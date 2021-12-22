@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <DebugSuffix Condition="'$(Configuration)'=='Debug'">d</DebugSuffix>
+    <DebugSuffix Condition="'$(Configuration)'!='Debug'">
+    </DebugSuffix>
+    <DependencyConfig Condition="'$(Configuration)'=='Debug'">debug</DependencyConfig>
+    <DependencyConfig Condition="'$(Configuration)'!='Debug'">release</DependencyConfig>
+    <TbbDebug Condition="'$(Configuration)'=='Debug'">TBB_USE_DEBUG=1</TbbDebug>
+    <TbbDebug Condition="'$(Configuration)'!='Debug'">
+    </TbbDebug>
+    <BoostDebug Condition="'$(Configuration)'=='Debug'">-gd</BoostDebug>
+    <BoostDebug Condition="'$(Configuration)'!='Debug'">
+    </BoostDebug>
+    <VcpkgDebug Condition="'$(Configuration)'=='Debug'">debug\</VcpkgDebug>
+    <VcpkgDebug Condition="'$(Configuration)'!='Debug'">
+    </VcpkgDebug>
+    <VulkanLib Condition="'$(PlatformArchitecture)'=='32'">Lib32</VulkanLib>
+    <VulkanLib Condition="'$(PlatformArchitecture)'!='32'">Lib</VulkanLib>
+    <CocosDev Condition="'$(Configuration)'=='Release'">COCOS_RELEASE</CocosDev>
+    <CocosDev Condition="'$(Configuration)'!='Release'">COCOS_DEV</CocosDev>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OutDir>$(SolutionDir)build\$(PlatformToolset)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(PlatformToolset)\$(Platform)\$(Configuration)\</IntDir>
+    <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\;..\..\vcpkg_installed\$(Platform)-windows\include;..\..\vcpkg_installed\$(Platform)-windows\include\eigen3;..\..\unsupported\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>$(CocosDev);_ENABLE_EXTENDED_ALIGNED_STORAGE;EIGEN_HAS_STD_RESULT_OF=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <ForcedIncludeFiles>pch.h</ForcedIncludeFiles>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <SDLCheck>true</SDLCheck>
+      <DisableSpecificWarnings>4648</DisableSpecificWarnings>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <FxCompile>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <ShaderModel>5.0</ShaderModel>
+    </FxCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>
