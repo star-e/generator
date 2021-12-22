@@ -24,12 +24,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "framework.h"
+#pragma once
+#include <type_traits>
+#include <utility>
 
-#include <Cocos/PCH/CompilerPCH.h>
+namespace Cocos {
 
-#include <filesystem>
+template<class... Ts>
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
 
-#include <Cocos/AST/BuilderMacros.h>
-#include <Cocos/FileUtils.h>
-#include <Cocos/Indent.h>
+#if (__cplusplus > 201703L)
+template<class... Ts>
+const overloaded<std::remove_cvref_t<Ts>...> overload(Ts&&... args) {
+    return { std::forward<Ts>(args)... };
+}
+#else
+template<class... Ts>
+inline const overloaded<std::remove_cv_t<std::remove_reference_t<Ts>>...> overload(Ts&&... args) {
+    return { std::forward<Ts>(args)... };
+}
+#endif
+
+}

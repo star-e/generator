@@ -89,6 +89,7 @@ THE SOFTWARE.
 
 // algorithm
 #include <boost/algorithm/clamp.hpp>
+#include <boost/algorithm/string.hpp>
 
 // iterator
 #include <boost/iterator/iterator_facade.hpp>
@@ -130,5 +131,12 @@ THE SOFTWARE.
 #include <Cocos/Container/Map.h>
 #include <Cocos/Container/Set.h>
 #include <Cocos/Container/UnorderedMap.h>
+#include <Cocos/GraphTypes.h>
 #include <Cocos/GraphImpl.h>
+#include <Cocos/GraphUtils.h>
 #include <Cocos/MovePtr.h>
+#include <Cocos/Overload.h>
+#include <Cocos/Path.h>
+#include <Cocos/PathUtils.h>
+#include <Cocos/StringStream.h>
+#include <Cocos/Range.h>

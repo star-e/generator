@@ -24,12 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "framework.h"
+#pragma once
 
-#include <Cocos/PCH/CompilerPCH.h>
-
-#include <filesystem>
-
-#include <Cocos/AST/BuilderMacros.h>
-#include <Cocos/FileUtils.h>
-#include <Cocos/Indent.h>
+#define OSS oss << space
+#define INDENT(...) auto ind##__VA_ARGS__ = indent(space)

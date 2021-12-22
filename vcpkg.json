@@ -11,7 +11,8 @@
         "boost-algorithm",
         "boost-multi-index",
         "boost-preprocessor",
-        "boost-uuid"
+        "boost-uuid",
+        "boost-iostreams"
     ],
     "supports": "windows & !arm & !x86"
 }

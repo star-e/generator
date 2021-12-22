@@ -24,12 +24,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "framework.h"
+#pragma once
+#include <boost/range/iterator_range.hpp>
 
-#include <Cocos/PCH/CompilerPCH.h>
+namespace Cocos {
 
-#include <filesystem>
+template<class IteratorT>
+inline boost::iterator_range<IteratorT>
+make_range(const std::pair<IteratorT, IteratorT>& p) noexcept {
+    return boost::make_iterator_range(p.first, p.second);
+}
 
-#include <Cocos/AST/BuilderMacros.h>
-#include <Cocos/FileUtils.h>
-#include <Cocos/Indent.h>
+}

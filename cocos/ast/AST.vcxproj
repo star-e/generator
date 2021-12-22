@@ -234,11 +234,23 @@
     <ClInclude Include="..\Container\Map.h" />
     <ClInclude Include="..\Container\Set.h" />
     <ClInclude Include="..\Container\UnorderedMap.h" />
+    <ClInclude Include="..\FileUtils.h" />
     <ClInclude Include="..\GraphTypes.h" />
+    <ClInclude Include="..\GraphUtils.h" />
+    <ClInclude Include="..\Indent.h" />
     <ClInclude Include="..\MovePtr.h" />
+    <ClInclude Include="..\Path.h" />
+    <ClInclude Include="..\PathUtils.h" />
     <ClInclude Include="..\PCH\CompilerPCH.h" />
+    <ClInclude Include="..\Overload.h" />
+    <ClInclude Include="..\Range.h" />
+    <ClInclude Include="..\StringStream.h" />
     <ClInclude Include="BuilderFwd.h" />
+    <ClInclude Include="BuilderMacros.h" />
     <ClInclude Include="BuilderTypes.h" />
+    <ClInclude Include="CppBuilder.h" />
+    <ClInclude Include="CppDefaultValues.h" />
+    <ClInclude Include="DSL.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="SyntaxFwd.h" />
@@ -246,9 +258,16 @@
     <ClInclude Include="SyntaxNames.h" />
     <ClInclude Include="SyntaxReflection.h" />
     <ClInclude Include="SyntaxTypes.h" />
+    <ClInclude Include="SyntaxUtils.h" />
+    <ClInclude Include="TypescriptBuilder.h" />
+    <ClInclude Include="TypescriptDefaultValues.h" />
+    <ClInclude Include="TypescriptGraph.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BuilderImpl.cpp" />
     <ClCompile Include="BuilderTypes.cpp" />
+    <ClCompile Include="CppBuilder.cpp" />
+    <ClCompile Include="CppDefaultValues.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -257,8 +276,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="SyntaxImpl.cpp" />
     <ClCompile Include="SyntaxReflection.cpp" />
     <ClCompile Include="SyntaxTypes.cpp" />
+    <ClCompile Include="SyntaxUtils.cpp" />
+    <ClCompile Include="TypescriptBuilder.cpp" />
+    <ClCompile Include="TypescriptDefaultValues.cpp" />
+    <ClCompile Include="TypescriptGraph.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

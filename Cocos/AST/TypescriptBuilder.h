@@ -24,12 +24,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "framework.h"
+#pragma once
+#include "SyntaxTypes.h"
+#include "BuilderTypes.h"
 
-#include <Cocos/PCH/CompilerPCH.h>
+namespace Cocos::Meta {
 
-#include <filesystem>
+void outputTypescript(std::ostream& oss, std::pmr::string& space,
+    CodegenContext& codegen,
+    const ModuleBuilder& builder, std::string_view scope,
+    SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::memory_resource* scratch);
 
-#include <Cocos/AST/BuilderMacros.h>
-#include <Cocos/FileUtils.h>
-#include <Cocos/Indent.h>
+}

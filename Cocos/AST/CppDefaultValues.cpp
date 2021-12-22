@@ -1,0 +1,129 @@
+/*
+Copyright (c) 2013-2016 Chukong Technologies Inc.
+Copyright (c) 2017-2021 Xiamen Yaji Software Co., Ltd.
+
+http://www.cocos.com
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated engine source code (the "Software"), a limited,
+worldwide, royalty-free, non-assignable, revocable and non-exclusive license
+to use Cocos Creator solely to develop games on your target platforms. You shall
+not use Cocos Creator software for developing other software or tools that's
+used for developing games. You are not granted to publish, distribute,
+sublicense, and/or sell copies of Cocos Creator.
+
+The software or tools in this License Agreement are licensed, not sold.
+Xiamen Yaji Software Co., Ltd. reserves all rights not expressly granted to you.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
+#include "CppDefaultValues.h"
+#include "BuilderTypes.h"
+#include "DSL.h"
+
+namespace Cocos::Meta {
+
+void addCppDefaultValues(ModuleBuilder& builder) {
+    // Value
+    VALUE(void);
+
+    VALUE(bool);
+
+    VALUE(int);
+    VALUE(float);
+    VALUE(double);
+
+    VALUE(char);
+    VALUE(char8_t);
+
+    VALUE(size_t);
+
+    VALUE(int8_t);
+    VALUE(int16_t);
+    VALUE(int32_t);
+    VALUE(int64_t);
+
+    VALUE(uint8_t);
+    VALUE(uint16_t);
+    VALUE(uint32_t);
+    VALUE(uint64_t);
+
+    VALUE(uintptr_t);
+
+    NAMESPACE(std) {
+        VALUE(byte);
+    }
+
+    // Struct
+    NAMESPACE(std) {
+        IMPORT_CLASS(string_view);
+        IMPORT_CLASS(u8string_view);
+
+        IMPORT_CLASS(string);
+        IMPORT_CLASS(u8string);
+
+        IMPORT_CLASS(monostate);
+        IMPORT_CLASS(mutex);
+        IMPORT_CLASS(thread);
+        IMPORT_CLASS(locale);
+
+        NAMESPACE(chrono) {
+            IMPORT_CLASS(system_clock);
+            IMPORT_CLASS(high_resolution_clock) {
+                IMPORT_CLASS(time_point);
+            }
+            IMPORT_CLASS(nanoseconds);
+            IMPORT_CLASS(microseconds);
+            IMPORT_CLASS(seconds);
+        }
+
+        NAMESPACE(pmr) {
+            IMPORT_PMR_CLASS(string);
+            IMPORT_PMR_CLASS(u8string);
+
+            IMPORT_CLASS(memory_resource);
+            IMPORT_CLASS(unsynchronized_pool_resource);
+            IMPORT_CLASS(synchronized_pool_resource);
+            IMPORT_CLASS(monotonic_buffer_resource);
+        }
+
+        NAMESPACE(filesystem) {
+            IMPORT_CLASS(path);
+        }
+
+        CONTAINER(vector);
+        CONTAINER(list);
+        CONTAINER(deque);
+        MAP(map);
+        MAP(unordered_map);
+
+        NAMESPACE(pmr) {
+            PMR_CONTAINER(vector);
+            PMR_CONTAINER(list);
+            PMR_CONTAINER(deque);
+            PMR_MAP(map);
+            PMR_MAP(unordered_map);
+        }
+    }
+
+    NAMESPACE(boost) {
+        IMPORT_CLASS(blank);
+        IMPORT_CLASS(default_color_type);
+
+        NAMESPACE(asio) {
+            IMPORT_CLASS(io_context) {
+                IMPORT_CLASS(work);
+                IMPORT_CLASS(strand);
+            }
+        }
+    }
+}
+
+}

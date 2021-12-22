@@ -24,12 +24,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "framework.h"
+#pragma once
+#include <sstream>
+#include <memory_resource>
 
-#include <Cocos/PCH/CompilerPCH.h>
+namespace Cocos {
 
-#include <filesystem>
+using pmr_stringstream = std::basic_stringstream<char, std::char_traits<char>,
+    std::pmr::polymorphic_allocator<char>>;
 
-#include <Cocos/AST/BuilderMacros.h>
-#include <Cocos/FileUtils.h>
-#include <Cocos/Indent.h>
+using pmr_ostringstream = std::basic_ostringstream<char, std::char_traits<char>,
+    std::pmr::polymorphic_allocator<char>>;
+
+using pmr_istringstream = std::basic_istringstream<char, std::char_traits<char>,
+    std::pmr::polymorphic_allocator<char>>;
+
+}

@@ -24,12 +24,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "framework.h"
+#pragma once
+#include "BuilderTypes.h"
 
-#include <Cocos/PCH/CompilerPCH.h>
+namespace Cocos::Meta {
 
-#include <filesystem>
+std::pmr::string generateFwd_h(const SyntaxGraph& g, std::string_view moduleName,
+	std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
-#include <Cocos/AST/BuilderMacros.h>
-#include <Cocos/FileUtils.h>
-#include <Cocos/Indent.h>
+std::pmr::string generateTypes_h(const SyntaxGraph& g, std::string_view moduleName,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
+
+}

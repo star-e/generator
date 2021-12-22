@@ -3,12 +3,6 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="BuilderFwd.h">
-      <Filter>1.Syntax</Filter>
-    </ClInclude>
-    <ClInclude Include="BuilderTypes.h">
-      <Filter>1.Syntax</Filter>
-    </ClInclude>
     <ClInclude Include="SyntaxFwd.h">
       <Filter>1.Syntax</Filter>
     </ClInclude>
@@ -42,17 +36,93 @@
     <ClInclude Include="..\PCH\CompilerPCH.h">
       <Filter>0.Common</Filter>
     </ClInclude>
+    <ClInclude Include="BuilderTypes.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="BuilderFwd.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="SyntaxUtils.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="BuilderMacros.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="CppBuilder.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Path.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Overload.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\PathUtils.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\StringStream.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GraphUtils.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Range.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\FileUtils.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Indent.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="TypescriptDefaultValues.h">
+      <Filter>3.Values</Filter>
+    </ClInclude>
+    <ClInclude Include="CppDefaultValues.h">
+      <Filter>3.Values</Filter>
+    </ClInclude>
+    <ClInclude Include="TypescriptBuilder.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="TypescriptGraph.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="DSL.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="BuilderTypes.cpp">
-      <Filter>1.Syntax</Filter>
-    </ClCompile>
     <ClCompile Include="SyntaxReflection.cpp">
       <Filter>1.Syntax</Filter>
     </ClCompile>
     <ClCompile Include="SyntaxTypes.cpp">
       <Filter>1.Syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="BuilderTypes.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="SyntaxImpl.cpp">
+      <Filter>1.Syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="SyntaxUtils.cpp">
+      <Filter>1.Syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="BuilderImpl.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="CppBuilder.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="TypescriptDefaultValues.cpp">
+      <Filter>3.Values</Filter>
+    </ClCompile>
+    <ClCompile Include="CppDefaultValues.cpp">
+      <Filter>3.Values</Filter>
+    </ClCompile>
+    <ClCompile Include="TypescriptBuilder.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="TypescriptGraph.cpp">
+      <Filter>2.Builder</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -64,6 +134,12 @@
     </Filter>
     <Filter Include="0.Common\Container">
       <UniqueIdentifier>{ebd87c3e-aad8-4d2d-a1cd-7fac74238ec6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="2.Builder">
+      <UniqueIdentifier>{a10d86c4-b75a-4db6-b879-a73c831af1be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3.Values">
+      <UniqueIdentifier>{378c8bb3-7436-4ec1-b6ac-d1353daa5480}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
