@@ -3,8 +3,65 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="BuilderFwd.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="BuilderTypes.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="SyntaxFwd.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="SyntaxGraphs.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="SyntaxNames.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="SyntaxReflection.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="SyntaxTypes.h">
+      <Filter>1.Syntax</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GraphTypes.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Container\Map.h">
+      <Filter>0.Common\Container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Container\Set.h">
+      <Filter>0.Common\Container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Container\UnorderedMap.h">
+      <Filter>0.Common\Container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MovePtr.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\PCH\CompilerPCH.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="BuilderTypes.cpp">
+      <Filter>1.Syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="SyntaxReflection.cpp">
+      <Filter>1.Syntax</Filter>
+    </ClCompile>
+    <ClCompile Include="SyntaxTypes.cpp">
+      <Filter>1.Syntax</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="1.Syntax">
+      <UniqueIdentifier>{62f63e43-cef9-419e-8138-93c03f3b7fd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="0.Common">
+      <UniqueIdentifier>{ae06de24-06e3-4ee3-b661-fc48c0959227}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="0.Common\Container">
+      <UniqueIdentifier>{ebd87c3e-aad8-4d2d-a1cd-7fac74238ec6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
