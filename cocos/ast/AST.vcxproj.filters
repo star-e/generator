@@ -39,7 +39,9 @@
     <ClInclude Include="..\MovePtr.h">
       <Filter>0.Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\PCH\CompilerPCH.h" />
+    <ClInclude Include="..\PCH\CompilerPCH.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
