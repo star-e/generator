@@ -498,6 +498,7 @@ void outputGraphEdge(std::ostream& oss, std::pmr::string& space,
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const SyntaxGraph& g,
+    const std::pmr::vector<std::pmr::string>& inherits,
     const std::pmr::vector<Member>& members,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,
@@ -510,37 +511,61 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             bChangeLine = true;
         }
 
+        int count = 0;
+        auto outputComma = [&]() {
+            if (bChangeLine) {
+                INDENT();
+                OSS;
+            } else {
+                if (count++) {
+                    oss << ", ";
+                }
+            }
+        };
+
+        auto outputParams = [&](const Constructor& cntr, const std::pmr::vector<Member>& members) {
+            for (const auto& id : cntr.mIndices) {
+                for (uint32_t i = 0; const auto& m : members) {
+                    if (i == id) {
+                        outputComma();
+                        auto memberID = locate(m.mTypePath, g);
+                        auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
+                        if (cntr.mHasDefault) {
+                            oss << builder.getTypedMemberName(m, true);
+                            oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                        } else {
+                            oss << builder.getTypedMemberName(m, true, true);
+                        }
+                        if (bChangeLine) {
+                            oss << ",\n";
+                        }
+                    }
+                    ++i;
+                }
+            }
+        };
         OSS << "constructor (";
+        if (!inherits.empty()) {
+            Expects(inherits.size() == 1);
+            const auto& base = inherits.front();
+            auto baseID = locate(base, g);
+            visit_vertex(
+                baseID, g,
+                [&](const Composition_ auto& s) {
+                    if (s.mConstructors.empty()) {
+                        return;
+                    }
+                    outputParams(s.mConstructors.front(), s.mMembers);
+                },
+                [&](const auto&) {
+                });
+        }
+
         if (bChangeLine)
             oss << "\n";
 
-        for (int count = 0; const auto& id : cntr.mIndices) {
-            for (uint32_t i = 0; const auto& m : members) {
-                if (i == id) {
-                    if (bChangeLine) {
-                        INDENT();
-                        OSS;
-                    } else {
-                        if (count++) {
-                            oss << ", ";
-                        }
-                    }
+        outputParams(cntr, members);
 
-                    auto memberID = locate(m.mTypePath, g);
-                    auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
-                    if (cntr.mHasDefault) {
-                        oss << builder.getTypedMemberName(m, true);
-                        oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
-                    } else {
-                        oss << builder.getTypedMemberName(m, true, true);
-                    }
-                    if (bChangeLine) {
-                        oss << ",\n";
-                    }
-                }
-                ++i;
-            }        
-        }
         if (bChangeLine) {
             OSS << ") {\n";
         } else {
@@ -548,6 +573,34 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         }
         {
             INDENT();
+            if (!inherits.empty()) {
+                const auto& base = inherits.front();
+                auto baseID = locate(base, g);
+                visit_vertex(
+                    baseID, g,
+                    [&](const Composition_ auto& s) {
+                        if (s.mConstructors.empty()) {
+                            return;
+                        }
+                        const auto& cntr = s.mConstructors.front();
+                        const auto& members = s.mMembers;
+                        OSS << "super(";
+                        for (int count = 0; const auto& id : cntr.mIndices) {
+                            for (uint32_t i = 0; const auto& m : members) {
+                                if (i == id) {
+                                    auto memberID = locate(m.mTypePath, g);
+                                    if (count++)
+                                        oss << ", ";
+                                    oss << builder.getMemberName(m.mMemberName, true);
+                                }
+                            }
+                        }
+                        oss << ");\n";
+                    },
+                    [&](const auto&) {
+                    });
+            }
+
             for (uint32_t i = 0; const auto& m : members) {
                 for (const auto& id : cntr.mIndices) {
                     if (i == id) {
@@ -574,7 +627,6 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         Expects(path.front() == '/');
         Expects(validateTypename(path));
         auto memberID = locate(path, g);
-
 
         bool bNeedIntial = true;
         if (!cntrs.empty()) {
@@ -791,8 +843,29 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph2& s,
     oss << "\n";
     OSS << "//-----------------------------------------------------------------\n";
     OSS << "// " << name << " Implementation\n";
-    OSS << "export class " << name << " implements impl.BidirectionalGraph\n";
+    OSS << "export class " << name;
+    
+    for (int count = 0; const auto& base : s.mInherits) {
+        auto superID = locate(base, g);
+        const auto& name = get(g.names, g, superID);
+        if (count++ == 0) {
+            oss << " extends ";
+        } else {
+            oss << ", ";
+        }
+        oss << name;
+    }
+    if (s.mInherits.empty()) {
+        oss << " implements impl.BidirectionalGraph\n";
+    } else {
+        oss << "\n";
+        INDENT();
+        oss << "implements impl.BidirectionalGraph\n";
+    }
     {
+        if (!s.mInherits.empty()) {
+            space.append("    ");
+        }
         OSS << ", impl.AdjacencyGraph\n";
         OSS << ", impl.VertexListGraph\n";
         OSS << ", impl.MutableGraph";
@@ -824,7 +897,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph2& s,
             oss << "\n";
             OSS << ", impl.AddressableGraph";
         }
+        if (!s.mInherits.empty()) {
+            space.resize(space.size() - 4);
+        }
     }
+
     oss << " {\n";
     {
         INDENT();
@@ -2061,7 +2138,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph2& s,
             }
         }
         // GraphMembers
-        outputMembers(oss, space, builder, g, s.mMembers, s.mTypescriptFunctions,
+        outputMembers(oss, space, builder, g, s.mInherits, s.mMembers, s.mTypescriptFunctions,
             s.mConstructors, scratch);
     }
     OSS << "}\n";

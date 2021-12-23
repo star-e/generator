@@ -330,6 +330,29 @@ TypeHandle ModuleBuilder::addStruct(std::string_view name, Traits traits) {
     return appendTypePath(*this, name, vertID);
 }
 
+void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view className) {
+    auto& g = mSyntaxGraph;
+    auto scratch = get_allocator().resource();
+
+    std::pmr::string adlPath(className, scratch);
+    convertTypename(adlPath);
+
+    if (isInstance(adlPath)) {
+        g.instantiate(mCurrentScope, adlPath, scratch);
+    }
+
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            auto vertID = g.lookupType(mCurrentScope, adlPath, scratch);
+            auto typeName = g.getTypePath(vertID, g.get_allocator().resource());
+            s.mInherits.emplace_back(std::move(typeName));
+        },
+        [&](const auto&) {
+            Expects(false);
+        });
+}
+
 void ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
     std::string_view className, std::string_view memberName,
     std::string_view initial, GenerationFlags flags) {

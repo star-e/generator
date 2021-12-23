@@ -183,6 +183,7 @@ struct ModuleBuilder {
         std::initializer_list<std::string_view> concepts = {});
 
     TypeHandle addStruct(std::string_view name, Traits traits = {});
+    void addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view name);
     void addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
         std::string_view adlPath, std::string_view memberName,
         std::string_view initial = "_", GenerationFlags flags = {});

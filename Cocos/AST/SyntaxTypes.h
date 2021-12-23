@@ -247,7 +247,7 @@ struct Constructor {
 struct Struct {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
-        return allocator_type(mMembers.get_allocator().resource());
+        return allocator_type(mInherits.get_allocator().resource());
     }
 
     Struct(const allocator_type& alloc) noexcept;
@@ -260,6 +260,7 @@ struct Struct {
     Struct& operator=(Struct const& rhs) = default;
     ~Struct() noexcept;
 
+    std::pmr::vector<std::pmr::string> mInherits;
     std::pmr::vector<Member> mMembers;
     std::pmr::vector<Constructor> mConstructors;
     std::pmr::vector<Member> mTypescriptMembers;
@@ -389,7 +390,7 @@ inline bool operator!=(const VertexListType& lhs, const VertexListType& rhs) noe
 struct Graph2 {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
-        return allocator_type(mMembers.get_allocator().resource());
+        return allocator_type(mInherits.get_allocator().resource());
     }
 
     Graph2(const allocator_type& alloc) noexcept;
@@ -460,6 +461,7 @@ struct Graph2 {
     std::pmr::string getTypescriptVertexPropertyType(const SyntaxGraph& g,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept;
 
+    std::pmr::vector<std::pmr::string> mInherits;
     std::pmr::vector<Member> mMembers;
     std::pmr::vector<Constructor> mConstructors;
     std::pmr::vector<Member> mTypescriptMembers;

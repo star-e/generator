@@ -136,19 +136,22 @@ Constructor::Constructor(Constructor const& rhs, const allocator_type& alloc)
 Constructor::~Constructor() noexcept = default;
 
 Struct::Struct(const allocator_type& alloc) noexcept
-    : mMembers(alloc)
+    : mInherits(alloc)
+    , mMembers(alloc)
     , mConstructors(alloc)
     , mTypescriptMembers(alloc)
     , mTypescriptFunctions(alloc) {}
 
 Struct::Struct(Struct&& rhs, const allocator_type& alloc)
-    : mMembers(std::move(rhs.mMembers), alloc)
+    : mInherits(std::move(rhs.mInherits), alloc)
+    , mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
     , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
     , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc) {}
 
 Struct::Struct(Struct const& rhs, const allocator_type& alloc)
-    : mMembers(rhs.mMembers, alloc)
+    : mInherits(rhs.mInherits, alloc)
+    , mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
     , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
     , mTypescriptFunctions(rhs.mTypescriptFunctions, alloc) {}
@@ -214,7 +217,8 @@ Component::Component(Component const& rhs, const allocator_type& alloc)
 Component::~Component() noexcept = default;
 
 Graph2::Graph2(const allocator_type& alloc) noexcept
-    : mMembers(alloc)
+    : mInherits(alloc)
+    , mMembers(alloc)
     , mConstructors(alloc)
     , mTypescriptMembers(alloc)
     , mTypescriptFunctions(alloc)
@@ -230,7 +234,8 @@ Graph2::Graph2(const allocator_type& alloc) noexcept
     , mDegreeSizeType(alloc) {}
 
 Graph2::Graph2(Graph2&& rhs, const allocator_type& alloc)
-    : mMembers(std::move(rhs.mMembers), alloc)
+    : mInherits(std::move(rhs.mInherits), alloc)
+    , mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
     , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
     , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc)
@@ -252,7 +257,8 @@ Graph2::Graph2(Graph2&& rhs, const allocator_type& alloc)
     , mDegreeSizeType(std::move(rhs.mDegreeSizeType), alloc) {}
 
 Graph2::Graph2(Graph2 const& rhs, const allocator_type& alloc)
-    : mMembers(rhs.mMembers, alloc)
+    : mInherits(rhs.mInherits, alloc)
+    , mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
     , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
     , mTypescriptFunctions(rhs.mTypescriptFunctions, alloc)

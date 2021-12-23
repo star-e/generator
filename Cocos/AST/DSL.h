@@ -113,6 +113,9 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
 #define TAGS(Cs, ...) BOOST_PP_SEQ_FOR_EACH_I(TAG_ELEM, (BOOST_PP_SEQ_FOR_EACH(STRINGIZE_ELEM, _, BOOST_PP_TUPLE_TO_SEQ(Cs))), BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
 
 // Struct
+#define INHERITS(NAME) \
+builder.addInherits(s.mVertexDescriptor, BOOST_PP_STRINGIZE(NAME))
+
 #define STRUCT_MEMBER(r, COND, i, MEMBER) \
 builder.addMember(s.mVertexDescriptor, COND,\
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 0, MEMBER)), \

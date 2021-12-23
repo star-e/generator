@@ -32,6 +32,7 @@ namespace Cocos::Meta {
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const SyntaxGraph& g,
+    const std::pmr::vector<std::pmr::string>& inherits,
     const std::pmr::vector<Member>& members,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,

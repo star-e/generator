@@ -73,10 +73,22 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         [&](const Struct& s) {
             if (currScope.mCount++)
                 oss << "\n";
-            OSS << "export class " << name << " {\n";
+            OSS << "export class " << name;
+            for (int count = 0; const auto& base : s.mInherits) {
+                auto superID = locate(base, g);
+                const auto& name = get(g.names, g, superID);
+                if (count++ == 0) {
+                    oss << " extends ";
+                } else {
+                    oss << ", ";
+                }
+                oss << name;
+            }
+            oss << " {\n";
             {
                 INDENT();
-                outputMembers(oss, space, builder, g, s.mMembers,
+                outputMembers(oss, space, builder, g,
+                    s.mInherits, s.mMembers,
                     s.mTypescriptFunctions, s.mConstructors, scratch);
             }
             OSS << "}\n";

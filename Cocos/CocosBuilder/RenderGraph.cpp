@@ -635,14 +635,21 @@ void buildRenderGraph(ModuleBuilder& builder) {
                     );
                 }
 
+                STRUCT(Setter) {
+                    PRIVATE(
+                        (RenderData&, mData, _)
+                    );
+                    EXPLICIT_CNTR(mData);
+                }
+
                 STRUCT(RasterQueue) {
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RenderQueueData&, mQueue, _)
-                        (RenderData&, mData, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mData);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue);
                     TS_FUNCTIONS(R"(addCamera (camera: Camera, name = 'Camera'): RasterQueue {
     const scene = new SceneData(name);
     scene.camera = camera;
@@ -660,13 +667,13 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                 }
                                                 
                 STRUCT(RasterPass) {
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RasterPassData&, mPass, _)
-                        (RenderData&, mData, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mData);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
                     TS_FUNCTIONS(R"(addRasterView (name: string, view: RasterView) {
     this._pass.rasterViews.set(name, view);
 }
@@ -698,7 +705,7 @@ addQueue (hint: QueueHint = QueueHint.Opaque, layoutName = '', name = 'Queue') {
     const queueID = this._renderGraph.addVertex<RenderGraphValue.queue>(
         RenderGraphValue.queue, queue, name, layoutName, data, this._vertID,
     );
-    return new RasterQueue(this._renderGraph, queueID, queue, data);
+    return new RasterQueue(data, this._renderGraph, queueID, queue);
 }
 addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
     this._renderGraph.addVertex<RenderGraphValue.blit>(
@@ -711,13 +718,13 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                 }
 
                 STRUCT(ComputeQueue) {
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RenderQueueData&, mQueue, _)
-                        (RenderData&, mData, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mData);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue);
                     TS_FUNCTIONS(R"(addDispatch (shader: string,
     threadGroupCountX: number,
     threadGroupCountY: number,
@@ -734,13 +741,13 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                 }
 
                 STRUCT(ComputePass) {
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (ComputePassData&, mPass, _)
-                        (RenderData&, mData, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mData);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
                     TS_FUNCTIONS(R"(addComputeView (name: string, view: ComputeView) {
     if (this._pass.computeViews.has(name)) {
         this._pass.computeViews.get(name)?.push(view);
