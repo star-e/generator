@@ -640,6 +640,58 @@ void buildRenderGraph(ModuleBuilder& builder) {
                         (RenderData&, mData, _)
                     );
                     EXPLICIT_CNTR(mData);
+                    TS_FUNCTIONS(R"(setMatrix4x4 (name: string, data: number[]): void {
+
+}
+setMatrix3x4 (name: string, data: number[]): void {
+
+}
+setFloat4 (name: string, data: number[]): void {
+
+}
+setFloat2 (name: string, data: number[]): void {
+
+}
+setFloat (name: string, data: number): void {
+
+}
+setInt4 (name: string, data: number[]): void {
+
+}
+setInt2 (name: string, data: number[]): void {
+
+}
+setInt (name: string, data: number): void {
+
+}
+setUint4 (name: string, data: number[]): void {
+
+}
+setUint2 (name: string, data: number[]): void {
+
+}
+setUint (name: string, data: number): void {
+
+}
+setCBuffer (name: string, buffer: Buffer): void {
+
+}
+setBuffer (name: string, buffer: Buffer): void {
+
+}
+setTexture (name: string, texture: Texture): void {
+
+}
+setRWBuffer (name: string, buffer: Buffer): void {
+
+}
+setRWTexture (name: string, texture: Texture): void {
+
+}
+setSampler (name: string, sampler: Sampler): void {
+
+}
+)");
                 }
 
                 STRUCT(RasterQueue) {
