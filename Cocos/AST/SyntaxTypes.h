@@ -677,7 +677,7 @@ struct SyntaxGraph {
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
 
     std::pmr::string getTypescriptInitialValue(
-        vertex_descriptor vertID, std::string_view initial,
+        vertex_descriptor vertID, const Member& member,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
 
     std::pmr::string getTypescriptGraphPolymorphicVariant(const Graph2& s,
@@ -764,7 +764,6 @@ struct ModuleInfo {
     std::string mAPI;
     std::string mFolder;
     std::string mFilePrefix;
-    std::string mExportAs;
 };
 
 struct ModuleGraph {

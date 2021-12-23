@@ -529,7 +529,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                     auto memberID = locate(m.mTypePath, g);
                     auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
                     oss << builder.getTypedMemberName(m, true)
-                        << " = " << g.getTypescriptInitialValue(memberID, m.mDefaultValue, scratch, scratch);
+                        << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
                     if (bChangeLine) {
                         oss << ",\n";
                     }
@@ -584,7 +584,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
 
         if (bNeedIntial) {
             OSS << builder.getTypedMemberName(m, m.mPublic);
-            oss << " = " << g.getTypescriptInitialValue(memberID, m.mDefaultValue, scratch, scratch) << ";\n";
+            oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
         } else {
             OSS << builder.getTypedMemberName(m, m.mPublic, true) << ";\n";
         }

@@ -351,12 +351,25 @@ void ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPubli
     visit_vertex(
         vertID, g,
         [&](Composition_ auto& s) {
-            auto vertID = g.lookupType(mCurrentScope, adlPath, scratch);
+            Member m(get_allocator());
+            std::pmr::string typeName(adlPath, scratch);
+            if (auto pos = adlPath.find('*'); pos != adlPath.npos) {
+                m.mPointer = true;
+                typeName.resize(pos);
+            }
+            if (boost::algorithm::contains(typeName, "const ") ||
+                boost::algorithm::contains(typeName, " const")) {
+                m.mConst = true;
+                boost::algorithm::replace_first(typeName, "const ", "");
+                boost::algorithm::replace_first(typeName, " const", "");
+                boost::algorithm::trim(typeName);
+            }
+
+            auto vertID = g.lookupType(mCurrentScope, typeName, scratch);
             Expects(vertID != g.null_vertex());
 
             auto typePath = g.getTypePath(vertID, scratch);
 
-            Member m(get_allocator());
             m.mTypePath = std::move(typePath);
             m.mPublic = bPublic;
             m.mMemberName = memberName;
@@ -713,6 +726,9 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
     if (bFull || !g.isTypescriptData(typeName)) {
         name += ": ";
         name += typeName;
+        if (m.mPointer) {
+            name += " | null";
+        }
     }
 
     return name;

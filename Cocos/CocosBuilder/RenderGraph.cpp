@@ -32,12 +32,19 @@ THE SOFTWARE.
 namespace Cocos::Meta {
 
 void buildRenderGraph(ModuleBuilder& builder) {
+    MODULE(Camera,
+        .mAPI = "CC_DLL",
+        .mFolder = "cocos/core/renderer/scene",
+        .mFilePrefix = "camera") {
+        NAMESPACE(cc) {
+            IMPORT_CLASS(Camera);
+        }
+    }
+
     MODULE(Gfx,
         .mAPI = "CC_DLL",
         .mFolder = "cocos/core/gfx",
-        .mFilePrefix = "index",
-        .mExportAs = "gfx"
-    ) {
+        .mFilePrefix = "index") {
         NAMESPACE(cc) {
             PMR_MAP(PmrMap);
             PROJECT_TS(PmrMap, Map);
@@ -195,9 +202,7 @@ void buildRenderGraph(ModuleBuilder& builder) {
     MODULE(RenderCommon,
         .mAPI = "CC_DLL",
         .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "types",
-        .mExportAs = "render"
-    ) {
+        .mFilePrefix = "types") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 ENUM(UpdateFrequency, (PerInstance, PerBatch, PerQueue, PerPass, Count));
@@ -262,9 +267,7 @@ void buildRenderGraph(ModuleBuilder& builder) {
     MODULE(DescriptorLayout,
         .mAPI = "CC_DLL",
         .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "layout-graph",
-        .mExportAs = "render"
-    ) {
+        .mFilePrefix = "layout-graph") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 //-----------------------------------------------------------
@@ -380,9 +383,7 @@ void buildRenderGraph(ModuleBuilder& builder) {
     MODULE(RenderGraph,
         .mAPI = "CC_DLL",
         .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "render-graph",
-        .mExportAs = "render"
-    ) {
+        .mFilePrefix = "render-graph") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 FLAGS(ResourceFlags, 
@@ -576,6 +577,8 @@ void buildRenderGraph(ModuleBuilder& builder) {
                 STRUCT(SceneData) {
                     PUBLIC(
                         (std::pmr::string, mName, _)
+                        (Camera*, mCamera, nullptr)
+                        (std::pmr::vector<std::pmr::string>, mScenes, _)
                     );
                     CNTR(mName);
                 }
@@ -609,7 +612,7 @@ void buildRenderGraph(ModuleBuilder& builder) {
                 GRAPH(RenderGraph, _, _) {
                     NAMED_GRAPH();
                     REFERENCE_GRAPH();
-                    ADDRESSABLE_GRAPH();
+                    //ADDRESSABLE_GRAPH();
 
                     COMPONENT_GRAPH(
                         (Layout, std::pmr::string, mLayoutNodes)
@@ -640,8 +643,7 @@ void buildRenderExecutor(ModuleBuilder& builder) {
     MODULE(RenderExecutor,
         .mAPI = "CC_DLL",
         .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "executor",
-        .mExportAs = "render") {
+        .mFilePrefix = "executor") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 GRAPH(DeviceResourceGraph, _, _) {

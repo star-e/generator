@@ -45,25 +45,6 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
 
     auto& currScope = codegen.mScopes.back();
 
-    auto generateMembers = [&](const Composition_ auto& s) {
-        for (const auto& m : s.mMembers) {
-            auto path = m.mTypePath;
-            Expects(!path.empty());
-            Expects(path.front() == '/');
-            Expects(validateTypename(path));
-            auto vertID = locate(path, g);
-            const auto& ts = get(g.typescripts, g, vertID);
-            auto typeName = g.getTypescriptTypename(vertID, scratch, scratch);
-            
-            OSS << builder.getMemberName(m.mMemberName, m.mPublic);
-            if (!g.isTypescriptData(typeName)) {
-                oss << ": " << typeName;
-            }
-            oss << " = " << g.getTypescriptInitialValue(vertID, m.mDefaultValue, scratch, scratch)
-                << ";\n";
-        }
-    };
-
     visit_vertex(
         vertID, g,
         [&](const Enum& e) {

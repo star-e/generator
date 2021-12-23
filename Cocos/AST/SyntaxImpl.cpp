@@ -512,13 +512,13 @@ std::pmr::string SyntaxGraph::getTypescriptTagName(std::string_view typePath,
 }
 
 std::pmr::string SyntaxGraph::getTypescriptInitialValue(
-    vertex_descriptor vertID, std::string_view initial0,
+    vertex_descriptor vertID, const Member& m,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
     const auto& g = *this;
     const auto& ts = get(g.typescripts, g, vertID);
 
-    Expects(initial0 != "_");
-    std::pmr::string initial1(initial0, scratch);
+    Expects(m.mDefaultValue != "_");
+    std::pmr::string initial1(m.mDefaultValue, scratch);
 
     boost::algorithm::trim(initial1);
     if (!initial1.empty() && initial1.front() == '{' && initial1.back() == '}') {
@@ -607,7 +607,22 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
             oss << "()";
         }
     };
-    
+
+    if (m.mPointer) {
+        if (initial.empty()) {
+            oss << "null";
+        } else {
+            if (initial == "nullptr"
+                || initial == "NULL"
+                || initial == "0") {
+                oss << "null";
+            } else {
+                oss << initial;
+            }
+        }
+        return oss.str();
+    }
+
     visit_vertex(
         vertID, g,
         [&](const Enum& e) {
