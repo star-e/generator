@@ -187,7 +187,7 @@ struct ModuleBuilder {
         std::string_view adlPath, std::string_view memberName,
         std::string_view initial = "_", GenerationFlags flags = {});
     void addConstructor(SyntaxGraph::vertex_descriptor vertID,
-        std::initializer_list<std::string_view> members);
+        std::initializer_list<std::string_view> members, bool hasDefault);
     void addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
 
     SyntaxGraph::vertex_descriptor addVariant(std::string_view name, GenerationFlags flags = {});

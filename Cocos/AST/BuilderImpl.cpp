@@ -344,7 +344,8 @@ void ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPubli
         initial = {};
     }
 
-    if (isInstance(adlPath)) {
+    bool bInstance = isInstance(adlPath);
+    if (bInstance) {
         g.instantiate(mCurrentScope, adlPath, scratch);
     }
 
@@ -353,16 +354,26 @@ void ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPubli
         [&](Composition_ auto& s) {
             Member m(get_allocator());
             std::pmr::string typeName(adlPath, scratch);
-            if (auto pos = adlPath.find('*'); pos != adlPath.npos) {
-                m.mPointer = true;
-                typeName.resize(pos);
-            }
-            if (boost::algorithm::contains(typeName, "const ") ||
-                boost::algorithm::contains(typeName, " const")) {
-                m.mConst = true;
-                boost::algorithm::replace_first(typeName, "const ", "");
-                boost::algorithm::replace_first(typeName, " const", "");
-                boost::algorithm::trim(typeName);
+            if (!bInstance) {
+                auto astPos = adlPath.find('*');
+                if (astPos != adlPath.npos) {
+                    m.mPointer = true;
+                    if (auto pos = adlPath.find('&', astPos); pos != adlPath.npos) {
+                        m.mReference = true;
+                    }
+                    typeName.resize(astPos);
+                } else {
+                    if (auto pos = adlPath.find('&'); pos != adlPath.npos) {
+                        m.mReference = true;
+                        typeName.resize(pos);
+                    }
+                }
+                if (boost::algorithm::contains(typeName, "const ") || boost::algorithm::contains(typeName, " const")) {
+                    m.mConst = true;
+                    boost::algorithm::replace_first(typeName, "const ", "");
+                    boost::algorithm::replace_first(typeName, " const", "");
+                    boost::algorithm::trim(typeName);
+                }
             }
 
             auto vertID = g.lookupType(mCurrentScope, typeName, scratch);
@@ -383,12 +394,13 @@ void ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPubli
         });
 }
 void ModuleBuilder::addConstructor(SyntaxGraph::vertex_descriptor vertID,
-    std::initializer_list<std::string_view> members) {
+    std::initializer_list<std::string_view> members, bool hasDefault) {
     auto& g = mSyntaxGraph;
     visit_vertex(
         vertID, g,
         [&](Composition_ auto& s) {
             auto& cntr = s.mConstructors.emplace_back();
+            cntr.mHasDefault = hasDefault;
             for (const auto& memberName : members) {
                 uint32_t id = 0;
                 for (const auto& m : s.mMembers) {

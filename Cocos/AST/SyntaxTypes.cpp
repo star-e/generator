@@ -100,6 +100,7 @@ Member::Member(Member&& rhs, const allocator_type& alloc)
     , mDefaultValue(std::move(rhs.mDefaultValue), alloc)
     , mConst(std::move(rhs.mConst))
     , mPointer(std::move(rhs.mPointer))
+    , mReference(std::move(rhs.mReference))
     , mPublic(std::move(rhs.mPublic))
     , mFlags(std::move(rhs.mFlags))
     , mTypescriptType(std::move(rhs.mTypescriptType), alloc)
@@ -112,6 +113,7 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
     , mDefaultValue(rhs.mDefaultValue, alloc)
     , mConst(rhs.mConst)
     , mPointer(rhs.mPointer)
+    , mReference(rhs.mReference)
     , mPublic(rhs.mPublic)
     , mFlags(rhs.mFlags)
     , mTypescriptType(rhs.mTypescriptType, alloc)
@@ -124,10 +126,12 @@ Constructor::Constructor(const allocator_type& alloc) noexcept
     : mIndices(alloc) {}
 
 Constructor::Constructor(Constructor&& rhs, const allocator_type& alloc)
-    : mIndices(std::move(rhs.mIndices), alloc) {}
+    : mIndices(std::move(rhs.mIndices), alloc)
+    , mHasDefault(std::move(rhs.mHasDefault)) {}
 
 Constructor::Constructor(Constructor const& rhs, const allocator_type& alloc)
-    : mIndices(rhs.mIndices, alloc) {}
+    : mIndices(rhs.mIndices, alloc)
+    , mHasDefault(rhs.mHasDefault) {}
 
 Constructor::~Constructor() noexcept = default;
 

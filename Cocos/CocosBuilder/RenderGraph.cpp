@@ -634,6 +634,160 @@ void buildRenderGraph(ModuleBuilder& builder) {
                         ((PmrUnorderedMap<std::pmr::string, uint32_t>), mIndex, _)
                     );
                 }
+
+                STRUCT(RasterQueue) {
+                    PRIVATE(
+                        (RenderGraph&, mRenderGraph, _)
+                        (const uint32_t, mVertID, 0xFFFFFFFF)
+                        (RenderQueueData&, mQueue, _)
+                        (RenderData&, mData, _)
+                    );
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mData);
+                    TS_FUNCTIONS(R"(addCamera (camera: Camera, name = 'Camera'): RasterQueue {
+    const scene = new SceneData(name);
+    scene.camera = camera;
+    this._renderGraph.addVertex<RenderGraphValue.scene>(
+        RenderGraphValue.scene, scene, name, '', new RenderData(), this._vertID,
+    );
+    return this;
+}
+addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
+    this._renderGraph.addVertex<RenderGraphValue.blit>(
+        RenderGraphValue.blit, new Blit(shader), name, layoutName, new RenderData(), this._vertID,
+    );
+}
+)");
+                }
+                                                
+                STRUCT(RasterPass) {
+                    PRIVATE(
+                        (RenderGraph&, mRenderGraph, _)
+                        (const uint32_t, mVertID, 0xFFFFFFFF)
+                        (RasterPassData&, mPass, _)
+                        (RenderData&, mData, _)
+                    );
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mData);
+                    TS_FUNCTIONS(R"(addRasterView (name: string, view: RasterView) {
+    this._pass.rasterViews.set(name, view);
+}
+addComputeView (name: string, view: ComputeView) {
+    if (this._pass.computeViews.has(name)) {
+        this._pass.computeViews.get(name)?.push(view);
+    } else {
+        this._pass.computeViews.set(name, [view]);
+    }
+}
+addQueue (hint: QueueHint = QueueHint.Opaque, layoutName = '', name = 'Queue') {
+    if (layoutName === '') {
+        switch (hint) {
+        case QueueHint.Opaque:
+            layoutName = 'Opaque';
+            break;
+        case QueueHint.Cutout:
+            layoutName = 'Cutout';
+            break;
+        case QueueHint.Transparent:
+            layoutName = 'Transparent';
+            break;
+        default:
+            throw Error('cannot infer layoutName from QueueHint');
+        }
+    }
+    const queue = new RenderQueueData(hint);
+    const data = new RenderData();
+    const queueID = this._renderGraph.addVertex<RenderGraphValue.queue>(
+        RenderGraphValue.queue, queue, name, layoutName, data, this._vertID,
+    );
+    return new RasterQueue(this._renderGraph, queueID, queue, data);
+}
+addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
+    this._renderGraph.addVertex<RenderGraphValue.blit>(
+        RenderGraphValue.blit,
+        new Blit(shader),
+        name, layoutName, new RenderData(), this._vertID,
+    );
+}
+)");
+                }
+
+                STRUCT(ComputeQueue) {
+                    PRIVATE(
+                        (RenderGraph&, mRenderGraph, _)
+                        (const uint32_t, mVertID, 0xFFFFFFFF)
+                        (RenderQueueData&, mQueue, _)
+                        (RenderData&, mData, _)
+                    );
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mData);
+                    TS_FUNCTIONS(R"(addDispatch (shader: string,
+    threadGroupCountX: number,
+    threadGroupCountY: number,
+    threadGroupCountZ: number,
+    layoutName = '',
+    name = 'Dispatch') {
+    this._renderGraph.addVertex<RenderGraphValue.dispatch>(
+        RenderGraphValue.dispatch,
+        new Dispatch(shader, threadGroupCountX, threadGroupCountY, threadGroupCountZ),
+        name, layoutName, new RenderData(), this._vertID,
+    );
+}
+)");
+                }
+
+                STRUCT(ComputePass) {
+                    PRIVATE(
+                        (RenderGraph&, mRenderGraph, _)
+                        (const uint32_t, mVertID, 0xFFFFFFFF)
+                        (ComputePassData&, mPass, _)
+                        (RenderData&, mData, _)
+                    );
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mData);
+                    TS_FUNCTIONS(R"(addComputeView (name: string, view: ComputeView) {
+    if (this._pass.computeViews.has(name)) {
+        this._pass.computeViews.get(name)?.push(view);
+    } else {
+        this._pass.computeViews.set(name, [view]);
+    }
+}
+addDispatch (shader: string,
+    threadGroupCountX: number,
+    threadGroupCountY: number,
+    threadGroupCountZ: number,
+    layoutName = '',
+    name = 'Dispatch') {
+    this._renderGraph.addVertex<RenderGraphValue.dispatch>(
+        RenderGraphValue.dispatch,
+        new Dispatch(shader, threadGroupCountX, threadGroupCountY, threadGroupCountZ),
+        name, layoutName, new RenderData(), this._vertID,
+    );
+}
+)");
+                }
+
+                STRUCT(MovePass) {
+                    PRIVATE(
+                        (RenderGraph&, mRenderGraph, _)
+                        (const uint32_t, mVertID, 0xFFFFFFFF)
+                        (MovePassData&, mPass, _)
+                    );
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
+                    TS_FUNCTIONS(R"(addMove (pair: MovePair) {
+    this._pass.movePairs.push(pair);
+}
+)");
+                }
+                
+                STRUCT(CopyPass) {
+                    PRIVATE(
+                        (RenderGraph&, mRenderGraph, _)
+                        (const uint32_t, mVertID, 0xFFFFFFFF)
+                        (CopyPassData&, mPass, _)
+                    );
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
+                    TS_FUNCTIONS(R"(addCopy (pair: CopyPair) {
+    this._pass.copyPairs.push(pair);
+}
+)");
+                }
             } // namespace render
         }
     }

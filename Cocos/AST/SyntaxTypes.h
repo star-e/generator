@@ -216,6 +216,7 @@ struct Member {
     std::pmr::string mDefaultValue;
     bool mConst = false;
     bool mPointer = false;
+    bool mReference = false;
     bool mPublic = true;
     GenerationFlags mFlags = {};
     std::pmr::string mTypescriptType;
@@ -240,6 +241,7 @@ struct Constructor {
     ~Constructor() noexcept;
 
     std::pmr::vector<uint32_t> mIndices;
+    bool mHasDefault = false;
 };
 
 struct Struct {

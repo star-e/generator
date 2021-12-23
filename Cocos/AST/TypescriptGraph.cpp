@@ -502,11 +502,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,
     std::pmr::memory_resource* scratch) {
-
+    const int maxParams = 4;
     if (!cntrs.empty()) {
         auto& cntr = cntrs.front();
         bool bChangeLine = false;
-        if (cntr.mIndices.size() > 3) {
+        if (cntr.mIndices.size() > maxParams) {
             bChangeLine = true;
         }
 
@@ -528,8 +528,12 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
 
                     auto memberID = locate(m.mTypePath, g);
                     auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
-                    oss << builder.getTypedMemberName(m, true)
-                        << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                    if (cntr.mHasDefault) {
+                        oss << builder.getTypedMemberName(m, true);
+                        oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                    } else {
+                        oss << builder.getTypedMemberName(m, true, true);
+                    }
                     if (bChangeLine) {
                         oss << ",\n";
                     }
@@ -581,12 +585,18 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
             }
         }
-
+        OSS;
+        if (!m.mPublic) {
+            oss << "private ";
+        }
+        if (m.mReference || m.mConst) {
+            oss << "readonly ";
+        }
         if (bNeedIntial) {
-            OSS << builder.getTypedMemberName(m, m.mPublic);
+            oss << builder.getTypedMemberName(m, m.mPublic);
             oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
         } else {
-            OSS << builder.getTypedMemberName(m, m.mPublic, true) << ";\n";
+            oss << builder.getTypedMemberName(m, m.mPublic, true) << ";\n";
         }
 
         ++i;
