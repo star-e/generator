@@ -768,6 +768,7 @@ struct ModuleInfo {
     std::string mAPI;
     std::string mFolder;
     std::string mFilePrefix;
+    std::string mTypescriptInclude;
 };
 
 struct ModuleGraph {

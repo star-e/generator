@@ -618,6 +618,11 @@ void ModuleBuilder::outputModule(const std::filesystem::path& rootFolder,
                 oss << "';\n";
             }
 
+            if (!m.mTypescriptInclude.empty()) {
+                copyString(oss, space, m.mTypescriptInclude);
+                ++count;
+            }
+
             if (count || !imported.empty())
                 oss << "\n";
         }

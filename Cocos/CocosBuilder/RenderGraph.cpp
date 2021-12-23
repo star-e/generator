@@ -383,7 +383,9 @@ void buildRenderGraph(ModuleBuilder& builder) {
     MODULE(RenderGraph,
         .mAPI = "CC_DLL",
         .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "render-graph") {
+        .mFilePrefix = "render-graph",
+        .mTypescriptInclude = R"(import { Mat4 } from '../math';
+)") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 FLAGS(ResourceFlags, 
@@ -640,7 +642,10 @@ void buildRenderGraph(ModuleBuilder& builder) {
                         (RenderData&, mData, _)
                     );
                     EXPLICIT_CNTR(mData);
-                    TS_FUNCTIONS(R"(setMatrix4x4 (name: string, data: number[]): void {
+                    TS_FUNCTIONS(R"(setMat4 (name: string, mat: Mat4): void {
+
+}
+setMatrix4x4 (name: string, data: number[]): void {
 
 }
 setMatrix3x4 (name: string, data: number[]): void {
@@ -694,20 +699,45 @@ setSampler (name: string, sampler: Sampler): void {
 )");
                 }
 
+                STRUCT(RenderConfig) {
+                    PUBLIC(
+                        (float, mShadingScale, 1.0)
+                    );
+                }
+
                 STRUCT(RasterQueue) {
                     INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RenderQueueData&, mQueue, _)
+                        (RenderConfig&, mConfig, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mConfig);
                     TS_FUNCTIONS(R"(addCamera (camera: Camera, name = 'Camera'): RasterQueue {
     const scene = new SceneData(name);
     scene.camera = camera;
     this._renderGraph.addVertex<RenderGraphValue.scene>(
         RenderGraphValue.scene, scene, name, '', new RenderData(), this._vertID,
     );
+    this.setMat4('cc_matView', camera.matView);
+    this.setMat4('cc_matViewInv', camera.node.worldMatrix);
+    this.setMat4('cc_matProj', camera.matProj);
+    this.setMat4('cc_matProjInv', camera.matProjInv);
+    this.setMat4('cc_matViewProj', camera.matViewProj);
+    this.setMat4('cc_matViewProjInv', camera.matViewProjInv);
+    this.setFloat4('cc_cameraPos', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_screenScale', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_exposure', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_mainLitDir', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_mainLitColor', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_ambientSky', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_ambientGround', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_fogColor', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_fogBase', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_fogAdd', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_nearFar', [camera.position.x, camera.position.y, camera.position.z]);
+    this.setFloat4('cc_viewPort', [camera.position.x, camera.position.y, camera.position.z]);
     return this;
 }
 addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
@@ -724,8 +754,9 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RasterPassData&, mPass, _)
+                        (RenderConfig&, mConfig, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mConfig);
                     TS_FUNCTIONS(R"(addRasterView (name: string, view: RasterView) {
     this._pass.rasterViews.set(name, view);
 }
@@ -757,7 +788,7 @@ addQueue (hint: QueueHint = QueueHint.Opaque, layoutName = '', name = 'Queue') {
     const queueID = this._renderGraph.addVertex<RenderGraphValue.queue>(
         RenderGraphValue.queue, queue, name, layoutName, data, this._vertID,
     );
-    return new RasterQueue(data, this._renderGraph, queueID, queue);
+    return new RasterQueue(data, this._renderGraph, queueID, queue, this._config);
 }
 addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
     this._renderGraph.addVertex<RenderGraphValue.blit>(
@@ -775,8 +806,9 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RenderQueueData&, mQueue, _)
+                        (RenderConfig&, mConfig, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mConfig);
                     TS_FUNCTIONS(R"(addDispatch (shader: string,
     threadGroupCountX: number,
     threadGroupCountY: number,
@@ -798,8 +830,9 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (ComputePassData&, mPass, _)
+                        (RenderConfig&, mConfig, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mConfig);
                     TS_FUNCTIONS(R"(addComputeView (name: string, view: ComputeView) {
     if (this._pass.computeViews.has(name)) {
         this._pass.computeViews.get(name)?.push(view);
