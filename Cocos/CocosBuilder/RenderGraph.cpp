@@ -40,6 +40,22 @@ void buildRenderGraph(ModuleBuilder& builder) {
             IMPORT_CLASS(Camera);
         }
     }
+    MODULE(Ambient,
+        .mAPI = "CC_DLL",
+        .mFolder = "cocos/core/renderer/scene",
+        .mFilePrefix = "ambient") {
+        NAMESPACE(cc) {
+            IMPORT_CLASS(Ambient);
+        }
+    }
+    MODULE(Fog,
+        .mAPI = "CC_DLL",
+        .mFolder = "cocos/core/renderer/scene",
+        .mFilePrefix = "fog") {
+        NAMESPACE(cc) {
+            IMPORT_CLASS(Fog);
+        }
+    }
 
     MODULE(Gfx,
         .mAPI = "CC_DLL",
@@ -385,6 +401,8 @@ void buildRenderGraph(ModuleBuilder& builder) {
         .mFolder = "cocos/core/pipeline",
         .mFilePrefix = "render-graph",
         .mTypescriptInclude = R"(import { Mat4 } from '../math';
+import { legacyCC } from '../global-exports';
+import { RenderScene } from '../renderer/scene';
 )") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
@@ -696,11 +714,64 @@ setRWTexture (name: string, texture: Texture): void {
 setSampler (name: string, sampler: Sampler): void {
 
 }
+protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<RenderConfig>, scene: Readonly<RenderScene>) {
+    this.setMat4('cc_matView', camera.matView);
+    this.setMat4('cc_matViewInv', camera.node.worldMatrix);
+    this.setMat4('cc_matProj', camera.matProj);
+    this.setMat4('cc_matProjInv', camera.matProjInv);
+    this.setMat4('cc_matViewProj', camera.matViewProj);
+    this.setMat4('cc_matViewProjInv', camera.matViewProjInv);
+    this.setFloat4('cc_cameraPos', [camera.position.x, camera.position.y, camera.position.z, 0.0]);
+    this.setFloat4('cc_screenScale', [cfg.shadingScale, cfg.shadingScale, 1.0 / cfg.shadingScale, 1.0 / cfg.shadingScale]);
+    this.setFloat4('cc_exposure', [camera.exposure, 1.0 / camera.exposure, cfg.isHDR ? 1.0 : 0.0, 0.0]);
+
+    const mainLight = scene.mainLight;
+    if (mainLight) {
+        this.setFloat4('cc_mainLitDir', [mainLight.direction.x, mainLight.direction.y, mainLight.direction.z, 0.0]);
+        let r = mainLight.color.x;
+        let g = mainLight.color.y;
+        let b = mainLight.color.z;
+        if (mainLight.useColorTemperature) {
+            r *= mainLight.colorTemperatureRGB.x;
+            g *= mainLight.colorTemperatureRGB.y;
+            b *= mainLight.colorTemperatureRGB.z;
+        }
+        let w = mainLight.illuminance;
+        if (cfg.isHDR) {
+            w *= camera.exposure;
+        }
+        this.setFloat4('cc_mainLitColor', [r, g, b, w]);
+    } else {
+        this.setFloat4('cc_mainLitDir', [0, 0, 1, 0]);
+        this.setFloat4('cc_mainLitColor', [0, 0, 0, 0]);
+    }
+
+    const ambient = cfg.ambient;
+    const skyColor = ambient.skyColor;
+    if (cfg.isHDR) {
+        skyColor.w = ambient.skyIllum * camera.exposure;
+    } else {
+        skyColor.w = ambient.skyIllum;
+    }
+    this.setFloat4('cc_ambientSky', [skyColor.x, skyColor.y, skyColor.z, skyColor.w]);
+    this.setFloat4('cc_ambientGround', [ambient.groundAlbedo.x, ambient.groundAlbedo.y, ambient.groundAlbedo.z, ambient.groundAlbedo.w]);
+
+    const fog = cfg.fog;
+    const colorTempRGB = fog.colorArray;
+    this.setFloat4('cc_fogColor', [colorTempRGB.x, colorTempRGB.y, colorTempRGB.z, colorTempRGB.w]);
+    this.setFloat4('cc_fogBase', [fog.fogStart, fog.fogEnd, fog.fogDensity, 0.0]);
+    this.setFloat4('cc_fogAdd', [fog.fogTop, fog.fogRange, fog.fogAtten, 0.0]);
+    this.setFloat4('cc_nearFar', [camera.nearClip, camera.farClip, 0.0, 0.0]);
+    this.setFloat4('cc_viewPort', [camera.viewport.x, camera.viewport.y, camera.viewport.z, camera.viewport.w]);
+}
 )");
                 }
 
                 STRUCT(RenderConfig) {
                     PUBLIC(
+                        (Ambient, mAmbient, _)
+                        (Fog, mFog, _)
+                        (bool, mIsHDR, false)
                         (float, mShadingScale, 1.0)
                     );
                 }
@@ -715,29 +786,13 @@ setSampler (name: string, sampler: Sampler): void {
                     );
                     EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mConfig);
                     TS_FUNCTIONS(R"(addCamera (camera: Camera, name = 'Camera'): RasterQueue {
-    const scene = new SceneData(name);
-    scene.camera = camera;
+    const sceneData = new SceneData(name);
+    sceneData.camera = camera;
     this._renderGraph.addVertex<RenderGraphValue.scene>(
-        RenderGraphValue.scene, scene, name, '', new RenderData(), this._vertID,
+        RenderGraphValue.scene, sceneData, name, '', new RenderData(), this._vertID,
     );
-    this.setMat4('cc_matView', camera.matView);
-    this.setMat4('cc_matViewInv', camera.node.worldMatrix);
-    this.setMat4('cc_matProj', camera.matProj);
-    this.setMat4('cc_matProjInv', camera.matProjInv);
-    this.setMat4('cc_matViewProj', camera.matViewProj);
-    this.setMat4('cc_matViewProjInv', camera.matViewProjInv);
-    this.setFloat4('cc_cameraPos', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_screenScale', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_exposure', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_mainLitDir', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_mainLitColor', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_ambientSky', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_ambientGround', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_fogColor', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_fogBase', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_fogAdd', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_nearFar', [camera.position.x, camera.position.y, camera.position.z]);
-    this.setFloat4('cc_viewPort', [camera.position.x, camera.position.y, camera.position.z]);
+    super._setCameraValues(camera, this._config,
+        camera.scene ? camera.scene : legacyCC.director.getScene().renderScene);
     return this;
 }
 addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
