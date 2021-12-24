@@ -56,6 +56,22 @@ void buildRenderGraph(ModuleBuilder& builder) {
             IMPORT_CLASS(Fog);
         }
     }
+    MODULE(Shadows,
+        .mAPI = "CC_DLL",
+        .mFolder = "cocos/core/renderer/scene",
+        .mFilePrefix = "shadows") {
+        NAMESPACE(cc) {
+            IMPORT_CLASS(Shadows);
+        }
+    }
+    MODULE(PipelineSceneData,
+        .mAPI = "CC_DLL",
+        .mFolder = "cocos/core/pipeline",
+        .mFilePrefix = "pipeline-scene-data") {
+        NAMESPACE(cc) {
+            IMPORT_CLASS(PipelineSceneData);
+        }
+    }
 
     MODULE(Gfx,
         .mAPI = "CC_DLL",
@@ -714,7 +730,7 @@ setRWTexture (name: string, texture: Texture): void {
 setSampler (name: string, sampler: Sampler): void {
 
 }
-protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<RenderConfig>, scene: Readonly<RenderScene>) {
+protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<PipelineSceneData>, scene: Readonly<RenderScene>) {
     this.setMat4('cc_matView', camera.matView);
     this.setMat4('cc_matViewInv', camera.node.worldMatrix);
     this.setMat4('cc_matProj', camera.matProj);
@@ -767,38 +783,37 @@ protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<RenderConfig
 )");
                 }
 
-                STRUCT(RenderConfig) {
-                    PUBLIC(
-                        (Ambient, mAmbient, _)
-                        (Fog, mFog, _)
-                        (bool, mIsHDR, false)
-                        (float, mShadingScale, 1.0)
-                    );
-                }
-
                 STRUCT(RasterQueue) {
                     INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RenderQueueData&, mQueue, _)
-                        (RenderConfig&, mConfig, _)
+                        (PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mConfig);
-                    TS_FUNCTIONS(R"(addCamera (camera: Camera, name = 'Camera'): RasterQueue {
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mPipeline);
+                    TS_FUNCTIONS(R"(addSceneOfCamera (camera: Camera, name = 'Camera'): RasterQueue {
     const sceneData = new SceneData(name);
     sceneData.camera = camera;
     this._renderGraph.addVertex<RenderGraphValue.scene>(
         RenderGraphValue.scene, sceneData, name, '', new RenderData(), this._vertID,
     );
-    super._setCameraValues(camera, this._config,
+    super._setCameraValues(camera, this._pipeline,
         camera.scene ? camera.scene : legacyCC.director.getScene().renderScene);
     return this;
 }
-addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
-    this._renderGraph.addVertex<RenderGraphValue.blit>(
-        RenderGraphValue.blit, new Blit(shader), name, layoutName, new RenderData(), this._vertID,
+addScene (sceneName: string): RasterQueue {
+    const sceneData = new SceneData(sceneName);
+    this._renderGraph.addVertex<RenderGraphValue.scene>(
+        RenderGraphValue.scene, sceneData, sceneName, '', new RenderData(), this._vertID,
     );
+    return this;
+}
+addFullscreenQuad (shader: string, name = 'Quad'): RasterQueue {
+    this._renderGraph.addVertex<RenderGraphValue.blit>(
+        RenderGraphValue.blit, new Blit(shader), name, '', new RenderData(), this._vertID,
+    );
+    return this;
 }
 )");
                 }
@@ -809,9 +824,9 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RasterPassData&, mPass, _)
-                        (RenderConfig&, mConfig, _)
+                        (PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mConfig);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mPipeline);
                     TS_FUNCTIONS(R"(addRasterView (name: string, view: RasterView) {
     this._pass.rasterViews.set(name, view);
 }
@@ -843,7 +858,7 @@ addQueue (hint: QueueHint = QueueHint.Opaque, layoutName = '', name = 'Queue') {
     const queueID = this._renderGraph.addVertex<RenderGraphValue.queue>(
         RenderGraphValue.queue, queue, name, layoutName, data, this._vertID,
     );
-    return new RasterQueue(data, this._renderGraph, queueID, queue, this._config);
+    return new RasterQueue(data, this._renderGraph, queueID, queue, this._pipeline);
 }
 addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
     this._renderGraph.addVertex<RenderGraphValue.blit>(
@@ -861,9 +876,9 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (RenderQueueData&, mQueue, _)
-                        (RenderConfig&, mConfig, _)
+                        (PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mConfig);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mPipeline);
                     TS_FUNCTIONS(R"(addDispatch (shader: string,
     threadGroupCountX: number,
     threadGroupCountY: number,
@@ -885,9 +900,9 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (ComputePassData&, mPass, _)
-                        (RenderConfig&, mConfig, _)
+                        (PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mConfig);
+                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mPipeline);
                     TS_FUNCTIONS(R"(addComputeView (name: string, view: ComputeView) {
     if (this._pass.computeViews.has(name)) {
         this._pass.computeViews.get(name)?.push(view);

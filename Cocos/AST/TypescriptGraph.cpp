@@ -514,6 +514,8 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         int count = 0;
         auto outputComma = [&]() {
             if (bChangeLine) {
+                if (count++ == 0)
+                    oss << "\n";
                 INDENT();
                 OSS;
             } else {
@@ -560,10 +562,6 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 [&](const auto&) {
                 });
         }
-
-        if (bChangeLine)
-            oss << "\n";
-
         outputParams(cntr, members);
 
         if (bChangeLine) {
