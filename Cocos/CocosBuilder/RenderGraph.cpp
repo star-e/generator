@@ -648,7 +648,6 @@ import { RenderScene } from '../renderer/scene';
                 GRAPH(RenderGraph, _, _) {
                     NAMED_GRAPH();
                     REFERENCE_GRAPH();
-                    //ADDRESSABLE_GRAPH();
 
                     COMPONENT_GRAPH(
                         (Layout, std::pmr::string, mLayoutNodes)
