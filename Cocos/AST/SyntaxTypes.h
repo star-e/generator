@@ -525,7 +525,7 @@ struct SyntaxGraph {
     // Graph
     using directed_category = boost::bidirectional_tag;
     using vertex_descriptor = uint32_t;
-    using edge_descriptor = Graph::EdgeDescriptor<directed_category, vertex_descriptor>;
+    using edge_descriptor = Impl::EdgeDescriptor<directed_category, vertex_descriptor>;
     using edge_parallel_category = boost::allow_parallel_edge_tag;
     struct traversal_category
         : virtual boost::incidence_graph_tag
@@ -539,15 +539,15 @@ struct SyntaxGraph {
     }
 
     // IncidenceGraph
-    using out_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using out_edge_iterator = Graph::OutEdgeIter<
+    using out_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using out_edge_iterator = Impl::OutEdgeIter<
         std::pmr::vector<out_edge_type>::iterator,
         vertex_descriptor, edge_descriptor, int32_t>;
     using degree_size_type = uint32_t;
 
     // BidirectionalGraph
-    using in_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using in_edge_iterator = Graph::InEdgeIter<
+    using in_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using in_edge_iterator = Impl::InEdgeIter<
         std::pmr::vector<in_edge_type>::iterator,
         vertex_descriptor, edge_descriptor, int32_t>;
 
@@ -587,24 +587,24 @@ struct SyntaxGraph {
     }
 
     // EdgeListGraph
-    using edge_iterator = Graph::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, SyntaxGraph>;
+    using edge_iterator = Impl::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, SyntaxGraph>;
     using edges_size_type = uint32_t;
 
     // AddressableGraph (Separated)
-    using ownership_descriptor = Graph::EdgeDescriptor<boost::bidirectional_tag, vertex_descriptor>;
+    using ownership_descriptor = Impl::EdgeDescriptor<boost::bidirectional_tag, vertex_descriptor>;
 
-    using children_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using children_iterator = Graph::OutEdgeIter<
+    using children_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using children_iterator = Impl::OutEdgeIter<
         std::pmr::vector<children_edge_type>::iterator,
         vertex_descriptor, ownership_descriptor, int32_t>;
     using children_size_type = uint32_t;
 
-    using parent_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using parent_iterator = Graph::InEdgeIter<
+    using parent_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using parent_iterator = Impl::InEdgeIter<
         std::pmr::vector<parent_edge_type>::iterator,
         vertex_descriptor, ownership_descriptor, int32_t>;
 
-    using ownership_iterator = Graph::OwnershipIterator<vertex_iterator, children_iterator, SyntaxGraph>;
+    using ownership_iterator = Impl::OwnershipIterator<vertex_iterator, children_iterator, SyntaxGraph>;
     using ownerships_size_type = edges_size_type;
 
     // AddressableGraph help functions
@@ -627,19 +627,19 @@ struct SyntaxGraph {
     using vertex_value_type = std::variant<Namespace*, Declare*, Concept*, Value*, Enum*, Tag*, Struct*, Graph2*, Optional*, Variant*, Container*, Map*, Instance*>;
     using vertex_const_value_type = std::variant<const Namespace*, const Declare*, const Concept*, const Value*, const Enum*, const Tag*, const Struct*, const Graph2*, const Optional*, const Variant*, const Container*, const Map*, const Instance*>;
     using vertex_handle_type = std::variant<
-        Graph::ValueHandle<Namespace_, Namespace>,
-        Graph::ValueHandle<Declare_, Declare>,
-        Graph::ValueHandle<Concept_, Concept>,
-        Graph::ValueHandle<Value_, Value>,
-        Graph::ValueHandle<Enum_, vertex_descriptor>,
-        Graph::ValueHandle<Tag_, vertex_descriptor>,
-        Graph::ValueHandle<Struct_, vertex_descriptor>,
-        Graph::ValueHandle<Graph_, vertex_descriptor>,
-        Graph::ValueHandle<Optional_, Optional>,
-        Graph::ValueHandle<Variant_, vertex_descriptor>,
-        Graph::ValueHandle<Container_, Container>,
-        Graph::ValueHandle<Map_, Map>,
-        Graph::ValueHandle<Instance_, vertex_descriptor>>;
+        Impl::ValueHandle<Namespace_, Namespace>,
+        Impl::ValueHandle<Declare_, Declare>,
+        Impl::ValueHandle<Concept_, Concept>,
+        Impl::ValueHandle<Value_, Value>,
+        Impl::ValueHandle<Enum_, vertex_descriptor>,
+        Impl::ValueHandle<Tag_, vertex_descriptor>,
+        Impl::ValueHandle<Struct_, vertex_descriptor>,
+        Impl::ValueHandle<Graph_, vertex_descriptor>,
+        Impl::ValueHandle<Optional_, Optional>,
+        Impl::ValueHandle<Variant_, vertex_descriptor>,
+        Impl::ValueHandle<Container_, Container>,
+        Impl::ValueHandle<Map_, Map>,
+        Impl::ValueHandle<Instance_, vertex_descriptor>>;
 
     bool isNamespace(std::string_view typePath) const noexcept;
     bool isTag(vertex_descriptor vertID) const;
@@ -792,7 +792,7 @@ struct ModuleGraph {
     // Graph
     using directed_category = boost::bidirectional_tag;
     using vertex_descriptor = uint32_t;
-    using edge_descriptor = Graph::EdgeDescriptor<directed_category, vertex_descriptor>;
+    using edge_descriptor = Impl::EdgeDescriptor<directed_category, vertex_descriptor>;
     using edge_parallel_category = boost::allow_parallel_edge_tag;
     struct traversal_category
         : virtual boost::incidence_graph_tag
@@ -806,15 +806,15 @@ struct ModuleGraph {
     }
 
     // IncidenceGraph
-    using out_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using out_edge_iterator = Graph::OutEdgeIter<
+    using out_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using out_edge_iterator = Impl::OutEdgeIter<
         std::pmr::vector<out_edge_type>::iterator,
         vertex_descriptor, edge_descriptor, int32_t>;
     using degree_size_type = uint32_t;
 
     // BidirectionalGraph
-    using in_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using in_edge_iterator = Graph::InEdgeIter<
+    using in_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using in_edge_iterator = Impl::InEdgeIter<
         std::pmr::vector<in_edge_type>::iterator,
         vertex_descriptor, edge_descriptor, int32_t>;
 
@@ -854,24 +854,24 @@ struct ModuleGraph {
     }
 
     // EdgeListGraph
-    using edge_iterator = Graph::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, ModuleGraph>;
+    using edge_iterator = Impl::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, ModuleGraph>;
     using edges_size_type = uint32_t;
 
     // AddressableGraph (Separated)
-    using ownership_descriptor = Graph::EdgeDescriptor<boost::bidirectional_tag, vertex_descriptor>;
+    using ownership_descriptor = Impl::EdgeDescriptor<boost::bidirectional_tag, vertex_descriptor>;
 
-    using children_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using children_iterator = Graph::OutEdgeIter<
+    using children_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using children_iterator = Impl::OutEdgeIter<
         std::pmr::vector<children_edge_type>::iterator,
         vertex_descriptor, ownership_descriptor, int32_t>;
     using children_size_type = uint32_t;
 
-    using parent_edge_type = Graph::StoredEdge<vertex_descriptor>;
-    using parent_iterator = Graph::InEdgeIter<
+    using parent_edge_type = Impl::StoredEdge<vertex_descriptor>;
+    using parent_iterator = Impl::InEdgeIter<
         std::pmr::vector<parent_edge_type>::iterator,
         vertex_descriptor, ownership_descriptor, int32_t>;
 
-    using ownership_iterator = Graph::OwnershipIterator<vertex_iterator, children_iterator, ModuleGraph>;
+    using ownership_iterator = Impl::OwnershipIterator<vertex_iterator, children_iterator, ModuleGraph>;
     using ownerships_size_type = edges_size_type;
 
     // AddressableGraph help functions

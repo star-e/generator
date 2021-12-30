@@ -39,7 +39,7 @@ struct no_property;
 
 }
 
-namespace Cocos::Graph {
+namespace Cocos::Impl {
 
 struct path_t {} static constexpr path;
 

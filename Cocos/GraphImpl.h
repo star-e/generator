@@ -8,7 +8,7 @@
 #include <Cocos/Concept.h>
 #include <Cocos/GraphTypes.h>
 
-namespace Cocos::Graph {
+namespace Cocos::Impl {
 
 //using BidirEdge = Graph::EdgeDescriptorWithProperty<boost::bidirectional_tag, uint32_t>;
 
@@ -830,8 +830,8 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type&, Color
 namespace std {
 
 template<class DirectedCategory, class VertexDescriptor>
-struct hash<Cocos::Graph::EdgeDescriptor<DirectedCategory, VertexDescriptor>> {
-    size_t operator()(const Cocos::Graph::EdgeDescriptor<DirectedCategory, VertexDescriptor>& e) const noexcept {
+struct hash<Cocos::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>> {
+    size_t operator()(const Cocos::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>& e) const noexcept {
         return boost::hash_value(e.get_property());
     }
 };
