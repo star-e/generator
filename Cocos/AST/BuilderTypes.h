@@ -217,7 +217,7 @@ struct ModuleBuilder {
     std::pmr::string mCurrentModule;
     std::pmr::string mCurrentScope;
     std::pmr::memory_resource* mScratch = std::pmr::get_default_resource();
-    bool mUnderscoreMemberName = false;
+    bool mUnderscoreMemberName = true;
 };
 
 } // namespace Meta
