@@ -73,7 +73,7 @@ inline const char* getName(const Polymorphic& v) noexcept { return "Polymorphic"
 inline const char* getName(const Component& v) noexcept { return "Component"; }
 inline const char* getName(const Vector_& v) noexcept { return "Vector"; }
 inline const char* getName(const List_& v) noexcept { return "List"; }
-inline const char* getName(const Graph2& v) noexcept { return "Graph2"; }
+inline const char* getName(const Graph& v) noexcept { return "Graph"; }
 inline const char* getName(const Typescript& v) noexcept { return "Typescript"; }
 inline const char* getName(const SyntaxGraph& v) noexcept { return "SyntaxGraph"; }
 inline const char* getName(const ModuleInfo& v) noexcept { return "ModuleInfo"; }

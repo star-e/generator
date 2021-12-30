@@ -38,7 +38,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const std::pmr::vector<Constructor>& cntrs,
     std::pmr::memory_resource* scratch);
 
-std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph2& s,
+std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
     std::string_view name, std::pmr::memory_resource* scratch);
 
 }

@@ -36,7 +36,7 @@ namespace {
 
 constexpr bool gThrow = true;
 
-std::pmr::string generatePushIndicenceList(const Graph2& g,
+std::pmr::string generatePushIndicenceList(const Graph& g,
     std::string_view el, std::string_view outEdgeType,
     std::string_view v, std::string_view edge,
     std::pmr::memory_resource* scratch) {
@@ -52,7 +52,7 @@ std::pmr::string generatePushIndicenceList(const Graph2& g,
     return oss.str();
 }
 
-std::string generateAddEdge(const Graph2* ptr, std::string_view name,
+std::string generateAddEdge(const Graph* ptr, std::string_view name,
     std::string_view edgeType, std::string_view edgeDescType, std::string_view outEdgeType,
     bool property, bool addressable,
     std::pmr::memory_resource* scratch) {
@@ -110,7 +110,7 @@ std::string generateAddEdge(const Graph2* ptr, std::string_view name,
     return oss.str();
 }
 
-void outputRemoveEdge(std::ostream& oss, std::pmr::string& space, const Graph2& s,
+void outputRemoveEdge(std::ostream& oss, std::pmr::string& space, const Graph& s,
     std::string_view vertexDescType,
     std::string_view edgeType,
     bool bReferenceGraph,
@@ -195,7 +195,7 @@ void outputRemoveOutEdge(std::ostream& oss, std::pmr::string& space,
     OSS << "}\n";
 }
 
-void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph2& s,
+void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph& s,
     bool bReferenceGraph,
     std::pmr::memory_resource* scratch) {
     {
@@ -227,7 +227,7 @@ void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph2&
 }
 
 void outputNullVertex(std::ostream& oss, std::pmr::string& space,
-    const Graph2& s, std::string_view vertexDescType) {
+    const Graph& s, std::string_view vertexDescType) {
     if (s.isVector()) {
         OSS << "nullVertex (): " << vertexDescType << " { ";
     } else {
@@ -246,7 +246,7 @@ void outputNullVertex(std::ostream& oss, std::pmr::string& space,
 }
 
 void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::string_view name,
-    const SyntaxGraph& g, const Graph2& s, std::pmr::memory_resource* scratch) {
+    const SyntaxGraph& g, const Graph& s, std::pmr::memory_resource* scratch) {
     OSS << "export const enum " << name << "Value {\n";
     {
         INDENT();
@@ -309,7 +309,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
 }
 
 void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::string_view name,
-    const SyntaxGraph& g, const Graph2& s, std::pmr::memory_resource* scratch) {
+    const SyntaxGraph& g, const Graph& s, std::pmr::memory_resource* scratch) {
     Expects(!s.mComponents.empty());
 
     OSS << "export const enum " << name << "Component {\n";
@@ -346,7 +346,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
 
 void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
-    const Graph2& s, std::string_view name,
+    const Graph& s, std::string_view name,
     std::string_view vertexDescType,
     std::string_view vertexName,
     std::string_view outEdgeType,
@@ -465,7 +465,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
 }
 
 void outputGraphEdge(std::ostream& oss, std::pmr::string& space,
-    const Graph2& s, std::string_view vertexDescType,
+    const Graph& s, std::string_view vertexDescType,
     std::string_view edgeType, std::string_view edgeProperty) {
     Expects(!edgeProperty.empty());
 
@@ -653,7 +653,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     }
 }
 
-std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph2& s,
+std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
     std::string_view name,
     std::pmr::memory_resource* scratch) {
     const auto& g = builder.mSyntaxGraph;

@@ -387,21 +387,21 @@ inline bool operator!=(const VertexListType& lhs, const VertexListType& rhs) noe
     return !(lhs == rhs);
 }
 
-struct Graph2 {
+struct Graph {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
         return allocator_type(mInherits.get_allocator().resource());
     }
 
-    Graph2(const allocator_type& alloc) noexcept;
-    Graph2(Graph2&& rhs, const allocator_type& alloc);
-    Graph2(Graph2 const& rhs, const allocator_type& alloc);
+    Graph(const allocator_type& alloc) noexcept;
+    Graph(Graph&& rhs, const allocator_type& alloc);
+    Graph(Graph const& rhs, const allocator_type& alloc);
 
-    Graph2(Graph2&& rhs) = default;
-    Graph2(Graph2 const& rhs) = delete;
-    Graph2& operator=(Graph2&& rhs) = default;
-    Graph2& operator=(Graph2 const& rhs) = default;
-    ~Graph2() noexcept;
+    Graph(Graph&& rhs) = default;
+    Graph(Graph const& rhs) = delete;
+    Graph& operator=(Graph&& rhs) = default;
+    Graph& operator=(Graph const& rhs) = default;
+    ~Graph() noexcept;
 
     std::pmr::string getTypescriptVertexDescriptorType(std::string_view tsName,
         std::pmr::memory_resource* scratch) const;
@@ -624,8 +624,8 @@ struct SyntaxGraph {
 
     // PolymorphicGraph
     using vertex_tag_type = std::variant<Namespace_, Declare_, Concept_, Value_, Enum_, Tag_, Struct_, Graph_, Optional_, Variant_, Container_, Map_, Instance_>;
-    using vertex_value_type = std::variant<Namespace*, Declare*, Concept*, Value*, Enum*, Tag*, Struct*, Graph2*, Optional*, Variant*, Container*, Map*, Instance*>;
-    using vertex_const_value_type = std::variant<const Namespace*, const Declare*, const Concept*, const Value*, const Enum*, const Tag*, const Struct*, const Graph2*, const Optional*, const Variant*, const Container*, const Map*, const Instance*>;
+    using vertex_value_type = std::variant<Namespace*, Declare*, Concept*, Value*, Enum*, Tag*, Struct*, Graph*, Optional*, Variant*, Container*, Map*, Instance*>;
+    using vertex_const_value_type = std::variant<const Namespace*, const Declare*, const Concept*, const Value*, const Enum*, const Tag*, const Struct*, const Graph*, const Optional*, const Variant*, const Container*, const Map*, const Instance*>;
     using vertex_handle_type = std::variant<
         Impl::ValueHandle<Namespace_, Namespace>,
         Impl::ValueHandle<Declare_, Declare>,
@@ -684,7 +684,7 @@ struct SyntaxGraph {
         vertex_descriptor vertID, const Member& member,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
 
-    std::pmr::string getTypescriptGraphPolymorphicVariant(const Graph2& s,
+    std::pmr::string getTypescriptGraphPolymorphicVariant(const Graph& s,
         std::pmr::memory_resource* mr,
         std::pmr::memory_resource* scratch) const;
 
@@ -756,7 +756,7 @@ struct SyntaxGraph {
     std::pmr::vector<Enum> mEnums;
     std::pmr::vector<Tag> mTags;
     std::pmr::vector<Struct> mStructs;
-    std::pmr::vector<Graph2> mGraphs;
+    std::pmr::vector<Graph> mGraphs;
     std::pmr::vector<Variant> mVariants;
     std::pmr::vector<Instance> mInstances;
     // Path

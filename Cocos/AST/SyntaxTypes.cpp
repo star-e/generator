@@ -216,7 +216,7 @@ Component::Component(Component const& rhs, const allocator_type& alloc)
 
 Component::~Component() noexcept = default;
 
-Graph2::Graph2(const allocator_type& alloc) noexcept
+Graph::Graph(const allocator_type& alloc) noexcept
     : mInherits(alloc)
     , mMembers(alloc)
     , mConstructors(alloc)
@@ -233,7 +233,7 @@ Graph2::Graph2(const allocator_type& alloc) noexcept
     , mEdgeDifferenceType(alloc)
     , mDegreeSizeType(alloc) {}
 
-Graph2::Graph2(Graph2&& rhs, const allocator_type& alloc)
+Graph::Graph(Graph&& rhs, const allocator_type& alloc)
     : mInherits(std::move(rhs.mInherits), alloc)
     , mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
@@ -256,7 +256,7 @@ Graph2::Graph2(Graph2&& rhs, const allocator_type& alloc)
     , mEdgeDifferenceType(std::move(rhs.mEdgeDifferenceType), alloc)
     , mDegreeSizeType(std::move(rhs.mDegreeSizeType), alloc) {}
 
-Graph2::Graph2(Graph2 const& rhs, const allocator_type& alloc)
+Graph::Graph(Graph const& rhs, const allocator_type& alloc)
     : mInherits(rhs.mInherits, alloc)
     , mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
@@ -279,7 +279,7 @@ Graph2::Graph2(Graph2 const& rhs, const allocator_type& alloc)
     , mEdgeDifferenceType(rhs.mEdgeDifferenceType, alloc)
     , mDegreeSizeType(rhs.mDegreeSizeType, alloc) {}
 
-Graph2::~Graph2() noexcept = default;
+Graph::~Graph() noexcept = default;
 
 Typescript::Typescript(const allocator_type& alloc) noexcept
     : mName(alloc) {}

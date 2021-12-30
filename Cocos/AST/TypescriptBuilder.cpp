@@ -63,7 +63,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             }
             OSS << "}\n";
         },
-        [&](const Graph2& s) {
+        [&](const Graph& s) {
             if (currScope.mCount++)
                 oss << "\n";
 

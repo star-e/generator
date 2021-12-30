@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-std::pmr::string Graph2::getTypescriptVertexDescriptorType(
+std::pmr::string Graph::getTypescriptVertexDescriptorType(
     std::string_view tsName, std::pmr::memory_resource* scratch) const {
     return visit(
         overload(
@@ -43,7 +43,7 @@ std::pmr::string Graph2::getTypescriptVertexDescriptorType(
         mVertexListType);
 }
 
-std::string_view Graph2::getTypescriptEdgeDescriptorType() const {
+std::string_view Graph::getTypescriptEdgeDescriptorType() const {
     if (mEdgeProperty.empty()) {
         return "impl.ED";
     } else {
@@ -51,7 +51,7 @@ std::string_view Graph2::getTypescriptEdgeDescriptorType() const {
     }
 }
 
-std::string_view Graph2::getTypescriptReferenceDescriptorType() const {
+std::string_view Graph::getTypescriptReferenceDescriptorType() const {
     if (isAliasGraph()) {
         return getTypescriptEdgeDescriptorType();
     } else {
@@ -59,7 +59,7 @@ std::string_view Graph2::getTypescriptReferenceDescriptorType() const {
     }
 }
 
-std::pmr::string Graph2::getTypescriptVertexDereference(std::string_view v,
+std::pmr::string Graph::getTypescriptVertexDereference(std::string_view v,
     std::pmr::memory_resource* scratch) const {
     pmr_ostringstream oss(std::ios_base::out, scratch);
 
@@ -72,7 +72,7 @@ std::pmr::string Graph2::getTypescriptVertexDereference(std::string_view v,
     return oss.str();
 }
 
-std::string_view Graph2::getTypescriptOutEdgeList(bool bAddressable) const {
+std::string_view Graph::getTypescriptOutEdgeList(bool bAddressable) const {
     if (bAddressable) {
         if (mAliasGraph) {
             return "_outEdges";
@@ -84,7 +84,7 @@ std::string_view Graph2::getTypescriptOutEdgeList(bool bAddressable) const {
     }
 }
 
-std::string_view Graph2::getTypescriptInEdgeList(bool bAddressable) const {
+std::string_view Graph::getTypescriptInEdgeList(bool bAddressable) const {
     if (bAddressable) {
         return "_parents";
     } else {
@@ -98,7 +98,7 @@ std::pmr::string Component::getTypescriptComponentType(const SyntaxGraph& g,
     return g.getTypescriptTypename(vertID, mr, scratch);
 }
 
-std::string_view Graph2::getTypescriptNullVertex() const {
+std::string_view Graph::getTypescriptNullVertex() const {
     return visit(
         overload(
             [&](Vector_) {
@@ -110,7 +110,7 @@ std::string_view Graph2::getTypescriptNullVertex() const {
         mVertexListType);
 }
 
-std::pmr::string Graph2::getTypescriptVertexPropertyType(const SyntaxGraph& g,
+std::pmr::string Graph::getTypescriptVertexPropertyType(const SyntaxGraph& g,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept {
     auto vertID = locate(mVertexProperty, g);
     return g.getTypescriptTypename(vertID, mr, scratch);
@@ -697,7 +697,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
     return result;
 }
 
-std::pmr::string SyntaxGraph::getTypescriptGraphPolymorphicVariant(const Graph2& s,
+std::pmr::string SyntaxGraph::getTypescriptGraphPolymorphicVariant(const Graph& s,
     std::pmr::memory_resource* mr,
     std::pmr::memory_resource* scratch) const {
     const auto& g = *this;
@@ -778,7 +778,7 @@ PmrMap<std::pmr::string, PmrSet<std::pmr::string>> SyntaxGraph::getImportedTypes
 
         visit_vertex(
             vertID, g,
-            [&](const Graph2& s) {
+            [&](const Graph& s) {
                 if (!s.mVertexProperty.empty()) {
                     auto typeID = locate(s.mVertexProperty, g);
                     addImported(typeID, g, modulePath, imported);

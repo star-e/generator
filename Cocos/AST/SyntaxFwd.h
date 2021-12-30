@@ -92,7 +92,7 @@ struct List_;
 
 using VertexListType = std::variant<Vector_, List_>;
 
-struct Graph2;
+struct Graph;
 struct Typescript;
 template <> struct IsIdentifier<Namespace_> { static constexpr bool value = true; };
 
@@ -132,9 +132,9 @@ template <> struct IsIdentifier<Struct> { static constexpr bool value = true; };
 template <> struct IsData<Struct> { static constexpr bool value = true; };
 template <> struct IsComposition<Struct> { static constexpr bool value = true; };
 
-template <> struct IsIdentifier<Graph2> { static constexpr bool value = true; };
-template <> struct IsData<Graph2> { static constexpr bool value = true; };
-template <> struct IsComposition<Graph2> { static constexpr bool value = true; };
+template <> struct IsIdentifier<Graph> { static constexpr bool value = true; };
+template <> struct IsData<Graph> { static constexpr bool value = true; };
+template <> struct IsComposition<Graph> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Optional_> { static constexpr bool value = true; };
 template <> struct IsTemplate<Optional_> { static constexpr bool value = true; };

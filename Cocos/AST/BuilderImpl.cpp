@@ -649,7 +649,7 @@ void ModuleBuilder::outputModule(const std::filesystem::path& rootFolder,
                     [&](const Enum& e) {
                         bOutput = true;
                     },
-                    [&](const Graph2& s) {
+                    [&](const Graph& s) {
                         if (count++) {
                             oss << ",\n";
                             OSS; 
