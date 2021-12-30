@@ -12,7 +12,7 @@ int main() {
     addCppDefaultValues(builder);
     projectTypescriptDefaultValues(builder);
 
-    MODULE("Tutorial",
+    MODULE(Tutorial,
         .mAPI = "CC_API",
         .mFolder = "../../examples/tutorial",
         .mFilePrefix = "tutorial",
@@ -36,7 +36,7 @@ int main() {
                     (float, mX, 0)
                     (float, mY, 0)
                     (float, mZ, 0)
-                    (float, mRadius, 0)
+                    (float, mRadius, 1)
                 );
             }
 
