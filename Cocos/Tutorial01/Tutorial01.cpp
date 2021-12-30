@@ -2,6 +2,7 @@
 #include <Cocos/AST/BuilderTypes.h>
 #include <Cocos/AST/CppDefaultValues.h>
 #include <Cocos/AST/TypescriptDefaultValues.h>
+// notice: we do not use DSL in this example
 
 using namespace Cocos;
 using namespace Cocos::Meta;
