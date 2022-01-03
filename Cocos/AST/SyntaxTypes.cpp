@@ -344,15 +344,25 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph const& rhs, const allocator_type& alloc)
     , mPathIndex(rhs.mPathIndex, alloc) {}
 
 SyntaxGraph::SyntaxGraph(SyntaxGraph&& rhs) = default;
-SyntaxGraph::~SyntaxGraph() noexcept = default;
 SyntaxGraph& SyntaxGraph::operator=(SyntaxGraph&& rhs) = default;
 SyntaxGraph& SyntaxGraph::operator=(SyntaxGraph const& rhs) = default;
+SyntaxGraph::~SyntaxGraph() noexcept = default;
 
-SyntaxGraph::object_type::allocator_type SyntaxGraph::object_type::get_allocator() const noexcept {
-    return allocator_type{ mChildren.get_allocator().resource() };
+// ContinuousContainer
+void SyntaxGraph::reserve(vertices_size_type sz) {
+    mObjects.reserve(sz);
+    mVertices.reserve(sz);
+    mNames.reserve(sz);
+    mTraits.reserve(sz);
+    mModulePaths.reserve(sz);
+    mTypescripts.reserve(sz);
 }
 
-SyntaxGraph::object_type::object_type(const allocator_type& alloc)
+SyntaxGraph::object_type::allocator_type SyntaxGraph::object_type::get_allocator() const noexcept {
+    return allocator_type(mChildren.get_allocator().resource());
+}
+
+SyntaxGraph::object_type::object_type(const allocator_type& alloc) noexcept
     : mChildren(alloc)
     , mParents(alloc) {}
 
@@ -364,16 +374,16 @@ SyntaxGraph::object_type::object_type(const object_type& rhs, const allocator_ty
     : mChildren(rhs.mChildren, alloc)
     , mParents(rhs.mParents, alloc) {}
 
-SyntaxGraph::object_type::object_type(object_type&&) noexcept = default;
-SyntaxGraph::object_type& SyntaxGraph::object_type::operator=(object_type&&) = default;
-SyntaxGraph::object_type& SyntaxGraph::object_type::operator=(object_type const&) = default;
+SyntaxGraph::object_type::object_type(object_type&& rhs) noexcept = default;
+SyntaxGraph::object_type& SyntaxGraph::object_type::operator=(object_type&& rhs) = default;
+SyntaxGraph::object_type& SyntaxGraph::object_type::operator=(object_type const& rhs) = default;
 SyntaxGraph::object_type::~object_type() noexcept = default;
 
 SyntaxGraph::vertex_type::allocator_type SyntaxGraph::vertex_type::get_allocator() const noexcept {
-    return allocator_type{ mOutEdges.get_allocator().resource() };
+    return allocator_type(mOutEdges.get_allocator().resource());
 }
 
-SyntaxGraph::vertex_type::vertex_type(const allocator_type& alloc)
+SyntaxGraph::vertex_type::vertex_type(const allocator_type& alloc) noexcept
     : mOutEdges(alloc)
     , mInEdges(alloc) {}
 
@@ -382,25 +392,15 @@ SyntaxGraph::vertex_type::vertex_type(vertex_type&& rhs, const allocator_type& a
     , mInEdges(std::move(rhs.mInEdges), alloc)
     , mHandle(std::move(rhs.mHandle)) {}
 
-SyntaxGraph::vertex_type::vertex_type(const vertex_type& rhs, const allocator_type& alloc)
+SyntaxGraph::vertex_type::vertex_type(vertex_type const& rhs, const allocator_type& alloc)
     : mOutEdges(rhs.mOutEdges, alloc)
     , mInEdges(rhs.mInEdges, alloc)
     , mHandle(rhs.mHandle) {}
 
-SyntaxGraph::vertex_type::vertex_type(vertex_type&&) noexcept = default;
-SyntaxGraph::vertex_type& SyntaxGraph::vertex_type::operator=(vertex_type&&) = default;
-SyntaxGraph::vertex_type& SyntaxGraph::vertex_type::operator=(vertex_type const&) = default;
+SyntaxGraph::vertex_type::vertex_type(vertex_type&& rhs) noexcept = default;
+SyntaxGraph::vertex_type& SyntaxGraph::vertex_type::operator=(vertex_type&& rhs) = default;
+SyntaxGraph::vertex_type& SyntaxGraph::vertex_type::operator=(vertex_type const& rhs) = default;
 SyntaxGraph::vertex_type::~vertex_type() noexcept = default;
-
-// ContinuousContainer
-void SyntaxGraph::reserve(vertices_size_type sz) {
-    mObjects.reserve(sz);
-    mVertices.reserve(sz);
-    mNames.reserve(sz);
-    mTraits.reserve(sz);
-    mModulePaths.reserve(sz);
-    mTypescripts.reserve(sz);
-}
 
 ModuleGraph::allocator_type ModuleGraph::get_allocator() const noexcept {
     return allocator_type(mVertices.get_allocator().resource());
@@ -428,15 +428,23 @@ ModuleGraph::ModuleGraph(ModuleGraph const& rhs, const allocator_type& alloc)
     , mPathIndex(rhs.mPathIndex, alloc) {}
 
 ModuleGraph::ModuleGraph(ModuleGraph&& rhs) = default;
-ModuleGraph::~ModuleGraph() noexcept = default;
 ModuleGraph& ModuleGraph::operator=(ModuleGraph&& rhs) = default;
 ModuleGraph& ModuleGraph::operator=(ModuleGraph const& rhs) = default;
+ModuleGraph::~ModuleGraph() noexcept = default;
 
-ModuleGraph::object_type::allocator_type ModuleGraph::object_type::get_allocator() const noexcept {
-    return allocator_type{ mChildren.get_allocator().resource() };
+// ContinuousContainer
+void ModuleGraph::reserve(vertices_size_type sz) {
+    mObjects.reserve(sz);
+    mVertices.reserve(sz);
+    mNames.reserve(sz);
+    mModules.reserve(sz);
 }
 
-ModuleGraph::object_type::object_type(const allocator_type& alloc)
+ModuleGraph::object_type::allocator_type ModuleGraph::object_type::get_allocator() const noexcept {
+    return allocator_type(mChildren.get_allocator().resource());
+}
+
+ModuleGraph::object_type::object_type(const allocator_type& alloc) noexcept
     : mChildren(alloc)
     , mParents(alloc) {}
 
@@ -448,16 +456,16 @@ ModuleGraph::object_type::object_type(const object_type& rhs, const allocator_ty
     : mChildren(rhs.mChildren, alloc)
     , mParents(rhs.mParents, alloc) {}
 
-ModuleGraph::object_type::object_type(object_type&&) noexcept = default;
-ModuleGraph::object_type& ModuleGraph::object_type::operator=(object_type&&) = default;
-ModuleGraph::object_type& ModuleGraph::object_type::operator=(object_type const&) = default;
+ModuleGraph::object_type::object_type(object_type&& rhs) noexcept = default;
+ModuleGraph::object_type& ModuleGraph::object_type::operator=(object_type&& rhs) = default;
+ModuleGraph::object_type& ModuleGraph::object_type::operator=(object_type const& rhs) = default;
 ModuleGraph::object_type::~object_type() noexcept = default;
 
 ModuleGraph::vertex_type::allocator_type ModuleGraph::vertex_type::get_allocator() const noexcept {
-    return allocator_type{ mOutEdges.get_allocator().resource() };
+    return allocator_type(mOutEdges.get_allocator().resource());
 }
 
-ModuleGraph::vertex_type::vertex_type(const allocator_type& alloc)
+ModuleGraph::vertex_type::vertex_type(const allocator_type& alloc) noexcept
     : mOutEdges(alloc)
     , mInEdges(alloc) {}
 
@@ -465,22 +473,14 @@ ModuleGraph::vertex_type::vertex_type(vertex_type&& rhs, const allocator_type& a
     : mOutEdges(std::move(rhs.mOutEdges), alloc)
     , mInEdges(std::move(rhs.mInEdges), alloc) {}
 
-ModuleGraph::vertex_type::vertex_type(const vertex_type& rhs, const allocator_type& alloc)
+ModuleGraph::vertex_type::vertex_type(vertex_type const& rhs, const allocator_type& alloc)
     : mOutEdges(rhs.mOutEdges, alloc)
     , mInEdges(rhs.mInEdges, alloc) {}
 
-ModuleGraph::vertex_type::vertex_type(vertex_type&&) noexcept = default;
-ModuleGraph::vertex_type& ModuleGraph::vertex_type::operator=(vertex_type&&) = default;
-ModuleGraph::vertex_type& ModuleGraph::vertex_type::operator=(vertex_type const&) = default;
+ModuleGraph::vertex_type::vertex_type(vertex_type&& rhs) noexcept = default;
+ModuleGraph::vertex_type& ModuleGraph::vertex_type::operator=(vertex_type&& rhs) = default;
+ModuleGraph::vertex_type& ModuleGraph::vertex_type::operator=(vertex_type const& rhs) = default;
 ModuleGraph::vertex_type::~vertex_type() noexcept = default;
-
-// ContinuousContainer
-void ModuleGraph::reserve(vertices_size_type sz) {
-    mObjects.reserve(sz);
-    mVertices.reserve(sz);
-    mNames.reserve(sz);
-    mModules.reserve(sz);
-}
 
 } // namespace Meta
 

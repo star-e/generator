@@ -701,14 +701,14 @@ struct SyntaxGraph {
         using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
         allocator_type get_allocator() const noexcept;
 
-        object_type(const allocator_type& alloc);
+        object_type(const allocator_type& alloc) noexcept;
         object_type(object_type&& rhs, const allocator_type& alloc);
-        object_type(const object_type& rhs, const allocator_type& alloc);
+        object_type(object_type const& rhs, const allocator_type& alloc);
 
-        object_type(object_type&&) noexcept;
-        object_type(object_type const&) = delete;
-        object_type& operator=(object_type&&);
-        object_type& operator=(object_type const&);
+        object_type(object_type&& rhs) noexcept;
+        object_type(object_type const& rhs) = delete;
+        object_type& operator=(object_type&& rhs);
+        object_type& operator=(object_type const& rhs);
         ~object_type() noexcept;
 
         std::pmr::vector<children_edge_type> mChildren;
@@ -719,14 +719,14 @@ struct SyntaxGraph {
         using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
         allocator_type get_allocator() const noexcept;
 
-        vertex_type(const allocator_type& alloc);
+        vertex_type(const allocator_type& alloc) noexcept;
         vertex_type(vertex_type&& rhs, const allocator_type& alloc);
-        vertex_type(const vertex_type& rhs, const allocator_type& alloc);
+        vertex_type(vertex_type const& rhs, const allocator_type& alloc);
 
-        vertex_type(vertex_type&&) noexcept;
-        vertex_type(vertex_type const&) = delete;
-        vertex_type& operator=(vertex_type&&);
-        vertex_type& operator=(vertex_type const&);
+        vertex_type(vertex_type&& rhs) noexcept;
+        vertex_type(vertex_type const& rhs) = delete;
+        vertex_type& operator=(vertex_type&& rhs);
+        vertex_type& operator=(vertex_type const& rhs);
         ~vertex_type() noexcept;
 
         std::pmr::vector<out_edge_type> mOutEdges;
@@ -897,14 +897,14 @@ struct ModuleGraph {
         using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
         allocator_type get_allocator() const noexcept;
 
-        object_type(const allocator_type& alloc);
+        object_type(const allocator_type& alloc) noexcept;
         object_type(object_type&& rhs, const allocator_type& alloc);
-        object_type(const object_type& rhs, const allocator_type& alloc);
+        object_type(object_type const& rhs, const allocator_type& alloc);
 
-        object_type(object_type&&) noexcept;
-        object_type(object_type const&) = delete;
-        object_type& operator=(object_type&&);
-        object_type& operator=(object_type const&);
+        object_type(object_type&& rhs) noexcept;
+        object_type(object_type const& rhs) = delete;
+        object_type& operator=(object_type&& rhs);
+        object_type& operator=(object_type const& rhs);
         ~object_type() noexcept;
 
         std::pmr::vector<children_edge_type> mChildren;
@@ -915,14 +915,14 @@ struct ModuleGraph {
         using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
         allocator_type get_allocator() const noexcept;
 
-        vertex_type(const allocator_type& alloc);
+        vertex_type(const allocator_type& alloc) noexcept;
         vertex_type(vertex_type&& rhs, const allocator_type& alloc);
-        vertex_type(const vertex_type& rhs, const allocator_type& alloc);
+        vertex_type(vertex_type const& rhs, const allocator_type& alloc);
 
-        vertex_type(vertex_type&&) noexcept;
-        vertex_type(vertex_type const&) = delete;
-        vertex_type& operator=(vertex_type&&);
-        vertex_type& operator=(vertex_type const&);
+        vertex_type(vertex_type&& rhs) noexcept;
+        vertex_type(vertex_type const& rhs) = delete;
+        vertex_type& operator=(vertex_type&& rhs);
+        vertex_type& operator=(vertex_type const& rhs);
         ~vertex_type() noexcept;
 
         std::pmr::vector<out_edge_type> mOutEdges;
