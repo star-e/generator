@@ -26,6 +26,9 @@ THE SOFTWARE.
 
 #include <Cocos/AST/CppDefaultValues.h>
 #include <Cocos/AST/TypescriptDefaultValues.h>
+#include <Cocos/FileUtils.h>
+#include "RenderCommon.h"
+#include "LayoutGraph.h"
 #include "RenderGraph.h"
 
 using namespace Cocos;
@@ -33,22 +36,51 @@ using namespace Cocos::Meta;
 
 int main() {
     ModuleBuilder builder(std::pmr::get_default_resource());
-    builder.mUnderscoreMemberName = true;
 
-    addCppDefaultValues(builder);
-    projectTypescriptDefaultValues(builder);
-    buildRenderGraph(builder);
-    buildRenderExecutor(builder);
+    // output folder
+    std::filesystem::path outputFolder = "../../../engine";
+    
+    // type registration
+    {
+        // register c++/stl types
+        addCppDefaultValues(builder);
 
-    builder.outputModule("../../../engine", "RenderCommon",
-        Features::Typescripts);
+        // relate c++ to ts
+        projectTypescriptDefaultValues(builder);
 
-    builder.outputModule("../../../engine", "DescriptorLayout",
-        Features::Typescripts);
+        // build render pipeline
+        buildRenderCommon(builder);
+        buildLayoutGraph(builder);
+        buildRenderGraph(builder);
 
-    builder.outputModule("../../../engine", "RenderGraph",
-        Features::Typescripts);
+        // build executor modules
+        buildRenderExecutor(builder);
+    }
 
-    builder.outputModule("../../../engine", "RenderExecutor",
-        Features::Typescripts);
+    // output ts files
+    {
+        // common types, shared by different modules
+        builder.outputModule(outputFolder, "RenderCommon",
+            Features::Typescripts);
+
+        // descriptor layout graph
+        builder.outputModule(outputFolder, "DescriptorLayout",
+            Features::Typescripts);
+
+        // render graph
+        builder.outputModule(outputFolder, "RenderGraph",
+            Features::Typescripts);
+
+        // executor
+        builder.outputModule(outputFolder, "RenderExecutor",
+            Features::Typescripts);
+    }
+
+    // copy graph interface
+    {
+        auto content = readFile("graph.ts");
+        updateFile(outputFolder / "cocos/core/pipeline/graph.ts", content);
+    }
+
+    return 0;
 }
