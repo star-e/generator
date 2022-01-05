@@ -5,7 +5,7 @@ cocos render pipeline generator
 Windows 10/11 (English ver.)
 
 # Getting Started
-0.  install Visual Studio 2019 (default location)
+0.  install Visual Studio 2019 (default location, english ver.)
 1.	install [vcpkg](https://github.com/Microsoft/vcpkg)
 2.  clone repository into a folder on the same level of cocos/engine
 3.	in the repository, install dependencies: vcpkg.exe install --triplet x64-windows --feature-flags manifests
