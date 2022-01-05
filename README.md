@@ -2,7 +2,7 @@
 cocos render pipeline generator
 
 # System Requirement
-Windows 10/11 Professional (English ver.)
+Windows 10/11 (English ver.)
 
 # Getting Started
 0.  install Visual Studio 2019 (default location)
