@@ -52,7 +52,10 @@ void extractTemplate(std::string_view instanceName,
 std::string_view extractName(std::string_view typePath);
 
 // Struct
-std::pmr::string convertMemberName(std::string_view member,
+std::pmr::string camelToVariable(std::string_view camelName,
+    std::pmr::memory_resource* scratch);
+
+std::pmr::string getMemberName(std::string_view member,
     std::pmr::memory_resource* scratch);
 
 // Syntax

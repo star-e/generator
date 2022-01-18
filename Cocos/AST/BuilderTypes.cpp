@@ -30,6 +30,38 @@ namespace Cocos {
 
 namespace Meta {
 
+CppStructBuilder::CppStructBuilder(CppStructBuilder&& rhs, const allocator_type& alloc)
+    : mSyntaxGraph(std::move(rhs.mSyntaxGraph))
+    , mModuleGraph(std::move(rhs.mModuleGraph))
+    , mCurrentVertex(std::move(rhs.mCurrentVertex))
+    , mCurrentModule(std::move(rhs.mCurrentModule))
+    , mCurrentNamespace(std::move(rhs.mCurrentNamespace), alloc)
+    , mCurrentPath(std::move(rhs.mCurrentPath), alloc)
+    , mName(std::move(rhs.mName), alloc)
+    , mAPI(std::move(rhs.mAPI), alloc)
+    , mProjectName(std::move(rhs.mProjectName), alloc) {}
+
+CppStructBuilder::CppStructBuilder(CppStructBuilder const& rhs, const allocator_type& alloc)
+    : mSyntaxGraph(rhs.mSyntaxGraph)
+    , mModuleGraph(rhs.mModuleGraph)
+    , mCurrentVertex(rhs.mCurrentVertex)
+    , mCurrentModule(rhs.mCurrentModule)
+    , mCurrentNamespace(rhs.mCurrentNamespace, alloc)
+    , mCurrentPath(rhs.mCurrentPath, alloc)
+    , mName(rhs.mName, alloc)
+    , mAPI(rhs.mAPI, alloc)
+    , mProjectName(rhs.mProjectName, alloc) {}
+
+CppStructBuilder::~CppStructBuilder() noexcept = default;
+
+GraphBuilder::~GraphBuilder() noexcept = default;
+
+CppGraphBuilder::CppGraphBuilder(const allocator_type& alloc) noexcept
+    : mStruct(alloc)
+    , mVertexType(alloc) {}
+
+CppGraphBuilder::~CppGraphBuilder() noexcept = default;
+
 TypeHandle::TypeHandle(TypeHandle&& rhs, const allocator_type& alloc)
     : mModuleBuilder(std::move(rhs.mModuleBuilder))
     , mPathSuffix(std::move(rhs.mPathSuffix), alloc)
@@ -71,15 +103,19 @@ ModuleBuilder::ModuleBuilder(const allocator_type& alloc)
     : mSyntaxGraph(alloc)
     , mModuleGraph(alloc)
     , mCurrentModule(alloc)
-    , mCurrentScope(alloc) {}
+    , mCurrentScope(alloc)
+    , mProjectName(alloc) {}
 
 ModuleBuilder::ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc)
-    : mSyntaxGraph(std::move(rhs.mSyntaxGraph), alloc)
+    : mFolder(std::move(rhs.mFolder))
+    , mSyntaxGraph(std::move(rhs.mSyntaxGraph), alloc)
     , mModuleGraph(std::move(rhs.mModuleGraph), alloc)
     , mCurrentModule(std::move(rhs.mCurrentModule), alloc)
     , mCurrentScope(std::move(rhs.mCurrentScope), alloc)
+    , mProjectName(std::move(rhs.mProjectName), alloc)
     , mScratch(std::move(rhs.mScratch))
-    , mUnderscoreMemberName(std::move(rhs.mUnderscoreMemberName)) {}
+    , mUnderscoreMemberName(std::move(rhs.mUnderscoreMemberName))
+    , mCompiled(std::move(rhs.mCompiled)) {}
 
 ModuleBuilder::~ModuleBuilder() noexcept = default;
 

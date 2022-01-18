@@ -281,15 +281,34 @@ std::string_view extractName(std::string_view typePath) {
 }
 
 // Struct
-std::pmr::string convertMemberName(std::string_view member,
+std::pmr::string camelToVariable(std::string_view camelName,
+    std::pmr::memory_resource* scratch) {
+    std::pmr::string name(camelName, scratch);
+    for (uint32_t i = 0; i != name.size(); ++i) {
+        if (i == 0) {
+            name[i] = tolower(name[i]);
+        }
+
+        if (i + 1 < name.size()) {
+            if (std::isupper(name[i + 1]))
+                name[i] = tolower(name[i]);
+            else
+                break;
+        } else {
+            if (std::isupper(name[i]))
+                name[i] = tolower(name[i]);
+        }
+    }
+    return name;
+}
+
+std::pmr::string getMemberName(std::string_view member,
     std::pmr::memory_resource* scratch) {
 
     if (member.size() < 2)
         throw std::runtime_error("member format incorrect");
 
-    std::pmr::string name(member.substr(1), scratch);
-    name[0] = tolower(name[0]);
-    return name;
+    return camelToVariable(member.substr(1), scratch);
 }
 
 // Syntax

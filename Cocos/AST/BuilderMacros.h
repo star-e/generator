@@ -27,4 +27,6 @@ THE SOFTWARE.
 #pragma once
 
 #define OSS oss << space
+
 #define INDENT(...) auto ind##__VA_ARGS__ = indent(space)
+#define UNINDENT(...) ind##__VA_ARGS__.reset()

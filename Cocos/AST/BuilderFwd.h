@@ -31,6 +31,12 @@ namespace Cocos {
 
 namespace Meta {
 
+enum class BreakType : uint32_t;
+enum class OperatorType : uint32_t;
+
+struct CppStructBuilder;
+class GraphBuilder;
+class CppGraphBuilder;
 struct ModuleBuilder;
 struct TypeHandle;
 struct ModuleHandle;

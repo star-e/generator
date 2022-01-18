@@ -283,6 +283,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="CppGraphBuilder.cpp" />
+    <ClCompile Include="CppGraphFunctions.cpp" />
+    <ClCompile Include="CppStructBuilder.cpp" />
     <ClCompile Include="SyntaxImpl.cpp" />
     <ClCompile Include="SyntaxReflection.cpp" />
     <ClCompile Include="SyntaxTypes.cpp" />
