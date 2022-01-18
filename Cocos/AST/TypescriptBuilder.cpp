@@ -74,8 +74,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (currScope.mCount++)
                 oss << "\n";
             OSS << "export class " << name;
-            for (int count = 0; const auto& base : s.mInherits) {
-                auto superID = locate(base, g);
+            const auto& constraints = get(g.constraints, g, vertID);
+            for (int count = 0; const auto& conceptPath : constraints.mConcepts) {
+                auto superID = locate(conceptPath, g);
                 const auto& name = get(g.names, g, superID);
                 if (count++ == 0) {
                     oss << " extends ";
@@ -88,7 +89,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             {
                 INDENT();
                 outputMembers(oss, space, builder, g,
-                    s.mInherits, s.mMembers,
+                    constraints.mConcepts, s.mMembers,
                     s.mTypescriptFunctions, s.mConstructors, scratch);
             }
             OSS << "}\n";

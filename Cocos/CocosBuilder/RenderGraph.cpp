@@ -403,7 +403,7 @@ protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<PipelineScen
                 }
 
                 STRUCT(RasterQueue) {
-                    INHERITS(Setter);
+                    REQUIRES(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -438,7 +438,7 @@ addFullscreenQuad (shader: string, name = 'Quad'): RasterQueue {
                 }
                                                 
                 STRUCT(RasterPass) {
-                    INHERITS(Setter);
+                    REQUIRES(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -490,7 +490,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                 }
 
                 STRUCT(ComputeQueue) {
-                    INHERITS(Setter);
+                    REQUIRES(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -514,7 +514,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                 }
 
                 STRUCT(ComputePass) {
-                    INHERITS(Setter);
+                    REQUIRES(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)

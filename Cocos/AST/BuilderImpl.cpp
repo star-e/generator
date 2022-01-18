@@ -364,7 +364,8 @@ void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID, std::stri
         [&](Composition_ auto& s) {
             auto vertID = g.lookupType(mCurrentScope, adlPath, scratch);
             auto typeName = g.getTypePath(vertID, g.get_allocator().resource());
-            s.mInherits.emplace_back(std::move(typeName));
+            auto& inherits = get(g.inherits, g, vertID);
+            inherits.mBases.emplace_back(std::move(typeName));
         },
         [&](const auto&) {
             Expects(false);
@@ -469,6 +470,38 @@ void ModuleBuilder::addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID
         },
         [&](const auto&) {
         });
+}
+
+void ModuleBuilder::addConstraints(std::string_view conceptName0,
+    std::string_view typeName0) {
+    auto scratch = mScratch;
+    auto& g = mSyntaxGraph;
+
+    auto typeName = convertTypename(typeName0, scratch);
+    auto typeID = g.lookupIdentifier(mCurrentScope, typeName, scratch);
+    Expects(typeID != g.null_vertex());
+
+    addConstraints(typeID, conceptName0);
+}
+
+void ModuleBuilder::addConstraints(SyntaxGraph::vertex_descriptor typeID, std::string_view conceptName0) {
+    auto& g = mSyntaxGraph;
+    const auto& mg = mModuleGraph;
+    auto scratch = mScratch;
+    auto conceptName = convertTypename(conceptName0, scratch);
+    auto conceptID = g.lookupIdentifier(mCurrentScope, conceptName, scratch);
+    Expects(conceptID != g.null_vertex());
+
+    auto typeModuleID = locate(get(g.modulePaths, g, typeID), mg);
+    auto superModuleID = locate(get(g.modulePaths, g, conceptID), mg);
+    if (superModuleID != typeModuleID && !edge(typeModuleID, superModuleID, mg).second) {
+        Expects(false);
+        throw std::out_of_range("supertype not in dependencies");
+    }
+
+    auto& constraints = get(g.constraints, g, typeID);
+    auto supertypePath = g.getTypePath(conceptID, mScratch);
+    constraints.mConcepts.emplace_back(supertypePath);
 }
 
 SyntaxGraph::vertex_descriptor ModuleBuilder::addVariant(

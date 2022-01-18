@@ -191,6 +191,9 @@ struct ModuleBuilder {
         std::initializer_list<std::string_view> members, bool hasDefault);
     void addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
 
+    void addConstraints(std::string_view conceptName, std::string_view typeName);
+    void addConstraints(SyntaxGraph::vertex_descriptor vertID, std::string_view conceptName);
+
     SyntaxGraph::vertex_descriptor addVariant(std::string_view name, GenerationFlags flags = {});
     void addVariantElement(SyntaxGraph::vertex_descriptor vertID, std::string_view type);
 

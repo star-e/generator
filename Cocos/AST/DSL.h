@@ -112,6 +112,10 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
     false, { BOOST_PP_REMOVE_PARENS(Cs) });
 #define TAGS(Cs, ...) BOOST_PP_SEQ_FOR_EACH_I(TAG_ELEM, (BOOST_PP_SEQ_FOR_EACH(STRINGIZE_ELEM, _, BOOST_PP_TUPLE_TO_SEQ(Cs))), BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
 
+// Concept
+#define REQUIRES_ELEM(r, _, i, SUPERTYPE) builder.addConstraints(s.mVertexDescriptor, BOOST_PP_STRINGIZE(SUPERTYPE));
+#define REQUIRES(...) BOOST_PP_SEQ_FOR_EACH_I(REQUIRES_ELEM, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
+
 // Struct
 #define INHERITS(NAME) \
 builder.addInherits(s.mVertexDescriptor, BOOST_PP_STRINGIZE(NAME))

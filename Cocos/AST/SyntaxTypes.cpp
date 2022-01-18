@@ -197,24 +197,21 @@ Constructor::Constructor(Constructor const& rhs, const allocator_type& alloc)
 Constructor::~Constructor() noexcept = default;
 
 Struct::Struct(const allocator_type& alloc) noexcept
-    : mInherits(alloc)
-    , mMembers(alloc)
+    : mMembers(alloc)
     , mConstructors(alloc)
     , mMemberFunctions(alloc)
     , mTypescriptMembers(alloc)
     , mTypescriptFunctions(alloc) {}
 
 Struct::Struct(Struct&& rhs, const allocator_type& alloc)
-    : mInherits(std::move(rhs.mInherits), alloc)
-    , mMembers(std::move(rhs.mMembers), alloc)
+    : mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
     , mMemberFunctions(std::move(rhs.mMemberFunctions), alloc)
     , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
     , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc) {}
 
 Struct::Struct(Struct const& rhs, const allocator_type& alloc)
-    : mInherits(rhs.mInherits, alloc)
-    , mMembers(rhs.mMembers, alloc)
+    : mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
     , mMemberFunctions(rhs.mMemberFunctions, alloc)
     , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
