@@ -95,6 +95,9 @@
     <ClInclude Include="..\GraphImpl.h">
       <Filter>0.Common</Filter>
     </ClInclude>
+    <ClInclude Include="..\GraphView.h">
+      <Filter>0.Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SyntaxReflection.cpp">

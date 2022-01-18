@@ -35,11 +35,11 @@ using namespace Cocos;
 using namespace Cocos::Meta;
 
 int main() {
-    ModuleBuilder builder(std::pmr::get_default_resource());
-
     // output folder
     std::filesystem::path outputFolder = "../../../engine";
-    
+
+    ModuleBuilder builder("cc", outputFolder, std::pmr::get_default_resource());
+
     // type registration
     {
         // register c++/stl types
@@ -49,31 +49,31 @@ int main() {
         projectTypescriptDefaultValues(builder);
 
         // build render pipeline
-        buildRenderCommon(builder);
-        buildLayoutGraph(builder);
-        buildRenderGraph(builder);
+        buildRenderCommon(builder,
+            Typescripts/* | Fwd | Types | Names | Reflection*/);
+        buildLayoutGraph(builder,
+            Typescripts/* | Fwd | Types | Names | Reflection | Graphs*/);
+        buildRenderGraph(builder,
+            Typescripts/* | Fwd | Types | Names | Reflection | Graphs*/);
 
         // build executor modules
-        buildRenderExecutor(builder);
+        buildRenderExecutor(builder,
+            Typescripts/* | Fwd | Types | Names | Reflection | Graphs*/);
     }
 
     // output ts files
     {
         // common types, shared by different modules
-        builder.outputModule(outputFolder, "RenderCommon",
-            Features::Typescripts);
+        builder.outputModule("RenderCommon");
 
         // descriptor layout graph
-        builder.outputModule(outputFolder, "DescriptorLayout",
-            Features::Typescripts);
+        builder.outputModule("DescriptorLayout");
 
         // render graph
-        builder.outputModule(outputFolder, "RenderGraph",
-            Features::Typescripts);
+        builder.outputModule("RenderGraph");
 
         // executor
-        builder.outputModule(outputFolder, "RenderExecutor",
-            Features::Typescripts);
+        builder.outputModule("RenderExecutor");
     }
 
     // copy graph interface

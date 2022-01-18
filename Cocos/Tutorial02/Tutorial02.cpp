@@ -2,18 +2,22 @@
 #include <Cocos/AST/BuilderTypes.h>
 #include <Cocos/AST/CppDefaultValues.h>
 #include <Cocos/AST/TypescriptDefaultValues.h>
+#include <Cocos/FileUtils.h>
 #include <Cocos/AST/DSL.h>
 
 using namespace Cocos;
 using namespace Cocos::Meta;
 
 int main() {
-    ModuleBuilder builder(std::pmr::get_default_resource());
+    std::filesystem::path outputFolder("../..");
+    ModuleBuilder builder("cc", outputFolder, std::pmr::get_default_resource());
     addCppDefaultValues(builder);
     projectTypescriptDefaultValues(builder);
 
+    const auto features = Features::Typescripts;
+
     MODULE(Tutorial,
-        .mFolder = "../../examples/tutorial",
+        .mFolder = "examples/tutorial",
         .mFilePrefix = "tutorial",
         .mAPI = "CC_API"
     ) {
@@ -89,5 +93,11 @@ int main() {
         }
     }
 
-    builder.outputModule(".", "Tutorial", Typescripts);
+    // copy graph interface
+    {
+        auto content = readFile("../CocosBuilder/graph.ts");
+        updateFile(outputFolder / "examples/tutorial/graph.ts", content);
+    }
+
+    builder.outputModule("Tutorial");
 }

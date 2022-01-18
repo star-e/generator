@@ -244,6 +244,7 @@
     <ClInclude Include="..\GraphImpl.h" />
     <ClInclude Include="..\GraphTypes.h" />
     <ClInclude Include="..\GraphUtils.h" />
+    <ClInclude Include="..\GraphView.h" />
     <ClInclude Include="..\Indent.h" />
     <ClInclude Include="..\MovePtr.h" />
     <ClInclude Include="..\Path.h" />

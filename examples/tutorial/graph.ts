@@ -303,7 +303,7 @@ export interface EdgeListGraph extends Graph {
 // MutableGraph
 //--------------------------------------------------------------------------
 export interface MutableGraph extends Graph {
-    addVertex (...args: any[]): vertex_descriptor;
+    addVertex (...args): vertex_descriptor;
     clearVertex (v: vertex_descriptor): void;
     removeVertex (v: vertex_descriptor): void;
     addEdge (u: vertex_descriptor, v: vertex_descriptor, p?: unknown): edge_descriptor | null;

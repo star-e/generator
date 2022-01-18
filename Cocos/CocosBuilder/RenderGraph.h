@@ -29,7 +29,7 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildRenderGraph(ModuleBuilder& builder);
-void buildRenderExecutor(ModuleBuilder& builder);
+void buildRenderGraph(ModuleBuilder& builder, Features features);
+void buildRenderExecutor(ModuleBuilder& builder, Features features);
 
 }

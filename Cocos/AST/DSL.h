@@ -28,7 +28,8 @@ THE SOFTWARE.
 #pragma warning(disable : 4390)
 
 #define MODULE(NAME, ...) \
-    if (auto m = builder.openModule(BOOST_PP_STRINGIZE(NAME), ModuleInfo{ __VA_ARGS__ }); true)
+    if (auto m = builder.openModule(BOOST_PP_STRINGIZE(NAME), \
+        ModuleInfo{ .mFeatures = features, __VA_ARGS__ }); true)
 
 #define NAMESPACE(NAME) \
     if (auto ns = builder.openNamespace(BOOST_PP_STRINGIZE(NAME)); true)

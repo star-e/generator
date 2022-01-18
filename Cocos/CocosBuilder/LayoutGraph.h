@@ -29,6 +29,6 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildLayoutGraph(ModuleBuilder& builder);
+void buildLayoutGraph(ModuleBuilder& builder, Features features);
 
 }

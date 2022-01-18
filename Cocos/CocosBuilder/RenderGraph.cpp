@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildRenderGraph(ModuleBuilder& builder) {
+void buildRenderGraph(ModuleBuilder& builder, Features features) {
     MODULE(RenderGraph,
         .mFolder = "cocos/core/pipeline",
         .mFilePrefix = "render-graph",
@@ -584,7 +584,7 @@ addDispatch (shader: string,
     }
 }
 
-void buildRenderExecutor(ModuleBuilder& builder) {
+void buildRenderExecutor(ModuleBuilder& builder, Features features) {
     MODULE(RenderExecutor,
         .mFolder = "cocos/core/pipeline",
         .mFilePrefix = "executor",

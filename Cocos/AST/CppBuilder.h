@@ -30,9 +30,36 @@ THE SOFTWARE.
 namespace Cocos::Meta {
 
 std::pmr::string generateFwd_h(const SyntaxGraph& g, std::string_view moduleName,
-	std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
-std::pmr::string generateTypes_h(const SyntaxGraph& g, std::string_view moduleName,
+std::pmr::string generateNames_h(const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
+
+std::pmr::string generateTypes_h(const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
+
+std::pmr::string generateTypes_cpp(const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName0,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
+
+std::pmr::string generateGraphs_h(const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
+
+std::pmr::string generateReflection_h(const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
+
+std::pmr::string generateReflection_cpp(const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
 }

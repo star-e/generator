@@ -380,7 +380,7 @@ struct ModuleBuilder {
         return allocator_type(mSyntaxGraph.get_allocator().resource());
     }
 
-    ModuleBuilder(const allocator_type& alloc);
+    ModuleBuilder(std::string_view projectName, std::filesystem::path folder, const allocator_type& alloc);
     ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc);
 
     ModuleBuilder(ModuleBuilder&& rhs) = default;
@@ -403,7 +403,7 @@ struct ModuleBuilder {
     ModuleHandle openModule(std::string_view modulePath, ModuleInfo info = {});
 
     SyntaxGraph::vertex_descriptor addDefine(std::string_view name, std::string_view content = {});
-    SyntaxGraph::vertex_descriptor addConcept(std::string_view name);
+    SyntaxGraph::vertex_descriptor addConcept(std::string_view name, std::string_view parent = {});
     SyntaxGraph::vertex_descriptor addAlias(std::string_view name, std::string_view type);
     SyntaxGraph::vertex_descriptor addContainer(std::string_view name, Traits traits);
     SyntaxGraph::vertex_descriptor addMap(std::string_view name, Traits traits);
@@ -421,9 +421,10 @@ struct ModuleBuilder {
 
     void addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view name);
 
-    void addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
+    Member& addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
         std::string_view adlPath, std::string_view memberName,
-        std::string_view initial = "_", GenerationFlags flags = {});
+        std::string_view initial = "_", GenerationFlags flags = {},
+        std::string_view comments = {});
 
     void setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
         std::string_view memberName, GenerationFlags flags);
@@ -458,8 +459,7 @@ struct ModuleBuilder {
     void addNamedConcept(SyntaxGraph::vertex_descriptor vertID, bool bComponent,
         std::string_view componentName, std::string_view componentMemberName = "");
 
-    void outputModule(const std::filesystem::path& rootFolder,
-        std::string_view name, Features features) const;
+    void outputModule(std::string_view name) const;
 
     void projectTypescript(std::string_view cpp, std::string_view ts);
     void addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);

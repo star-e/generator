@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildRenderCommon(ModuleBuilder& builder) {
+void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Camera,
         .mFolder = "cocos/core/renderer/scene",
         .mFilePrefix = "camera",

@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildLayoutGraph(ModuleBuilder& builder) {
+void buildLayoutGraph(ModuleBuilder& builder, Features features) {
     MODULE(DescriptorLayout,
         .mFolder = "cocos/core/pipeline",
         .mFilePrefix = "layout-graph",

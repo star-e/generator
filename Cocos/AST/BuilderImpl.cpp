@@ -196,6 +196,88 @@ ModuleHandle ModuleBuilder::openModule(std::string_view name, ModuleInfo info) {
     return appendModulePath(*this, name, vertID);
 }
 
+SyntaxGraph::vertex_descriptor ModuleBuilder::addDefine(std::string_view name, std::string_view content) {
+    auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+
+    Expects(locate(g.null_vertex(), name, g) == g.null_vertex());
+
+    auto vertID = add_vertex(Define_{},
+        std::forward_as_tuple(name), // name
+        std::forward_as_tuple(), // trait
+        std::forward_as_tuple(), // constraints
+        std::forward_as_tuple(), // inherits
+        std::forward_as_tuple(mCurrentModule), // module path
+        std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(content), // polymorphic
+        g, g.null_vertex());
+
+    return vertID;
+}
+
+SyntaxGraph::vertex_descriptor ModuleBuilder::addConcept(std::string_view name, std::string_view parent) {
+    if (parent == "_")
+        parent = "";
+
+    auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+
+    auto parentID = locate(mCurrentScope, g);
+    Expects(locate(parentID, name, g) == g.null_vertex());
+
+    std::pmr::string superTypePath(scratch);
+    if (!parent.empty()) {
+        auto superType = convertTypename(parent, scratch);
+        auto superID = g.lookupType(mCurrentScope, superType, scratch);
+        Expects(superID != g.null_vertex());
+        superTypePath = g.getTypePath(superID, scratch);
+    }
+
+    auto vertID = add_vertex(Concept_{},
+        std::forward_as_tuple(name), // name
+        std::forward_as_tuple(), // trait
+        std::forward_as_tuple(), // constraints
+        std::forward_as_tuple(), // inherits
+        std::forward_as_tuple(mCurrentModule), // module path
+        std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(superTypePath), // polymorphic
+        g, parentID);
+
+    return vertID;
+}
+
+SyntaxGraph::vertex_descriptor ModuleBuilder::addAlias(std::string_view name, std::string_view type) {
+    auto& g = mSyntaxGraph;
+    auto scratch = get_allocator().resource();
+
+    auto parentID = locate(mCurrentScope, g);
+    Expects(locate(parentID, name, g) == g.null_vertex());
+
+    std::pmr::string typePath(g.get_allocator().resource());
+    if (!type.empty()) {
+        std::pmr::string adlPath(type, scratch);
+        convertTypename(adlPath);
+
+        if (isInstance(adlPath)) {
+            g.instantiate(mCurrentScope, adlPath, scratch);
+        }
+        auto typeID = g.lookupType(mCurrentScope, adlPath, scratch);
+        typePath = g.getTypePath(typeID, g.get_allocator().resource());
+    }
+
+    auto vertID = add_vertex(Alias_{},
+        std::forward_as_tuple(name), // name
+        std::forward_as_tuple(), // trait
+        std::forward_as_tuple(), // constraints
+        std::forward_as_tuple(), // inherits
+        std::forward_as_tuple(mCurrentModule), // module path
+        std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(std::move(typePath)), // polymorphic
+        g, parentID);
+
+    return vertID;
+}
+
 SyntaxGraph::vertex_descriptor ModuleBuilder::addContainer(std::string_view name, Traits traits) {
     auto& g = mSyntaxGraph;
 
@@ -205,7 +287,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addContainer(std::string_view name
     auto vertID = add_vertex(Container_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
@@ -224,7 +306,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addMap(std::string_view name, Trai
     auto vertID = add_vertex(Map_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
@@ -243,7 +325,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addValue(std::string_view name) {
     auto vertID = add_vertex(Value_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
@@ -262,17 +344,23 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addEnum(std::string_view name, Tra
     auto vertID = add_vertex(Enum_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
+    auto& e = get<Enum>(vertID, g);
+    if (traits.mClass) {
+        e.mUnderlyingType = "uint32_t";
+    }
     return vertID;
 }
 
 SyntaxGraph::vertex_descriptor ModuleBuilder::addFlag(std::string_view name, Traits traits) {
+    bool bEnumOperator = !(traits.mFlags & NO_ENUM_OPERATOR);
+
     auto& g = mSyntaxGraph;
 
     auto parentID = locate(mCurrentScope, g);
@@ -281,14 +369,17 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addFlag(std::string_view name, Tra
     auto vertID = add_vertex(Enum_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
-    get<Enum>(vertID, g).mIsFlags = true;
+    auto& e = get<Enum>(vertID, g);
+    e.mIsFlags = true;
+    e.mEnumOperator = bEnumOperator;
+    e.mUnderlyingType = "uint32_t";
 
     return vertID;
 }
@@ -298,6 +389,9 @@ void ModuleBuilder::addEnumElement(SyntaxGraph::vertex_descriptor vertID,
     auto& g = mSyntaxGraph;
     Expects(holds_tag<Enum_>(vertID, g));
 
+    if (value == "_")
+        value = {};
+
     auto& e = get_by_tag<Enum_>(vertID, g);
     EnumValue v(e.get_allocator());
     v.mName = name;
@@ -305,9 +399,19 @@ void ModuleBuilder::addEnumElement(SyntaxGraph::vertex_descriptor vertID,
     e.mValues.emplace_back(std::move(v));
 }
 
+void ModuleBuilder::setEnumUnderlyingType(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view type) {
+    auto& g = mSyntaxGraph;
+    Expects(holds_tag<Enum_>(vertID, g));
+
+    auto& e = get_by_tag<Enum_>(vertID, g);
+    e.mUnderlyingType = type;
+}
+
 SyntaxGraph::vertex_descriptor ModuleBuilder::addTag(std::string_view name, bool bEntity,
     std::initializer_list<std::string_view> concepts) {
     auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
 
     auto parentID = locate(mCurrentScope, g);
     Expects(locate(parentID, name, g) == g.null_vertex());
@@ -315,12 +419,24 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addTag(std::string_view name, bool
     auto vertID = add_vertex(Tag_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(Tag{ .mEntity = bEntity }), // polymorphic
         g, parentID);
+
+    auto& constraints = get(g.constraints, g, vertID);
+    for (const auto& c : concepts) {
+        if (c == "_")
+            continue;
+
+        auto conceptName = convertTypename(c, scratch);
+        auto conceptID = g.lookupIdentifier(mCurrentScope, conceptName, scratch);
+        Expects(conceptID != g.null_vertex());
+        auto conceptPath = g.getTypePath(conceptID, g.get_allocator().resource());
+        constraints.mConcepts.emplace_back(conceptPath);
+    }
 
     return vertID;
 }
@@ -328,17 +444,22 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addTag(std::string_view name, bool
 TypeHandle ModuleBuilder::addStruct(std::string_view name, Traits traits) {
     auto& g = mSyntaxGraph;
 
+    if (traits.mInterface) {
+        traits.mFlags |= NO_MOVE_NO_COPY;
+    }
+
     auto parentID = locate(mCurrentScope, g);
     Expects(parentID == SyntaxGraph::null_vertex()
         || holds_tag<Namespace_>(parentID, g)
-        || holds_tag<Struct_>(parentID, g));
+        || holds_tag<Struct_>(parentID, g)
+        || holds_tag<Graph_>(parentID, g));
 
     Expects(locate(parentID, name, g) == g.null_vertex());
 
     auto vertID = add_vertex(Struct_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
@@ -348,33 +469,29 @@ TypeHandle ModuleBuilder::addStruct(std::string_view name, Traits traits) {
     return appendTypePath(*this, name, vertID);
 }
 
-void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view className) {
+void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view type) {
     auto& g = mSyntaxGraph;
     auto scratch = get_allocator().resource();
 
-    std::pmr::string adlPath(className, scratch);
+    std::pmr::string adlPath(type, scratch);
     convertTypename(adlPath);
+    Expects(!isInstance(adlPath));
+    auto baseID = g.lookupType(mCurrentScope, adlPath, scratch);
+    Expects(baseID != g.null_vertex());
+    const auto& baseTraits = get(g.traits, g, baseID);
+    Expects(baseTraits.mInterface);
+    auto& inherits = get(g.inherits, g, vertID);
 
-    if (isInstance(adlPath)) {
-        g.instantiate(mCurrentScope, adlPath, scratch);
-    }
-
-    visit_vertex(
-        vertID, g,
-        [&](Composition_ auto& s) {
-            auto vertID = g.lookupType(mCurrentScope, adlPath, scratch);
-            auto typeName = g.getTypePath(vertID, g.get_allocator().resource());
-            auto& inherits = get(g.inherits, g, vertID);
-            inherits.mBases.emplace_back(std::move(typeName));
-        },
-        [&](const auto&) {
-            Expects(false);
-        });
+    auto typePath = g.getTypePath(baseID, g.get_allocator().resource());
+    inherits.mBases.emplace_back(std::move(typePath));
+    auto& traits = get(g.traits, g, vertID);
+    traits.mClass = true;
 }
 
-void ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
+Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
     std::string_view className, std::string_view memberName,
-    std::string_view initial, GenerationFlags flags) {
+    std::string_view initial, GenerationFlags flags,
+    std::string_view comments) {
     auto& g = mSyntaxGraph;
     auto scratch = get_allocator().resource();
 
@@ -391,50 +508,88 @@ void ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPubli
         g.instantiate(mCurrentScope, adlPath, scratch);
     }
 
+    Member* ptr = nullptr;
+
+    auto addMember = [&](auto& s) {
+        std::pmr::string typeName(adlPath, scratch);
+        Member m(get_allocator());
+
+        if (!bInstance) {
+            auto astPos = adlPath.find('*');
+            if (astPos != adlPath.npos) {
+                m.mPointer = true;
+                if (auto pos = adlPath.find('&', astPos); pos != adlPath.npos) {
+                    m.mReference = true;
+                }
+                typeName.resize(astPos);
+            } else {
+                if (auto pos = adlPath.find('&'); pos != adlPath.npos) {
+                    m.mReference = true;
+                    typeName.resize(pos);
+                }
+            }
+            if (boost::algorithm::contains(typeName, "const ") || boost::algorithm::contains(typeName, " const")) {
+                m.mConst = true;
+                boost::algorithm::replace_first(typeName, "const ", "");
+                boost::algorithm::replace_first(typeName, " const", "");
+                boost::algorithm::trim(typeName);
+            }
+        }
+
+        auto vertID = g.lookupType(mCurrentScope, typeName, scratch);
+        if (vertID == g.null_vertex()) {
+            Expects(m.mPointer || m.mReference);
+            m.mTypePath = typeName;
+        } else {
+            auto typePath = g.getTypePath(vertID, scratch);
+            m.mTypePath = std::move(typePath);
+        }
+
+        m.mPublic = bPublic;
+        m.mMemberName = memberName;
+        m.mDefaultValue = initial;
+        if (!m.mDefaultValue.empty() && m.mDefaultValue.front() == '('
+            && m.mDefaultValue.back() == ')') {
+            m.mDefaultValue.pop_back();
+            m.mDefaultValue.erase(m.mDefaultValue.begin());
+        }
+        m.mFlags = flags;
+        m.mComments = comments;
+
+        s.mMembers.emplace_back(std::move(m));
+        ptr = &s.mMembers.back();
+    };
+
     visit_vertex(
         vertID, g,
         [&](Composition_ auto& s) {
-            Member m(get_allocator());
-            std::pmr::string typeName(adlPath, scratch);
-            if (!bInstance) {
-                auto astPos = adlPath.find('*');
-                if (astPos != adlPath.npos) {
-                    m.mPointer = true;
-                    if (auto pos = adlPath.find('&', astPos); pos != adlPath.npos) {
-                        m.mReference = true;
-                    }
-                    typeName.resize(astPos);
-                } else {
-                    if (auto pos = adlPath.find('&'); pos != adlPath.npos) {
-                        m.mReference = true;
-                        typeName.resize(pos);
-                    }
-                }
-                if (boost::algorithm::contains(typeName, "const ") || boost::algorithm::contains(typeName, " const")) {
-                    m.mConst = true;
-                    boost::algorithm::replace_first(typeName, "const ", "");
-                    boost::algorithm::replace_first(typeName, " const", "");
-                    boost::algorithm::trim(typeName);
-                }
-            }
-
-            auto vertID = g.lookupType(mCurrentScope, typeName, scratch);
-            Expects(vertID != g.null_vertex());
-
-            auto typePath = g.getTypePath(vertID, scratch);
-
-            m.mTypePath = std::move(typePath);
-            m.mPublic = bPublic;
-            m.mMemberName = memberName;
-            m.mDefaultValue = initial;
-            m.mFlags = flags;
-
-            s.mMembers.emplace_back(std::move(m));
+            addMember(s);
         },
         [&](const auto&) {
-            // do nothing
+            Expects(false);
+        });
+
+    Expects(ptr);
+    return *ptr;
+}
+
+void ModuleBuilder::setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view memberName, GenerationFlags flags) {
+    auto& g = mSyntaxGraph;
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            for (Member& m : s.mMembers) {
+                if (m.mMemberName == memberName) {
+                    m.mFlags = flags;
+                    break;
+                }
+            }
+        },
+        [&](const auto&) {
         });
 }
+
 void ModuleBuilder::addConstructor(SyntaxGraph::vertex_descriptor vertID,
     std::initializer_list<std::string_view> members, bool hasDefault) {
     auto& g = mSyntaxGraph;
@@ -461,12 +616,13 @@ void ModuleBuilder::addConstructor(SyntaxGraph::vertex_descriptor vertID,
         });
 }
 
-void ModuleBuilder::addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content) {
+void ModuleBuilder::addMemberFunctions(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view content) {
     auto& g = mSyntaxGraph;
     visit_vertex(
         vertID, g,
         [&](Composition_ auto& s) {
-            s.mTypescriptFunctions.emplace_back(content);
+            s.mMemberFunctions.emplace_back(content);
         },
         [&](const auto&) {
         });
@@ -516,7 +672,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addVariant(
     auto vertID = add_vertex(Variant_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(Traits{ .mFlags = flags }), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
@@ -529,14 +685,23 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addVariant(
 void ModuleBuilder::addVariantElement(SyntaxGraph::vertex_descriptor vertID,
     std::string_view type) {
     auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
     Expects(holds_tag<Variant_>(vertID, g));
     auto& var = get<Variant>(vertID, g);
-    var.mVariants.emplace_back(g.getTypePath(mCurrentScope, type,
+
+    std::pmr::string typePath(type, scratch);
+    convertTypename(typePath);
+
+    var.mVariants.emplace_back(g.getTypePath(mCurrentScope, typePath,
         g.get_allocator().resource(), mScratch));
 }
 
 TypeHandle ModuleBuilder::addGraph(std::string_view name,
-    std::string_view vertex, std::string_view edge, Traits traits) {
+    std::string_view vertex, std::string_view edge, Traits traits0) {
+    if (traits0.mInterface) {
+        traits0.mFlags |= NO_MOVE_NO_COPY;
+    }
+
     auto& g = mSyntaxGraph;
     auto mr = g.get_allocator().resource();
     auto scratch = mScratch;
@@ -548,8 +713,8 @@ TypeHandle ModuleBuilder::addGraph(std::string_view name,
 
     auto vertID = add_vertex(Graph_{},
         std::forward_as_tuple(name), // name
-        std::forward_as_tuple(std::move(traits)), // trait
-        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(std::move(traits0)), // trait
+        std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
@@ -566,12 +731,24 @@ TypeHandle ModuleBuilder::addGraph(std::string_view name,
     std::pmr::string edgePropertyPath(edge, scratch);
     convertTypename(vertexPropertyPath);
     convertTypename(edgePropertyPath);
-    
+
     auto& s = get_by_tag<Graph_>(vertID, g);
     s.mVertexProperty = g.getTypePath(mCurrentScope, vertexPropertyPath, mr, mr);
     s.mEdgeProperty = g.getTypePath(mCurrentScope, edgePropertyPath, mr, mr);
 
-    return appendTypePath(*this, name, vertID);
+    {
+        auto& traits = get(g.traits, g, vertID);
+        if (g.isPmr(vertID)) {
+            traits.mPmr |= true;
+        }
+    }
+
+    auto handle = appendTypePath(*this, name, vertID);
+
+    addAlias("vertex_descriptor", "");
+    addAlias("edge_type", "");
+
+    return handle;
 }
 
 void ModuleBuilder::addGraphComponent(SyntaxGraph::vertex_descriptor vertID,
@@ -586,18 +763,29 @@ void ModuleBuilder::addGraphComponent(SyntaxGraph::vertex_descriptor vertID,
     if (isInstance(typeName)) {
         g.instantiate(mCurrentScope, typeName, scratch);
     }
-   
+
     auto valueID = g.lookupType(mCurrentScope, typeName, scratch);
-    auto tagPath = g.getTypePath(valueID, g.get_allocator().resource());
+    auto valuePath = g.getTypePath(valueID, g.get_allocator().resource());
 
     auto& c = s.mComponents.emplace_back();
     c.mName = name;
-    c.mValuePath = tagPath;
+    c.mValuePath = valuePath;
     c.mMemberName = memberName;
+
+    c.mVector = true;
+    bool bPmr = g.isPmr(valueID) || g.isPmr(vertID);
+    if (bPmr) {
+        c.mContainerPath = "/std/pmr/vector";
+    } else {
+        c.mContainerPath = "/std/vector";
+    }
 }
 
 void ModuleBuilder::addGraphPolymorphic(SyntaxGraph::vertex_descriptor vertID,
     std::string_view tag, std::string_view type, std::string_view memberName) {
+    if (memberName == "_")
+        memberName = "";
+
     auto& g = mSyntaxGraph;
     auto scratch = mScratch;
 
@@ -620,10 +808,123 @@ void ModuleBuilder::addGraphPolymorphic(SyntaxGraph::vertex_descriptor vertID,
     c.mTag = tagPath;
     c.mValue = typePath;
     c.mMemberName = memberName;
+    bool bPmr = g.isPmr(valueID) || g.isPmr(vertID);
+    if (bPmr) {
+        c.mContainerPath = "/std/pmr/vector";
+    } else {
+        c.mContainerPath = "/std/vector";
+    }
 }
 
-void ModuleBuilder::outputModule(const std::filesystem::path& rootFolder,
-    std::string_view name, Features features) const {
+void ModuleBuilder::addVertexMap(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view mapType, std::string_view memberName,
+    std::string_view keyType) {
+    auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+
+    auto& s = get_by_tag<Graph_>(vertID, g);
+
+    auto mapName = convertTypename(mapType, scratch);
+    auto keyName = convertTypename(keyType, scratch);
+
+    if (isInstance(keyName)) {
+        g.instantiate(mCurrentScope, keyName, scratch);
+    }
+    std::pmr::string typePath(scratch);
+    {
+        pmr_ostringstream oss(std::ios::out, scratch);
+        oss << mapName << "<" << keyName << ",vertex_descriptor"
+            << ">";
+        typePath = oss.str();
+        g.instantiate(mCurrentScope, typePath, scratch);
+    }
+
+    auto mapID = g.lookupType(mCurrentScope, mapName, scratch);
+    auto mapPath = g.getTypePath(mapID, g.get_allocator().resource());
+
+    auto keyID = g.lookupType(mCurrentScope, keyName, scratch);
+    auto keyPath = g.getTypePath(keyID, g.get_allocator().resource());
+
+    auto& map = s.mVertexMaps.emplace_back();
+    map.mMapType = mapPath;
+    map.mKeyType = keyPath;
+    map.mMemberName = memberName;
+    map.mTypePath = typePath;
+}
+
+void ModuleBuilder::addVertexBimap(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view mapType, std::string_view memberName,
+    std::string_view componentName, std::string_view componentMemberName) {
+    auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+
+    auto& s = get_by_tag<Graph_>(vertID, g);
+
+    auto mapName = convertTypename(mapType, scratch);
+    std::pmr::string keyName(scratch);
+    for (const auto& c : s.mComponents) {
+        if (c.mName == componentName) {
+            auto componentID = locate(c.mValuePath, g);
+            if (componentMemberName.empty()) {
+                keyName = g.getDependentName(mCurrentScope, componentID, scratch, scratch);
+            } else {
+                visit_vertex(
+                    componentID, g,
+                    [&](const Composition_ auto& s) {
+                        for (const auto& m : s.mMembers) {
+                            if (m.mMemberName == componentMemberName) {
+                                auto memberID = locate(m.mTypePath, g);
+                                keyName = g.getDependentName(mCurrentScope, memberID, scratch, scratch);
+                                break;
+                            }
+                        }
+                    },
+                    [&](const auto&) {
+                        throw std::out_of_range("cannot find member");
+                    });
+            }
+            break;
+        }
+    }
+    if (keyName.empty())
+        throw std::out_of_range("component not found");
+
+    std::pmr::string typePath(scratch);
+    {
+        pmr_ostringstream oss(std::ios::out, scratch);
+        oss << mapName << "<" << keyName << ",vertex_descriptor"
+            << ">";
+        typePath = oss.str();
+        g.instantiate(mCurrentScope, typePath, scratch);
+    }
+
+    auto mapID = g.lookupType(mCurrentScope, mapName, scratch);
+    auto mapPath = g.getTypePath(mapID, g.get_allocator().resource());
+
+    auto keyID = g.lookupType(mCurrentScope, keyName, scratch);
+    auto keyPath = g.getTypePath(keyID, g.get_allocator().resource());
+
+    auto& map = s.mVertexMaps.emplace_back();
+    map.mMapType = mapPath;
+    map.mKeyType = keyPath;
+    map.mMemberName = memberName;
+    map.mComponentName = componentName;
+    map.mComponentMemberName = componentMemberName;
+    map.mTypePath = typePath;
+}
+
+void ModuleBuilder::addNamedConcept(SyntaxGraph::vertex_descriptor vertID, bool bComponent,
+    std::string_view componentName, std::string_view componentMemberName) {
+    auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+    auto& s = get<Graph>(vertID, g);
+    s.mNamed = true;
+    s.mNamedConcept.mComponent = bComponent;
+    s.mNamedConcept.mComponentName = componentName;
+    s.mNamedConcept.mComponentMemberName = componentMemberName;
+}
+
+void ModuleBuilder::outputModule(std::string_view name) const {
     auto scratch = mScratch;
     Expects(!name.empty());
 
@@ -632,12 +933,152 @@ void ModuleBuilder::outputModule(const std::filesystem::path& rootFolder,
         return;
 
     const auto& g = mSyntaxGraph;
+    const auto& mg = mModuleGraph;
 
-    const auto& moduleName = get(mModuleGraph.names, mModuleGraph, moduleID);
     const auto& m = get(mModuleGraph.modules, mModuleGraph, moduleID);
     auto modulePath = get_path(moduleID, mModuleGraph, scratch);
     Expects(!modulePath.empty());
     Expects(modulePath.front() == '/');
+
+    const auto& moduleInfo = get(mg.modules, mg, moduleID);
+    const auto features = moduleInfo.mFeatures;
+    const auto& rootFolder = mFolder;
+
+    if (features & Features::Fwd) {
+        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+        filename += "Fwd.h";
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+        std::pmr::string space(scratch);
+        OSS << "#pragma once\n";
+        for (const auto& require : m.mRequires) {
+            auto moduleID = locate(mg.null_vertex(), require, mg);
+            const auto& dep = get(mg.modules, mg, moduleID);
+            OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Fwd.h>\n";
+        }
+        copyString(oss, generateFwd_h(mSyntaxGraph, modulePath, scratch, scratch));
+
+        updateFile(filename, oss.str());
+    }
+
+    if (features & Features::Names) {
+        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+        filename += "Names.h";
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+        std::pmr::string space(scratch);
+        OSS << "#pragma once\n";
+        OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+        for (const auto& require : m.mRequires) {
+            auto moduleID = locate(mg.null_vertex(), require, mg);
+            const auto& dep = get(mg.modules, mg, moduleID);
+            OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Names.h>\n";
+        }
+        copyString(oss, generateNames_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+
+        updateFile(filename, oss.str());
+    }
+
+    if (features & Features::Types) {
+        const std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+
+        {
+            auto filename1 = filename;
+            filename1 += "Types.h";
+
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            OSS << "#pragma once\n";
+
+            if (!moduleInfo.mAPI.empty()) {
+                oss << "#include <" << std::filesystem::path(moduleInfo.mFolder).generic_string()
+                    << "/SConfig.h>\n";
+            }
+
+            if (features & Features::Fwd) {
+                OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+            }
+            for (const auto& require : m.mRequires) {
+                auto moduleID = locate(mg.null_vertex(), require, mg);
+                const auto& dep = get(mg.modules, mg, moduleID);
+                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Types.h>\n";
+            }
+            if (g.moduleHasGraph(modulePath)) {
+                OSS << "#include <Star/SGraphTypes.h>\n";
+            }
+            if (!moduleInfo.mHeader.empty()) {
+                copyCppString(oss, space, moduleInfo.mHeader);
+            }
+            copyString(oss, generateTypes_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+
+            updateFile(filename1, oss.str());
+        }
+
+        {
+            auto filename1 = filename;
+            filename1 += "Types.cpp";
+
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
+
+            copyString(oss, generateTypes_cpp(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+
+            updateFile(filename1, oss.str());
+        }
+    }
+    if (features & Features::Graphs) {
+        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+        filename += "Graphs.h";
+
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+        std::pmr::string space(scratch);
+        OSS << "#pragma once\n";
+        oss << "#include <Star/SGraphImpl.h>\n";
+        OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
+
+        copyString(oss, generateGraphs_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+
+        updateFile(filename, oss.str());
+    }
+    if (features & Features::Reflection) {
+        {
+            std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+            filename += "Reflection.h";
+
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            OSS << "#pragma once\n";
+
+            if (!moduleInfo.mAPI.empty()) {
+                oss << "#include <" << std::filesystem::path(moduleInfo.mFolder).generic_string()
+                    << "/SConfig.h>\n";
+            }
+            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+            for (const auto& require : m.mRequires) {
+                auto moduleID = locate(mg.null_vertex(), require, mg);
+                const auto& moduleInfo = get(mg.modules, mg, moduleID);
+                const auto& dep = get(mg.modules, mg, moduleID);
+                if (moduleInfo.mFeatures & Reflection) {
+                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Reflection.h>\n";
+                }
+            }
+            copyString(oss, generateReflection_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+
+            updateFile(filename, oss.str());
+        }
+        {
+            std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+            filename += "Reflection.cpp";
+
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            OSS << "#include \"" << m.mFilePrefix << "Reflection.h\"\n";
+            OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
+
+            copyString(oss, generateReflection_cpp(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+
+            updateFile(filename, oss.str());
+        }
+    }
 
     if (features & Features::Typescripts) {
         std::filesystem::path tsPath = rootFolder / m.mFolder / m.mFilePrefix;
@@ -743,28 +1184,17 @@ void ModuleBuilder::outputModule(const std::filesystem::path& rootFolder,
         codegen.mScopes.pop_back();
         updateFile(filename, oss.str());
     }
+}
 
-    if (features & Features::Fwd) {
-        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
-        filename += "Fwd.h";
-        pmr_ostringstream oss(std::ios_base::out, scratch);
-        std::pmr::string space(scratch);
-        OSS << "#pragma once\n";
-        copyString(oss, generateFwd_h(mSyntaxGraph, modulePath, scratch, scratch));
-
-        updateFile(filename, oss.str());
-    }
-
-    if (features & Features::Types) {
-        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
-        filename += "Types.h";
-        pmr_ostringstream oss(std::ios_base::out, scratch);
-        std::pmr::string space(scratch);
-        OSS << "#pragma once\n";
-        copyString(oss, generateTypes_h(mSyntaxGraph, modulePath, scratch, scratch));
-
-        updateFile(filename, oss.str());
-    }
+void ModuleBuilder::addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content) {
+    auto& g = mSyntaxGraph;
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            s.mTypescriptFunctions.emplace_back(content);
+        },
+        [&](const auto&) {
+        });
 }
 
 void ModuleBuilder::projectTypescript(std::string_view cpp, std::string_view ts) {
@@ -789,6 +1219,211 @@ void ModuleBuilder::projectTypescript(std::string_view cpp, std::string_view ts)
 }
 
 // Generation
+int ModuleBuilder::compile() {
+    auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+
+    // resolve all member types
+    for (auto vertID : make_range(vertices(g))) {
+        auto ns = mSyntaxGraph.getNamespace(vertID, scratch);
+        visit_vertex(
+            vertID, g,
+            [&](Composition_ auto& s) {
+                for (Member& m : s.mMembers) {
+                    Expects(!m.mTypePath.empty());
+                    if (!isTypePath(m.mTypePath)) {
+                        auto memberID = g.lookupType(ns, m.mTypePath, scratch);
+                        if (memberID == g.null_vertex()) {
+                            throw std::out_of_range("type cannot be resolved");
+                        } else {
+                            m.mTypePath = g.getTypePath(memberID, g.get_allocator().resource());
+                        }
+                    }
+                }
+            },
+            [&](const auto&) {
+            });
+    }
+
+    // complete graphs
+    for (auto vertID : make_range(vertices(g))) {
+        if (!holds_alternative<Graph>(vertID, g))
+            continue;
+        // copy graph, vertex might be invalidated
+        Graph s(get<Graph>(vertID, g), scratch);
+        mCurrentScope = g.getScope(vertID, scratch);
+        mCurrentModule = get(g.modulePaths, g, vertID);
+        { // add alias
+            if (s.mIncidence) {
+                addAlias("out_edge_type", "");
+                if (s.mBidirectional) {
+                    addAlias("in_edge_type", "");
+                }
+            }
+            if (s.mReferenceGraph && !s.mAliasGraph) {
+                addAlias("children_edge_type", "");
+                addAlias("parent_edge_type", "");
+            }
+            if (s.isPolymorphic()) {
+                addAlias("vertex_handle_type", "");
+            }
+        }
+
+        const auto& moduleID = locate(mCurrentModule, mModuleGraph);
+        const auto& m = get(mModuleGraph.modules, mModuleGraph, moduleID);
+        auto ns = mSyntaxGraph.getNamespace(vertID, mScratch);
+
+        CppGraphBuilder builder(&mSyntaxGraph, &mModuleGraph,
+            vertID, moduleID,
+            ns, !m.mAPI.empty(), mProjectName, scratch);
+
+        auto bPmr = g.isPmr(vertID);
+        if (s.mReferenceGraph && !s.mAliasGraph) {
+            auto scope = addStruct(
+                "object_type",
+                Traits{
+                    .mPmr = bPmr,
+                    .mFlags = NO_SERIALIZATION,
+                });
+            auto objectID = scope.mVertexDescriptor;
+            addMember(objectID, true, builder.childListType(), "mChildren");
+            addMember(objectID, true, builder.parentListType(), "mParents");
+        }
+        {
+            auto scope = addStruct(
+                "vertex_type",
+                Traits{
+                    .mPmr = bPmr && s.mIncidence,
+                    .mFlags = NO_SERIALIZATION,
+                });
+            auto vertexID = scope.mVertexDescriptor;
+
+            if (s.mIncidence) {
+                addMember(vertexID, true, builder.outEdgeListType(), "mOutEdges");
+                if (s.mBidirectional) {
+                    addMember(vertexID, true, builder.inEdgeListType(), "mInEdges");
+                }
+            }
+            if (s.isPolymorphic()) {
+                addMember(vertexID, true, "vertex_handle_type", "mHandle");
+            }
+        }
+
+        std::pmr::vector<Member> members(g.get_allocator());
+        {
+            auto& s0 = get<Graph>(vertID, g);
+            members = std::move(s0.mMembers);
+            s0.mMembers.clear();
+        }
+
+        if (s.mReferenceGraph && !s.mAliasGraph) {
+            addMember(vertID, true, builder.objectListType(), "mObjects", "_",
+                NO_SERIALIZATION, R"(// Owners
+)");
+        }
+
+        addMember(vertID, true, builder.vertexListType(), "mVertices", "_",
+            NO_SERIALIZATION, R"(// Vertices
+)");
+
+        for (size_t i = 0; i != s.mComponents.size(); ++i) {
+            const auto& c = s.mComponents[i];
+            std::string_view comments;
+            if (i == 0)
+                comments = R"(// Components
+)";
+            auto memberID = locate(c.mValuePath, g);
+            pmr_ostringstream oss(std::ios::out, scratch);
+            auto typeName = g.getDependentName(mCurrentScope, memberID, scratch, scratch);
+            auto listID = locate(builder.componentContainerType(), g);
+            oss << g.getDependentName(mCurrentScope, listID, scratch, scratch);
+            oss << "<" << typeName << ">";
+            addMember(vertID, true, oss.str(), c.mMemberName,
+                "_", NO_SERIALIZATION, comments);
+        }
+
+        for (size_t i = 0, count = 0; i != s.mPolymorphic.mConcepts.size(); ++i) {
+            const auto& c = s.mPolymorphic.mConcepts[i];
+            if (c.mMemberName.empty())
+                continue;
+            std::string_view comments;
+            if (count++ == 0)
+                comments = R"(// PolymorphicGraph
+)";
+            auto conceptID = locate(c.mValue, g);
+            pmr_ostringstream oss(std::ios::out, scratch);
+            auto typeName = g.getDependentName(mCurrentScope, conceptID, scratch, scratch);
+            auto listID = g.null_vertex();
+            if (bPmr) {
+                listID = c.isVector() ? locate("/std/pmr/vector", g)
+                                      : locate("/std/pmr/list", g);
+            } else {
+                listID = c.isVector() ? locate("/std/vector", g)
+                                      : locate("/std/list", g);
+            }
+            Ensures(listID != g.null_vertex());
+            oss << g.getDependentName(mCurrentScope, listID, scratch, scratch);
+            oss << "<" << typeName << ">";
+            addMember(vertID, true, oss.str(), c.mMemberName,
+                "_", NO_SERIALIZATION, comments);
+        }
+
+        if (s.needEdgeList()) {
+            addMember(vertID, true, builder.edgeListType(), "mEdges", "_", NO_SERIALIZATION,
+                R"(// Edges
+)");
+        }
+
+        for (int count = 0; const auto& map : s.mVertexMaps) {
+            std::string_view comments;
+            if (count++ == 0)
+                comments = R"(// UuidGraph
+)";
+            addMember(vertID, true, map.mTypePath, map.mMemberName,
+                "_", NO_SERIALIZATION, comments);
+        }
+
+        int count = 0;
+        for (auto& s = get<Graph>(vertID, g); auto& m : members) {
+            if (count++ == 0)
+                m.mComments = "// Members\n";
+            s.mMembers.emplace_back(std::move(m));
+        }
+
+        if (s.mAddressable) {
+            visit(
+                overload(
+                    [&](Map_) {
+                        std::pmr::string indexName(scratch);
+                        if (bPmr) {
+                            if (s.mAddressableConcept.mUtf8) {
+                                indexName = "PmrMap<std::pmr::u8string, vertex_descriptor>";
+                            } else {
+                                indexName = "PmrMap<std::pmr::string, vertex_descriptor>";
+                            }
+                        } else {
+                            if (s.mAddressableConcept.mUtf8) {
+                                indexName = "Map<std::u8string, vertex_descriptor>";
+                            } else {
+                                indexName = "Map<std::string, vertex_descriptor>";
+                            }
+                        }
+                        addMember(vertID, true, indexName,
+                            s.mAddressableConcept.mMemberName,
+                            "_", NO_SERIALIZATION, "// Path\n");
+                    },
+                    [&](auto) {
+                    }),
+                s.mAddressableConcept.mType);
+        }
+    }
+    mCurrentScope.clear();
+    mCurrentModule.clear();
+
+    mCompiled = true;
+    return 0;
+}
+
 std::pmr::string ModuleBuilder::getMemberName(std::string_view memberName, bool bPublic) const {
     Expects(memberName.size() >= 2);
 
