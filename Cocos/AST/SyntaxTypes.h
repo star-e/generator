@@ -659,23 +659,51 @@ struct Graph {
     Graph& operator=(Graph const& rhs) = default;
     ~Graph() noexcept;
 
-    std::pmr::string getTypescriptVertexDescriptorType(std::string_view tsName,
-        std::pmr::memory_resource* scratch) const;
-    std::string_view getTypescriptEdgeDescriptorType() const;
-    std::string_view getTypescriptReferenceDescriptorType() const;
+    bool hasVertexProperty() const noexcept {
+        return !mVertexProperty.empty();
+    }
 
-    std::pmr::string getTypescriptVertexDereference(std::string_view v,
-        std::pmr::memory_resource* scratch) const;
-
-    std::string_view getTypescriptOutEdgeList(bool bAddressable) const;
-    std::string_view getTypescriptInEdgeList(bool bAddressable) const;
-
-    bool needEdgeList() const noexcept {
+    bool hasEdgeProperty() const noexcept {
         return !mEdgeProperty.empty();
     }
 
     bool isVector() const noexcept {
         return holds_alternative<Vector_>(mVertexListType);
+    }
+
+    bool isEdgeListVector() const noexcept {
+        return false;
+    }
+
+    bool isDirectedOnly() const noexcept {
+        return !mUndirected && !mBidirectional;
+    }
+
+    bool isBidirectionalOnly() const noexcept {
+        return !mUndirected && mBidirectional;
+    }
+
+    bool needEdgeList() const noexcept {
+        if (mUndirected)
+            return true;
+
+        if (isDirectedOnly())
+            return false;
+
+        Expects(mBidirectional);
+        
+        if (mEdgeProperty.empty())
+            return false;
+        
+        return true;
+    }
+
+    bool hasReserve() const noexcept {
+        return isVector();
+    }
+
+    bool isContinuousContainer() const noexcept {
+        return isVector();
     }
 
     bool isAddressable() const noexcept {
@@ -712,10 +740,37 @@ struct Graph {
         return mReferenceGraph && !mAliasGraph;
     }
 
+    bool hasAddressIndex() const noexcept {
+        return mAddressable && mAddressIndex;
+    }
+    bool hasIteratorComponent() const noexcept {
+        return !isVector();
+    }
+    const Component& getComponent(std::string_view name) const {
+        for (const auto& c : mComponents) {
+            if (c.mName == name) {
+                return c;
+            }
+        }
+        throw std::out_of_range("component not found");
+    }
+
+    // Typescript
     std::string_view getTypescriptNullVertex() const;
 
     std::pmr::string getTypescriptVertexPropertyType(const SyntaxGraph& g,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept;
+
+    std::pmr::string getTypescriptVertexDescriptorType(std::string_view tsName,
+        std::pmr::memory_resource* scratch) const;
+    std::string_view getTypescriptEdgeDescriptorType() const;
+    std::string_view getTypescriptReferenceDescriptorType() const;
+
+    std::pmr::string getTypescriptVertexDereference(std::string_view v,
+        std::pmr::memory_resource* scratch) const;
+
+    std::string_view getTypescriptOutEdgeList(bool bAddressable) const;
+    std::string_view getTypescriptInEdgeList(bool bAddressable) const;
 
     std::pmr::vector<Member> mMembers;
     std::pmr::vector<Constructor> mConstructors;
