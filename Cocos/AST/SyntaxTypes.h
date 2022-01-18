@@ -387,9 +387,18 @@ struct PolymorphicPair {
     PolymorphicPair& operator=(PolymorphicPair const& rhs) = default;
     ~PolymorphicPair() noexcept;
 
+    bool isIntrusive() const noexcept {
+        return mMemberName.empty();
+    }
+    bool isVector() const noexcept {
+        return mVector;
+    }
+
     std::pmr::string mTag;
     std::pmr::string mValue;
     std::pmr::string mMemberName;
+    std::pmr::string mContainerPath;
+    bool mVector = true;
 };
 
 struct Polymorphic {

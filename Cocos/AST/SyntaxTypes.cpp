@@ -235,17 +235,22 @@ Variant::~Variant() noexcept = default;
 PolymorphicPair::PolymorphicPair(const allocator_type& alloc) noexcept
     : mTag(alloc)
     , mValue(alloc)
-    , mMemberName(alloc) {}
+    , mMemberName(alloc)
+    , mContainerPath(alloc) {}
 
 PolymorphicPair::PolymorphicPair(PolymorphicPair&& rhs, const allocator_type& alloc)
     : mTag(std::move(rhs.mTag), alloc)
     , mValue(std::move(rhs.mValue), alloc)
-    , mMemberName(std::move(rhs.mMemberName), alloc) {}
+    , mMemberName(std::move(rhs.mMemberName), alloc)
+    , mContainerPath(std::move(rhs.mContainerPath), alloc)
+    , mVector(std::move(rhs.mVector)) {}
 
 PolymorphicPair::PolymorphicPair(PolymorphicPair const& rhs, const allocator_type& alloc)
     : mTag(rhs.mTag, alloc)
     , mValue(rhs.mValue, alloc)
-    , mMemberName(rhs.mMemberName, alloc) {}
+    , mMemberName(rhs.mMemberName, alloc)
+    , mContainerPath(rhs.mContainerPath, alloc)
+    , mVector(rhs.mVector) {}
 
 PolymorphicPair::~PolymorphicPair() noexcept = default;
 
