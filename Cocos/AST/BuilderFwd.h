@@ -34,9 +34,6 @@ namespace Meta {
 struct ModuleBuilder;
 struct TypeHandle;
 struct ModuleHandle;
-
-enum Features : uint32_t;
-
 struct CodegenScope;
 struct CodegenContext;
 struct ModuleBuilder;

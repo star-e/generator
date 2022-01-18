@@ -33,50 +33,50 @@ namespace Cocos::Meta {
 
 void buildRenderCommon(ModuleBuilder& builder) {
     MODULE(Camera,
-        .mAPI = "CC_DLL",
         .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "camera") {
+        .mFilePrefix = "camera",
+        .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Camera);
         }
     }
     MODULE(Ambient,
-        .mAPI = "CC_DLL",
         .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "ambient") {
+        .mFilePrefix = "ambient",
+        .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Ambient);
         }
     }
     MODULE(Fog,
-        .mAPI = "CC_DLL",
         .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "fog") {
+        .mFilePrefix = "fog",
+        .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Fog);
         }
     }
     MODULE(Shadows,
-        .mAPI = "CC_DLL",
         .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "shadows") {
+        .mFilePrefix = "shadows",
+        .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Shadows);
         }
     }
     MODULE(PipelineSceneData,
-        .mAPI = "CC_DLL",
         .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "pipeline-scene-data") {
+        .mFilePrefix = "pipeline-scene-data",
+        .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(PipelineSceneData);
         }
     }
 
     MODULE(Gfx,
-        .mAPI = "CC_DLL",
         .mFolder = "cocos/core/gfx",
-        .mFilePrefix = "index") {
+        .mFilePrefix = "index",
+        .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             PMR_MAP(PmrMap);
             PROJECT_TS(PmrMap, Map);
@@ -232,9 +232,9 @@ void buildRenderCommon(ModuleBuilder& builder) {
     }
 
     MODULE(RenderCommon,
-        .mAPI = "CC_DLL",
         .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "types") {
+        .mFilePrefix = "types",
+        .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 ENUM(UpdateFrequency, (PerInstance, PerBatch, PerQueue, PerPass, Count));

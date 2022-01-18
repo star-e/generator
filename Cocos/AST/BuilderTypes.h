@@ -74,42 +74,6 @@ struct ModuleHandle {
     uint32_t mVertexDescriptor = std::numeric_limits<uint32_t>::max();
 };
 
-enum Features : uint32_t {
-    Fwd = 1 << 0,
-    Types = 1 << 1,
-    Serialization = 1 << 2,
-    Names = 1 << 3,
-    NVP = 1 << 4,
-    Reflection = 1 << 5,
-    Graphs = 1 << 6,
-    Sender = 1 << 7,
-    Typescripts = 1 << 8,
-};
-
-constexpr Features operator|(const Features lhs, const Features rhs) noexcept {
-    return (Features)((uint32_t)lhs | (uint32_t)rhs);
-}
-
-constexpr Features operator&(const Features lhs, const Features rhs) noexcept {
-    return (Features)((uint32_t)lhs & (uint32_t)rhs);
-}
-
-constexpr Features& operator|=(Features& lhs, const Features rhs) noexcept {
-    return lhs = lhs | rhs;
-}
-
-constexpr Features& operator&=(Features& lhs, const Features rhs) noexcept {
-    return lhs = lhs & rhs;
-}
-
-constexpr bool operator!(Features e) noexcept {
-    return e == static_cast<Features>(0);
-}
-
-constexpr bool any(Features e) noexcept {
-    return !!e;
-}
-
 struct CodegenScope {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {

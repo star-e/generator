@@ -15,9 +15,9 @@ int main() {
     { // Open Module
         auto m = builder.openModule("Tutorial",
             ModuleInfo{
-                .mAPI = "CC_API",
                 .mFolder = "../../examples/tutorial",
                 .mFilePrefix = "tutorial",
+                .mAPI = "CC_API",
             });
         {
             // Open Namespace

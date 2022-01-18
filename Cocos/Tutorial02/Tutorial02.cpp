@@ -13,9 +13,9 @@ int main() {
     projectTypescriptDefaultValues(builder);
 
     MODULE(Tutorial,
-        .mAPI = "CC_API",
         .mFolder = "../../examples/tutorial",
         .mFilePrefix = "tutorial",
+        .mAPI = "CC_API"
     ) {
         NAMESPACE(cc) {
             ENUM(TransversalEnum, (DepthFirst, BreadthFirst));
