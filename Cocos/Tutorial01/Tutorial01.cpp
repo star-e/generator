@@ -94,7 +94,7 @@ int main() {
                 auto& g = get_by_tag<Graph_>(graphID, builder.mSyntaxGraph);
                 g.mNamed = true;
                 g.mReferenceGraph = true;
-                g.mAddressable.emplace();
+                g.mAddressable = true;
 
                 builder.addGraphComponent(graphID, "node", "Node", "mNodes");
 

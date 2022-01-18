@@ -189,7 +189,7 @@ BOOST_PP_SEQ_FOR_EACH_I(POLYMORPHIC_GRAPH_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(
     graph.mAliasGraph = true
 
 #define ADDRESSABLE_GRAPH() \
-    graph.mAddressable.emplace()
+    graph.mAddressable = true
 
 // Typescript
 #define PROJECT_TS(TYPE, JS) \

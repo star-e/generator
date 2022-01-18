@@ -81,15 +81,68 @@ struct Graph_;
 struct Container_;
 struct Map_;
 struct Instance_;
-struct Addressable;
 struct PolymorphicPair;
 struct Polymorphic;
 struct Component;
+struct VertexMap;
+
+template <typename T> struct IsForward { static constexpr bool value = false; };
+template <typename T> concept Forward_ = IsForward<T>::value;
+
+template <typename T> struct IsReversible { static constexpr bool value = false; };
+template <typename T> concept Reversible_ = Forward_<T> && IsReversible<T>::value;
+
+template <typename T> struct IsRandomAccess { static constexpr bool value = false; };
+template <typename T> concept RandomAccess_ = Reversible_<T> && IsRandomAccess<T>::value;
+
+template <typename T> struct IsSequence { static constexpr bool value = false; };
+template <typename T> concept Sequence_ = Forward_<T> && IsSequence<T>::value;
+
+template <typename T> struct IsBackInsertionSequence { static constexpr bool value = false; };
+template <typename T> concept BackInsertionSequence_ = Sequence_<T> && IsBackInsertionSequence<T>::value;
+
+template <typename T> struct IsAssociative { static constexpr bool value = false; };
+template <typename T> concept Associative_ = Forward_<T> && IsAssociative<T>::value;
+
+template <typename T> struct IsUniqueAssociative { static constexpr bool value = false; };
+template <typename T> concept UniqueAssociative_ = Associative_<T> && IsUniqueAssociative<T>::value;
+
+template <typename T> struct IsMultipleAssociative { static constexpr bool value = false; };
+template <typename T> concept MultipleAssociative_ = Associative_<T> && IsMultipleAssociative<T>::value;
+
 struct Vector_;
 struct List_;
+struct Set_;
+struct MultiSet_;
+template <> struct IsForward<Vector_> { static constexpr bool value = true; };
+template <> struct IsSequence<Vector_> { static constexpr bool value = true; };
+template <> struct IsBackInsertionSequence<Vector_> { static constexpr bool value = true; };
+
+template <> struct IsForward<List_> { static constexpr bool value = true; };
+template <> struct IsSequence<List_> { static constexpr bool value = true; };
+template <> struct IsBackInsertionSequence<List_> { static constexpr bool value = true; };
+
+template <> struct IsForward<Set_> { static constexpr bool value = true; };
+template <> struct IsAssociative<Set_> { static constexpr bool value = true; };
+template <> struct IsUniqueAssociative<Set_> { static constexpr bool value = true; };
+
+template <> struct IsForward<MultiSet_> { static constexpr bool value = true; };
+template <> struct IsAssociative<MultiSet_> { static constexpr bool value = true; };
+template <> struct IsMultipleAssociative<MultiSet_> { static constexpr bool value = true; };
 
 using VertexListType = std::variant<Vector_, List_>;
+using EdgeListType = std::variant<List_, Set_, MultiSet_>;
+using OutEdgeListType = std::variant<Vector_, List_, Set_, MultiSet_>;
 
+struct Direct_;
+struct Trie_;
+
+using PathIndexType = std::variant<Direct_, Map_>;
+
+struct Layer;
+struct Stack;
+struct Named;
+struct Addressable;
 struct Graph;
 struct Typescript;
 template <> struct IsIdentifier<Define_> { static constexpr bool value = true; };

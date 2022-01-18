@@ -268,19 +268,119 @@ Polymorphic::~Polymorphic() noexcept = default;
 Component::Component(const allocator_type& alloc) noexcept
     : mName(alloc)
     , mValuePath(alloc)
-    , mMemberName(alloc) {}
+    , mMemberName(alloc)
+    , mContainerPath(alloc) {}
 
 Component::Component(Component&& rhs, const allocator_type& alloc)
     : mName(std::move(rhs.mName), alloc)
     , mValuePath(std::move(rhs.mValuePath), alloc)
-    , mMemberName(std::move(rhs.mMemberName), alloc) {}
+    , mMemberName(std::move(rhs.mMemberName), alloc)
+    , mContainerPath(std::move(rhs.mContainerPath), alloc)
+    , mVector(std::move(rhs.mVector)) {}
 
 Component::Component(Component const& rhs, const allocator_type& alloc)
     : mName(rhs.mName, alloc)
     , mValuePath(rhs.mValuePath, alloc)
-    , mMemberName(rhs.mMemberName, alloc) {}
+    , mMemberName(rhs.mMemberName, alloc)
+    , mContainerPath(rhs.mContainerPath, alloc)
+    , mVector(rhs.mVector) {}
 
 Component::~Component() noexcept = default;
+
+VertexMap::VertexMap(const allocator_type& alloc) noexcept
+    : mMapType(alloc)
+    , mMemberName(alloc)
+    , mKeyType(alloc)
+    , mComponentName(alloc)
+    , mComponentMemberName(alloc)
+    , mTypePath(alloc) {}
+
+VertexMap::VertexMap(VertexMap&& rhs, const allocator_type& alloc)
+    : mMapType(std::move(rhs.mMapType), alloc)
+    , mMemberName(std::move(rhs.mMemberName), alloc)
+    , mKeyType(std::move(rhs.mKeyType), alloc)
+    , mComponentName(std::move(rhs.mComponentName), alloc)
+    , mComponentMemberName(std::move(rhs.mComponentMemberName), alloc)
+    , mTypePath(std::move(rhs.mTypePath), alloc) {}
+
+VertexMap::VertexMap(VertexMap const& rhs, const allocator_type& alloc)
+    : mMapType(rhs.mMapType, alloc)
+    , mMemberName(rhs.mMemberName, alloc)
+    , mKeyType(rhs.mKeyType, alloc)
+    , mComponentName(rhs.mComponentName, alloc)
+    , mComponentMemberName(rhs.mComponentMemberName, alloc)
+    , mTypePath(rhs.mTypePath, alloc) {}
+
+VertexMap::~VertexMap() noexcept = default;
+
+Layer::Layer(const allocator_type& alloc) noexcept
+    : mContainer(alloc)
+    , mMemberName(alloc)
+    , mGraphPath(alloc)
+    , mTagPath(alloc) {}
+
+Layer::Layer(Layer&& rhs, const allocator_type& alloc)
+    : mContainer(std::move(rhs.mContainer), alloc)
+    , mMemberName(std::move(rhs.mMemberName), alloc)
+    , mGraphPath(std::move(rhs.mGraphPath), alloc)
+    , mTagPath(std::move(rhs.mTagPath), alloc)
+    , mContainerType(std::move(rhs.mContainerType)) {}
+
+Layer::Layer(Layer const& rhs, const allocator_type& alloc)
+    : mContainer(rhs.mContainer, alloc)
+    , mMemberName(rhs.mMemberName, alloc)
+    , mGraphPath(rhs.mGraphPath, alloc)
+    , mTagPath(rhs.mTagPath, alloc)
+    , mContainerType(rhs.mContainerType) {}
+
+Layer::~Layer() noexcept = default;
+
+Stack::Stack(const allocator_type& alloc) noexcept
+    : mLayers(alloc)
+    , mContainer(alloc) {}
+
+Stack::Stack(Stack&& rhs, const allocator_type& alloc)
+    : mLayers(std::move(rhs.mLayers), alloc)
+    , mContainer(std::move(rhs.mContainer), alloc) {}
+
+Stack::Stack(Stack const& rhs, const allocator_type& alloc)
+    : mLayers(rhs.mLayers, alloc)
+    , mContainer(rhs.mContainer, alloc) {}
+
+Stack::~Stack() noexcept = default;
+
+Named::Named(const allocator_type& alloc) noexcept
+    : mComponentName(alloc)
+    , mComponentMemberName(alloc) {}
+
+Named::Named(Named&& rhs, const allocator_type& alloc)
+    : mComponent(std::move(rhs.mComponent))
+    , mComponentName(std::move(rhs.mComponentName), alloc)
+    , mComponentMemberName(std::move(rhs.mComponentMemberName), alloc) {}
+
+Named::Named(Named const& rhs, const allocator_type& alloc)
+    : mComponent(rhs.mComponent)
+    , mComponentName(rhs.mComponentName, alloc)
+    , mComponentMemberName(rhs.mComponentMemberName, alloc) {}
+
+Named::~Named() noexcept = default;
+
+Addressable::Addressable(const allocator_type& alloc) noexcept
+    : mMemberName(alloc) {}
+
+Addressable::Addressable(Addressable&& rhs, const allocator_type& alloc)
+    : mUtf8(std::move(rhs.mUtf8))
+    , mPathPropertyMap(std::move(rhs.mPathPropertyMap))
+    , mType(std::move(rhs.mType))
+    , mMemberName(std::move(rhs.mMemberName), alloc) {}
+
+Addressable::Addressable(Addressable const& rhs, const allocator_type& alloc)
+    : mUtf8(rhs.mUtf8)
+    , mPathPropertyMap(rhs.mPathPropertyMap)
+    , mType(rhs.mType)
+    , mMemberName(rhs.mMemberName, alloc) {}
+
+Addressable::~Addressable() noexcept = default;
 
 Graph::Graph(const allocator_type& alloc) noexcept
     : mInherits(alloc)
@@ -297,7 +397,8 @@ Graph::Graph(const allocator_type& alloc) noexcept
     , mDifferenceType(alloc)
     , mEdgeSizeType(alloc)
     , mEdgeDifferenceType(alloc)
-    , mDegreeSizeType(alloc) {}
+    , mDegreeSizeType(alloc)
+    , mAddressableConcept(alloc) {}
 
 Graph::Graph(Graph&& rhs, const allocator_type& alloc)
     : mInherits(std::move(rhs.mInherits), alloc)
@@ -320,7 +421,8 @@ Graph::Graph(Graph&& rhs, const allocator_type& alloc)
     , mDifferenceType(std::move(rhs.mDifferenceType), alloc)
     , mEdgeSizeType(std::move(rhs.mEdgeSizeType), alloc)
     , mEdgeDifferenceType(std::move(rhs.mEdgeDifferenceType), alloc)
-    , mDegreeSizeType(std::move(rhs.mDegreeSizeType), alloc) {}
+    , mDegreeSizeType(std::move(rhs.mDegreeSizeType), alloc)
+    , mAddressableConcept(std::move(rhs.mAddressableConcept), alloc) {}
 
 Graph::Graph(Graph const& rhs, const allocator_type& alloc)
     : mInherits(rhs.mInherits, alloc)
@@ -343,7 +445,8 @@ Graph::Graph(Graph const& rhs, const allocator_type& alloc)
     , mDifferenceType(rhs.mDifferenceType, alloc)
     , mEdgeSizeType(rhs.mEdgeSizeType, alloc)
     , mEdgeDifferenceType(rhs.mEdgeDifferenceType, alloc)
-    , mDegreeSizeType(rhs.mDegreeSizeType, alloc) {}
+    , mDegreeSizeType(rhs.mDegreeSizeType, alloc)
+    , mAddressableConcept(rhs.mAddressableConcept, alloc) {}
 
 Graph::~Graph() noexcept = default;
 

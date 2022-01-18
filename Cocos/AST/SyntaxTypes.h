@@ -369,7 +369,6 @@ struct Graph_ {};
 struct Container_ {};
 struct Map_ {};
 struct Instance_ {};
-struct Addressable {};
 
 struct PolymorphicPair {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
@@ -417,6 +416,14 @@ struct Polymorphic {
     Polymorphic& operator=(Polymorphic const& rhs) = default;
     ~Polymorphic() noexcept;
 
+    bool contains(const PolymorphicPair& rhs) const {
+        for (const auto& t : mConcepts) {
+            if (t.mTag == rhs.mTag)
+                return true;
+        }
+        return false;
+    }
+
     std::pmr::vector<PolymorphicPair> mConcepts;
 };
 
@@ -439,17 +446,55 @@ struct Component {
     bool isValid() const noexcept {
         return !mMemberName.empty();
     }
-
+    bool isVector() const noexcept {
+        return mVector;
+    }
     std::pmr::string getTypescriptComponentType(const SyntaxGraph& g,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept;
+        std::pmr::memory_resource* mr,
+        std::pmr::memory_resource* scratch) const noexcept;
 
     std::pmr::string mName;
     std::pmr::string mValuePath;
     std::pmr::string mMemberName;
+    std::pmr::string mContainerPath;
+    bool mVector = true;
+};
+
+struct VertexMap {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mMapType.get_allocator().resource());
+    }
+
+    VertexMap(const allocator_type& alloc) noexcept;
+    VertexMap(VertexMap&& rhs, const allocator_type& alloc);
+    VertexMap(VertexMap const& rhs, const allocator_type& alloc);
+
+    VertexMap(VertexMap&& rhs) = default;
+    VertexMap(VertexMap const& rhs) = delete;
+    VertexMap& operator=(VertexMap&& rhs) = default;
+    VertexMap& operator=(VertexMap const& rhs) = default;
+    ~VertexMap() noexcept;
+
+    bool isBimap() const noexcept {
+        return !mComponentName.empty();
+    }
+    bool isComponentMember() const noexcept {
+        return !mComponentMemberName.empty();
+    }
+
+    std::pmr::string mMapType;
+    std::pmr::string mMemberName;
+    std::pmr::string mKeyType;
+    std::pmr::string mComponentName;
+    std::pmr::string mComponentMemberName;
+    std::pmr::string mTypePath;
 };
 
 struct Vector_ {};
 struct List_ {};
+struct Set_ {};
+struct MultiSet_ {};
 
 using VertexListType = std::variant<Vector_, List_>;
 
@@ -464,6 +509,139 @@ inline bool operator==(const VertexListType& lhs, const VertexListType& rhs) noe
 inline bool operator!=(const VertexListType& lhs, const VertexListType& rhs) noexcept {
     return !(lhs == rhs);
 }
+using EdgeListType = std::variant<List_, Set_, MultiSet_>;
+
+inline bool operator<(const EdgeListType& lhs, const EdgeListType& rhs) noexcept {
+    return lhs.index() < rhs.index();
+}
+
+inline bool operator==(const EdgeListType& lhs, const EdgeListType& rhs) noexcept {
+    return lhs.index() == rhs.index();
+}
+
+inline bool operator!=(const EdgeListType& lhs, const EdgeListType& rhs) noexcept {
+    return !(lhs == rhs);
+}
+using OutEdgeListType = std::variant<Vector_, List_, Set_, MultiSet_>;
+
+inline bool operator<(const OutEdgeListType& lhs, const OutEdgeListType& rhs) noexcept {
+    return lhs.index() < rhs.index();
+}
+
+inline bool operator==(const OutEdgeListType& lhs, const OutEdgeListType& rhs) noexcept {
+    return lhs.index() == rhs.index();
+}
+
+inline bool operator!=(const OutEdgeListType& lhs, const OutEdgeListType& rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+struct Direct_ {};
+struct Trie_ {};
+
+using PathIndexType = std::variant<Direct_, Map_>;
+
+inline bool operator<(const PathIndexType& lhs, const PathIndexType& rhs) noexcept {
+    return lhs.index() < rhs.index();
+}
+
+inline bool operator==(const PathIndexType& lhs, const PathIndexType& rhs) noexcept {
+    return lhs.index() == rhs.index();
+}
+
+inline bool operator!=(const PathIndexType& lhs, const PathIndexType& rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+struct Layer {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mContainer.get_allocator().resource());
+    }
+
+    Layer(const allocator_type& alloc) noexcept;
+    Layer(Layer&& rhs, const allocator_type& alloc);
+    Layer(Layer const& rhs, const allocator_type& alloc);
+
+    Layer(Layer&& rhs) = default;
+    Layer(Layer const& rhs) = delete;
+    Layer& operator=(Layer&& rhs) = default;
+    Layer& operator=(Layer const& rhs) = default;
+    ~Layer() noexcept;
+
+    bool isIntrusive() const noexcept {
+        return mMemberName.empty();
+    }
+
+    std::pmr::string mContainer;
+    std::pmr::string mMemberName;
+    std::pmr::string mGraphPath;
+    std::pmr::string mTagPath;
+    VertexListType mContainerType;
+};
+
+struct Stack {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mLayers.get_allocator().resource());
+    }
+
+    Stack(const allocator_type& alloc) noexcept;
+    Stack(Stack&& rhs, const allocator_type& alloc);
+    Stack(Stack const& rhs, const allocator_type& alloc);
+
+    Stack(Stack&& rhs) = default;
+    Stack(Stack const& rhs) = delete;
+    Stack& operator=(Stack&& rhs) = default;
+    Stack& operator=(Stack const& rhs) = default;
+    ~Stack() noexcept;
+
+    std::pmr::vector<Layer> mLayers;
+    std::pmr::string mContainer = std::pmr::string("/std/pmr/vector", get_allocator());
+};
+
+struct Named {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mComponentName.get_allocator().resource());
+    }
+
+    Named(const allocator_type& alloc) noexcept;
+    Named(Named&& rhs, const allocator_type& alloc);
+    Named(Named const& rhs, const allocator_type& alloc);
+
+    Named(Named&& rhs) = default;
+    Named(Named const& rhs) = delete;
+    Named& operator=(Named&& rhs) = default;
+    Named& operator=(Named const& rhs) = default;
+    ~Named() noexcept;
+
+    bool mComponent = true;
+    std::pmr::string mComponentName;
+    std::pmr::string mComponentMemberName;
+};
+
+struct Addressable {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mMemberName.get_allocator().resource());
+    }
+
+    Addressable(const allocator_type& alloc) noexcept;
+    Addressable(Addressable&& rhs, const allocator_type& alloc);
+    Addressable(Addressable const& rhs, const allocator_type& alloc);
+
+    Addressable(Addressable&& rhs) = default;
+    Addressable(Addressable const& rhs) = delete;
+    Addressable& operator=(Addressable&& rhs) = default;
+    Addressable& operator=(Addressable const& rhs) = default;
+    ~Addressable() noexcept;
+
+    bool mUtf8 = true;
+    bool mPathPropertyMap = false;
+    PathIndexType mType = Map_{};
+    std::pmr::string mMemberName;
+};
 
 struct Graph {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
@@ -551,7 +729,7 @@ struct Graph {
     bool mReferenceGraph = false;
     bool mAliasGraph = false;
     bool mMutableReference = true;
-    std::optional<Addressable> mAddressable;
+    bool mAddressable = false;
     Polymorphic mPolymorphic;
     VertexListType mVertexListType;
     std::pmr::string mVertexDescriptor;
@@ -560,6 +738,7 @@ struct Graph {
     std::pmr::string mEdgeSizeType;
     std::pmr::string mEdgeDifferenceType;
     std::pmr::string mDegreeSizeType;
+    Addressable mAddressableConcept;
 };
 
 struct Typescript {
