@@ -30,92 +30,6 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-std::pmr::string Graph::getTypescriptVertexDescriptorType(
-    std::string_view tsName, std::pmr::memory_resource* scratch) const {
-    return visit(
-        overload(
-            [&](Vector_) {
-                return std::pmr::string("number", scratch);
-            },
-            [&](List_) {
-                return std::pmr::string(tsName, scratch) + "Vertex";
-            }),
-        mVertexListType);
-}
-
-std::string_view Graph::getTypescriptEdgeDescriptorType() const {
-    if (mEdgeProperty.empty()) {
-        return "impl.ED";
-    } else {
-        return "impl.EPD";
-    }
-}
-
-std::string_view Graph::getTypescriptReferenceDescriptorType() const {
-    if (isAliasGraph()) {
-        return getTypescriptEdgeDescriptorType();
-    } else {
-        return "impl.ED";
-    }
-}
-
-std::pmr::string Graph::getTypescriptVertexDereference(std::string_view v,
-    std::pmr::memory_resource* scratch) const {
-    pmr_ostringstream oss(std::ios_base::out, scratch);
-
-    if (isVector()) {
-        oss << "this._vertices[" << v << "]";
-    } else {
-        oss << v;
-    }
-
-    return oss.str();
-}
-
-std::string_view Graph::getTypescriptOutEdgeList(bool bAddressable) const {
-    if (bAddressable) {
-        if (mAliasGraph) {
-            return "_outEdges";
-        } else {
-            return "_children";
-        }
-    } else {
-        return "_outEdges";
-    }
-}
-
-std::string_view Graph::getTypescriptInEdgeList(bool bAddressable) const {
-    if (bAddressable) {
-        return "_parents";
-    } else {
-        return "_inEdges";
-    }
-}
-
-std::pmr::string Component::getTypescriptComponentType(const SyntaxGraph& g,
-    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept {
-    auto vertID = locate(mValuePath, g);
-    return g.getTypescriptTypename(vertID, mr, scratch);
-}
-
-std::string_view Graph::getTypescriptNullVertex() const {
-    return visit(
-        overload(
-            [&](Vector_) {
-                return std::string_view("0xFFFFFFFF");
-            },
-            [&](List_) {
-                return std::string_view("null");
-            }),
-        mVertexListType);
-}
-
-std::pmr::string Graph::getTypescriptVertexPropertyType(const SyntaxGraph& g,
-    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept {
-    auto vertID = locate(mVertexProperty, g);
-    return g.getTypescriptTypename(vertID, mr, scratch);
-}
-
 bool SyntaxGraph::isNamespace(std::string_view typePath) const noexcept {
     const auto& g = *this;
     if (typePath.empty()) {
@@ -125,7 +39,14 @@ bool SyntaxGraph::isNamespace(std::string_view typePath) const noexcept {
     return parentID != g.null_vertex();
 }
 
-bool SyntaxGraph::isTag(vertex_descriptor vertID) const {
+bool SyntaxGraph::isInstantiation(vertex_descriptor vertID) const noexcept {
+    if (holds_tag<Instance_>(vertID, *this)) {
+        return true;
+    }
+    return false;
+}
+
+bool SyntaxGraph::isTag(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     if (holds_tag<Tag_>(vertID, g))
         return true;
@@ -133,6 +54,8 @@ bool SyntaxGraph::isTag(vertex_descriptor vertID) const {
     if (holds_tag<Variant_>(vertID, g)) {
         const auto& var = get_by_tag<Variant_>(vertID, g);
         for (const auto& typePath : var.mVariants) {
+            if (typePath == "/std/monostate")
+                continue;
             auto typeID = locate(typePath, g);
             if (!holds_tag<Tag_>(typeID, g)) {
                 return false;
@@ -141,6 +64,177 @@ bool SyntaxGraph::isTag(vertex_descriptor vertID) const {
         return true;
     }
     return false;
+}
+
+bool SyntaxGraph::isPmr(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+    if (traits.mPmr)
+        return true;
+
+    auto checkStruct = [&](const Composition_ auto& s) {
+        bool bPmr = false;
+        for (const auto& m : s.mMembers) {
+            auto memberID = locate(m.mTypePath, g);
+            if (memberID == vertID)
+                continue;
+
+            if (m.mPointer || m.mReference)
+                continue;
+
+            if (g.isPmr(memberID))
+                bPmr = true;
+        }
+        return bPmr;
+    };
+
+    return visit_vertex(
+        vertID, g,
+        [&](const Struct& s) {
+            return checkStruct(s);
+        },
+        [&](const Graph& s) {
+            bool bPmr = checkStruct(s);
+            for (const auto& c : s.mComponents) {
+                auto componentID = locate(c.mValuePath, g);
+                Expects(componentID != vertID);
+                if (g.isPmr(componentID))
+                    bPmr = true;
+            }
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                auto objectID = locate(c.mValue, g);
+                Expects(objectID != vertID);
+                if (g.isPmr(objectID))
+                    bPmr = true;
+            }
+            return bPmr;
+        },
+        [&](const Instance& s) {
+            const auto optionalID = locate("/std/optional", g);
+            auto templateID = locate(s.mTemplate, g);
+            const auto& traits = get(g.traits, g, templateID);
+
+            if (traits.mPmr)
+                return true;
+
+            if (s.mTemplate == "/std/shared_ptr"
+                || s.mTemplate == "/std/weak_ptr")
+                return false;
+
+            if (templateID == optionalID) {
+                Expects(s.mParameters.size() == 1);
+                auto parameterID = locate(s.mParameters.front(), g);
+                return g.isPmr(parameterID);
+            }
+
+            for (const auto& typePath : s.mParameters) {
+                auto paramID = locate(typePath, g);
+                const auto& traits = get(g.traits, g, paramID);
+                Expects(!traits.mPmr);
+            }
+            return false;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
+bool SyntaxGraph::isNoexcept(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+
+    if (!traits.mNoexcept) {
+        return false;
+    }
+
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            bool bThrow = false;
+            for (const auto& m : s.mMembers) {
+                auto memberID = locate(m.mTypePath, g);
+                if (memberID == vertID)
+                    continue;
+
+                if (!g.isNoexcept(memberID))
+                    bThrow = true;
+            }
+            return !bThrow;
+        },
+        [&](const Instance& s) {
+            auto templateID = locate(s.mTemplate, g);
+            const auto& traits = get(g.traits, g, templateID);
+            bool bThrow = false;
+            if (!traits.mNoexcept)
+                bThrow = true;
+
+            for (const auto& typePath : s.mParameters) {
+                auto paramID = locate(typePath, g);
+                const auto& traits = get(g.traits, g, paramID);
+                if (!traits.mNoexcept)
+                    bThrow = true;
+            }
+            return !bThrow;
+        },
+        [&](const auto&) {
+            return true;
+        });
+}
+
+bool SyntaxGraph::isComposition(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto&) {
+            return true;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
+bool SyntaxGraph::isString(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& name = get(g.names, g, vertID);
+    return name == "string" || name == "u8string";
+}
+
+bool SyntaxGraph::isUtf8(vertex_descriptor vertID) const noexcept {
+    if (!isString(vertID))
+        return false;
+    const auto& g = *this;
+    const auto& name = get(g.names, g, vertID);
+    return name == "u8string";
+}
+
+bool SyntaxGraph::isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept {
+    const auto& g = *this;
+    auto typePath = get_path(vertID, g, scratch);
+    if (typePath.starts_with("/std/pair<") && typePath.ends_with(">")) {
+        return true;
+    }
+    return false;
+}
+
+bool SyntaxGraph::isOptional(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    if (!isInstantiation(vertID))
+        return false;
+
+    const auto& inst = get<Instance>(vertID, g);
+    if (inst.mTemplate == "/std/optional") {
+        return true;
+    }
+    return false;
+}
+
+bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept {
+    const auto& g = *this;
+    const auto& modulePath = get(g.modulePaths, g, vertID);
+    const auto& moduleID = locate(modulePath, mg);
+
+    const auto& m = get(mg.modules, mg, moduleID);
+    return !m.mAPI.empty();
 }
 
 std::pmr::string SyntaxGraph::getTypePath(vertex_descriptor vertID,
@@ -801,6 +895,92 @@ PmrMap<std::pmr::string, PmrSet<std::pmr::string>> SyntaxGraph::getImportedTypes
             [](const auto&) {});
     }
     return imported;
+}
+
+std::pmr::string Graph::getTypescriptVertexDescriptorType(
+    std::string_view tsName, std::pmr::memory_resource* scratch) const {
+    return visit(
+        overload(
+            [&](Vector_) {
+                return std::pmr::string("number", scratch);
+            },
+            [&](List_) {
+                return std::pmr::string(tsName, scratch) + "Vertex";
+            }),
+        mVertexListType);
+}
+
+std::string_view Graph::getTypescriptEdgeDescriptorType() const {
+    if (mEdgeProperty.empty()) {
+        return "impl.ED";
+    } else {
+        return "impl.EPD";
+    }
+}
+
+std::string_view Graph::getTypescriptReferenceDescriptorType() const {
+    if (isAliasGraph()) {
+        return getTypescriptEdgeDescriptorType();
+    } else {
+        return "impl.ED";
+    }
+}
+
+std::pmr::string Graph::getTypescriptVertexDereference(std::string_view v,
+    std::pmr::memory_resource* scratch) const {
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+
+    if (isVector()) {
+        oss << "this._vertices[" << v << "]";
+    } else {
+        oss << v;
+    }
+
+    return oss.str();
+}
+
+std::string_view Graph::getTypescriptOutEdgeList(bool bAddressable) const {
+    if (bAddressable) {
+        if (mAliasGraph) {
+            return "_outEdges";
+        } else {
+            return "_children";
+        }
+    } else {
+        return "_outEdges";
+    }
+}
+
+std::string_view Graph::getTypescriptInEdgeList(bool bAddressable) const {
+    if (bAddressable) {
+        return "_parents";
+    } else {
+        return "_inEdges";
+    }
+}
+
+std::pmr::string Component::getTypescriptComponentType(const SyntaxGraph& g,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept {
+    auto vertID = locate(mValuePath, g);
+    return g.getTypescriptTypename(vertID, mr, scratch);
+}
+
+std::string_view Graph::getTypescriptNullVertex() const {
+    return visit(
+        overload(
+            [&](Vector_) {
+                return std::string_view("0xFFFFFFFF");
+            },
+            [&](List_) {
+                return std::string_view("null");
+            }),
+        mVertexListType);
+}
+
+std::pmr::string Graph::getTypescriptVertexPropertyType(const SyntaxGraph& g,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept {
+    auto vertID = locate(mVertexProperty, g);
+    return g.getTypescriptTypename(vertID, mr, scratch);
 }
 
 }

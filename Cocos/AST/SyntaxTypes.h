@@ -971,8 +971,18 @@ struct SyntaxGraph {
         Impl::ValueHandle<Instance_, vertex_descriptor>>;
 
     bool isNamespace(std::string_view typePath) const noexcept;
-    bool isTag(vertex_descriptor vertID) const;
+    bool isInstantiation(vertex_descriptor vertID) const noexcept;
+    bool isTag(vertex_descriptor vertID) const noexcept;
+    bool isPmr(vertex_descriptor vertID) const noexcept;
+    bool isNoexcept(vertex_descriptor vertID) const noexcept;
+    bool isComposition(vertex_descriptor vertID) const noexcept;
+    bool isString(vertex_descriptor vertID) const noexcept;
+    bool isUtf8(vertex_descriptor vertID) const noexcept;
+    bool isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept;
+    bool isOptional(vertex_descriptor vertID) const noexcept;
+    bool isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
 
+    // general
     std::pmr::string getTypePath(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
 
     vertex_descriptor lookupIdentifier(std::string_view currentScope, std::string_view dependentName,
@@ -993,6 +1003,7 @@ struct SyntaxGraph {
 
     vertex_descriptor getTemplate(vertex_descriptor instanceID, std::pmr::memory_resource* scratch) const;
 
+    // Typescript
     bool isTypescriptData(std::string_view name) const;
 
     bool isTypescriptArray(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const;
