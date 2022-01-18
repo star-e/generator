@@ -481,7 +481,7 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
         [&](const Concept&) {
             Expects(false);
         },
-        [&](const Declare&) {
+        [&](const Define&) {
             Expects(false);
         });
 
@@ -687,7 +687,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
         [&](const Concept&) {
             Expects(false);
         },
-        [&](const Declare&) {
+        [&](const Define&) {
             Expects(false);
         });
 

@@ -38,8 +38,11 @@ template <typename T> concept Identifier_ = IsIdentifier<T>::value;
 template <typename T> struct IsData { static constexpr bool value = false; };
 template <typename T> concept Data_ = Identifier_<T> && IsData<T>::value;
 
+template <typename T> struct IsAlgebra { static constexpr bool value = false; };
+template <typename T> concept Algebra_ = Identifier_<T> && IsAlgebra<T>::value;
+
 template <typename T> struct IsComposition { static constexpr bool value = false; };
-template <typename T> concept Composition_ = Data_<T> && IsComposition<T>::value;
+template <typename T> concept Composition_ = Identifier_<T> && IsComposition<T>::value;
 
 template <typename T> struct IsTemplate { static constexpr bool value = false; };
 template <typename T> concept Template_ = Identifier_<T> && IsTemplate<T>::value;
@@ -47,18 +50,11 @@ template <typename T> concept Template_ = Identifier_<T> && IsTemplate<T>::value
 template <typename T> struct IsInstantiation { static constexpr bool value = false; };
 template <typename T> concept Instantiation_ = IsInstantiation<T>::value;
 
-struct Requires_;
-struct Composites_;
-struct Reuses_;
-struct Inherits_;
-struct Sums_;
-struct References_;
-struct Optional;
 struct Container;
 struct Map;
 struct Instance;
 struct Namespace;
-struct Declare;
+struct Define;
 struct Alias;
 struct Concept;
 struct Traits;
@@ -71,7 +67,7 @@ struct Constructor;
 struct Struct;
 struct Variant;
 struct Namespace_;
-struct Declare_;
+struct Define_;
 struct Concept_;
 struct Value_;
 struct Enum_;
@@ -79,7 +75,6 @@ struct Tag_;
 struct Struct_;
 struct Variant_;
 struct Graph_;
-struct Optional_;
 struct Container_;
 struct Map_;
 struct Instance_;
@@ -121,32 +116,22 @@ template <> struct IsIdentifier<Tag> { static constexpr bool value = true; };
 template <> struct IsData<Tag> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Struct_> { static constexpr bool value = true; };
-template <> struct IsData<Struct_> { static constexpr bool value = true; };
 template <> struct IsComposition<Struct_> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Graph_> { static constexpr bool value = true; };
-template <> struct IsData<Graph_> { static constexpr bool value = true; };
 template <> struct IsComposition<Graph_> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Struct> { static constexpr bool value = true; };
-template <> struct IsData<Struct> { static constexpr bool value = true; };
 template <> struct IsComposition<Struct> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Graph> { static constexpr bool value = true; };
-template <> struct IsData<Graph> { static constexpr bool value = true; };
 template <> struct IsComposition<Graph> { static constexpr bool value = true; };
-
-template <> struct IsIdentifier<Optional_> { static constexpr bool value = true; };
-template <> struct IsTemplate<Optional_> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Container_> { static constexpr bool value = true; };
 template <> struct IsTemplate<Container_> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Map_> { static constexpr bool value = true; };
 template <> struct IsTemplate<Map_> { static constexpr bool value = true; };
-
-template <> struct IsIdentifier<Optional> { static constexpr bool value = true; };
-template <> struct IsTemplate<Optional> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Container> { static constexpr bool value = true; };
 template <> struct IsTemplate<Container> { static constexpr bool value = true; };

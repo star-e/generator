@@ -34,22 +34,24 @@ namespace Meta {
 
 enum GenerationFlags : uint64_t {
     NO_FLAGS = 0,
-    CUSTOM_CNTR = 1 << 0,
-    CUSTOM_DTOR = 1 << 1,
-    MOVE = 1 << 2,
-    NO_MOVE = 1 << 3,
-    EQUAL = 1 << 4,
-    NO_EQUAL = 1 << 5,
-    LESS = 1 << 6,
-    NO_LESS = 1 << 7,
-    SPACESHIP = 1 << 8,
-    NO_SPACESHIP = 1 << 9,
-    REFLECTION = 1 << 10,
-    NO_SERIALIZATION = 1 << 11,
-    HASH_COMBINE = 1 << 12,
-    NO_HASH_COMBINE = 1 << 13,
-    ENUM_OPERATOR = 1 << 14,
-    PMR_DEFAULT = 1 << 15,
+    NO_DEFAULT_CNTR = 1 << 0,
+    CUSTOM_CNTR = 1 << 1,
+    CUSTOM_DTOR = 1 << 2,
+    NO_COPY = 1 << 3,
+    NO_MOVE_NO_COPY = 1 << 4,
+    EQUAL = 1 << 5,
+    NO_EQUAL = 1 << 6,
+    LESS = 1 << 7,
+    NO_LESS = 1 << 8,
+    SPACESHIP = 1 << 9,
+    NO_SPACESHIP = 1 << 10,
+    REFLECTION = 1 << 11,
+    NO_SERIALIZATION = 1 << 12,
+    HASH_COMBINE = 1 << 13,
+    NO_HASH_COMBINE = 1 << 14,
+    ENUM_OPERATOR = 1 << 15,
+    NO_ENUM_OPERATOR = 1 << 16,
+    PMR_DEFAULT = 1 << 17,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -76,26 +78,13 @@ constexpr bool any(GenerationFlags e) noexcept {
     return !!e;
 }
 
-struct Requires_ {
-} static constexpr Requires;
-struct Composites_ {
-} static constexpr Composites;
-struct Reuses_ {
-} static constexpr Reuses;
-struct Inherits_ {
-} static constexpr Inherits;
-struct Sums_ {
-} static constexpr Sums;
-struct References_ {
-} static constexpr References;
-struct Optional {};
 struct Container {};
 struct Map {};
 
 struct Instance {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
-        return allocator_type(mParameters.get_allocator().resource());
+        return allocator_type(mTemplate.get_allocator().resource());
     }
 
     Instance(const allocator_type& alloc) noexcept;
@@ -108,11 +97,31 @@ struct Instance {
     Instance& operator=(Instance const& rhs) = default;
     ~Instance() noexcept;
 
+    std::pmr::string mTemplate;
     std::pmr::vector<std::pmr::string> mParameters;
 };
 
 struct Namespace {};
-struct Declare {};
+
+struct Define {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mContent.get_allocator().resource());
+    }
+
+    Define(const allocator_type& alloc);
+    Define(std::string_view content, const allocator_type& alloc);
+    Define(Define&& rhs, const allocator_type& alloc);
+    Define(Define const& rhs, const allocator_type& alloc);
+
+    Define(Define&& rhs) = default;
+    Define(Define const& rhs) = delete;
+    Define& operator=(Define&& rhs) = default;
+    Define& operator=(Define const& rhs) = default;
+    ~Define() noexcept;
+
+    std::pmr::string mContent;
+};
 
 struct Alias {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
@@ -288,7 +297,7 @@ struct Variant {
 };
 
 struct Namespace_ {};
-struct Declare_ {};
+struct Define_ {};
 struct Concept_ {};
 struct Value_ {};
 struct Enum_ {};
@@ -296,7 +305,6 @@ struct Tag_ {};
 struct Struct_ {};
 struct Variant_ {};
 struct Graph_ {};
-struct Optional_ {};
 struct Container_ {};
 struct Map_ {};
 struct Instance_ {};
@@ -623,19 +631,18 @@ struct SyntaxGraph {
     }
 
     // PolymorphicGraph
-    using vertex_tag_type = std::variant<Namespace_, Declare_, Concept_, Value_, Enum_, Tag_, Struct_, Graph_, Optional_, Variant_, Container_, Map_, Instance_>;
-    using vertex_value_type = std::variant<Namespace*, Declare*, Concept*, Value*, Enum*, Tag*, Struct*, Graph*, Optional*, Variant*, Container*, Map*, Instance*>;
-    using vertex_const_value_type = std::variant<const Namespace*, const Declare*, const Concept*, const Value*, const Enum*, const Tag*, const Struct*, const Graph*, const Optional*, const Variant*, const Container*, const Map*, const Instance*>;
+    using vertex_tag_type = std::variant<Define_, Namespace_, Concept_, Value_, Enum_, Tag_, Struct_, Graph_, Variant_, Container_, Map_, Instance_>;
+    using vertex_value_type = std::variant<Define*, Namespace*, Concept*, Value*, Enum*, Tag*, Struct*, Graph*, Variant*, Container*, Map*, Instance*>;
+    using vertex_const_value_type = std::variant<const Define*, const Namespace*, const Concept*, const Value*, const Enum*, const Tag*, const Struct*, const Graph*, const Variant*, const Container*, const Map*, const Instance*>;
     using vertex_handle_type = std::variant<
+        Impl::ValueHandle<Define_, vertex_descriptor>,
         Impl::ValueHandle<Namespace_, Namespace>,
-        Impl::ValueHandle<Declare_, Declare>,
         Impl::ValueHandle<Concept_, Concept>,
         Impl::ValueHandle<Value_, Value>,
         Impl::ValueHandle<Enum_, vertex_descriptor>,
         Impl::ValueHandle<Tag_, vertex_descriptor>,
         Impl::ValueHandle<Struct_, vertex_descriptor>,
         Impl::ValueHandle<Graph_, vertex_descriptor>,
-        Impl::ValueHandle<Optional_, Optional>,
         Impl::ValueHandle<Variant_, vertex_descriptor>,
         Impl::ValueHandle<Container_, Container>,
         Impl::ValueHandle<Map_, Map>,
@@ -753,6 +760,7 @@ struct SyntaxGraph {
     std::pmr::vector<std::pmr::string> mModulePaths;
     std::pmr::vector<Typescript> mTypescripts;
     // PolymorphicGraph
+    std::pmr::vector<Define> mDefines;
     std::pmr::vector<Enum> mEnums;
     std::pmr::vector<Tag> mTags;
     std::pmr::vector<Struct> mStructs;

@@ -31,15 +31,32 @@ namespace Cocos {
 namespace Meta {
 
 Instance::Instance(const allocator_type& alloc) noexcept
-    : mParameters(alloc) {}
+    : mTemplate(alloc)
+    , mParameters(alloc) {}
 
 Instance::Instance(Instance&& rhs, const allocator_type& alloc)
-    : mParameters(std::move(rhs.mParameters), alloc) {}
+    : mTemplate(std::move(rhs.mTemplate), alloc)
+    , mParameters(std::move(rhs.mParameters), alloc) {}
 
 Instance::Instance(Instance const& rhs, const allocator_type& alloc)
-    : mParameters(rhs.mParameters, alloc) {}
+    : mTemplate(rhs.mTemplate, alloc)
+    , mParameters(rhs.mParameters, alloc) {}
 
 Instance::~Instance() noexcept = default;
+
+Define::Define(const allocator_type& alloc)
+    : mContent(alloc) {}
+
+Define::Define(std::string_view content, const allocator_type& alloc)
+    : mContent(std::move(content), alloc) {}
+
+Define::Define(Define&& rhs, const allocator_type& alloc)
+    : mContent(std::move(rhs.mContent), alloc) {}
+
+Define::Define(Define const& rhs, const allocator_type& alloc)
+    : mContent(rhs.mContent, alloc) {}
+
+Define::~Define() noexcept = default;
 
 Alias::Alias(const allocator_type& alloc) noexcept
     : mName(alloc) {}
@@ -305,6 +322,7 @@ SyntaxGraph::SyntaxGraph(const allocator_type& alloc)
     , mTraits(alloc)
     , mModulePaths(alloc)
     , mTypescripts(alloc)
+    , mDefines(alloc)
     , mEnums(alloc)
     , mTags(alloc)
     , mStructs(alloc)
@@ -320,6 +338,7 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph&& rhs, const allocator_type& alloc)
     , mTraits(std::move(rhs.mTraits), alloc)
     , mModulePaths(std::move(rhs.mModulePaths), alloc)
     , mTypescripts(std::move(rhs.mTypescripts), alloc)
+    , mDefines(std::move(rhs.mDefines), alloc)
     , mEnums(std::move(rhs.mEnums), alloc)
     , mTags(std::move(rhs.mTags), alloc)
     , mStructs(std::move(rhs.mStructs), alloc)
@@ -335,6 +354,7 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph const& rhs, const allocator_type& alloc)
     , mTraits(rhs.mTraits, alloc)
     , mModulePaths(rhs.mModulePaths, alloc)
     , mTypescripts(rhs.mTypescripts, alloc)
+    , mDefines(rhs.mDefines, alloc)
     , mEnums(rhs.mEnums, alloc)
     , mTags(rhs.mTags, alloc)
     , mStructs(rhs.mStructs, alloc)
