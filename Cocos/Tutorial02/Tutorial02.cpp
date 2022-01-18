@@ -18,7 +18,9 @@ int main() {
         .mAPI = "CC_API"
     ) {
         NAMESPACE(cc) {
-            ENUM(TransversalEnum, (DepthFirst, BreadthFirst));
+            ENUM(TransversalEnum) {
+                ENUMS(DepthFirst, BreadthFirst);
+            }
 
             TAGS((_), Sphere_, Box_, Mesh_, Light_);
 

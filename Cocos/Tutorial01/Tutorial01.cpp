@@ -29,8 +29,8 @@ int main() {
                 Traits {
                     .mClass = true,
                 });
-            builder.addEnumElement(enumID, "DepthFirst");
-            builder.addEnumElement(enumID, "BreadthFirst");
+            builder.addEnumElement(enumID, "DepthFirst", "_");
+            builder.addEnumElement(enumID, "BreadthFirst", "_");
             
             // Tags
             builder.addTag("Sphere_");

@@ -42,18 +42,22 @@ import { RenderScene } from '../renderer/scene';
 )") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
-                FLAGS(ResourceFlags, 
-                    (None, 0)
-                    (AllowRenderTarget, 0x1)
-                    (AllowDepthStencil, 0x2)
-                    (AllowUnorderedAccess, 0x4)
-                    (DenyShaderResource, 0x8)
-                    (AllowCrossAdapter, 0x10)
-                    (AllowSimultaneousAccess, 0x20)
-                    (VideoDecodeReferenceOnly, 0x40)
-                );
+                FLAG(ResourceFlags) {
+                    FLAGS(
+                        (None, 0)
+                        (AllowRenderTarget, 0x1)
+                        (AllowDepthStencil, 0x2)
+                        (AllowUnorderedAccess, 0x4)
+                        (DenyShaderResource, 0x8)
+                        (AllowCrossAdapter, 0x10)
+                        (AllowSimultaneousAccess, 0x20)
+                        (VideoDecodeReferenceOnly, 0x40)
+                    );
+                }
 
-                ENUM(TextureLayout, (Unknown, RowMajor, UndefinedSwizzle, StandardSwizzle));
+                ENUM(TextureLayout) {
+                    ENUMS(Unknown, RowMajor, UndefinedSwizzle, StandardSwizzle);
+                }
 
                 STRUCT(ResourceDesc) {
                     PUBLIC(
@@ -117,8 +121,12 @@ import { RenderScene } from '../renderer/scene';
                 //    );
                 //}
 
-                ENUM(AttachmentType, (RenderTarget, DepthStencil));
-                ENUM(AccessType, (Read, ReadWrite, Write));
+                ENUM(AttachmentType) {
+                    ENUMS(RenderTarget, DepthStencil);
+                }
+                ENUM(AccessType) {
+                    ENUMS(Read, ReadWrite, Write);
+                }
 
                 STRUCT(RasterView) {
                     PUBLIC(
@@ -133,7 +141,9 @@ import { RenderScene } from '../renderer/scene';
                     CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor);
                 }
 
-                ENUM(ClearValueType, (Float, Int));
+                ENUM(ClearValueType) {
+                    ENUMS(Float, Int);
+                }
 
                 STRUCT(ComputeView) {
                     PUBLIC(

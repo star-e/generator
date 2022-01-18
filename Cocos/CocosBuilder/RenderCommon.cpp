@@ -237,7 +237,9 @@ void buildRenderCommon(ModuleBuilder& builder) {
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
-                ENUM(UpdateFrequency, (PerInstance, PerBatch, PerQueue, PerPass, Count));
+                ENUM(UpdateFrequency) {
+                    ENUMS(PerInstance, PerBatch, PerQueue, PerPass, Count);
+                }
 
                 TAGS((_), CBV_, UAV_, SRV_, SSV_, RTV_, DSV_, IBV_, VBV_, SOV_, Constants_, Table_);
                 VARIANT(ParameterType, (Constants_, CBV_, UAV_, SRV_, Table_, SSV_), EQUAL | LESS);
@@ -269,15 +271,21 @@ void buildRenderCommon(ModuleBuilder& builder) {
                 TAGS((_), Managed_, Persistent_, Backbuffer_, Memoryless_);
                 VARIANT(ResourceResidency, (Managed_, Persistent_, Backbuffer_, Memoryless_));
 
-                ENUM(QueueHint, (Opaque, Cutout, Transparent, Count));
-                ENUM(ResourceDimension, (Buffer, Texture1D, Texture2D, Texture3D));
+                ENUM(QueueHint) {
+                    ENUMS(Opaque, Cutout, Transparent, Count);
+                }
+                ENUM(ResourceDimension) {
+                    ENUMS(Buffer, Texture1D, Texture2D, Texture3D);
+                }
 
                 STRUCT(SampleDesc) {
                     PUBLIC(
                         (uint32_t, mCount, 1)(uint32_t, mQuality, 0));
                 }
 
-                ENUM(NodeType, (Internal, Leaf));
+                ENUM(NodeType) {
+                    ENUMS(Internal, Leaf);
+                }
             } // namespace render
         }
     } // module CoreRender

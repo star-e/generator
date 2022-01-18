@@ -37,29 +37,45 @@ THE SOFTWARE.
     builder.addValue(BOOST_PP_STRINGIZE(NAME))
 
 #define ENUM_MEMBER(r, _, i, MEMBER)       \
-    builder.addEnumElement(vertID, BOOST_PP_STRINGIZE(MEMBER));
+    builder.addEnumElement(vertID, BOOST_PP_STRINGIZE(MEMBER), "");
 
-#define ENUM(NAME, TUPLE) \
-    if (auto vertID = builder.addEnum(BOOST_PP_STRINGIZE(NAME)); true) { \
-        BOOST_PP_SEQ_FOR_EACH_I(ENUM_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ(TUPLE)) \
-    }
+#define ENUM(NAME, ...) \
+    if (auto vertID = builder.addEnum(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); true)
 
-#define FLAGS_ELEM(r, _, i, MEMBER) \
+#define ENUM_CLASS(NAME, ...) \
+    if (auto vertID = builder.addEnum(BOOST_PP_STRINGIZE(NAME), Traits{ .mClass = true, __VA_ARGS__ }); true)
+
+#define ENUMS(...) \
+    BOOST_PP_SEQ_FOR_EACH_I(ENUM_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
+
+#define UNDERLYING_TYPE(NAME) \
+    builder.setEnumUnderlyingType(vertID, BOOST_PP_STRINGIZE(NAME))
+
+#define FLAG_MEMBER(r, _, i, MEMBER) \
 builder.addEnumElement(vertID, \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 0, MEMBER)), \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 1, MEMBER)));
 
-#define FLAGS(NAME, SEQ) \
-    if (auto vertID = builder.addFlags(BOOST_PP_STRINGIZE(NAME)); true) { \
-        BOOST_PP_SEQ_FOR_EACH_I(FLAGS_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ)) \
-    }
+#define FLAG_MEMBER3(r, _, i, MEMBER) \
+builder.addEnumElement(vertID, \
+    BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 0, MEMBER)), \
+    BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 1, MEMBER)));
+
+#define FLAG(NAME, ...) \
+    if (auto vertID = builder.addFlag(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); true)
+
+#define FLAG_CLASS(NAME, ...) \
+    if (auto vertID = builder.addFlag(BOOST_PP_STRINGIZE(NAME), Traits{ .mClass = true, __VA_ARGS__ }); true)
+
+#define FLAGS(SEQ) \
+    BOOST_PP_SEQ_FOR_EACH_I(FLAG_MEMBER, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
 
 #define IMPORT_ENUM(NAME) \
     if (auto vertID = builder.addEnum(BOOST_PP_STRINGIZE(NAME), \
         Traits{ .mImport = true }); true)
 
 #define IMPORT_FLAGS(NAME) \
-    if (auto vertID = builder.addFlags(BOOST_PP_STRINGIZE(NAME), \
+    if (auto vertID = builder.addFlag(BOOST_PP_STRINGIZE(NAME), \
         Traits{ .mImport = true }); true)
 
 #define IMPORT_CLASS(NAME) \

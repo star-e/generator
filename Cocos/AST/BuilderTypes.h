@@ -388,32 +388,49 @@ struct ModuleBuilder {
     ModuleBuilder& operator=(ModuleBuilder&& rhs) = default;
     ModuleBuilder& operator=(ModuleBuilder const& rhs) = delete;
     ~ModuleBuilder() noexcept;
-
+    const SyntaxGraph& syntax() const noexcept {
+        return mSyntaxGraph;
+    }
+    SyntaxGraph& syntax() noexcept {
+        return mSyntaxGraph;
+    }
+    SyntaxGraph::vertex_descriptor null_vertex() const noexcept {
+        return mSyntaxGraph.null_vertex();
+    }
     SyntaxGraph::vertex_descriptor registerType(std::string_view name, SyntaxGraph::vertex_tag_type tag);
 
     TypeHandle openNamespace(std::string_view namespaceSuffix);
     ModuleHandle openModule(std::string_view modulePath, ModuleInfo info = {});
 
+    SyntaxGraph::vertex_descriptor addDefine(std::string_view name, std::string_view content = {});
     SyntaxGraph::vertex_descriptor addConcept(std::string_view name);
+    SyntaxGraph::vertex_descriptor addAlias(std::string_view name, std::string_view type);
     SyntaxGraph::vertex_descriptor addContainer(std::string_view name, Traits traits);
     SyntaxGraph::vertex_descriptor addMap(std::string_view name, Traits traits);
 
     SyntaxGraph::vertex_descriptor addValue(std::string_view name);
     SyntaxGraph::vertex_descriptor addEnum(std::string_view name, Traits traits = {});
-    SyntaxGraph::vertex_descriptor addFlags(std::string_view name, Traits traits = {});
+    SyntaxGraph::vertex_descriptor addFlag(std::string_view name, Traits traits = {});
     void addEnumElement(SyntaxGraph::vertex_descriptor vertID,
-        std::string_view name, std::string_view value = {});
-    SyntaxGraph::vertex_descriptor addTag(std::string_view name, bool bEntity = false,
+        std::string_view name, std::string_view value);
+    void setEnumUnderlyingType(SyntaxGraph::vertex_descriptor vertID, std::string_view type);
+    SyntaxGraph::vertex_descriptor addTag(std::string_view name, bool bEntity = true,
         std::initializer_list<std::string_view> concepts = {});
 
     TypeHandle addStruct(std::string_view name, Traits traits = {});
+
     void addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view name);
+
     void addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
         std::string_view adlPath, std::string_view memberName,
         std::string_view initial = "_", GenerationFlags flags = {});
+
+    void setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
+        std::string_view memberName, GenerationFlags flags);
+
     void addConstructor(SyntaxGraph::vertex_descriptor vertID,
         std::initializer_list<std::string_view> members, bool hasDefault);
-    void addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
+    void addMemberFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
 
     void addConstraints(std::string_view conceptName, std::string_view typeName);
     void addConstraints(SyntaxGraph::vertex_descriptor vertID, std::string_view conceptName);
@@ -430,12 +447,25 @@ struct ModuleBuilder {
     void addGraphPolymorphic(SyntaxGraph::vertex_descriptor vertID,
         std::string_view tag, std::string_view type, std::string_view memberName);
 
+    void addVertexMap(SyntaxGraph::vertex_descriptor vertID,
+        std::string_view mapType, std::string_view memberName,
+        std::string_view keyType);
+
+    void addVertexBimap(SyntaxGraph::vertex_descriptor vertID,
+        std::string_view mapType, std::string_view memberName,
+        std::string_view componentName, std::string_view componentMemberName = "");
+
+    void addNamedConcept(SyntaxGraph::vertex_descriptor vertID, bool bComponent,
+        std::string_view componentName, std::string_view componentMemberName = "");
+
     void outputModule(const std::filesystem::path& rootFolder,
         std::string_view name, Features features) const;
 
     void projectTypescript(std::string_view cpp, std::string_view ts);
+    void addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
 
     // Generation
+    int compile();
     std::pmr::string getMemberName(std::string_view memberName, bool bPublic) const;
     std::pmr::string getTypedMemberName(const Member& m, bool bPublic, bool bFull = false) const;
 

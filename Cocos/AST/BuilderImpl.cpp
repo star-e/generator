@@ -272,7 +272,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addEnum(std::string_view name, Tra
     return vertID;
 }
 
-SyntaxGraph::vertex_descriptor ModuleBuilder::addFlags(std::string_view name, Traits traits) {
+SyntaxGraph::vertex_descriptor ModuleBuilder::addFlag(std::string_view name, Traits traits) {
     auto& g = mSyntaxGraph;
 
     auto parentID = locate(mCurrentScope, g);
