@@ -664,6 +664,35 @@ std::pmr::string SyntaxGraph::getTypePath(
     return result;
 }
 
+std::pmr::string SyntaxGraph::getDependentName(std::string_view ns, vertex_descriptor vertID,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
+    if (!isInstantiation(vertID)) {
+        auto typePath = getTypePath(vertID, mr);
+        auto dependentName = getDependentPath(ns, typePath);
+        typePath.erase(0, typePath.size() - dependentName.size());
+        return typePath;
+    }
+    const auto& g = *this;
+    const auto typePath = getTypePath(vertID, scratch);
+    std::pmr::string name(scratch);
+    std::pmr::vector<std::pmr::string> parameters(scratch);
+    extractTemplate(typePath, name, parameters);
+
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+
+    std::pmr::string templateName(getDependentPath(ns, name), scratch);
+    oss << templateName << "<";
+    for (int count = 0; const auto& param : parameters) {
+        if (count++)
+            oss << ", ";
+        auto paramID = locate(param, g);
+        oss << getDependentName(ns, paramID, scratch, scratch);
+    }
+    oss << ">";
+
+    return oss.str(std::pmr::polymorphic_allocator<char>(mr));
+}
+
 SyntaxGraph::vertex_descriptor
 SyntaxGraph::lookupType(std::string_view currentScope, std::string_view dependentName,
     std::pmr::memory_resource* scratch) const {
@@ -704,6 +733,23 @@ std::pmr::string SyntaxGraph::getNamespace(vertex_descriptor vertID, std::pmr::m
         Expects(holds_tag<Namespace_>(parentID, g));
         return g.getTypePath(parentID, mr);
     }
+}
+
+std::pmr::string SyntaxGraph::getScope(vertex_descriptor vertID, std::pmr::memory_resource* mr) const {
+    const auto& g = *this;
+
+    // validation
+    visit_vertex(
+        vertID, g,
+        [&](const Identifier_ auto&) {
+        },
+        [&](const Instantiation_ auto&) {
+        },
+        [&](const auto&) {
+            Expects(false);
+        });
+
+    return g.getTypePath(vertID, mr);
 }
 
 std::pair<std::string_view, std::string_view>
@@ -775,7 +821,7 @@ void SyntaxGraph::instantiate(std::string_view currentScope, std::string_view de
         auto vertID = add_vertex(Instance_{},
             std::forward_as_tuple(typeName), // name
             std::forward_as_tuple(), // trait
-            std::forward_as_tuple(), // requires
+            std::forward_as_tuple(), // constraints
             std::forward_as_tuple(), // inherits
             std::forward_as_tuple(), // module path
             std::forward_as_tuple(), // typescript
@@ -785,10 +831,61 @@ void SyntaxGraph::instantiate(std::string_view currentScope, std::string_view de
         extractTemplate(typePath, name, parameters);
 
         auto& instance = get_by_tag<Instance_>(vertID, g);
+        instance.mTemplate = name;
         for (const auto& param : parameters) {
             instance.mParameters.emplace_back(param);
         }
     }
+}
+
+void SyntaxGraph::propagate(vertex_descriptor vertID, GenerationFlags flags) {
+    auto& g = *this;
+    auto& traits = get(g.traits, g, vertID);
+
+    if (flags == GenerationFlags::NO_FLAGS) {
+        flags = traits.mFlags;
+    }
+
+    GenerationFlags legal = EQUAL | LESS | SPACESHIP | HASH_COMBINE;
+
+    // guard flags
+    flags &= static_cast<GenerationFlags>(legal);
+
+    if ((flags & EQUAL) && (traits.mFlags & NO_EQUAL)) {
+        flags &= static_cast<GenerationFlags>(~EQUAL);
+    }
+    if ((flags & LESS) && (traits.mFlags & NO_LESS)) {
+        flags &= static_cast<GenerationFlags>(~LESS);
+    }
+    if ((flags & SPACESHIP) && (traits.mFlags & NO_SPACESHIP)) {
+        flags &= static_cast<GenerationFlags>(~SPACESHIP);
+    }
+    if ((flags & HASH_COMBINE) && (traits.mFlags & NO_HASH_COMBINE)) {
+        flags &= static_cast<GenerationFlags>(~HASH_COMBINE);
+    }
+
+    traits.mFlags |= flags;
+
+    visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (const Member& m : s.mMembers) {
+                if (m.mPointer || m.mReference)
+                    continue;
+                auto memberID = locate(m.mTypePath, g);
+                propagate(memberID, flags);
+            }
+        },
+        [&](const Variant& s) {
+            if (!g.isTag(vertID)) {
+                for (const auto& v : s.mVariants) {
+                    auto typeID = locate(v, g);
+                    propagate(typeID, flags);
+                }
+            }
+        },
+        [&](const auto&) {
+        });
 }
 
 SyntaxGraph::vertex_descriptor SyntaxGraph::getTemplate(
@@ -799,6 +896,50 @@ SyntaxGraph::vertex_descriptor SyntaxGraph::getTemplate(
     auto vertID = locate(templateName, g);
     Ensures(vertID != g.null_vertex());
     return vertID;
+}
+
+bool SyntaxGraph::moduleHasGraph(std::string_view modulePath) const {
+    const auto& g = *this;
+    bool hasGraph = false;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path == modulePath) {
+            if (holds_tag<Graph_>(vertID, g)) {
+                hasGraph = true;
+                break;
+            }
+        }
+    }
+    return hasGraph;
+}
+
+bool SyntaxGraph::moduleUsesHashCombine(std::string_view modulePath) const {
+    const auto& g = *this;
+    bool usesHashCombine = false;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path == modulePath) {
+            const auto& traits = get(g.traits, g, vertID);
+            if (traits.mFlags & GenerationFlags::HASH_COMBINE) {
+                usesHashCombine = true;
+                break;
+            }
+        }
+    }
+    return usesHashCombine;
+}
+
+bool SyntaxGraph::moduleHasImpl(std::string_view modulePath, bool bDLL) const {
+    const auto& g = *this;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path != modulePath) {
+            continue;
+        }
+        if (g.hasImpl(vertID, bDLL))
+            return true;
+    }
+    return false;
 }
 
 bool SyntaxGraph::isTypescriptData(std::string_view name) const {
@@ -1122,21 +1263,6 @@ std::pmr::string SyntaxGraph::getTypescriptGraphPolymorphicVariant(const Graph& 
         oss << g.getTypescriptTypename(c.mValue, scratch, scratch);
     }
     return oss.str();
-}
-
-bool SyntaxGraph::moduleUsesGraph(std::string_view modulePath) const {
-    const auto& g = *this;
-    bool usesGraph = false;
-    for (const auto& vertID : make_range(vertices(g))) {
-        const auto& path = get(g.modulePaths, g, vertID);
-        if (path == modulePath) {
-            if (holds_tag<Graph_>(vertID, g)) {
-                usesGraph = true;
-                break;
-            }
-        }
-    }
-    return usesGraph;
 }
 
 namespace {

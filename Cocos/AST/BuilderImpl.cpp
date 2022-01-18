@@ -650,7 +650,7 @@ void ModuleBuilder::outputModule(const std::filesystem::path& rootFolder,
 
         {
             int count = 0;
-            if (g.moduleUsesGraph(modulePath)) {
+            if (g.moduleHasGraph(modulePath)) {
                 ++count;
                 OSS << "import * as impl from './graph';\n";
             }

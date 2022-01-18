@@ -1013,17 +1013,29 @@ struct SyntaxGraph {
     std::pmr::string getTypePath(std::string_view currentScope, std::string_view dependentName,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
 
+    std::pmr::string getDependentName(std::string_view ns, vertex_descriptor vertID,
+        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+
     vertex_descriptor lookupType(std::string_view currentScope, std::string_view dependentName,
         std::pmr::memory_resource* scratch) const;
 
     std::pmr::string getNamespace(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
+    std::pmr::string getScope(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
 
     std::pair<std::string_view, std::string_view> splitTypePath(std::string_view typePath) const;
 
     void instantiate(std::string_view currentScope, std::string_view dependentName,
         std::pmr::memory_resource* scratch);
 
+    void propagate(vertex_descriptor vertID, GenerationFlags flags = {});
+
     vertex_descriptor getTemplate(vertex_descriptor instanceID, std::pmr::memory_resource* scratch) const;
+
+    bool moduleHasGraph(std::string_view modulePath) const;
+
+    bool moduleUsesHashCombine(std::string_view modulePath) const;
+
+    bool moduleHasImpl(std::string_view modulePath, bool bDLL) const;
 
     // Typescript
     bool isTypescriptData(std::string_view name) const;
@@ -1049,8 +1061,6 @@ struct SyntaxGraph {
     std::pmr::string getTypescriptGraphPolymorphicVariant(const Graph& s,
         std::pmr::memory_resource* mr,
         std::pmr::memory_resource* scratch) const;
-
-    bool moduleUsesGraph(std::string_view modulePath) const;
 
     PmrMap<std::pmr::string, PmrSet<std::pmr::string>> getImportedTypes(
         std::string_view modulePath, std::pmr::memory_resource* mr) const;
