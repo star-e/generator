@@ -36,8 +36,10 @@ inline const char* getName(const Map& v) noexcept { return "Map"; }
 inline const char* getName(const Instance& v) noexcept { return "Instance"; }
 inline const char* getName(const Namespace& v) noexcept { return "Namespace"; }
 inline const char* getName(const Define& v) noexcept { return "Define"; }
-inline const char* getName(const Alias& v) noexcept { return "Alias"; }
 inline const char* getName(const Concept& v) noexcept { return "Concept"; }
+inline const char* getName(const Constraints& v) noexcept { return "Constraints"; }
+inline const char* getName(const Inherits& v) noexcept { return "Inherits"; }
+inline const char* getName(const Alias& v) noexcept { return "Alias"; }
 inline const char* getName(const Traits& v) noexcept { return "Traits"; }
 inline const char* getName(const Value& v) noexcept { return "Value"; }
 inline const char* getName(const EnumValue& v) noexcept { return "EnumValue"; }
@@ -50,6 +52,7 @@ inline const char* getName(const Variant& v) noexcept { return "Variant"; }
 inline const char* getName(const Namespace_& v) noexcept { return "Namespace"; }
 inline const char* getName(const Define_& v) noexcept { return "Define"; }
 inline const char* getName(const Concept_& v) noexcept { return "Concept"; }
+inline const char* getName(const Alias_& v) noexcept { return "Alias"; }
 inline const char* getName(const Value_& v) noexcept { return "Value"; }
 inline const char* getName(const Enum_& v) noexcept { return "Enum"; }
 inline const char* getName(const Tag_& v) noexcept { return "Tag"; }

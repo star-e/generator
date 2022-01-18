@@ -365,6 +365,8 @@ void SyntaxGraph::instantiate(std::string_view currentScope, std::string_view de
         auto vertID = add_vertex(Instance_{},
             std::forward_as_tuple(typeName), // name
             std::forward_as_tuple(), // trait
+            std::forward_as_tuple(), // requires
+            std::forward_as_tuple(), // inherits
             std::forward_as_tuple(), // module path
             std::forward_as_tuple(), // typescript
             std::forward_as_tuple(), // polymorphic

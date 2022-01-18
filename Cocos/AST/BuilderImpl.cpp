@@ -111,6 +111,8 @@ ModuleGraph::vertex_descriptor ModuleBuilder::registerType(
                 return add_vertex(t,
                     std::forward_as_tuple(name), // name
                     std::forward_as_tuple(), // trait
+                    std::forward_as_tuple(), // requires
+                    std::forward_as_tuple(), // inherits
                     std::forward_as_tuple(mCurrentModule), // module path
                     std::forward_as_tuple(), // typescript
                     std::forward_as_tuple(), // polymorphic
@@ -166,6 +168,8 @@ TypeHandle ModuleBuilder::openNamespace(std::string_view name) {
         vertID = add_vertex(Namespace_{},
             std::forward_as_tuple(name), // name
             std::forward_as_tuple(), // trait
+            std::forward_as_tuple(), // requires
+            std::forward_as_tuple(), // inherits
             std::forward_as_tuple(), // module path
             std::forward_as_tuple(), // typescript
             std::forward_as_tuple(), // polymorphic
@@ -201,6 +205,8 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addContainer(std::string_view name
     auto vertID = add_vertex(Container_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
@@ -218,6 +224,8 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addMap(std::string_view name, Trai
     auto vertID = add_vertex(Map_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
@@ -235,6 +243,8 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addValue(std::string_view name) {
     auto vertID = add_vertex(Value_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
@@ -252,6 +262,8 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addEnum(std::string_view name, Tra
     auto vertID = add_vertex(Enum_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
@@ -269,6 +281,8 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addFlags(std::string_view name, Tr
     auto vertID = add_vertex(Enum_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
@@ -301,6 +315,8 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addTag(std::string_view name, bool
     auto vertID = add_vertex(Tag_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(Tag{ .mEntity = bEntity }), // polymorphic
@@ -322,6 +338,8 @@ TypeHandle ModuleBuilder::addStruct(std::string_view name, Traits traits) {
     auto vertID = add_vertex(Struct_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
@@ -465,6 +483,8 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addVariant(
     auto vertID = add_vertex(Variant_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(Traits{ .mFlags = flags }), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
@@ -496,6 +516,8 @@ TypeHandle ModuleBuilder::addGraph(std::string_view name,
     auto vertID = add_vertex(Graph_{},
         std::forward_as_tuple(name), // name
         std::forward_as_tuple(std::move(traits)), // trait
+        std::forward_as_tuple(), // requires
+        std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic

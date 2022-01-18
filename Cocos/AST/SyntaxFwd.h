@@ -55,8 +55,10 @@ struct Map;
 struct Instance;
 struct Namespace;
 struct Define;
-struct Alias;
 struct Concept;
+struct Constraints;
+struct Inherits;
+struct Alias;
 struct Traits;
 struct Value;
 struct EnumValue;
@@ -69,6 +71,7 @@ struct Variant;
 struct Namespace_;
 struct Define_;
 struct Concept_;
+struct Alias_;
 struct Value_;
 struct Enum_;
 struct Tag_;
@@ -89,13 +92,21 @@ using VertexListType = std::variant<Vector_, List_>;
 
 struct Graph;
 struct Typescript;
+template <> struct IsIdentifier<Define_> { static constexpr bool value = true; };
+
 template <> struct IsIdentifier<Namespace_> { static constexpr bool value = true; };
 
-template <> struct IsIdentifier<Variant_> { static constexpr bool value = true; };
+template <> struct IsIdentifier<Concept_> { static constexpr bool value = true; };
+
+template <> struct IsIdentifier<Alias_> { static constexpr bool value = true; };
+
+template <> struct IsIdentifier<Define> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Namespace> { static constexpr bool value = true; };
 
-template <> struct IsIdentifier<Variant> { static constexpr bool value = true; };
+template <> struct IsIdentifier<Concept> { static constexpr bool value = true; };
+
+template <> struct IsIdentifier<Alias> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Value_> { static constexpr bool value = true; };
 template <> struct IsData<Value_> { static constexpr bool value = true; };
@@ -114,6 +125,12 @@ template <> struct IsData<Enum> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Tag> { static constexpr bool value = true; };
 template <> struct IsData<Tag> { static constexpr bool value = true; };
+
+template <> struct IsIdentifier<Variant_> { static constexpr bool value = true; };
+template <> struct IsAlgebra<Variant_> { static constexpr bool value = true; };
+
+template <> struct IsIdentifier<Variant> { static constexpr bool value = true; };
+template <> struct IsAlgebra<Variant> { static constexpr bool value = true; };
 
 template <> struct IsIdentifier<Struct_> { static constexpr bool value = true; };
 template <> struct IsComposition<Struct_> { static constexpr bool value = true; };

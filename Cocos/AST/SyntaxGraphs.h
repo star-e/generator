@@ -639,6 +639,86 @@ struct property_map<Cocos::Meta::SyntaxGraph, T Cocos::Meta::Traits::*> {
 
 // Vertex Component
 template <>
+struct property_map<Cocos::Meta::SyntaxGraph, Cocos::Meta::SyntaxGraph::constraints_> {
+    using const_type = Cocos::Impl::VectorVertexComponentPropertyMap<
+        lvalue_property_map_tag,
+        const Cocos::Meta::SyntaxGraph,
+        const std::pmr::vector<Cocos::Meta::Constraints>,
+        Cocos::Meta::Constraints,
+        const Cocos::Meta::Constraints&
+    >;
+    using type = Cocos::Impl::VectorVertexComponentPropertyMap<
+        lvalue_property_map_tag,
+        Cocos::Meta::SyntaxGraph,
+        std::pmr::vector<Cocos::Meta::Constraints>,
+        Cocos::Meta::Constraints,
+        Cocos::Meta::Constraints&
+    >;
+};
+
+// Vertex ComponentMember
+template <class T>
+struct property_map<Cocos::Meta::SyntaxGraph, T Cocos::Meta::Constraints::*> {
+    using const_type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        lvalue_property_map_tag,
+        const Cocos::Meta::SyntaxGraph,
+        const std::pmr::vector<Cocos::Meta::Constraints>,
+        T,
+        const T&,
+        T Cocos::Meta::Constraints::*
+    >;
+    using type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        lvalue_property_map_tag,
+        Cocos::Meta::SyntaxGraph,
+        std::pmr::vector<Cocos::Meta::Constraints>,
+        T,
+        T&,
+        T Cocos::Meta::Constraints::*
+    >;
+};
+
+// Vertex Component
+template <>
+struct property_map<Cocos::Meta::SyntaxGraph, Cocos::Meta::SyntaxGraph::inherits_> {
+    using const_type = Cocos::Impl::VectorVertexComponentPropertyMap<
+        lvalue_property_map_tag,
+        const Cocos::Meta::SyntaxGraph,
+        const std::pmr::vector<Cocos::Meta::Inherits>,
+        Cocos::Meta::Inherits,
+        const Cocos::Meta::Inherits&
+    >;
+    using type = Cocos::Impl::VectorVertexComponentPropertyMap<
+        lvalue_property_map_tag,
+        Cocos::Meta::SyntaxGraph,
+        std::pmr::vector<Cocos::Meta::Inherits>,
+        Cocos::Meta::Inherits,
+        Cocos::Meta::Inherits&
+    >;
+};
+
+// Vertex ComponentMember
+template <class T>
+struct property_map<Cocos::Meta::SyntaxGraph, T Cocos::Meta::Inherits::*> {
+    using const_type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        lvalue_property_map_tag,
+        const Cocos::Meta::SyntaxGraph,
+        const std::pmr::vector<Cocos::Meta::Inherits>,
+        T,
+        const T&,
+        T Cocos::Meta::Inherits::*
+    >;
+    using type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        lvalue_property_map_tag,
+        Cocos::Meta::SyntaxGraph,
+        std::pmr::vector<Cocos::Meta::Inherits>,
+        T,
+        T&,
+        T Cocos::Meta::Inherits::*
+    >;
+};
+
+// Vertex Component
+template <>
 struct property_map<Cocos::Meta::SyntaxGraph, Cocos::Meta::SyntaxGraph::modulePaths_> {
     using const_type = Cocos::Impl::VectorVertexComponentPropertyMap<
         lvalue_property_map_tag,
@@ -887,6 +967,54 @@ get(T Traits::* memberPointer, SyntaxGraph& g) noexcept {
 }
 
 // Vertex Component
+inline typename boost::property_map<SyntaxGraph, SyntaxGraph::constraints_>::const_type
+get(SyntaxGraph::constraints_, const SyntaxGraph& g) noexcept {
+    return { g.mConstraints };
+}
+
+inline typename boost::property_map<SyntaxGraph, SyntaxGraph::constraints_>::type
+get(SyntaxGraph::constraints_, SyntaxGraph& g) noexcept {
+    return { g.mConstraints };
+}
+
+// Vertex ComponentMember
+template <class T>
+inline typename boost::property_map<SyntaxGraph, T Constraints::*>::const_type
+get(T Constraints::* memberPointer, const SyntaxGraph& g) noexcept {
+    return { g.mConstraints, memberPointer };
+}
+
+template <class T>
+inline typename boost::property_map<SyntaxGraph, T Constraints::*>::type
+get(T Constraints::* memberPointer, SyntaxGraph& g) noexcept {
+    return { g.mConstraints, memberPointer };
+}
+
+// Vertex Component
+inline typename boost::property_map<SyntaxGraph, SyntaxGraph::inherits_>::const_type
+get(SyntaxGraph::inherits_, const SyntaxGraph& g) noexcept {
+    return { g.mInherits };
+}
+
+inline typename boost::property_map<SyntaxGraph, SyntaxGraph::inherits_>::type
+get(SyntaxGraph::inherits_, SyntaxGraph& g) noexcept {
+    return { g.mInherits };
+}
+
+// Vertex ComponentMember
+template <class T>
+inline typename boost::property_map<SyntaxGraph, T Inherits::*>::const_type
+get(T Inherits::* memberPointer, const SyntaxGraph& g) noexcept {
+    return { g.mInherits, memberPointer };
+}
+
+template <class T>
+inline typename boost::property_map<SyntaxGraph, T Inherits::*>::type
+get(T Inherits::* memberPointer, SyntaxGraph& g) noexcept {
+    return { g.mInherits, memberPointer };
+}
+
+// Vertex Component
 inline typename boost::property_map<SyntaxGraph, SyntaxGraph::modulePaths_>::const_type
 get(SyntaxGraph::modulePaths_, const SyntaxGraph& g) noexcept {
     return { g.mModulePaths };
@@ -932,8 +1060,11 @@ value_id(SyntaxGraph::vertex_descriptor u, const SyntaxGraph& g) noexcept {
         [](const Impl::ValueHandle<Namespace_, Namespace>&) {
             return SyntaxGraph::null_vertex();
         },
-        [](const Impl::ValueHandle<Concept_, Concept>&) {
-            return SyntaxGraph::null_vertex();
+        [](const Impl::ValueHandle<Concept_, vertex_descriptor>& h) {
+            return h.mValue;
+        },
+        [](const Impl::ValueHandle<Alias_, vertex_descriptor>& h) {
+            return h.mValue;
         },
         [](const Impl::ValueHandle<Value_, Value>&) {
             return SyntaxGraph::null_vertex();
@@ -975,8 +1106,11 @@ tag(SyntaxGraph::vertex_descriptor u, const SyntaxGraph& g) noexcept {
         [](const Impl::ValueHandle<Namespace_, Namespace>&) {
             return SyntaxGraph::vertex_tag_type{ Namespace_{} };
         },
-        [](const Impl::ValueHandle<Concept_, Concept>&) {
+        [](const Impl::ValueHandle<Concept_, vertex_descriptor>&) {
             return SyntaxGraph::vertex_tag_type{ Concept_{} };
+        },
+        [](const Impl::ValueHandle<Alias_, vertex_descriptor>&) {
+            return SyntaxGraph::vertex_tag_type{ Alias_{} };
         },
         [](const Impl::ValueHandle<Value_, Value>&) {
             return SyntaxGraph::vertex_tag_type{ Value_{} };
@@ -1018,8 +1152,11 @@ value(SyntaxGraph::vertex_descriptor u, SyntaxGraph& g) noexcept {
         [&](Impl::ValueHandle<Namespace_, Namespace>& h) {
             return SyntaxGraph::vertex_value_type{ &h.mValue };
         },
-        [&](Impl::ValueHandle<Concept_, Concept>& h) {
-            return SyntaxGraph::vertex_value_type{ &h.mValue };
+        [&](const Impl::ValueHandle<Concept_, vertex_descriptor>& h) {
+            return SyntaxGraph::vertex_value_type{ &g.mConcepts[h.mValue] };
+        },
+        [&](const Impl::ValueHandle<Alias_, vertex_descriptor>& h) {
+            return SyntaxGraph::vertex_value_type{ &g.mAliases[h.mValue] };
         },
         [&](Impl::ValueHandle<Value_, Value>& h) {
             return SyntaxGraph::vertex_value_type{ &h.mValue };
@@ -1061,8 +1198,11 @@ value(SyntaxGraph::vertex_descriptor u, const SyntaxGraph& g) noexcept {
         [&](const Impl::ValueHandle<Namespace_, Namespace>& h) {
             return SyntaxGraph::vertex_const_value_type{ &h.mValue };
         },
-        [&](const Impl::ValueHandle<Concept_, Concept>& h) {
-            return SyntaxGraph::vertex_const_value_type{ &h.mValue };
+        [&](const Impl::ValueHandle<Concept_, vertex_descriptor>& h) {
+            return SyntaxGraph::vertex_const_value_type{ &g.mConcepts[h.mValue] };
+        },
+        [&](const Impl::ValueHandle<Alias_, vertex_descriptor>& h) {
+            return SyntaxGraph::vertex_const_value_type{ &g.mAliases[h.mValue] };
         },
         [&](const Impl::ValueHandle<Value_, Value>& h) {
             return SyntaxGraph::vertex_const_value_type{ &h.mValue };
@@ -1103,7 +1243,9 @@ holds_tag(SyntaxGraph::vertex_descriptor v, const SyntaxGraph& g) noexcept {
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Namespace_>) {
         return std::holds_alternative<Impl::ValueHandle<Namespace_, Namespace>>(g.mVertices[v].mHandle);
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Concept_>) {
-        return std::holds_alternative<Impl::ValueHandle<Concept_, Concept>>(g.mVertices[v].mHandle);
+        return std::holds_alternative<Impl::ValueHandle<Concept_, vertex_descriptor>>(g.mVertices[v].mHandle);
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Alias_>) {
+        return std::holds_alternative<Impl::ValueHandle<Alias_, vertex_descriptor>>(g.mVertices[v].mHandle);
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Value_>) {
         return std::holds_alternative<Impl::ValueHandle<Value_, Value>>(g.mVertices[v].mHandle);
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Enum_>) {
@@ -1139,7 +1281,9 @@ holds_alternative(SyntaxGraph::vertex_descriptor v, const SyntaxGraph& g) noexce
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Namespace>) {
         return std::holds_alternative<Impl::ValueHandle<Namespace_, Namespace>>(g.mVertices[v].mHandle);
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Concept>) {
-        return std::holds_alternative<Impl::ValueHandle<Concept_, Concept>>(g.mVertices[v].mHandle);
+        return std::holds_alternative<Impl::ValueHandle<Concept_, vertex_descriptor>>(g.mVertices[v].mHandle);
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Alias>) {
+        return std::holds_alternative<Impl::ValueHandle<Alias_, vertex_descriptor>>(g.mVertices[v].mHandle);
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Value>) {
         return std::holds_alternative<Impl::ValueHandle<Value_, Value>>(g.mVertices[v].mHandle);
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Enum>) {
@@ -1177,8 +1321,11 @@ get(SyntaxGraph::vertex_descriptor v, SyntaxGraph& g) noexcept {
         auto& handle = std::get<Impl::ValueHandle<Namespace_, Namespace>>(g.mVertices[v].mHandle);
         return handle.mValue;
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Concept>) {
-        auto& handle = std::get<Impl::ValueHandle<Concept_, Concept>>(g.mVertices[v].mHandle);
-        return handle.mValue;
+        auto& handle = std::get<Impl::ValueHandle<Concept_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mConcepts[handle.mValue];
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Alias>) {
+        auto& handle = std::get<Impl::ValueHandle<Alias_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mAliases[handle.mValue];
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Value>) {
         auto& handle = std::get<Impl::ValueHandle<Value_, Value>>(g.mVertices[v].mHandle);
         return handle.mValue;
@@ -1224,8 +1371,11 @@ get(SyntaxGraph::vertex_descriptor v, const SyntaxGraph& g) noexcept {
         auto& handle = std::get<Impl::ValueHandle<Namespace_, Namespace>>(g.mVertices[v].mHandle);
         return handle.mValue;
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Concept>) {
-        auto& handle = std::get<Impl::ValueHandle<Concept_, Concept>>(g.mVertices[v].mHandle);
-        return handle.mValue;
+        auto& handle = std::get<Impl::ValueHandle<Concept_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mConcepts[handle.mValue];
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Alias>) {
+        auto& handle = std::get<Impl::ValueHandle<Alias_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mAliases[handle.mValue];
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Value>) {
         auto& handle = std::get<Impl::ValueHandle<Value_, Value>>(g.mVertices[v].mHandle);
         return handle.mValue;
@@ -1271,8 +1421,11 @@ get_by_tag(SyntaxGraph::vertex_descriptor v, SyntaxGraph& g) noexcept {
         auto& handle = std::get<Impl::ValueHandle<Namespace_, Namespace>>(g.mVertices[v].mHandle);
         return handle.mValue;
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Concept_>) {
-        auto& handle = std::get<Impl::ValueHandle<Concept_, Concept>>(g.mVertices[v].mHandle);
-        return handle.mValue;
+        auto& handle = std::get<Impl::ValueHandle<Concept_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mConcepts[handle.mValue];
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Alias_>) {
+        auto& handle = std::get<Impl::ValueHandle<Alias_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mAliases[handle.mValue];
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Value_>) {
         auto& handle = std::get<Impl::ValueHandle<Value_, Value>>(g.mVertices[v].mHandle);
         return handle.mValue;
@@ -1318,8 +1471,11 @@ get_by_tag(SyntaxGraph::vertex_descriptor v, const SyntaxGraph& g) noexcept {
         auto& handle = std::get<Impl::ValueHandle<Namespace_, Namespace>>(g.mVertices[v].mHandle);
         return handle.mValue;
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Concept_>) {
-        auto& handle = std::get<Impl::ValueHandle<Concept_, Concept>>(g.mVertices[v].mHandle);
-        return handle.mValue;
+        auto& handle = std::get<Impl::ValueHandle<Concept_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mConcepts[handle.mValue];
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Alias_>) {
+        auto& handle = std::get<Impl::ValueHandle<Alias_, vertex_descriptor>>(g.mVertices[v].mHandle);
+        return g.mAliases[handle.mValue];
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Value_>) {
         auto& handle = std::get<Impl::ValueHandle<Value_, Value>>(g.mVertices[v].mHandle);
         return handle.mValue;
@@ -1376,9 +1532,14 @@ get_if(SyntaxGraph::vertex_descriptor v, SyntaxGraph* pGraph) noexcept {
             ptr = &pHandle->mValue;
         }
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Concept>) {
-        auto* pHandle = std::get_if<Impl::ValueHandle<Concept_, Concept>>(&g.mVertices[v].mHandle);
+        auto* pHandle = std::get_if<Impl::ValueHandle<Concept_, vertex_descriptor>>(&g.mVertices[v].mHandle);
         if (pHandle) {
-            ptr = &pHandle->mValue;
+            ptr = &g.mConcepts[pHandle->mValue];
+        }
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Alias>) {
+        auto* pHandle = std::get_if<Impl::ValueHandle<Alias_, vertex_descriptor>>(&g.mVertices[v].mHandle);
+        if (pHandle) {
+            ptr = &g.mAliases[pHandle->mValue];
         }
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Value>) {
         auto* pHandle = std::get_if<Impl::ValueHandle<Value_, Value>>(&g.mVertices[v].mHandle);
@@ -1455,9 +1616,14 @@ get_if(SyntaxGraph::vertex_descriptor v, const SyntaxGraph* pGraph) noexcept {
             ptr = &pHandle->mValue;
         }
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Concept>) {
-        auto* pHandle = std::get_if<Impl::ValueHandle<Concept_, Concept>>(&g.mVertices[v].mHandle);
+        auto* pHandle = std::get_if<Impl::ValueHandle<Concept_, vertex_descriptor>>(&g.mVertices[v].mHandle);
         if (pHandle) {
-            ptr = &pHandle->mValue;
+            ptr = &g.mConcepts[pHandle->mValue];
+        }
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Alias>) {
+        auto* pHandle = std::get_if<Impl::ValueHandle<Alias_, vertex_descriptor>>(&g.mVertices[v].mHandle);
+        if (pHandle) {
+            ptr = &g.mAliases[pHandle->mValue];
         }
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Value>) {
         auto* pHandle = std::get_if<Impl::ValueHandle<Value_, Value>>(&g.mVertices[v].mHandle);
@@ -1772,7 +1938,20 @@ inline void remove_vertex_value_impl(const SyntaxGraph::vertex_handle_type& h, S
             Impl::reindexVectorHandle<Define_>(g.mVertices, h.mValue);
         },
         [&](const Impl::ValueHandle<Namespace_, Namespace>& h) {},
-        [&](const Impl::ValueHandle<Concept_, Concept>& h) {},
+        [&](const Impl::ValueHandle<Concept_, vertex_descriptor>& h) {
+            g.mConcepts.erase(g.mConcepts.begin() + h.mValue);
+            if (h.mValue == g.mConcepts.size()) {
+                return;
+            }
+            Impl::reindexVectorHandle<Concept_>(g.mVertices, h.mValue);
+        },
+        [&](const Impl::ValueHandle<Alias_, vertex_descriptor>& h) {
+            g.mAliases.erase(g.mAliases.begin() + h.mValue);
+            if (h.mValue == g.mAliases.size()) {
+                return;
+            }
+            Impl::reindexVectorHandle<Alias_>(g.mVertices, h.mValue);
+        },
         [&](const Impl::ValueHandle<Value_, Value>& h) {},
         [&](const Impl::ValueHandle<Enum_, vertex_descriptor>& h) {
             g.mEnums.erase(g.mEnums.begin() + h.mValue);
@@ -1849,14 +2028,16 @@ inline void remove_vertex(SyntaxGraph::vertex_descriptor u, SyntaxGraph& g) noex
     // remove components
     g.mNames.erase(g.mNames.begin() + u);
     g.mTraits.erase(g.mTraits.begin() + u);
+    g.mConstraints.erase(g.mConstraints.begin() + u);
+    g.mInherits.erase(g.mInherits.begin() + u);
     g.mModulePaths.erase(g.mModulePaths.begin() + u);
     g.mTypescripts.erase(g.mTypescripts.begin() + u);
 }
 
 // MutablePropertyGraph(Vertex)
-template <class Component0, class Component1, class Component2, class Component3, class ValueT>
+template <class Component0, class Component1, class Component2, class Component3, class Component4, class Component5, class ValueT>
 inline SyntaxGraph::vertex_descriptor
-add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
+add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, Component4&& c4, Component5&& c5, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
     auto v = gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mVertices.size());
 
     g.mObjects.emplace_back();
@@ -1865,8 +2046,10 @@ add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, V
     auto& vert = g.mVertices.back();
     g.mNames.emplace_back(std::forward<Component0>(c0));
     g.mTraits.emplace_back(std::forward<Component1>(c1));
-    g.mModulePaths.emplace_back(std::forward<Component2>(c2));
-    g.mTypescripts.emplace_back(std::forward<Component3>(c3));
+    g.mConstraints.emplace_back(std::forward<Component2>(c2));
+    g.mInherits.emplace_back(std::forward<Component3>(c3));
+    g.mModulePaths.emplace_back(std::forward<Component4>(c4));
+    g.mTypescripts.emplace_back(std::forward<Component5>(c5));
 
     // PolymorphicGraph
     if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Define>) {
@@ -1877,7 +2060,15 @@ add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, V
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Namespace>) {
         vert.mHandle = Impl::ValueHandle<Namespace_, Namespace>{ std::forward<ValueT>(val) };
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Concept>) {
-        vert.mHandle = Impl::ValueHandle<Concept_, Concept>{ std::forward<ValueT>(val) };
+        vert.mHandle = Impl::ValueHandle<Concept_, SyntaxGraph::vertex_descriptor>{
+            gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mConcepts.size())
+        };
+        g.mConcepts.emplace_back(std::forward<ValueT>(val));
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Alias>) {
+        vert.mHandle = Impl::ValueHandle<Alias_, SyntaxGraph::vertex_descriptor>{
+            gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mAliases.size())
+        };
+        g.mAliases.emplace_back(std::forward<ValueT>(val));
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Value>) {
         vert.mHandle = Impl::ValueHandle<Value_, Value>{ std::forward<ValueT>(val) };
     } else if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Enum>) {
@@ -1926,9 +2117,9 @@ add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, V
     return v;
 }
 
-template <class Component0, class Component1, class Component2, class Component3, class Tag, class ValueT>
+template <class Component0, class Component1, class Component2, class Component3, class Component4, class Component5, class Tag, class ValueT>
 inline SyntaxGraph::vertex_descriptor
-add_vertex(Tag, Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
+add_vertex(Tag, Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, Component4&& c4, Component5&& c5, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
     auto v = gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mVertices.size());
 
     g.mObjects.emplace_back();
@@ -1945,12 +2136,20 @@ add_vertex(Tag, Component0&& c0, Component1&& c1, Component2&& c2, Component3&& 
     }, std::forward<Component1>(c1));
 
     std::apply([&]<typename... T>(T&&... args) {
-        g.mModulePaths.emplace_back(std::forward<T>(args)...);
+        g.mConstraints.emplace_back(std::forward<T>(args)...);
     }, std::forward<Component2>(c2));
 
     std::apply([&]<typename... T>(T&&... args) {
-        g.mTypescripts.emplace_back(std::forward<T>(args)...);
+        g.mInherits.emplace_back(std::forward<T>(args)...);
     }, std::forward<Component3>(c3));
+
+    std::apply([&]<typename... T>(T&&... args) {
+        g.mModulePaths.emplace_back(std::forward<T>(args)...);
+    }, std::forward<Component4>(c4));
+
+    std::apply([&]<typename... T>(T&&... args) {
+        g.mTypescripts.emplace_back(std::forward<T>(args)...);
+    }, std::forward<Component5>(c5));
 
     // PolymorphicGraph
     if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Define_>) {
@@ -1966,7 +2165,17 @@ add_vertex(Tag, Component0&& c0, Component1&& c1, Component2&& c2, Component3&& 
         }, std::forward<ValueT>(val));
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Concept_>) {
         std::apply([&]<typename... T>(T&&... args) {
-            vert.mHandle = Impl::ValueHandle<Concept_, Concept>{ std::forward<T>(args)... };
+            vert.mHandle = Impl::ValueHandle<Concept_, SyntaxGraph::vertex_descriptor>{
+                gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mConcepts.size())
+            };
+            g.mConcepts.emplace_back(std::forward<T>(args)...);
+        }, std::forward<ValueT>(val));
+    } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Alias_>) {
+        std::apply([&]<typename... T>(T&&... args) {
+            vert.mHandle = Impl::ValueHandle<Alias_, SyntaxGraph::vertex_descriptor>{
+                gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mAliases.size())
+            };
+            g.mAliases.emplace_back(std::forward<T>(args)...);
         }, std::forward<ValueT>(val));
     } else if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Value_>) {
         std::apply([&]<typename... T>(T&&... args) {
@@ -2041,6 +2250,8 @@ add_vertex(SyntaxGraph& g, Tag t, std::string_view name, SyntaxGraph::vertex_des
     return add_vertex(t,
         std::forward_as_tuple(name), // mNames
         std::forward_as_tuple(), // mTraits
+        std::forward_as_tuple(), // mConstraints
+        std::forward_as_tuple(), // mInherits
         std::forward_as_tuple(), // mModulePaths
         std::forward_as_tuple(), // mTypescripts
         std::forward_as_tuple(), // PolymorphicType
@@ -2053,6 +2264,8 @@ add_vertex(SyntaxGraph& g, Tag t, std::pmr::string&& name, SyntaxGraph::vertex_d
     return add_vertex(t,
         std::forward_as_tuple(std::move(name)), // mNames
         std::forward_as_tuple(), // mTraits
+        std::forward_as_tuple(), // mConstraints
+        std::forward_as_tuple(), // mInherits
         std::forward_as_tuple(), // mModulePaths
         std::forward_as_tuple(), // mTypescripts
         std::forward_as_tuple(), // PolymorphicType
@@ -2065,6 +2278,8 @@ add_vertex(SyntaxGraph& g, Tag t, const char* name, SyntaxGraph::vertex_descript
     return add_vertex(t,
         std::forward_as_tuple(name), // mNames
         std::forward_as_tuple(), // mTraits
+        std::forward_as_tuple(), // mConstraints
+        std::forward_as_tuple(), // mInherits
         std::forward_as_tuple(), // mModulePaths
         std::forward_as_tuple(), // mTypescripts
         std::forward_as_tuple(), // PolymorphicType

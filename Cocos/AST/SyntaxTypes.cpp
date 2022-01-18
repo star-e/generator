@@ -58,14 +58,53 @@ Define::Define(Define const& rhs, const allocator_type& alloc)
 
 Define::~Define() noexcept = default;
 
-Alias::Alias(const allocator_type& alloc) noexcept
-    : mName(alloc) {}
+Concept::Concept(const allocator_type& alloc)
+    : mParentPath(alloc) {}
+
+Concept::Concept(std::string_view parentPath, const allocator_type& alloc)
+    : mParentPath(std::move(parentPath), alloc) {}
+
+Concept::Concept(Concept&& rhs, const allocator_type& alloc)
+    : mParentPath(std::move(rhs.mParentPath), alloc) {}
+
+Concept::Concept(Concept const& rhs, const allocator_type& alloc)
+    : mParentPath(rhs.mParentPath, alloc) {}
+
+Concept::~Concept() noexcept = default;
+
+Constraints::Constraints(const allocator_type& alloc) noexcept
+    : mConcepts(alloc) {}
+
+Constraints::Constraints(Constraints&& rhs, const allocator_type& alloc)
+    : mConcepts(std::move(rhs.mConcepts), alloc) {}
+
+Constraints::Constraints(Constraints const& rhs, const allocator_type& alloc)
+    : mConcepts(rhs.mConcepts, alloc) {}
+
+Constraints::~Constraints() noexcept = default;
+
+Inherits::Inherits(const allocator_type& alloc) noexcept
+    : mBases(alloc) {}
+
+Inherits::Inherits(Inherits&& rhs, const allocator_type& alloc)
+    : mBases(std::move(rhs.mBases), alloc) {}
+
+Inherits::Inherits(Inherits const& rhs, const allocator_type& alloc)
+    : mBases(rhs.mBases, alloc) {}
+
+Inherits::~Inherits() noexcept = default;
+
+Alias::Alias(const allocator_type& alloc)
+    : mTypePath(alloc) {}
+
+Alias::Alias(std::string_view typePath, const allocator_type& alloc)
+    : mTypePath(std::move(typePath), alloc) {}
 
 Alias::Alias(Alias&& rhs, const allocator_type& alloc)
-    : mName(std::move(rhs.mName), alloc) {}
+    : mTypePath(std::move(rhs.mTypePath), alloc) {}
 
 Alias::Alias(Alias const& rhs, const allocator_type& alloc)
-    : mName(rhs.mName, alloc) {}
+    : mTypePath(rhs.mTypePath, alloc) {}
 
 Alias::~Alias() noexcept = default;
 
@@ -93,12 +132,14 @@ Enum::Enum(const allocator_type& alloc) noexcept
 Enum::Enum(Enum&& rhs, const allocator_type& alloc)
     : mIsFlags(std::move(rhs.mIsFlags))
     , mEnumOperator(std::move(rhs.mEnumOperator))
+    , mHasName(std::move(rhs.mHasName))
     , mUnderlyingType(std::move(rhs.mUnderlyingType), alloc)
     , mValues(std::move(rhs.mValues), alloc) {}
 
 Enum::Enum(Enum const& rhs, const allocator_type& alloc)
     : mIsFlags(rhs.mIsFlags)
     , mEnumOperator(rhs.mEnumOperator)
+    , mHasName(rhs.mHasName)
     , mUnderlyingType(rhs.mUnderlyingType, alloc)
     , mValues(rhs.mValues, alloc) {}
 
@@ -108,6 +149,7 @@ Member::Member(const allocator_type& alloc) noexcept
     : mTypePath(alloc)
     , mMemberName(alloc)
     , mDefaultValue(alloc)
+    , mComments(alloc)
     , mTypescriptType(alloc)
     , mTypescriptDefaultValue(alloc) {}
 
@@ -115,6 +157,7 @@ Member::Member(Member&& rhs, const allocator_type& alloc)
     : mTypePath(std::move(rhs.mTypePath), alloc)
     , mMemberName(std::move(rhs.mMemberName), alloc)
     , mDefaultValue(std::move(rhs.mDefaultValue), alloc)
+    , mComments(std::move(rhs.mComments), alloc)
     , mConst(std::move(rhs.mConst))
     , mPointer(std::move(rhs.mPointer))
     , mReference(std::move(rhs.mReference))
@@ -128,6 +171,7 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
     , mMemberName(rhs.mMemberName, alloc)
     , mDefaultValue(rhs.mDefaultValue, alloc)
+    , mComments(rhs.mComments, alloc)
     , mConst(rhs.mConst)
     , mPointer(rhs.mPointer)
     , mReference(rhs.mReference)
@@ -156,6 +200,7 @@ Struct::Struct(const allocator_type& alloc) noexcept
     : mInherits(alloc)
     , mMembers(alloc)
     , mConstructors(alloc)
+    , mMemberFunctions(alloc)
     , mTypescriptMembers(alloc)
     , mTypescriptFunctions(alloc) {}
 
@@ -163,6 +208,7 @@ Struct::Struct(Struct&& rhs, const allocator_type& alloc)
     : mInherits(std::move(rhs.mInherits), alloc)
     , mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
+    , mMemberFunctions(std::move(rhs.mMemberFunctions), alloc)
     , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
     , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc) {}
 
@@ -170,6 +216,7 @@ Struct::Struct(Struct const& rhs, const allocator_type& alloc)
     : mInherits(rhs.mInherits, alloc)
     , mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
+    , mMemberFunctions(rhs.mMemberFunctions, alloc)
     , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
     , mTypescriptFunctions(rhs.mTypescriptFunctions, alloc) {}
 
@@ -320,9 +367,13 @@ SyntaxGraph::SyntaxGraph(const allocator_type& alloc)
     , mVertices(alloc)
     , mNames(alloc)
     , mTraits(alloc)
+    , mConstraints(alloc)
+    , mInherits(alloc)
     , mModulePaths(alloc)
     , mTypescripts(alloc)
     , mDefines(alloc)
+    , mConcepts(alloc)
+    , mAliases(alloc)
     , mEnums(alloc)
     , mTags(alloc)
     , mStructs(alloc)
@@ -336,9 +387,13 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph&& rhs, const allocator_type& alloc)
     , mVertices(std::move(rhs.mVertices), alloc)
     , mNames(std::move(rhs.mNames), alloc)
     , mTraits(std::move(rhs.mTraits), alloc)
+    , mConstraints(std::move(rhs.mConstraints), alloc)
+    , mInherits(std::move(rhs.mInherits), alloc)
     , mModulePaths(std::move(rhs.mModulePaths), alloc)
     , mTypescripts(std::move(rhs.mTypescripts), alloc)
     , mDefines(std::move(rhs.mDefines), alloc)
+    , mConcepts(std::move(rhs.mConcepts), alloc)
+    , mAliases(std::move(rhs.mAliases), alloc)
     , mEnums(std::move(rhs.mEnums), alloc)
     , mTags(std::move(rhs.mTags), alloc)
     , mStructs(std::move(rhs.mStructs), alloc)
@@ -352,9 +407,13 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph const& rhs, const allocator_type& alloc)
     , mVertices(rhs.mVertices, alloc)
     , mNames(rhs.mNames, alloc)
     , mTraits(rhs.mTraits, alloc)
+    , mConstraints(rhs.mConstraints, alloc)
+    , mInherits(rhs.mInherits, alloc)
     , mModulePaths(rhs.mModulePaths, alloc)
     , mTypescripts(rhs.mTypescripts, alloc)
     , mDefines(rhs.mDefines, alloc)
+    , mConcepts(rhs.mConcepts, alloc)
+    , mAliases(rhs.mAliases, alloc)
     , mEnums(rhs.mEnums, alloc)
     , mTags(rhs.mTags, alloc)
     , mStructs(rhs.mStructs, alloc)
@@ -374,6 +433,8 @@ void SyntaxGraph::reserve(vertices_size_type sz) {
     mVertices.reserve(sz);
     mNames.reserve(sz);
     mTraits.reserve(sz);
+    mConstraints.reserve(sz);
+    mInherits.reserve(sz);
     mModulePaths.reserve(sz);
     mTypescripts.reserve(sz);
 }

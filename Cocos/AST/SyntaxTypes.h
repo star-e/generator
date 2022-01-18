@@ -123,13 +123,72 @@ struct Define {
     std::pmr::string mContent;
 };
 
+struct Concept {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mParentPath.get_allocator().resource());
+    }
+
+    Concept(const allocator_type& alloc);
+    Concept(std::string_view parentPath, const allocator_type& alloc);
+    Concept(Concept&& rhs, const allocator_type& alloc);
+    Concept(Concept const& rhs, const allocator_type& alloc);
+
+    Concept(Concept&& rhs) = default;
+    Concept(Concept const& rhs) = delete;
+    Concept& operator=(Concept&& rhs) = default;
+    Concept& operator=(Concept const& rhs) = default;
+    ~Concept() noexcept;
+
+    std::pmr::string mParentPath;
+};
+
+struct Constraints {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mConcepts.get_allocator().resource());
+    }
+
+    Constraints(const allocator_type& alloc) noexcept;
+    Constraints(Constraints&& rhs, const allocator_type& alloc);
+    Constraints(Constraints const& rhs, const allocator_type& alloc);
+
+    Constraints(Constraints&& rhs) = default;
+    Constraints(Constraints const& rhs) = delete;
+    Constraints& operator=(Constraints&& rhs) = default;
+    Constraints& operator=(Constraints const& rhs) = default;
+    ~Constraints() noexcept;
+
+    std::pmr::vector<std::pmr::string> mConcepts;
+};
+
+struct Inherits {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mBases.get_allocator().resource());
+    }
+
+    Inherits(const allocator_type& alloc) noexcept;
+    Inherits(Inherits&& rhs, const allocator_type& alloc);
+    Inherits(Inherits const& rhs, const allocator_type& alloc);
+
+    Inherits(Inherits&& rhs) = default;
+    Inherits(Inherits const& rhs) = delete;
+    Inherits& operator=(Inherits&& rhs) = default;
+    Inherits& operator=(Inherits const& rhs) = default;
+    ~Inherits() noexcept;
+
+    std::pmr::vector<std::pmr::string> mBases;
+};
+
 struct Alias {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
-        return allocator_type(mName.get_allocator().resource());
+        return allocator_type(mTypePath.get_allocator().resource());
     }
 
-    Alias(const allocator_type& alloc) noexcept;
+    Alias(const allocator_type& alloc);
+    Alias(std::string_view typePath, const allocator_type& alloc);
     Alias(Alias&& rhs, const allocator_type& alloc);
     Alias(Alias const& rhs, const allocator_type& alloc);
 
@@ -139,20 +198,19 @@ struct Alias {
     Alias& operator=(Alias const& rhs) = default;
     ~Alias() noexcept;
 
-    std::pmr::string mName;
+    std::pmr::string mTypePath;
 };
-
-struct Concept {};
 
 struct Traits {
     bool mImport = false;
-    bool mPmr = false;
-    bool mNameComparison = false;
-    bool mDefined = false;
+    bool mInterface = false;
     bool mClass = false;
-    bool mExport = false;
+    bool mPmr = false;
+    bool mNoexcept = true;
+    bool mUnknown = false;
+    bool mTrivial = false;
     GenerationFlags mFlags = {};
-    uint32_t mOverAlignment = 0;
+    uint32_t mAlignment = 0;
 };
 
 struct Value {};
@@ -196,6 +254,7 @@ struct Enum {
 
     bool mIsFlags = false;
     bool mEnumOperator = true;
+    bool mHasName = true;
     std::pmr::string mUnderlyingType;
     std::pmr::vector<EnumValue> mValues;
 };
@@ -223,6 +282,7 @@ struct Member {
     std::pmr::string mTypePath;
     std::pmr::string mMemberName;
     std::pmr::string mDefaultValue;
+    std::pmr::string mComments;
     bool mConst = false;
     bool mPointer = false;
     bool mReference = false;
@@ -272,6 +332,7 @@ struct Struct {
     std::pmr::vector<std::pmr::string> mInherits;
     std::pmr::vector<Member> mMembers;
     std::pmr::vector<Constructor> mConstructors;
+    std::pmr::vector<std::pmr::string> mMemberFunctions;
     std::pmr::vector<Member> mTypescriptMembers;
     std::pmr::vector<std::pmr::string> mTypescriptFunctions;
 };
@@ -299,6 +360,7 @@ struct Variant {
 struct Namespace_ {};
 struct Define_ {};
 struct Concept_ {};
+struct Alias_ {};
 struct Value_ {};
 struct Enum_ {};
 struct Tag_ {};
@@ -631,13 +693,14 @@ struct SyntaxGraph {
     }
 
     // PolymorphicGraph
-    using vertex_tag_type = std::variant<Define_, Namespace_, Concept_, Value_, Enum_, Tag_, Struct_, Graph_, Variant_, Container_, Map_, Instance_>;
-    using vertex_value_type = std::variant<Define*, Namespace*, Concept*, Value*, Enum*, Tag*, Struct*, Graph*, Variant*, Container*, Map*, Instance*>;
-    using vertex_const_value_type = std::variant<const Define*, const Namespace*, const Concept*, const Value*, const Enum*, const Tag*, const Struct*, const Graph*, const Variant*, const Container*, const Map*, const Instance*>;
+    using vertex_tag_type = std::variant<Define_, Namespace_, Concept_, Alias_, Value_, Enum_, Tag_, Struct_, Graph_, Variant_, Container_, Map_, Instance_>;
+    using vertex_value_type = std::variant<Define*, Namespace*, Concept*, Alias*, Value*, Enum*, Tag*, Struct*, Graph*, Variant*, Container*, Map*, Instance*>;
+    using vertex_const_value_type = std::variant<const Define*, const Namespace*, const Concept*, const Alias*, const Value*, const Enum*, const Tag*, const Struct*, const Graph*, const Variant*, const Container*, const Map*, const Instance*>;
     using vertex_handle_type = std::variant<
         Impl::ValueHandle<Define_, vertex_descriptor>,
         Impl::ValueHandle<Namespace_, Namespace>,
-        Impl::ValueHandle<Concept_, Concept>,
+        Impl::ValueHandle<Concept_, vertex_descriptor>,
+        Impl::ValueHandle<Alias_, vertex_descriptor>,
         Impl::ValueHandle<Value_, Value>,
         Impl::ValueHandle<Enum_, vertex_descriptor>,
         Impl::ValueHandle<Tag_, vertex_descriptor>,
@@ -745,6 +808,10 @@ struct SyntaxGraph {
     } static constexpr names = {};
     struct traits_ {
     } static constexpr traits = {};
+    struct constraints_ {
+    } static constexpr constraints = {};
+    struct inherits_ {
+    } static constexpr inherits = {};
     struct modulePaths_ {
     } static constexpr modulePaths = {};
     struct typescripts_ {
@@ -757,10 +824,14 @@ struct SyntaxGraph {
     // Components
     std::pmr::vector<std::pmr::string> mNames;
     std::pmr::vector<Traits> mTraits;
+    std::pmr::vector<Constraints> mConstraints;
+    std::pmr::vector<Inherits> mInherits;
     std::pmr::vector<std::pmr::string> mModulePaths;
     std::pmr::vector<Typescript> mTypescripts;
     // PolymorphicGraph
     std::pmr::vector<Define> mDefines;
+    std::pmr::vector<Concept> mConcepts;
+    std::pmr::vector<Alias> mAliases;
     std::pmr::vector<Enum> mEnums;
     std::pmr::vector<Tag> mTags;
     std::pmr::vector<Struct> mStructs;

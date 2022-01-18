@@ -68,7 +68,7 @@ builder.addEnumElement(vertID, \
 
 #define IMPORT_PMR_CLASS(NAME) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mPmr = true, .mClass = true }); true)
+        Traits{ .mImport = true, .mClass = true, .mPmr = true }); true)
 
 #define IMPORT_STRUCT(NAME) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
@@ -76,7 +76,7 @@ builder.addEnumElement(vertID, \
 
 #define IMPORT_PMR_STRUCT(NAME) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mPmr = true, .mClass = false }); true)
+        Traits{ .mImport = true, .mClass = false, .mPmr = true }); true)
 
 #define STRUCT(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME), __VA_ARGS__); true)
