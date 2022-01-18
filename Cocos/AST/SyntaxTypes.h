@@ -833,6 +833,13 @@ struct Typescript {
     bool mArray = false;
 };
 
+enum class ImplEnum : uint32_t {
+    None,
+    Inline,
+    Separated,
+    Delete,
+};
+
 struct SyntaxGraph {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept;
@@ -981,6 +988,21 @@ struct SyntaxGraph {
     bool isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept;
     bool isOptional(vertex_descriptor vertID) const noexcept;
     bool isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
+
+    // struct
+    bool isDerived(vertex_descriptor vertID) const noexcept;
+    ImplEnum needDefaultCntr(vertex_descriptor vertID) const noexcept;
+    ImplEnum needMoveCntr(vertex_descriptor vertID) const noexcept;
+    ImplEnum needCopyCntr(vertex_descriptor vertID) const noexcept;
+    ImplEnum needDtor(vertex_descriptor vertID, bool bDLL) const noexcept;
+    bool hasPmrOptional(vertex_descriptor vertID) const noexcept;
+    bool hasString(vertex_descriptor vertID) const noexcept;
+    bool hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept;
+    bool hasHeader(vertex_descriptor vertID) const noexcept;
+
+    vertex_descriptor getMemberType(vertex_descriptor vertID, std::string_view member) const noexcept;
+    vertex_descriptor getFirstMemberString(vertex_descriptor vertID) const noexcept;
+    vertex_descriptor getFirstMemberUtf8(vertex_descriptor vertID) const noexcept;
 
     // general
     std::pmr::string getTypePath(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;

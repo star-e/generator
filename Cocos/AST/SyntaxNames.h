@@ -78,6 +78,15 @@ inline const char* getName(const Named& v) noexcept { return "Named"; }
 inline const char* getName(const Addressable& v) noexcept { return "Addressable"; }
 inline const char* getName(const Graph& v) noexcept { return "Graph"; }
 inline const char* getName(const Typescript& v) noexcept { return "Typescript"; }
+inline const char* getName(ImplEnum e) noexcept {
+    switch(e) {
+    case ImplEnum::None: return "None";
+    case ImplEnum::Inline: return "Inline";
+    case ImplEnum::Separated: return "Separated";
+    case ImplEnum::Delete: return "Delete";
+    }
+    return "";
+}
 inline const char* getName(const SyntaxGraph& v) noexcept { return "SyntaxGraph"; }
 inline const char* getName(const ModuleInfo& v) noexcept { return "ModuleInfo"; }
 inline const char* getName(const ModuleGraph& v) noexcept { return "ModuleGraph"; }

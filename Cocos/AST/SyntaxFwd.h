@@ -213,6 +213,8 @@ template <> struct IsInstantiation<Instance_> { static constexpr bool value = tr
 
 template <> struct IsInstantiation<Instance> { static constexpr bool value = true; };
 
+enum class ImplEnum : uint32_t;
+
 struct SyntaxGraph;
 struct ModuleInfo;
 struct ModuleGraph;

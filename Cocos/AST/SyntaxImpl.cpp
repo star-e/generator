@@ -237,6 +237,322 @@ bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const n
     return !m.mAPI.empty();
 }
 
+bool SyntaxGraph::isDerived(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    return !get(g.inherits, g, vertID).mBases.empty();
+}
+
+ImplEnum SyntaxGraph::needDefaultCntr(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+
+    bool bNeedDefault = false;
+    bool bPmr = g.isPmr(vertID);
+    bool bNeedCopy = g.needCopyCntr(vertID) != ImplEnum::None;
+    bool bNeedMove = g.needMoveCntr(vertID) != ImplEnum::None;
+    bool hasDtor = traits.mFlags & CUSTOM_DTOR;
+
+    if (traits.mInterface)
+        bNeedDefault = true;
+
+    if (hasDtor)
+        bNeedDefault = true;
+
+    visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            if (!s.mConstructors.empty())
+                bNeedDefault = true;
+            if (bPmr)
+                bNeedDefault = true;
+            if (bNeedCopy)
+                bNeedDefault = true;
+            if (bNeedMove)
+                bNeedDefault = true;
+        },
+        [&](const auto&) {
+        });
+
+    if (traits.mFlags & NO_DEFAULT_CNTR)
+        bNeedDefault = false;
+
+    if (bNeedDefault) {
+        if (bPmr || traits.mInterface) {
+            return ImplEnum::Separated;
+        } else {
+            return ImplEnum::Inline;
+        }
+    } else {
+        return ImplEnum::None;
+    }
+}
+
+ImplEnum SyntaxGraph::needMoveCntr(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+
+    bool bPmr = g.isPmr(vertID);
+    bool hasDtor = traits.mFlags & CUSTOM_DTOR;
+    bool bDerived = g.isDerived(vertID);
+
+    bool bNeedMove = false;
+    bool bNeedDeleteMove = false;
+    if (traits.mFlags & GenerationFlags::NO_MOVE_NO_COPY) {
+        bNeedDeleteMove = true;
+    }
+
+    if (hasDtor)
+        bNeedMove = true;
+
+    if (bPmr) {
+        bNeedMove = true;
+    } else if (traits.mFlags & GenerationFlags::NO_COPY) {
+        bNeedMove = true;
+    }
+
+    if (bDerived) {
+        bNeedDeleteMove = true;
+    }
+
+    if (bNeedDeleteMove) {
+        if (bDerived) {
+            return ImplEnum::None;
+        } else {
+            return ImplEnum::Delete;
+        }
+    } else {
+        if (bNeedMove) {
+            if (bPmr) {
+                return ImplEnum::Separated;
+            } else {
+                return ImplEnum::Inline;
+            }
+        } else {
+            return ImplEnum::None;
+        }
+    }
+}
+
+ImplEnum SyntaxGraph::needCopyCntr(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+
+    bool bPmr = g.isPmr(vertID);
+    bool hasDtor = traits.mFlags & CUSTOM_DTOR;
+    bool bDerived = !get(g.inherits, g, vertID).mBases.empty();
+
+    bool bNeedCopy = false;
+    bool bNeedDeleteCopy = false;
+
+    if (traits.mFlags & GenerationFlags::NO_COPY) {
+        bNeedDeleteCopy = true;
+    }
+    if (traits.mFlags & GenerationFlags::NO_MOVE_NO_COPY) {
+        bNeedDeleteCopy = true;
+    }
+
+    if (hasDtor)
+        bNeedCopy = true;
+
+    if (bPmr) {
+        bNeedCopy = true;
+    }
+
+    if (bDerived) {
+        bNeedDeleteCopy = true;
+    }
+
+    if (bNeedDeleteCopy) {
+        if (bDerived) {
+            return ImplEnum::None;
+        } else {
+            return ImplEnum::Delete;
+        }
+    } else {
+        if (bNeedCopy) {
+            if (bPmr) {
+                return ImplEnum::Separated;
+            } else {
+                return ImplEnum::Inline;
+            }
+        } else {
+            return ImplEnum::None;
+        }
+    }
+}
+
+ImplEnum SyntaxGraph::needDtor(vertex_descriptor vertID, bool bDLL) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+
+    bool bPmr = g.isPmr(vertID);
+    bool hasDtor = traits.mFlags & CUSTOM_DTOR;
+
+    if (hasDtor) {
+        return ImplEnum::Separated;
+    } else {
+        if (traits.mInterface) {
+            if (bDLL) {
+                return ImplEnum::Separated;
+            } else {
+                return ImplEnum::Inline;
+            }
+        }
+        if (bDLL && bPmr) {
+            return ImplEnum::Separated;
+        } else {
+            return ImplEnum::None;
+        }
+    }
+}
+
+bool SyntaxGraph::hasPmrOptional(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (const Member& m : s.mMembers) {
+                auto typeID = locate(m.mTypePath, g);
+                if (g.isOptional(typeID)) {
+                    const auto& inst = get<Instance>(typeID, g);
+                    Expects(inst.mParameters.size() == 1);
+                    auto paramID = locate(inst.mParameters.front(), g);
+                    if (g.isPmr(paramID)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
+bool SyntaxGraph::hasString(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (const Member& m : s.mMembers) {
+                auto typeID = locate(m.mTypePath, g);
+                if (g.isString(typeID)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
+bool SyntaxGraph::hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+
+    if (traits.mImport)
+        return false;
+
+    if (traits.mUnknown)
+        return false;
+
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            bool bNeedCopy = g.needCopyCntr(vertID) == ImplEnum::Separated;
+            bool bNeedMove = g.needMoveCntr(vertID) == ImplEnum::Separated;
+            bool bNeedDefault = g.needDefaultCntr(vertID) == ImplEnum::Separated;
+            bool bNeedDtor = g.needDtor(vertID, bDLL) == ImplEnum::Separated;
+            bool bPmr = g.isPmr(vertID);
+
+            return (bPmr && !s.mConstructors.empty())
+                || bNeedDefault
+                || bNeedMove
+                || bNeedCopy
+                || bNeedDtor;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
+bool SyntaxGraph::hasHeader(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            bool bNeedDefault = g.needDefaultCntr(vertID) != ImplEnum::None;
+            bool bNeedMove = g.needMoveCntr(vertID) != ImplEnum::None;
+            bool bNeedCopy = g.needCopyCntr(vertID) != ImplEnum::None;
+            bool bPmr = g.isPmr(vertID);
+
+            return (bPmr && !s.mConstructors.empty())
+                || bNeedDefault || bNeedMove || bNeedCopy;
+        },
+        [&](const auto&) {
+            return true;
+        });
+}
+
+SyntaxGraph::vertex_descriptor SyntaxGraph::getMemberType(
+    vertex_descriptor vertID, std::string_view member) const noexcept {
+    const auto& g = *this;
+    Expects(isComposition(vertID));
+
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (const auto& m : s.mMembers) {
+                if (m.mMemberName != member) {
+                    continue;
+                }
+                return locate(m.mTypePath, g);
+            }
+            return g.null_vertex();
+        },
+        [&](const auto&) {
+            return g.null_vertex();
+        });
+}
+
+SyntaxGraph::vertex_descriptor SyntaxGraph::getFirstMemberString(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (const Member& m : s.mMembers) {
+                auto typeID = locate(m.mTypePath, g);
+                if (g.isString(typeID) && !g.isUtf8(typeID)) {
+                    return typeID;
+                }
+            }
+            return g.null_vertex();
+        },
+        [&](const auto&) {
+            return g.null_vertex();
+        });
+}
+
+SyntaxGraph::vertex_descriptor SyntaxGraph::getFirstMemberUtf8(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (const Member& m : s.mMembers) {
+                auto typeID = locate(m.mTypePath, g);
+                if (g.isString(typeID) && g.isUtf8(typeID)) {
+                    return typeID;
+                }
+            }
+            return g.null_vertex();
+        },
+        [&](const auto&) {
+            return g.null_vertex();
+        });
+}
+
 std::pmr::string SyntaxGraph::getTypePath(vertex_descriptor vertID,
     std::pmr::memory_resource* mr) const {
     const auto& g = *this;
