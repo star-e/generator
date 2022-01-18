@@ -383,8 +383,7 @@ Addressable::Addressable(Addressable const& rhs, const allocator_type& alloc)
 Addressable::~Addressable() noexcept = default;
 
 Graph::Graph(const allocator_type& alloc) noexcept
-    : mInherits(alloc)
-    , mMembers(alloc)
+    : mMembers(alloc)
     , mConstructors(alloc)
     , mTypescriptMembers(alloc)
     , mTypescriptFunctions(alloc)
@@ -401,8 +400,7 @@ Graph::Graph(const allocator_type& alloc) noexcept
     , mAddressableConcept(alloc) {}
 
 Graph::Graph(Graph&& rhs, const allocator_type& alloc)
-    : mInherits(std::move(rhs.mInherits), alloc)
-    , mMembers(std::move(rhs.mMembers), alloc)
+    : mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
     , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
     , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc)
@@ -425,8 +423,7 @@ Graph::Graph(Graph&& rhs, const allocator_type& alloc)
     , mAddressableConcept(std::move(rhs.mAddressableConcept), alloc) {}
 
 Graph::Graph(Graph const& rhs, const allocator_type& alloc)
-    : mInherits(rhs.mInherits, alloc)
-    , mMembers(rhs.mMembers, alloc)
+    : mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
     , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
     , mTypescriptFunctions(rhs.mTypescriptFunctions, alloc)

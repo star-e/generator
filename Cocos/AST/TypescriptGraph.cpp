@@ -653,8 +653,8 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     }
 }
 
-std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
-    std::string_view name,
+std::pmr::string generateGraph(const ModuleBuilder& builder,
+    const Graph& s, SyntaxGraph::vertex_descriptor vertID, std::string_view name,
     std::pmr::memory_resource* scratch) {
     const auto& g = builder.mSyntaxGraph;
 
@@ -843,8 +843,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
     OSS << "// " << name << " Implementation\n";
     OSS << "export class " << name;
     
-    for (int count = 0; const auto& base : s.mInherits) {
-        auto superID = locate(base, g);
+    const auto& constraints = get(g.constraints, g, vertID);
+    for (int count = 0; const auto& conceptPath : constraints.mConcepts) {
+        auto superID = locate(conceptPath, g);
         const auto& name = get(g.names, g, superID);
         if (count++ == 0) {
             oss << " extends ";
@@ -853,7 +854,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
         }
         oss << name;
     }
-    if (s.mInherits.empty()) {
+    if (constraints.mConcepts.empty()) {
         oss << " implements impl.BidirectionalGraph\n";
     } else {
         oss << "\n";
@@ -861,7 +862,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
         oss << "implements impl.BidirectionalGraph\n";
     }
     {
-        if (!s.mInherits.empty()) {
+        if (!constraints.mConcepts.empty()) {
             space.append("    ");
         }
         OSS << ", impl.AdjacencyGraph\n";
@@ -895,7 +896,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
             oss << "\n";
             OSS << ", impl.AddressableGraph";
         }
-        if (!s.mInherits.empty()) {
+        if (!constraints.mConcepts.empty()) {
             space.resize(space.size() - 4);
         }
     }
@@ -2136,7 +2137,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder, const Graph& s,
             }
         }
         // GraphMembers
-        outputMembers(oss, space, builder, g, s.mInherits, s.mMembers, s.mTypescriptFunctions,
+        const auto& constraints = get(g.constraints, g, vertID);
+        outputMembers(oss, space, builder, g, constraints.mConcepts,
+            s.mMembers, s.mTypescriptFunctions,
             s.mConstructors, scratch);
     }
     OSS << "}\n";

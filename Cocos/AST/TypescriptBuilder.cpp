@@ -67,7 +67,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (currScope.mCount++)
                 oss << "\n";
 
-            auto content = generateGraph(builder, s, name, scratch);
+            auto content = generateGraph(builder, s, vertID, name, scratch);
             copyString(oss, space, content);
         }, 
         [&](const Struct& s) {
