@@ -379,7 +379,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                     OSS << "readonly id: " << name << "Value,\n";
                     OSS << "readonly object: " << name << "Object";
                 }
-                if (s.mNamed) {
+                if (false && s.mNamed) {
                     if (count++) {
                         oss << ",\n";
                     } else {
@@ -419,7 +419,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                     OSS << "this._id = id;\n";
                     OSS << "this._object = object;\n";
                 }
-                if (s.mNamed) {
+                if (false && s.mNamed) {
                     OSS << "this._name = name;\n";
                 }
                 if (!s.mVertexProperty.empty()) {
@@ -448,7 +448,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                 OSS << "readonly _id: " << name << "Value;\n";
                 OSS << "readonly _object: "<< name << "Object;\n";
             }
-            if (s.mNamed)
+            if (false && s.mNamed)
                 OSS << "readonly _name: string;\n";
             if (!s.mVertexProperty.empty()) {
                 OSS << "readonly _property: " << s.getTypescriptVertexPropertyType(g, scratch, scratch) << ";\n";
@@ -804,7 +804,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         OSS << "//-----------------------------------------------------------------\n";
         OSS << "// PropertyGraph Concept\n";
         int count = 0;
-        if (s.mNamed) {
+        if (false && s.mNamed) {
             if (count++)
                 oss << "\n";
             outputPropertyMap("Name", true, "vertices", vertexName, "_name", "string");
@@ -1111,7 +1111,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     } else {
                         oss << " (";
                     }
-                    if (s.mNamed) {
+                    if (false && s.mNamed) {
                         if (count++ == 0)
                             oss << '\n';
                         OSS << "name: string,\n";
@@ -1154,7 +1154,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         oss << "object";
                         ++count;
                     }
-                    if (s.mNamed) {
+                    if (false && s.mNamed) {
                         if (count++)
                             oss << ", ";
                         oss << "name";
@@ -1392,14 +1392,43 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "vertexName (v: " << vertexDescType << "): string {\n";
             {
                 INDENT();
-                OSS << "return " << s.getTypescriptVertexDereference("v", scratch) << "._name;\n";
+                Expects(s.mNamedConcept.mComponent);
+                for (const auto& c : s.mComponents) {
+                    if (c.mName != s.mNamedConcept.mComponentName)
+                        continue;
+
+                    if (s.mNamedConcept.mComponentMemberName.empty()) {
+                        if (s.isVector()) {
+                            OSS << "return this." << builder.getMemberName(c.mMemberName, false)
+                                << "[v];\n";
+                        } else {
+                            OSS << "return " << s.getTypescriptVertexDereference("v", scratch)
+                                << "." << builder.getMemberName(c.mMemberName, false) << ";\n";
+                        }
+                    } else {
+                        if (s.isVector()) {
+                            OSS << "return this." << builder.getMemberName(c.mMemberName, false)
+                                << "[v]." << s.mNamedConcept.mComponentMemberName << ";\n";
+                        } else {
+                            OSS << "return " << s.getTypescriptVertexDereference("v", scratch)
+                                << "." << builder.getMemberName(c.mMemberName, false)
+                                << "." << s.mNamedConcept.mComponentMemberName << ";\n";
+                        }
+                    }
+                }
             }
             OSS << "}\n";
             OSS << "vertexNameMap (): " << name << "NameMap {\n";
             {
                 INDENT();
                 if (s.isVector()) {
-                    OSS << "return new " << name << "NameMap(this._vertices);\n";
+                    for (const auto& c : s.mComponents) {
+                        if (c.mName != s.mNamedConcept.mComponentName)
+                            continue;
+
+                        OSS << "return new " << name << "NameMap(this."
+                            << builder.getMemberName(c.mMemberName, false) << ");\n";
+                    }
                 } else {
                     OSS << "return new " << name << "NameMap();\n";
                 }
@@ -1436,7 +1465,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
             OSS << "get (tag: string): ";
             int count = 0;
-            if (s.mNamed) {
+            if (false && s.mNamed) {
                 if (count++)
                     oss << " | ";
                 oss << name << "NameMap";
@@ -1455,7 +1484,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 OSS << "switch (tag) {\n";
-                if (s.mNamed) {
+                if (false && s.mNamed) {
                     OSS << "// NamedGraph\n";
                     OSS << "case '"
                         << "name"

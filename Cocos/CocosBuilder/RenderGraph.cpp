@@ -86,7 +86,7 @@ import { RenderScene } from '../renderer/scene';
                     OBJECT_DESCRIPTOR();
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        // (Name_, std::pmr::string, mNames)
+                        (Name_, std::pmr::string, mName)
                         (Desc_, ResourceDesc, mDescs)
                         (Traits_, ResourceTraits, mTraits)
                     );
@@ -166,9 +166,9 @@ import { RenderScene } from '../renderer/scene';
 
                 PMR_GRAPH(SubpassGraph, RasterSubpass, _) {
                     NAMED_GRAPH(Name_);
-                    //COMPONENT_GRAPH(
-                    //    (Name_, std::pmr::string, mNames)
-                    //);
+                    COMPONENT_GRAPH(
+                        (Name_, std::pmr::string, mName)
+                    );
                 }
                 
                 STRUCT(RasterPassData) {
@@ -285,7 +285,7 @@ import { RenderScene } from '../renderer/scene';
                     REFERENCE_GRAPH();
 
                     COMPONENT_GRAPH(
-                        //(Name_, std::pmr::string, mNames)
+                        (Name_, std::pmr::string, mName)
                         (Layout_, std::pmr::string, mLayoutNodes)
                         (Data_, RenderData, mData)
                     );
@@ -603,7 +603,7 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
                     OBJECT_DESCRIPTOR();
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        //(Name_, std::pmr::string, mNames)
+                        (Name_, std::pmr::string, mName)
                         (RefCount_, int32_t, mRefCounts)
                     );
                     POLYMORPHIC_GRAPH(
