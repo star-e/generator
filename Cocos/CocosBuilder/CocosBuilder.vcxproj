@@ -245,10 +245,8 @@
     <ClCompile Include="RenderGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LayoutGraph.h" />
+    <ClInclude Include="CocosModules.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="RenderCommon.h" />
-    <ClInclude Include="RenderGraph.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AST\AST.vcxproj">

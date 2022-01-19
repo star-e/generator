@@ -15,15 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="RenderGraph.h">
-      <Filter>Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="LayoutGraph.h">
-      <Filter>Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="RenderCommon.h">
-      <Filter>Modules</Filter>
-    </ClInclude>
+    <ClInclude Include="CocosModules.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="graph.ts" />

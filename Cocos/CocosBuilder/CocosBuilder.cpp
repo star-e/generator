@@ -27,9 +27,7 @@ THE SOFTWARE.
 #include <Cocos/AST/CppDefaultValues.h>
 #include <Cocos/AST/TypescriptDefaultValues.h>
 #include <Cocos/FileUtils.h>
-#include "RenderCommon.h"
-#include "LayoutGraph.h"
-#include "RenderGraph.h"
+#include "CocosModules.h"
 
 using namespace Cocos;
 using namespace Cocos::Meta;

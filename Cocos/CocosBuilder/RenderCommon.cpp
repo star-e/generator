@@ -24,8 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "RenderCommon.h"
-
+#include "CocosModules.h"
 #include <Cocos/AST/DSL.h>
 #include <Cocos/AST/SyntaxGraphs.h>
 

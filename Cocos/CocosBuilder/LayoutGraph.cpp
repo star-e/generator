@@ -24,8 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "LayoutGraph.h"
-
+#include "CocosModules.h"
 #include <Cocos/AST/DSL.h>
 #include <Cocos/AST/SyntaxGraphs.h>
 
@@ -42,12 +41,16 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 // Constant
                 STRUCT(Constant) {
                     PUBLIC(
-                        (ValueType, mType, _)(uint32_t, mValueID, 0xFFFFFFFF));
+                        (ValueType, mType, _)
+                        (uint32_t, mValueID, 0xFFFFFFFF)
+                    );
                 }
 
                 STRUCT(ConstantBuffer) {
                     PUBLIC(
-                        (uint32_t, mSize, 0)(std::pmr::vector<Constant>, mConstants, _));
+                        (uint32_t, mSize, 0)
+                        (std::pmr::vector<Constant>, mConstants, _)
+                    );
                 }
 
                 //-----------------------------------------------------------
@@ -56,51 +59,70 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
                 STRUCT(DescriptorBlock) {
                     PUBLIC(
-                        (DescriptorType, mType, _)(uint32_t, mCapacity, 0)(std::pmr::vector<uint32_t>, mAttributeIDs, _));
+                        (DescriptorType, mType, _)
+                        (uint32_t, mCapacity, 0)
+                        (std::pmr::vector<uint32_t>, mAttributeIDs, _)
+                    );
                 }
 
                 STRUCT(DescriptorArray) {
                     PUBLIC(
-                        (uint32_t, mCapacity, 0)(uint32_t, mAttributeID, 0xFFFFFFFF));
+                        (uint32_t, mCapacity, 0)
+                        (uint32_t, mAttributeID, 0xFFFFFFFF)
+                    );
                 }
 
                 STRUCT(UnboundedDescriptor) {
                     PUBLIC(
-                        (DescriptorType, mType, _)(std::pmr::vector<DescriptorArray>, mDescriptors, _));
+                        (DescriptorType, mType, _)
+                        (std::pmr::vector<DescriptorArray>, mDescriptors, _)
+                    );
                 }
 
                 STRUCT(DescriptorTable) {
                     PUBLIC(
-                        (uint32_t, mSlot, 0)(uint32_t, mCapacity, 0)(std::pmr::vector<DescriptorBlock>, mBlocks, _));
+                        (uint32_t, mSlot, 0)
+                        (uint32_t, mCapacity, 0)
+                        (std::pmr::vector<DescriptorBlock>, mBlocks, _)
+                    );
                 }
 
                 STRUCT(DescriptorSet){
                     PUBLIC(
-                        (std::pmr::vector<DescriptorTable>, mTables, _)(UnboundedDescriptor, mUnbounded, _))
+                        (std::pmr::vector<DescriptorTable>, mTables, _)
+                        (UnboundedDescriptor, mUnbounded, _)
+                    );
                 }
 
                 STRUCT(LayoutData) {
                     PUBLIC(
-                        ((PmrMap<ParameterType, ConstantBuffer>), mConstantBuffers, _)((PmrMap<ParameterType, DescriptorSet>), mDescriptorSets, _));
+                        ((PmrMap<ParameterType, ConstantBuffer>), mConstantBuffers, _)
+                        ((PmrMap<ParameterType, DescriptorSet>), mDescriptorSets, _)
+                    );
                 }
                 //-----------------------------------------------------------
                 // Shader Program
                 STRUCT(ShaderProgramData) {
                     PUBLIC(
-                        ((PmrMap<UpdateFrequency, LayoutData>), mLayouts, _));
+                        ((PmrMap<UpdateFrequency, LayoutData>), mLayouts, _)
+                    );
                 }
 
                 //-----------------------------------------------------------
                 // Descriptor Layout Graph
                 STRUCT(GroupNodeData) {
                     PUBLIC(
-                        (NodeType, mNodeType, _));
+                        (NodeType, mNodeType, _)
+                    );
                     CNTR(mNodeType);
                 }
 
                 STRUCT(ShaderNodeData) {
                     PUBLIC(
-                        (std::pmr::string, mRootSignature, _)(std::pmr::vector<ShaderProgramData>, mShaderPrograms, _)((PmrMap<std::pmr::string, uint32_t>), mShaderIndex, _));
+                        (std::pmr::string, mRootSignature, _)
+                        (std::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
+                        ((PmrMap<std::pmr::string, uint32_t>), mShaderIndex, _)
+                    );
                 }
 
                 TAGS((_), Group_, Shader_);
@@ -112,10 +134,14 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     ADDRESSABLE_GRAPH(mPathIndex);
 
                     COMPONENT_GRAPH(
-                        (Update, UpdateFrequency, mUpdateFrequencies)(Layout, LayoutData, mLayouts));
+                        (Update, UpdateFrequency, mUpdateFrequencies)
+                        (Layout, LayoutData, mLayouts)
+                    );
 
                     POLYMORPHIC_GRAPH(
-                        (Group_, GroupNodeData, mGroupNodes)(Shader_, ShaderNodeData, mShaderNodes));
+                        (Group_, GroupNodeData, mGroupNodes)
+                        (Shader_, ShaderNodeData, mShaderNodes)
+                    );
                 }
             }
         }
