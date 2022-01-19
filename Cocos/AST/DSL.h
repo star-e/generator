@@ -133,6 +133,14 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
 #define REQUIRES_ELEM(r, _, i, SUPERTYPE) builder.addConstraints(s.mVertexDescriptor, BOOST_PP_STRINGIZE(SUPERTYPE));
 #define REQUIRES(...) BOOST_PP_SEQ_FOR_EACH_I(REQUIRES_ELEM, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
 
+// Interface
+#define INTERFACE(NAME, ...) \
+    for (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME), \
+        Traits{ .mInterface = true, .mClass = true, __VA_ARGS__ }); \
+        s.mVertexDescriptor != SyntaxGraph::null_vertex(); \
+        builder.syntax().propagate(s.mVertexDescriptor), \
+        s.mVertexDescriptor = SyntaxGraph::null_vertex())
+
 // Struct
 #define INHERITS(NAME) \
 builder.addInherits(s.mVertexDescriptor, BOOST_PP_STRINGIZE(NAME))

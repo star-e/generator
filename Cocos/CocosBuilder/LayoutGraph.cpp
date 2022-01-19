@@ -32,6 +32,8 @@ namespace Cocos::Meta {
 
 void buildLayoutGraph(ModuleBuilder& builder, Features features) {
     MODULE(DescriptorLayout,
+        .mFolder = "cocos/renderer/pipeline",
+        .mFilePrefix = "DescriptorLayout",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "layout-graph",
         .mAPI = "CC_DLL") {

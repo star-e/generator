@@ -32,6 +32,8 @@ namespace Cocos::Meta {
 
 void buildRenderGraph(ModuleBuilder& builder, Features features) {
     MODULE(RenderGraph,
+        .mFolder = "cocos/renderer/pipeline",
+        .mFilePrefix = "RenderGraph",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "render-graph",
         .mAPI = "CC_DLL",
@@ -299,7 +301,7 @@ import { RenderScene } from '../renderer/scene';
                     );
                 }
 
-                STRUCT(Setter) {
+                INTERFACE(Setter) {
                     PRIVATE(
                         (RenderData&, mData, _)
                     );
@@ -412,7 +414,7 @@ protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<PipelineScen
                 }
 
                 STRUCT(RasterQueue) {
-                    REQUIRES(Setter);
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -447,7 +449,7 @@ addFullscreenQuad (shader: string, name = 'Quad'): RasterQueue {
                 }
                                                 
                 STRUCT(RasterPass) {
-                    REQUIRES(Setter);
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -499,7 +501,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                 }
 
                 STRUCT(ComputeQueue) {
-                    REQUIRES(Setter);
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -523,7 +525,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                 }
 
                 STRUCT(ComputePass) {
-                    REQUIRES(Setter);
+                    INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
                         (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -585,6 +587,8 @@ addDispatch (shader: string,
 
 void buildRenderExecutor(ModuleBuilder& builder, Features features) {
     MODULE(RenderExecutor,
+        .mFolder = "cocos/renderer/pipeline",
+        .mFilePrefix = "RenderExecutor",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "executor",
         .mAPI = "CC_DLL") {

@@ -226,6 +226,8 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(RenderCommon,
+        .mFolder = "cocos/renderer/pipeline",
+        .mFilePrefix = "RenderCommon",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "types",
         .mAPI = "CC_DLL") {
