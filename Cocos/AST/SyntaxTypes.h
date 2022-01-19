@@ -1189,6 +1189,8 @@ struct ModuleInfo {
     Features mFeatures = {};
     std::string mFolder;
     std::string mFilePrefix;
+    std::string mTypescriptFolder;
+    std::string mTypescriptFilePrefix;
     std::string mAPI;
     std::vector<std::string> mRequires;
     std::string mHeader;

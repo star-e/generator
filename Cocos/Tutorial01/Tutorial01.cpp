@@ -20,8 +20,8 @@ int main() {
         auto m = builder.openModule("Tutorial",
             ModuleInfo{
                 .mFeatures = features,
-                .mFolder = "examples/tutorial",
-                .mFilePrefix = "tutorial",
+                .mTypescriptFolder = "examples/tutorial",
+                .mTypescriptFilePrefix = "tutorial",
                 .mAPI = "CC_API",
             });
         {

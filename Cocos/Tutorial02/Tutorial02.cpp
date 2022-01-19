@@ -17,8 +17,8 @@ int main() {
     const auto features = Features::Typescripts;
 
     MODULE(Tutorial,
-        .mFolder = "examples/tutorial",
-        .mFilePrefix = "tutorial",
+        .mTypescriptFolder = "examples/tutorial",
+        .mTypescriptFilePrefix = "tutorial",
         .mAPI = "CC_API"
     ) {
         NAMESPACE(cc) {

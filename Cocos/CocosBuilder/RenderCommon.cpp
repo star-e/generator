@@ -32,40 +32,40 @@ namespace Cocos::Meta {
 
 void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Camera,
-        .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "camera",
+        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFilePrefix = "camera",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Camera);
         }
     }
     MODULE(Ambient,
-        .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "ambient",
+        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFilePrefix = "ambient",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Ambient);
         }
     }
     MODULE(Fog,
-        .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "fog",
+        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFilePrefix = "fog",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Fog);
         }
     }
     MODULE(Shadows,
-        .mFolder = "cocos/core/renderer/scene",
-        .mFilePrefix = "shadows",
+        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFilePrefix = "shadows",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(Shadows);
         }
     }
     MODULE(PipelineSceneData,
-        .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "pipeline-scene-data",
+        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFilePrefix = "pipeline-scene-data",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             IMPORT_CLASS(PipelineSceneData);
@@ -73,8 +73,8 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(Gfx,
-        .mFolder = "cocos/core/gfx",
-        .mFilePrefix = "index",
+        .mTypescriptFolder = "cocos/core/gfx",
+        .mTypescriptFilePrefix = "index",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             NAMESPACE(gfx) {
@@ -226,8 +226,8 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(RenderCommon,
-        .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "types",
+        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFilePrefix = "types",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             NAMESPACE(render) {

@@ -1120,7 +1120,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
     }
 
     if (features & Features::Typescripts) {
-        std::filesystem::path tsPath = rootFolder / m.mFolder / m.mFilePrefix;
+        std::filesystem::path tsPath = rootFolder / m.mTypescriptFolder / m.mTypescriptFilePrefix;
         std::filesystem::path filename = tsPath;
         filename += ".ts";
         pmr_ostringstream oss(std::ios_base::out, scratch);
@@ -1148,7 +1148,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
 
                 const auto targetID = locate(m.first, mModuleGraph);
                 const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
-                std::filesystem::path tsPath1 = rootFolder / target.mFolder / target.mFilePrefix;
+                std::filesystem::path tsPath1 = rootFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
                 oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
                 oss << "';\n";
             }
@@ -1220,7 +1220,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
                     oss << name;
                 }
             }
-            oss << " } from './" << m.mFilePrefix << "';\n";
+            oss << " } from './" << m.mTypescriptFilePrefix << "';\n";
             OSS << "*/\n";
         }
 

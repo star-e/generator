@@ -32,8 +32,8 @@ namespace Cocos::Meta {
 
 void buildRenderGraph(ModuleBuilder& builder, Features features) {
     MODULE(RenderGraph,
-        .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "render-graph",
+        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFilePrefix = "render-graph",
         .mAPI = "CC_DLL",
         .mTypescriptInclude = R"(import { Mat4 } from '../math';
 import { legacyCC } from '../global-exports';
@@ -585,8 +585,8 @@ addDispatch (shader: string,
 
 void buildRenderExecutor(ModuleBuilder& builder, Features features) {
     MODULE(RenderExecutor,
-        .mFolder = "cocos/core/pipeline",
-        .mFilePrefix = "executor",
+        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFilePrefix = "executor",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
