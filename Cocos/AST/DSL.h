@@ -205,8 +205,15 @@ BOOST_PP_SEQ_FOR_EACH_I(POLYMORPHIC_GRAPH_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(
     graph.mReferenceGraph = true; \
     graph.mAliasGraph = true
 
-#define ADDRESSABLE_GRAPH() \
-    graph.mAddressable = true
+#define ADDRESSABLE_GRAPH(MEMBER) \
+    graph.mReferenceGraph = true; \
+    graph.mAddressable = true; \
+    graph.mAddressableConcept.mMemberName = BOOST_PP_STRINGIZE(MEMBER)
+
+#define COMPONENT_BIMAP(MAPTYPE, MEMBER, ...) \
+    builder.addVertexBimap(s.mVertexDescriptor,\
+        BOOST_PP_STRINGIZE(MAPTYPE), BOOST_PP_STRINGIZE(MEMBER), \
+        BOOST_PP_SEQ_FOR_EACH_I(COMMA_STRINGIZE_ELEM, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))))
 
 // Typescript
 #define PROJECT_TS(TYPE, JS) \

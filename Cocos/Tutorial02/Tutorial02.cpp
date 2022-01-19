@@ -77,7 +77,7 @@ int main() {
             GRAPH(SceneGraph, _, _) {
                 NAMED_GRAPH();
                 REFERENCE_GRAPH();
-                ADDRESSABLE_GRAPH();
+                ADDRESSABLE_GRAPH(mPathIndex);
 
                 COMPONENT_GRAPH(
                     (node, Node, mNodes)
@@ -99,5 +99,6 @@ int main() {
         updateFile(outputFolder / "examples/tutorial/graph.ts", content);
     }
 
+    builder.compile();
     builder.outputModule("Tutorial");
 }

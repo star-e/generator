@@ -88,6 +88,11 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(std::pmr::vector<uint16_t>, Uint16Array);
     PROJECT_TS(std::pmr::vector<uint32_t>, Uint32Array);
     PROJECT_TS(std::pmr::vector<uint64_t>, BigUint64Array);
+
+    PROJECT_TS(cc::Map, Map);
+    PROJECT_TS(cc::PmrMap, Map);
+    PROJECT_TS(cc::UnorderedMap, Map);
+    PROJECT_TS(cc::PmrUnorderedMap, Map);
 }
 
 }

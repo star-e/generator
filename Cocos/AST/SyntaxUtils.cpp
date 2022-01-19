@@ -166,8 +166,6 @@ std::string_view extractScope(std::string_view name) {
 }
 
 std::string_view getDependentPath(std::string_view scope, std::string_view typePath) {
-    Expects(scope.size() < typePath.size());
-
     if (scope.empty()) {
         return typePath;
     }
@@ -182,13 +180,20 @@ std::string_view getDependentPath(std::string_view scope, std::string_view typeP
         auto ns1 = typePath.substr(pos, end1 - pos);
 
         if (ns0 != ns1) {
+            // scopes are different now
             return typePath.substr(pos);
         }
 
         if (end0 == scope.npos) {
-            return typePath.substr(end1 + 1);
+            // scope ended first
+            if (end1 == typePath.npos) {
+                // scope == typePath
+                return {};
+            } else {
+                // output full scope
+                return typePath.substr(end1 + 1);
+            }
         }
-
         pos = end0 + 1;
     }
     // should never reach here

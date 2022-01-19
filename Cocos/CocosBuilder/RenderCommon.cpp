@@ -78,11 +78,6 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "index",
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
-            PMR_MAP(PmrMap);
-            PROJECT_TS(PmrMap, Map);
-            PMR_MAP(PmrUnorderedMap);
-            PROJECT_TS(PmrUnorderedMap, Map);
-
             NAMESPACE(gfx) {
                 // define
                 IMPORT_ENUM(ObjectType);

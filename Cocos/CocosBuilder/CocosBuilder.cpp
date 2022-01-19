@@ -61,7 +61,8 @@ int main() {
             Typescripts/* | Fwd | Types | Names | Reflection | Graphs*/);
     }
 
-    // output ts files
+    builder.compile();
+    // output files
     {
         // common types, shared by different modules
         builder.outputModule("RenderCommon");

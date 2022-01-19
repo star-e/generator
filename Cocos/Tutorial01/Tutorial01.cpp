@@ -100,6 +100,7 @@ int main() {
                 g.mNamed = true;
                 g.mReferenceGraph = true;
                 g.mAddressable = true;
+                g.mAddressableConcept.mMemberName = "mPathIndex";
 
                 builder.addGraphComponent(graphID, "node", "Node", "mNodes");
 
@@ -117,5 +118,6 @@ int main() {
         updateFile(outputFolder / "examples/tutorial/graph.ts", content);
     }
 
+    builder.compile();
     builder.outputModule("Tutorial");
 }

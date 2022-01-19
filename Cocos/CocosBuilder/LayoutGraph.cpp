@@ -109,7 +109,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     OBJECT_DESCRIPTOR();
                     NAMED_GRAPH();
                     ALIAS_REFERENCE_GRAPH();
-                    ADDRESSABLE_GRAPH();
+                    ADDRESSABLE_GRAPH(mPathIndex);
 
                     COMPONENT_GRAPH(
                         (Update, UpdateFrequency, mUpdateFrequencies)(Layout, LayoutData, mLayouts));

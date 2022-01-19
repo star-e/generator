@@ -42,6 +42,9 @@ void addCppDefaultValues(ModuleBuilder& builder) {
 
     VALUE(char);
     VALUE(char8_t);
+    VALUE(char16_t);
+    VALUE(char32_t);
+    VALUE(wchar_t);
 
     VALUE(size_t);
 
@@ -74,6 +77,8 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         IMPORT_CLASS(thread);
         IMPORT_CLASS(locale);
 
+        IMPORT_CLASS(istream);
+
         NAMESPACE(chrono) {
             IMPORT_CLASS(system_clock);
             IMPORT_CLASS(high_resolution_clock) {
@@ -98,9 +103,15 @@ void addCppDefaultValues(ModuleBuilder& builder) {
             IMPORT_CLASS(path);
         }
 
+        CONTAINER(optional);
+        CONTAINER(shared_ptr);
+        CONTAINER(weak_ptr);
         CONTAINER(vector);
         CONTAINER(list);
         CONTAINER(deque);
+        CONTAINER(set);
+        CONTAINER(unordered_set);
+        CONTAINER(unique_ptr);
         MAP(map);
         MAP(unordered_map);
 
@@ -108,6 +119,8 @@ void addCppDefaultValues(ModuleBuilder& builder) {
             PMR_CONTAINER(vector);
             PMR_CONTAINER(list);
             PMR_CONTAINER(deque);
+            PMR_CONTAINER(set);
+            PMR_CONTAINER(unordered_set);
             PMR_MAP(map);
             PMR_MAP(unordered_map);
         }
@@ -117,12 +130,22 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         IMPORT_CLASS(blank);
         IMPORT_CLASS(default_color_type);
 
+        NAMESPACE(uuids) {
+            IMPORT_STRUCT(uuid);
+        }
         NAMESPACE(asio) {
             IMPORT_CLASS(io_context) {
                 IMPORT_CLASS(work);
                 IMPORT_CLASS(strand);
             }
         }
+    }
+
+    NAMESPACE(cc) {
+        MAP(Map);
+        PMR_MAP(PmrMap);
+        MAP(UnorderedMap);
+        PMR_MAP(PmrUnorderedMap);
     }
 }
 

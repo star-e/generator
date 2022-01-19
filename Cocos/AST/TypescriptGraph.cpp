@@ -620,6 +620,8 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     }
 
     for (uint32_t i = 0; const auto& m : members) {
+        if (m.mFlags & IMPL_DETAIL)
+            continue;
         auto path = m.mTypePath;
         Expects(!path.empty());
         Expects(path.front() == '/');

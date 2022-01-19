@@ -924,6 +924,33 @@ void ModuleBuilder::addNamedConcept(SyntaxGraph::vertex_descriptor vertID, bool 
     s.mNamedConcept.mComponentMemberName = componentMemberName;
 }
 
+namespace {
+
+void getIncluded(ModuleGraph::vertex_descriptor vertID,
+    const ModuleGraph& mg,
+    std::pmr::set<ModuleGraph::vertex_descriptor>& included) {
+    const auto& m = get(mg.modules, mg, vertID);
+    for (const auto& require : m.mRequires) {
+        auto moduleID = locate(mg.null_vertex(), require, mg);
+        included.emplace(moduleID);
+        getIncluded(moduleID, mg, included);
+    }
+}
+
+std::pmr::set<ModuleGraph::vertex_descriptor> getIndirectIncludes(
+    ModuleGraph::vertex_descriptor vertID, const ModuleGraph& mg,
+    std::pmr::memory_resource* scratch) {
+    std::pmr::set<ModuleGraph::vertex_descriptor> included(scratch);
+    const auto& m = get(mg.modules, mg, vertID);
+    for (const auto& require : m.mRequires) {
+        auto moduleID = locate(mg.null_vertex(), require, mg);
+        getIncluded(moduleID, mg, included);
+    }
+    return included;
+}
+
+}
+
 void ModuleBuilder::outputModule(std::string_view name) const {
     auto scratch = mScratch;
     Expects(!name.empty());
@@ -950,8 +977,11 @@ void ModuleBuilder::outputModule(std::string_view name) const {
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
+        const auto included = getIndirectIncludes(moduleID, mg, scratch);
         for (const auto& require : m.mRequires) {
             auto moduleID = locate(mg.null_vertex(), require, mg);
+            if (included.contains(moduleID))
+                continue;
             const auto& dep = get(mg.modules, mg, moduleID);
             OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Fwd.h>\n";
         }
@@ -967,8 +997,11 @@ void ModuleBuilder::outputModule(std::string_view name) const {
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
         OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+        const auto included = getIndirectIncludes(moduleID, mg, scratch);
         for (const auto& require : m.mRequires) {
             auto moduleID = locate(mg.null_vertex(), require, mg);
+            if (included.contains(moduleID))
+                continue;
             const auto& dep = get(mg.modules, mg, moduleID);
             OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Names.h>\n";
         }
@@ -996,8 +1029,11 @@ void ModuleBuilder::outputModule(std::string_view name) const {
             if (features & Features::Fwd) {
                 OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
             }
+            const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
                 auto moduleID = locate(mg.null_vertex(), require, mg);
+                if (included.contains(moduleID))
+                    continue;
                 const auto& dep = get(mg.modules, mg, moduleID);
                 OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Types.h>\n";
             }
@@ -1053,8 +1089,11 @@ void ModuleBuilder::outputModule(std::string_view name) const {
                     << "/SConfig.h>\n";
             }
             OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+            const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
                 auto moduleID = locate(mg.null_vertex(), require, mg);
+                if (included.contains(moduleID))
+                    continue;
                 const auto& moduleInfo = get(mg.modules, mg, moduleID);
                 const auto& dep = get(mg.modules, mg, moduleID);
                 if (moduleInfo.mFeatures & Reflection) {
@@ -1137,6 +1176,10 @@ void ModuleBuilder::outputModule(std::string_view name) const {
                 const auto& typeModulePath = get(g.modulePaths, g, vertID);
                 if (typeModulePath != modulePath)
                     continue;
+                const auto& traits = get(g.traits, g, vertID);
+                if (traits.mFlags & IMPL_DETAIL)
+                    continue;
+
                 const auto& name = get(g.names, g, vertID);
 
                 bool bOutput = false;
@@ -1283,7 +1326,7 @@ int ModuleBuilder::compile() {
                 "object_type",
                 Traits{
                     .mPmr = bPmr,
-                    .mFlags = NO_SERIALIZATION,
+                    .mFlags = NO_SERIALIZATION | IMPL_DETAIL,
                 });
             auto objectID = scope.mVertexDescriptor;
             addMember(objectID, true, builder.childListType(), "mChildren");
@@ -1294,7 +1337,7 @@ int ModuleBuilder::compile() {
                 "vertex_type",
                 Traits{
                     .mPmr = bPmr && s.mIncidence,
-                    .mFlags = NO_SERIALIZATION,
+                    .mFlags = NO_SERIALIZATION | IMPL_DETAIL,
                 });
             auto vertexID = scope.mVertexDescriptor;
 
@@ -1318,12 +1361,12 @@ int ModuleBuilder::compile() {
 
         if (s.mReferenceGraph && !s.mAliasGraph) {
             addMember(vertID, true, builder.objectListType(), "mObjects", "_",
-                NO_SERIALIZATION, R"(// Owners
+                NO_SERIALIZATION | IMPL_DETAIL, R"(// Owners
 )");
         }
 
         addMember(vertID, true, builder.vertexListType(), "mVertices", "_",
-            NO_SERIALIZATION, R"(// Vertices
+            NO_SERIALIZATION | IMPL_DETAIL, R"(// Vertices
 )");
 
         for (size_t i = 0; i != s.mComponents.size(); ++i) {
@@ -1339,7 +1382,7 @@ int ModuleBuilder::compile() {
             oss << g.getDependentName(mCurrentScope, listID, scratch, scratch);
             oss << "<" << typeName << ">";
             addMember(vertID, true, oss.str(), c.mMemberName,
-                "_", NO_SERIALIZATION, comments);
+                "_", NO_SERIALIZATION | IMPL_DETAIL, comments);
         }
 
         for (size_t i = 0, count = 0; i != s.mPolymorphic.mConcepts.size(); ++i) {
@@ -1365,11 +1408,12 @@ int ModuleBuilder::compile() {
             oss << g.getDependentName(mCurrentScope, listID, scratch, scratch);
             oss << "<" << typeName << ">";
             addMember(vertID, true, oss.str(), c.mMemberName,
-                "_", NO_SERIALIZATION, comments);
+                "_", NO_SERIALIZATION | IMPL_DETAIL, comments);
         }
 
         if (s.needEdgeList()) {
-            addMember(vertID, true, builder.edgeListType(), "mEdges", "_", NO_SERIALIZATION,
+            addMember(vertID, true, builder.edgeListType(), "mEdges", "_",
+                NO_SERIALIZATION | IMPL_DETAIL,
                 R"(// Edges
 )");
         }
@@ -1380,7 +1424,7 @@ int ModuleBuilder::compile() {
                 comments = R"(// UuidGraph
 )";
             addMember(vertID, true, map.mTypePath, map.mMemberName,
-                "_", NO_SERIALIZATION, comments);
+                "_", NO_SERIALIZATION | IMPL_DETAIL, comments);
         }
 
         int count = 0;
@@ -1410,7 +1454,7 @@ int ModuleBuilder::compile() {
                         }
                         addMember(vertID, true, indexName,
                             s.mAddressableConcept.mMemberName,
-                            "_", NO_SERIALIZATION, "// Path\n");
+                            "_", NO_SERIALIZATION | IMPL_DETAIL, "// Path\n");
                     },
                     [&](auto) {
                     }),
