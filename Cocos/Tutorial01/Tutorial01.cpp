@@ -94,14 +94,16 @@ int main() {
             // Graph
             {
                 auto graphHandle = builder.addGraph("SceneGraph", "_", "_",
-                    Traits{});
+                    Traits{ .mPmr = true });
                 auto graphID = graphHandle.mVertexDescriptor;
                 auto& g = get_by_tag<Graph_>(graphID, builder.mSyntaxGraph);
                 g.mNamed = true;
+                g.mNamedConcept.mComponentName = "Name_";
                 g.mReferenceGraph = true;
                 g.mAddressable = true;
                 g.mAddressableConcept.mMemberName = "mPathIndex";
 
+                builder.addGraphComponent(graphID, "Name_", "std::pmr::string", "mName");
                 builder.addGraphComponent(graphID, "Node_", "Node", "mNodes");
 
                 builder.addGraphPolymorphic(graphID, "Sphere_", "Sphere", "mSpheres");

@@ -79,11 +79,9 @@ export class SceneGraphVertex {
     constructor (
         readonly id: SceneGraphValue,
         readonly object: SceneGraphObject,
-        readonly name: string,
     ) {
         this._id = id;
         this._object = object;
-        this._name = name;
     }
     readonly _outEdges: impl.OutE[] = [];
     readonly _inEdges: impl.OutE[] = [];
@@ -91,19 +89,18 @@ export class SceneGraphVertex {
     readonly _parents: impl.OutE[] = [];
     readonly _id: SceneGraphValue;
     readonly _object: SceneGraphObject;
-    readonly _name: string;
 }
 
 //-----------------------------------------------------------------
 // PropertyGraph Concept
 export class SceneGraphNameMap implements impl.PropertyMap {
-    constructor (readonly vertices: SceneGraphVertex[]) {
-        this._vertices = vertices;
+    constructor (readonly name: string[]) {
+        this._name = name;
     }
     get (v: number): string {
-        return this._vertices[v]._name;
+        return this._name[v];
     }
-    readonly _vertices: SceneGraphVertex[];
+    readonly _name: string[];
 }
 
 export class SceneGraphNodeMap implements impl.PropertyMap {
@@ -119,14 +116,17 @@ export class SceneGraphNodeMap implements impl.PropertyMap {
 //-----------------------------------------------------------------
 // ComponentGraph Concept
 export const enum SceneGraphComponent {
+    name,
     node,
 }
 
 interface SceneGraphComponentType {
+    [SceneGraphComponent.name]: string;
     [SceneGraphComponent.node]: Node;
 }
 
 interface SceneGraphComponentPropertyMap {
+    [SceneGraphComponent.name]: SceneGraphNameMap;
     [SceneGraphComponent.node]: SceneGraphNodeMap;
 }
 
@@ -213,9 +213,10 @@ export class SceneGraph implements impl.BidirectionalGraph
         node: Node,
         u = 0xFFFFFFFF,
     ): number {
-        const vert = new SceneGraphVertex(id, object, name);
+        const vert = new SceneGraphVertex(id, object);
         const v = this._vertices.length;
         this._vertices.push(vert);
+        this._name.push(name);
         this._nodes.push(node);
 
         // ReferenceGraph
@@ -283,6 +284,7 @@ export class SceneGraph implements impl.BidirectionalGraph
     }
     removeVertex (u: number): void {
         this._vertices.splice(u, 1);
+        this._name.splice(u, 1);
         this._nodes.splice(u, 1);
 
         const sz = this._vertices.length;
@@ -350,19 +352,18 @@ export class SceneGraph implements impl.BidirectionalGraph
     //-----------------------------------------------------------------
     // NamedGraph
     vertexName (v: number): string {
-        return this._vertices[v]._name;
+        return this._name[v];
     }
     vertexNameMap (): SceneGraphNameMap {
-        return new SceneGraphNameMap(this._vertices);
+        return new SceneGraphNameMap(this._name);
     }
     //-----------------------------------------------------------------
     // PropertyGraph
     get (tag: string): SceneGraphNameMap | SceneGraphNodeMap {
         switch (tag) {
-        // NamedGraph
-        case 'name':
-            return new SceneGraphNameMap(this._vertices);
         // Components
+        case 'name':
+            return new SceneGraphNameMap(this._name);
         case 'node':
             return new SceneGraphNodeMap(this._nodes);
         default:
@@ -373,6 +374,8 @@ export class SceneGraph implements impl.BidirectionalGraph
     // ComponentGraph
     component<T extends SceneGraphComponent> (id: T, v: number): SceneGraphComponentType[T] {
         switch (id) {
+        case SceneGraphComponent.name:
+            return this._name[v] as SceneGraphComponentType[T];
         case SceneGraphComponent.node:
             return this._nodes[v] as SceneGraphComponentType[T];
         default:
@@ -381,11 +384,16 @@ export class SceneGraph implements impl.BidirectionalGraph
     }
     componentMap<T extends SceneGraphComponent> (id: T): SceneGraphComponentPropertyMap[T] {
         switch (id) {
+        case SceneGraphComponent.name:
+            return new SceneGraphNameMap(this._name) as SceneGraphComponentPropertyMap[T];
         case SceneGraphComponent.node:
             return new SceneGraphNodeMap(this._nodes) as SceneGraphComponentPropertyMap[T];
         default:
             throw Error('component map not found');
         }
+    }
+    getName (v: number): string {
+        return this._name[v];
     }
     getNode (v: number): Node {
         return this._nodes[v];
@@ -606,7 +614,7 @@ export class SceneGraph implements impl.BidirectionalGraph
         if (u === 0xFFFFFFFF) {
             for (const v of this._vertices.keys()) {
                 const vert = this._vertices[v];
-                if (vert._parents.length === 0 && vert._name === name) {
+                if (vert._parents.length === 0 && this._name[v] === name) {
                     return v;
                 }
             }
@@ -614,7 +622,7 @@ export class SceneGraph implements impl.BidirectionalGraph
         }
         for (const oe of this._vertices[u]._children) {
             const child = oe.target as number;
-            if (name === this._vertices[child]._name) {
+            if (name === this._name[child]) {
                 return child;
             }
         }
@@ -635,8 +643,9 @@ export class SceneGraph implements impl.BidirectionalGraph
         return impl.getPath(this, v);
     }
 
-    readonly components: string[] = ['node'];
+    readonly components: string[] = ['name', 'node'];
     readonly _vertices: SceneGraphVertex[] = [];
+    readonly _name: string[] = [];
     readonly _nodes: Node[] = [];
 }
 /*

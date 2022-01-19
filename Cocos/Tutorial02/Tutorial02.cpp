@@ -80,7 +80,7 @@ int main() {
                 ADDRESSABLE_GRAPH(mPathIndex);
 
                 COMPONENT_GRAPH(
-                    //(Name_, std::pmr::string, mNames)
+                    (Name_, std::pmr::string, mName)
                     (Node_, Node, mNodes)
                 );
 

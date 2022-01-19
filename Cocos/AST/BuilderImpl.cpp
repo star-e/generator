@@ -1509,4 +1509,41 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
     return name;
 }
 
+std::pmr::string ModuleBuilder::getTypescriptVertexName(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view descName) const {
+    auto scratch = get_allocator().resource();
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+    const auto& g = mSyntaxGraph;
+    const auto& s = get<Graph>(vertID, g);
+    const auto& builder = *this;
+
+    Expects(s.mNamed);
+    Expects(s.mNamedConcept.mComponent);
+    for (const auto& c : s.mComponents) {
+        if (c.mName != s.mNamedConcept.mComponentName)
+            continue;
+
+        if (s.mNamedConcept.mComponentMemberName.empty()) {
+            if (s.isVector()) {
+                oss << "this." << builder.getMemberName(c.mMemberName, false)
+                    << "[" << descName << "]";
+            } else {
+                oss << s.getTypescriptVertexDereference(descName, scratch)
+                    << "." << builder.getMemberName(c.mMemberName, false);
+            }
+        } else {
+            if (s.isVector()) {
+                oss << "this." << builder.getMemberName(c.mMemberName, false)
+                    << "[" << descName << "]." << s.mNamedConcept.mComponentMemberName;
+            } else {
+                oss << s.getTypescriptVertexDereference(descName, scratch)
+                    << "." << builder.getMemberName(c.mMemberName, false)
+                    << "." << s.mNamedConcept.mComponentMemberName;
+            }
+        }
+    }
+
+    return oss.str();
+}
+
 }

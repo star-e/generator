@@ -469,6 +469,9 @@ struct ModuleBuilder {
     std::pmr::string getMemberName(std::string_view memberName, bool bPublic) const;
     std::pmr::string getTypedMemberName(const Member& m, bool bPublic, bool bFull = false) const;
 
+    std::pmr::string getTypescriptVertexName(SyntaxGraph::vertex_descriptor vertID,
+        std::string_view descName) const;
+
     std::filesystem::path mCppFolder;
     std::filesystem::path mTypescriptFolder;
     SyntaxGraph mSyntaxGraph;

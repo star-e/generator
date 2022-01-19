@@ -1397,24 +1397,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     if (c.mName != s.mNamedConcept.mComponentName)
                         continue;
 
-                    if (s.mNamedConcept.mComponentMemberName.empty()) {
-                        if (s.isVector()) {
-                            OSS << "return this." << builder.getMemberName(c.mMemberName, false)
-                                << "[v];\n";
-                        } else {
-                            OSS << "return " << s.getTypescriptVertexDereference("v", scratch)
-                                << "." << builder.getMemberName(c.mMemberName, false) << ";\n";
-                        }
-                    } else {
-                        if (s.isVector()) {
-                            OSS << "return this." << builder.getMemberName(c.mMemberName, false)
-                                << "[v]." << s.mNamedConcept.mComponentMemberName << ";\n";
-                        } else {
-                            OSS << "return " << s.getTypescriptVertexDereference("v", scratch)
-                                << "." << builder.getMemberName(c.mMemberName, false)
-                                << "." << s.mNamedConcept.mComponentMemberName << ";\n";
-                        }
-                    }
+                    OSS << "return " << builder.getTypescriptVertexName(vertID, "v") << ";\n";
                 }
             }
             OSS << "}\n";
@@ -2038,9 +2021,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             INDENT();
                             OSS << "const vert = this._vertices[v];\n";
                             if (s.isAliasGraph()) {
-                                OSS << "if (vert._inEdges.length === 0 && vert._name === name) {\n";
+                                OSS << "if (vert._inEdges.length === 0 && "
+                                    << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             } else {
-                                OSS << "if (vert._parents.length === 0 && vert._name === name) {\n";
+                                OSS << "if (vert._parents.length === 0 && "
+                                    << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             }
                             OSS << "    return v;\n";
                             OSS << "}\n";
@@ -2051,9 +2036,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         {
                             INDENT();
                             if (s.isAliasGraph()) {
-                                OSS << "if (v._inEdges.length === 0 && v._name === name) {\n";
+                                OSS << "if (v._inEdges.length === 0 && "
+                                    << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             } else {
-                                OSS << "if (v._parents.length === 0 && v._name === name) {\n";
+                                OSS << "if (v._parents.length === 0 && "
+                                    << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             }
                             OSS << "    return v;\n";
                             OSS << "}\n";
@@ -2080,10 +2067,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     INDENT();
                     OSS << "const child = oe.target as " << vertexDescType << ";\n";
                     if (s.isVector()) {
-                        OSS << "if (name === this._vertices[child]._name) {\n";
+                        OSS << "if (name === " << builder.getTypescriptVertexName(vertID, "child") << ") {\n";
                         OSS << "    return child;\n";
                     } else {
-                        OSS << "if (name === child._name) {\n";
+                        OSS << "if (name === " << builder.getTypescriptVertexName(vertID, "child") << ") {\n";
                         OSS << "    return child;\n";
                     }
                     OSS << "}\n";
