@@ -74,13 +74,14 @@ int main() {
                 );
             }
 
-            GRAPH(SceneGraph, _, _) {
-                NAMED_GRAPH();
+            PMR_GRAPH(SceneGraph, _, _) {
+                NAMED_GRAPH(Name_);
                 REFERENCE_GRAPH();
                 ADDRESSABLE_GRAPH(mPathIndex);
 
                 COMPONENT_GRAPH(
-                    (node, Node, mNodes)
+                    //(Name_, std::pmr::string, mNames)
+                    (Node_, Node, mNodes)
                 );
 
                 POLYMORPHIC_GRAPH(

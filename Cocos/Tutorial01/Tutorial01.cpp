@@ -102,7 +102,7 @@ int main() {
                 g.mAddressable = true;
                 g.mAddressableConcept.mMemberName = "mPathIndex";
 
-                builder.addGraphComponent(graphID, "node", "Node", "mNodes");
+                builder.addGraphComponent(graphID, "Node_", "Node", "mNodes");
 
                 builder.addGraphPolymorphic(graphID, "Sphere_", "Sphere", "mSpheres");
                 builder.addGraphPolymorphic(graphID, "Box_", "Box", "mBoxes");

@@ -82,12 +82,13 @@ import { RenderScene } from '../renderer/scene';
                     CNTR(mResidency);
                 }
 
-                GRAPH(ResourceGraph, _, _) {
+                PMR_GRAPH(ResourceGraph, _, _) {
                     OBJECT_DESCRIPTOR();
-                    NAMED_GRAPH();
+                    NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        (Desc, ResourceDesc, mDescs)
-                        (Traits, ResourceTraits, mTraits)
+                        // (Name_, std::pmr::string, mNames)
+                        (Desc_, ResourceDesc, mDescs)
+                        (Traits_, ResourceTraits, mTraits)
                     );
                 }
 
@@ -99,7 +100,7 @@ import { RenderScene } from '../renderer/scene';
                 //}
                 //PROJECT_TS((PmrMap<NodeValue, uint32_t>), (Map<string, number>));
 
-                //GRAPH(NodeGraph, NodeValue, _) {
+                //PMR_GRAPH(NodeGraph, NodeValue, _) {
                 //    PUBLIC(
                 //        ((PmrMap<NodeValue, uint32_t>), mIndex, _)
                 //    );
@@ -163,8 +164,11 @@ import { RenderScene } from '../renderer/scene';
                     );
                 }
 
-                GRAPH(SubpassGraph, RasterSubpass, _) {
-                    NAMED_GRAPH();
+                PMR_GRAPH(SubpassGraph, RasterSubpass, _) {
+                    NAMED_GRAPH(Name_);
+                    //COMPONENT_GRAPH(
+                    //    (Name_, std::pmr::string, mNames)
+                    //);
                 }
                 
                 STRUCT(RasterPassData) {
@@ -276,13 +280,14 @@ import { RenderScene } from '../renderer/scene';
                     );
                 }
 
-                GRAPH(RenderGraph, _, _) {
-                    NAMED_GRAPH();
+                PMR_GRAPH(RenderGraph, _, _) {
+                    NAMED_GRAPH(Name_);
                     REFERENCE_GRAPH();
 
                     COMPONENT_GRAPH(
-                        (Layout, std::pmr::string, mLayoutNodes)
-                        (Data, RenderData, mData)
+                        //(Name_, std::pmr::string, mNames)
+                        (Layout_, std::pmr::string, mLayoutNodes)
+                        (Data_, RenderData, mData)
                     );
 
                     POLYMORPHIC_GRAPH(
@@ -594,11 +599,12 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
         .mAPI = "CC_DLL") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
-                GRAPH(DeviceResourceGraph, _, _) {
+                PMR_GRAPH(DeviceResourceGraph, _, _) {
                     OBJECT_DESCRIPTOR();
-                    NAMED_GRAPH();
+                    NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        (RefCount, int32_t, mRefCounts)
+                        //(Name_, std::pmr::string, mNames)
+                        (RefCount_, int32_t, mRefCounts)
                     );
                     POLYMORPHIC_GRAPH(
                         (Buffer_, gfx::Buffer, mBuffers)

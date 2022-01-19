@@ -327,8 +327,11 @@ bool isInstance(std::string_view name) {
 // Generation
 std::pmr::string getCppPath(std::string_view typePath,
     std::pmr::memory_resource* mr) {
+    if (typePath.empty())
+        return std::pmr::string(mr);
+
     Expects(!typePath.empty());
-    
+
     if (typePath.front() == '/')
         typePath = typePath.substr(1);
 
@@ -350,6 +353,7 @@ std::pmr::string getVariableName(std::string_view typeName,
 }
 
 std::string_view convertTag(std::string_view tagName) {
+    Expects(!tagName.empty() && tagName.back() == '_');
     if (!tagName.empty() && tagName.back() == '_') {
         return tagName.substr(0, tagName.size() - 1);
     }

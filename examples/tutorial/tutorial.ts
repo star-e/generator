@@ -106,7 +106,7 @@ export class SceneGraphNameMap implements impl.PropertyMap {
     readonly _vertices: SceneGraphVertex[];
 }
 
-export class SceneGraphnodeMap implements impl.PropertyMap {
+export class SceneGraphNodeMap implements impl.PropertyMap {
     constructor (readonly nodes: Node[]) {
         this._nodes = nodes;
     }
@@ -127,7 +127,7 @@ interface SceneGraphComponentType {
 }
 
 interface SceneGraphComponentPropertyMap {
-    [SceneGraphComponent.node]: SceneGraphnodeMap;
+    [SceneGraphComponent.node]: SceneGraphNodeMap;
 }
 
 //-----------------------------------------------------------------
@@ -357,14 +357,14 @@ export class SceneGraph implements impl.BidirectionalGraph
     }
     //-----------------------------------------------------------------
     // PropertyGraph
-    get (tag: string): SceneGraphNameMap | SceneGraphnodeMap {
+    get (tag: string): SceneGraphNameMap | SceneGraphNodeMap {
         switch (tag) {
         // NamedGraph
         case 'name':
             return new SceneGraphNameMap(this._vertices);
         // Components
         case 'node':
-            return new SceneGraphnodeMap(this._nodes);
+            return new SceneGraphNodeMap(this._nodes);
         default:
             throw Error('property map not found');
         }
@@ -382,12 +382,12 @@ export class SceneGraph implements impl.BidirectionalGraph
     componentMap<T extends SceneGraphComponent> (id: T): SceneGraphComponentPropertyMap[T] {
         switch (id) {
         case SceneGraphComponent.node:
-            return new SceneGraphnodeMap(this._nodes) as SceneGraphComponentPropertyMap[T];
+            return new SceneGraphNodeMap(this._nodes) as SceneGraphComponentPropertyMap[T];
         default:
             throw Error('component map not found');
         }
     }
-    getnode (v: number): Node {
+    getNode (v: number): Node {
         return this._nodes[v];
     }
     //-----------------------------------------------------------------

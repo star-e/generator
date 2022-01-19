@@ -27,6 +27,10 @@ THE SOFTWARE.
 #pragma once
 #pragma warning(disable : 4390)
 
+// Helpers
+#define COMMA_STRINGIZE_ELEM(r, _, i, C) BOOST_PP_COMMA_IF(i) BOOST_PP_STRINGIZE(C)
+
+// Builder
 #define MODULE(NAME, ...) \
     if (auto m = builder.openModule(BOOST_PP_STRINGIZE(NAME), \
         ModuleInfo{ .mFeatures = features, __VA_ARGS__ }); true)
@@ -176,15 +180,21 @@ builder.addMember(s.mVertexDescriptor, COND,\
 
 // Graph
 #define GRAPH(NAME, VERTEX, EDGE, ...) \
-    if (auto s = builder.addGraph(BOOST_PP_STRINGIZE(NAME),\
-        BOOST_PP_STRINGIZE(VERTEX), BOOST_PP_STRINGIZE(EDGE), Traits{ __VA_ARGS__ }); true) \
+    for (auto s = builder.addGraph(BOOST_PP_STRINGIZE(NAME),\
+        BOOST_PP_STRINGIZE(VERTEX), BOOST_PP_STRINGIZE(EDGE), Traits{ __VA_ARGS__ }); \
+        s.mVertexDescriptor != SyntaxGraph::null_vertex(); \
+        builder.syntax().propagate(s.mVertexDescriptor), \
+        s.mVertexDescriptor = SyntaxGraph::null_vertex()) \
         if (auto& graph = get_by_tag<Graph_>(s.mVertexDescriptor, builder.mSyntaxGraph); true) \
+
+#define PMR_GRAPH(NAME, VERTEX, EDGE, ...) GRAPH(NAME, VERTEX, EDGE, .mPmr = true, __VA_ARGS__)
 
 #define OBJECT_DESCRIPTOR() \
     graph.mVertexListType = List_ {}
 
-#define NAMED_GRAPH() \
-    graph.mNamed = true
+#define NAMED_GRAPH(...)                               \
+    builder.addNamedConcept(s.mVertexDescriptor, true, \
+        BOOST_PP_SEQ_FOR_EACH_I(COMMA_STRINGIZE_ELEM, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))))
 
 #define GRAPH_COMPONENT_ELEM(r, _, i, MEMBER) \
 builder.addGraphComponent(s.mVertexDescriptor, \

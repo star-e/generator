@@ -49,15 +49,15 @@ int main() {
 
         // build render pipeline
         buildRenderCommon(builder,
-            Typescripts/* | Fwd | Types | Names | Reflection*/);
+            Typescripts /* | Fwd | Types | Names | Reflection*/);
         buildLayoutGraph(builder,
-            Typescripts/* | Fwd | Types | Names | Reflection | Graphs*/);
+            Typescripts /* | Fwd | Types | Names | Reflection | Graphs*/);
         buildRenderGraph(builder,
-            Typescripts/* | Fwd | Types | Names | Reflection | Graphs*/);
+            Typescripts /* | Fwd | Types | Names | Reflection | Graphs*/);
 
         // build executor modules
         buildRenderExecutor(builder,
-            Typescripts/* | Fwd | Types | Names | Reflection | Graphs*/);
+            Typescripts /* | Fwd | Types | Names | Reflection | Graphs*/);
     }
 
     builder.compile();
@@ -67,7 +67,7 @@ int main() {
         builder.outputModule("RenderCommon");
 
         // descriptor layout graph
-        builder.outputModule("DescriptorLayout");
+        builder.outputModule("LayoutGraph");
 
         // render graph
         builder.outputModule("RenderGraph");

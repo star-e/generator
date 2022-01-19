@@ -31,9 +31,9 @@ THE SOFTWARE.
 namespace Cocos::Meta {
 
 void buildLayoutGraph(ModuleBuilder& builder, Features features) {
-    MODULE(DescriptorLayout,
+    MODULE(LayoutGraph,
         .mFolder = "cocos/renderer/pipeline",
-        .mFilePrefix = "DescriptorLayout",
+        .mFilePrefix = "LayoutGraph",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "layout-graph",
         .mAPI = "CC_DLL") {
@@ -129,15 +129,16 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
                 TAGS((_), Group_, Shader_);
 
-                GRAPH(LayoutGraph, _, _) {
+                PMR_GRAPH(LayoutGraph, _, _) {
                     OBJECT_DESCRIPTOR();
-                    NAMED_GRAPH();
+                    NAMED_GRAPH(Name_);
                     ALIAS_REFERENCE_GRAPH();
                     ADDRESSABLE_GRAPH(mPathIndex);
 
                     COMPONENT_GRAPH(
-                        (Update, UpdateFrequency, mUpdateFrequencies)
-                        (Layout, LayoutData, mLayouts)
+                        //(Name_, std::pmr::string, mNames)
+                        (Update_, UpdateFrequency, mUpdateFrequencies)
+                        (Layout_, LayoutData, mLayouts)
                     );
 
                     POLYMORPHIC_GRAPH(
