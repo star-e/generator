@@ -1038,7 +1038,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
                 OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Types.h>\n";
             }
             if (g.moduleHasGraph(modulePath)) {
-                OSS << "#include <Star/SGraphTypes.h>\n";
+                OSS << "#include <cocos/renderer/pipeline/GraphTypes.h>\n";
             }
             if (!moduleInfo.mHeader.empty()) {
                 copyCppString(oss, space, moduleInfo.mHeader);
@@ -1068,7 +1068,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
-        oss << "#include <Star/SGraphImpl.h>\n";
+        oss << "#include <cocos/renderer/pipeline/GraphImpl.h>\n";
         OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
 
         copyString(oss, generateGraphs_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
