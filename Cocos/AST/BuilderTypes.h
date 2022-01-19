@@ -380,7 +380,7 @@ struct ModuleBuilder {
         return allocator_type(mSyntaxGraph.get_allocator().resource());
     }
 
-    ModuleBuilder(std::string_view projectName, std::filesystem::path folder, const allocator_type& alloc);
+    ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, const allocator_type& alloc);
     ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc);
 
     ModuleBuilder(ModuleBuilder&& rhs) = default;
@@ -469,7 +469,8 @@ struct ModuleBuilder {
     std::pmr::string getMemberName(std::string_view memberName, bool bPublic) const;
     std::pmr::string getTypedMemberName(const Member& m, bool bPublic, bool bFull = false) const;
 
-    std::filesystem::path mFolder;
+    std::filesystem::path mCppFolder;
+    std::filesystem::path mTypescriptFolder;
     SyntaxGraph mSyntaxGraph;
     ModuleGraph mModuleGraph;
     std::pmr::string mCurrentModule;

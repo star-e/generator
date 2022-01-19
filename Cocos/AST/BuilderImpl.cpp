@@ -969,10 +969,11 @@ void ModuleBuilder::outputModule(std::string_view name) const {
 
     const auto& moduleInfo = get(mg.modules, mg, moduleID);
     const auto features = moduleInfo.mFeatures;
-    const auto& rootFolder = mFolder;
+    const auto& typescriptFolder = mTypescriptFolder;
+    const auto& cppFolder = mCppFolder;
 
     if (features & Features::Fwd) {
-        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+        std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
         filename += "Fwd.h";
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
@@ -991,7 +992,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
     }
 
     if (features & Features::Names) {
-        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+        std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
         filename += "Names.h";
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
@@ -1011,7 +1012,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
     }
 
     if (features & Features::Types) {
-        const std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+        const std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
 
         {
             auto filename1 = filename;
@@ -1043,7 +1044,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
             if (!moduleInfo.mHeader.empty()) {
                 copyCppString(oss, space, moduleInfo.mHeader);
             }
-            copyString(oss, generateTypes_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+            copyString(oss, generateTypes_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
             updateFile(filename1, oss.str());
         }
@@ -1056,13 +1057,13 @@ void ModuleBuilder::outputModule(std::string_view name) const {
             std::pmr::string space(scratch);
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
-            copyString(oss, generateTypes_cpp(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+            copyString(oss, generateTypes_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
             updateFile(filename1, oss.str());
         }
     }
     if (features & Features::Graphs) {
-        std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+        std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
         filename += "Graphs.h";
 
         pmr_ostringstream oss(std::ios_base::out, scratch);
@@ -1071,13 +1072,13 @@ void ModuleBuilder::outputModule(std::string_view name) const {
         oss << "#include <cocos/renderer/pipeline/GraphImpl.h>\n";
         OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
 
-        copyString(oss, generateGraphs_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+        copyString(oss, generateGraphs_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
         updateFile(filename, oss.str());
     }
     if (features & Features::Reflection) {
         {
-            std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+            std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
             filename += "Reflection.h";
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
@@ -1100,12 +1101,12 @@ void ModuleBuilder::outputModule(std::string_view name) const {
                     OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Reflection.h>\n";
                 }
             }
-            copyString(oss, generateReflection_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+            copyString(oss, generateReflection_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
             updateFile(filename, oss.str());
         }
         {
-            std::filesystem::path filename = rootFolder / m.mFolder / m.mFilePrefix;
+            std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
             filename += "Reflection.cpp";
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
@@ -1113,14 +1114,14 @@ void ModuleBuilder::outputModule(std::string_view name) const {
             OSS << "#include \"" << m.mFilePrefix << "Reflection.h\"\n";
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
-            copyString(oss, generateReflection_cpp(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
+            copyString(oss, generateReflection_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
             updateFile(filename, oss.str());
         }
     }
 
     if (features & Features::Typescripts) {
-        std::filesystem::path tsPath = rootFolder / m.mTypescriptFolder / m.mTypescriptFilePrefix;
+        std::filesystem::path tsPath = typescriptFolder / m.mTypescriptFolder / m.mTypescriptFilePrefix;
         std::filesystem::path filename = tsPath;
         filename += ".ts";
         pmr_ostringstream oss(std::ios_base::out, scratch);
@@ -1148,7 +1149,7 @@ void ModuleBuilder::outputModule(std::string_view name) const {
 
                 const auto targetID = locate(m.first, mModuleGraph);
                 const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
-                std::filesystem::path tsPath1 = rootFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
+                std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
                 oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
                 oss << "';\n";
             }

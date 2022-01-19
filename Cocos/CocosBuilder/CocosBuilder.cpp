@@ -34,9 +34,10 @@ using namespace Cocos::Meta;
 
 int main() {
     // output folder
-    std::filesystem::path outputFolder = "../../../engine";
+    std::filesystem::path typescriptFolder = "../../../engine";
+    std::filesystem::path cppFolder = "../../../engine-native";
 
-    ModuleBuilder builder("cc", outputFolder, std::pmr::get_default_resource());
+    ModuleBuilder builder("cocos", cppFolder, typescriptFolder, std::pmr::get_default_resource());
 
     // type registration
     {
@@ -78,7 +79,7 @@ int main() {
     // copy graph interface
     {
         auto content = readFile("graph.ts");
-        updateFile(outputFolder / "cocos/core/pipeline/graph.ts", content);
+        updateFile(typescriptFolder / "cocos/core/pipeline/graph.ts", content);
     }
 
     return 0;

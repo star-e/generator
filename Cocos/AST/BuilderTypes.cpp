@@ -99,8 +99,9 @@ CodegenContext::CodegenContext(CodegenContext const& rhs, const allocator_type& 
 
 CodegenContext::~CodegenContext() noexcept = default;
 
-ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path folder, const allocator_type& alloc)
-    : mFolder(std::move(folder))
+ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, const allocator_type& alloc)
+    : mCppFolder(std::move(cppFolder))
+    , mTypescriptFolder(std::move(typescriptFolder))
     , mSyntaxGraph(alloc)
     , mModuleGraph(alloc)
     , mCurrentModule(alloc)
@@ -108,7 +109,8 @@ ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path
     , mProjectName(std::move(projectName), alloc) {}
 
 ModuleBuilder::ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc)
-    : mFolder(std::move(rhs.mFolder))
+    : mCppFolder(std::move(rhs.mCppFolder))
+    , mTypescriptFolder(std::move(rhs.mTypescriptFolder))
     , mSyntaxGraph(std::move(rhs.mSyntaxGraph), alloc)
     , mModuleGraph(std::move(rhs.mModuleGraph), alloc)
     , mCurrentModule(std::move(rhs.mCurrentModule), alloc)

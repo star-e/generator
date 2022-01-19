@@ -37,27 +37,32 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
     std::string_view moduleName,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
-std::pmr::string generateTypes_h(const SyntaxGraph& g,
+std::pmr::string generateTypes_h(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
-std::pmr::string generateTypes_cpp(const SyntaxGraph& g,
+std::pmr::string generateTypes_cpp(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
-std::pmr::string generateGraphs_h(const SyntaxGraph& g,
+std::pmr::string generateGraphs_h(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
-std::pmr::string generateReflection_h(const SyntaxGraph& g,
+std::pmr::string generateReflection_h(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
-std::pmr::string generateReflection_cpp(const SyntaxGraph& g,
+std::pmr::string generateReflection_cpp(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);

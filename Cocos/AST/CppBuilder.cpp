@@ -998,11 +998,10 @@ struct VisitorTypes_cpp : boost::dfs_visitor<> {
     CodegenContext& mContext;
 };
 
-const std::string_view sProjectName = "cc";
-
 }
 
-std::pmr::string generateTypes_h(const SyntaxGraph& g,
+std::pmr::string generateTypes_h(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) {
@@ -1023,7 +1022,7 @@ std::pmr::string generateTypes_h(const SyntaxGraph& g,
     BreakType prevType{};
     VisitorTypes_h visitor{
         {}, oss, space, moduleName0, prevType, scratch,
-        mg, moduleID, bDLL, apiDLL, sProjectName, context
+        mg, moduleID, bDLL, apiDLL, projectName, context
     };
 
     auto colors = g.colors(scratch);
@@ -1083,7 +1082,8 @@ std::pmr::string generateTypes_h(const SyntaxGraph& g,
     return oss.str();
 }
 
-std::pmr::string generateTypes_cpp(const SyntaxGraph& g,
+std::pmr::string generateTypes_cpp(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) {
@@ -1103,7 +1103,7 @@ std::pmr::string generateTypes_cpp(const SyntaxGraph& g,
     Impl::AddressableView<SyntaxGraph> g1(const_cast<SyntaxGraph&>(g));
     VisitorTypes_cpp visitor{
         {}, oss, space, moduleName0, scratch,
-        mg, moduleID, sProjectName, context
+        mg, moduleID, projectName, context
     };
 
     for (const auto& vertID : make_range(vertices(g))) {
@@ -1127,7 +1127,8 @@ std::pmr::string generateTypes_cpp(const SyntaxGraph& g,
     return oss.str();
 }
 
-std::pmr::string generateGraphs_h(const SyntaxGraph& g,
+std::pmr::string generateGraphs_h(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) {
@@ -1170,7 +1171,7 @@ std::pmr::string generateGraphs_h(const SyntaxGraph& g,
             [&](const Graph&) {
                 const bool bDLL = !moduleInfo.mAPI.empty();
                 CppGraphBuilder builder(&g, &mg, vertID,
-                    moduleID, ns, bDLL, sProjectName, scratch);
+                    moduleID, ns, bDLL, projectName, scratch);
                 copyString(oss, space, builder.generateGraphFunctions_h());
             },
             [&](const auto&) {
@@ -1199,7 +1200,7 @@ std::pmr::string generateGraphs_h(const SyntaxGraph& g,
                 [&](const Graph&) {
                     const bool bDLL = !moduleInfo.mAPI.empty();
                     CppGraphBuilder builder(&g, &mg, vertID,
-                        moduleID, ns, bDLL, sProjectName, scratch);
+                        moduleID, ns, bDLL, projectName, scratch);
                     copyString(oss, space, builder.generateGraphBoostFunctions_h());
                 },
                 [&](const auto&) {
@@ -1228,7 +1229,7 @@ std::pmr::string generateGraphs_h(const SyntaxGraph& g,
             [&](const Graph&) {
                 const bool bDLL = !moduleInfo.mAPI.empty();
                 CppGraphBuilder builder(&g, &mg, vertID,
-                    moduleID, ns, bDLL, sProjectName, scratch);
+                    moduleID, ns, bDLL, projectName, scratch);
                 copyString(oss, space, builder.generateGraphPropertyMaps_h());
             },
             [&](const auto&) {
@@ -1239,7 +1240,8 @@ std::pmr::string generateGraphs_h(const SyntaxGraph& g,
     return oss.str();
 }
 
-std::pmr::string generateReflection_h(const SyntaxGraph& g,
+std::pmr::string generateReflection_h(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) {
@@ -1349,7 +1351,8 @@ std::pmr::string generateReflection_h(const SyntaxGraph& g,
     return oss.str();
 }
 
-std::pmr::string generateReflection_cpp(const SyntaxGraph& g,
+std::pmr::string generateReflection_cpp(std::string_view projectName,
+    const SyntaxGraph& g,
     const ModuleGraph& mg,
     std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) {
