@@ -83,7 +83,6 @@ import { RenderScene } from '../renderer/scene';
                 }
 
                 PMR_GRAPH(ResourceGraph, _, _) {
-                    OBJECT_DESCRIPTOR();
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
                         (Name_, std::pmr::string, mName)
@@ -600,7 +599,6 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 PMR_GRAPH(DeviceResourceGraph, _, _) {
-                    OBJECT_DESCRIPTOR();
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
                         (Name_, std::pmr::string, mName)

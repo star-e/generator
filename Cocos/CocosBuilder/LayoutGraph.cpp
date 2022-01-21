@@ -130,7 +130,6 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 TAGS((_), Group_, Shader_);
 
                 PMR_GRAPH(LayoutGraph, _, _) {
-                    OBJECT_DESCRIPTOR();
                     NAMED_GRAPH(Name_);
                     ALIAS_REFERENCE_GRAPH();
                     ADDRESSABLE_GRAPH(mPathIndex);
