@@ -73,6 +73,8 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(Gfx,
+        .mFolder = "cocos/renderer/gfx-base",
+        .mFilePrefix = "GFXDef-common.h",
         .mTypescriptFolder = "cocos/core/gfx",
         .mTypescriptFilePrefix = "index",
     ) {

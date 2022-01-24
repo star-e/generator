@@ -2222,7 +2222,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         if (s.mColorMap) {
             oss << "\n";
             OSS << "[[nodiscard]] inline Impl::ColorMap<" << name << "::vertex_descriptor>\n";
-            OSS << "get(std::pmr::vector<boost::default_color_type>& colors, const " << name << "& g) noexcept {\n";
+            OSS << "get(boost::container::pmr::vector<boost::default_color_type>& colors, const " << name << "& g) noexcept {\n";
             OSS << "    return { colors };\n";
             OSS << "}\n";
         }

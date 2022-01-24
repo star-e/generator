@@ -36,6 +36,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "RenderGraph",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "render-graph",
+        .mRequires = { "RenderCommon", "Gfx" },
         .mTypescriptInclude = R"(import { Mat4 } from '../math';
 import { legacyCC } from '../global-exports';
 import { RenderScene } from '../renderer/scene';
@@ -158,7 +159,7 @@ import { RenderScene } from '../renderer/scene';
                 STRUCT(RasterSubpass) {
                     PUBLIC(
                         ((PmrMap<std::pmr::string, RasterView>), mRasterViews, _)
-                        ((PmrMap<std::pmr::string, std::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrMap<std::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                     );
                 }
 
@@ -172,14 +173,14 @@ import { RenderScene } from '../renderer/scene';
                 STRUCT(RasterPassData) {
                     PUBLIC(
                         ((PmrMap<std::pmr::string, RasterView>), mRasterViews, _)
-                        ((PmrMap<std::pmr::string, std::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrMap<std::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                         (SubpassGraph, mSubpassGraph, _)
                     );
                 }
 
                 STRUCT(ComputePassData) {
                     PUBLIC(
-                        ((PmrMap<std::pmr::string, std::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrMap<std::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                     );
                 }
 
@@ -203,7 +204,7 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(CopyPassData) {
                     PUBLIC(
-                        (std::pmr::vector<CopyPair>, mCopyPairs, _)
+                        (boost::container::pmr::vector<CopyPair>, mCopyPairs, _)
                     );
                 }
 
@@ -224,13 +225,13 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(MovePassData) {
                     PUBLIC(
-                        (std::pmr::vector<MovePair>, mMovePairs, _)
+                        (boost::container::pmr::vector<MovePair>, mMovePairs, _)
                     );
                 }
 
                 STRUCT(RaytracePassData) {
                     PUBLIC(
-                        ((PmrMap<std::pmr::string, std::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrMap<std::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                     );
                 }
 
@@ -247,7 +248,7 @@ import { RenderScene } from '../renderer/scene';
                     PUBLIC(
                         (std::pmr::string, mName, _)
                         (Camera*, mCamera, nullptr)
-                        (std::pmr::vector<std::pmr::string>, mScenes, _)
+                        (boost::container::pmr::vector<std::pmr::string>, mScenes, _)
                     );
                     CNTR(mName);
                 }
@@ -271,7 +272,7 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(RenderData) {
                     PUBLIC(
-                        ((PmrUnorderedMap<uint32_t, std::pmr::vector<uint8_t>>), mConstants, _)
+                        ((PmrUnorderedMap<uint32_t, boost::container::pmr::vector<uint8_t>>), mConstants, _)
                         ((PmrUnorderedMap<uint32_t, gfx::Buffer>), mBuffers, _)
                         ((PmrUnorderedMap<uint32_t, gfx::Texture>), mTextures, _)
                         ((PmrUnorderedMap<uint32_t, gfx::Sampler>), mSamplers, _)
@@ -594,6 +595,7 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "RenderExecutor",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "executor",
+        .mRequires = { "RenderCommon", "Gfx" },
     ) {
         NAMESPACE(cc) {
             NAMESPACE(render) {

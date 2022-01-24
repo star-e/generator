@@ -95,7 +95,10 @@ int main() {
         auto content = readFile("GraphImpl.h");
         updateFile(cppFolder / "cocos/renderer/pipeline/GraphImpl.h", content);
     }
-
+    {
+        auto content = readFile("Map.h");
+        updateFile(cppFolder / "cocos/renderer/pipeline/Map.h", content);
+    }
     // update cmakelists
     if (true) {
         auto cmake = readFile(cppFolder / "CMakeLists.txt", true);

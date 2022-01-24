@@ -16,17 +16,20 @@
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="CocosModules.h" />
+    <ClInclude Include="GraphView.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
     <ClInclude Include="GraphImpl.h">
-      <Filter>Modules</Filter>
+      <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="GraphTypes.h">
-      <Filter>Modules</Filter>
+      <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="GraphUtils.h">
-      <Filter>Modules</Filter>
+      <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="GraphView.h">
-      <Filter>Modules</Filter>
+    <ClInclude Include="Map.h">
+      <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -35,6 +38,9 @@
   <ItemGroup>
     <Filter Include="Modules">
       <UniqueIdentifier>{0644d922-5b41-457c-bbc6-88ba625679f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{dc9aa706-6699-48bb-9d16-794ae993a920}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

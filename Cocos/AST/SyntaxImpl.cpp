@@ -898,6 +898,34 @@ SyntaxGraph::vertex_descriptor SyntaxGraph::getTemplate(
     return vertID;
 }
 
+bool SyntaxGraph::moduleHasMap(std::string_view modulePath, std::string_view mapPath) const {
+    const auto& g = *this;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path == modulePath) {
+            if (visit_vertex(
+                    vertID, g,
+                    [&](const Composition_ auto& s) {
+                        for (const auto& member : s.mMembers) {
+                            const auto& memberID = locate(member.mTypePath, g);
+                            if (holds_tag<Instance_>(memberID, g)) {
+                                const auto& inst = get<Instance>(memberID, g);
+                                if (inst.mTemplate == mapPath)
+                                    return true;
+                            }
+                        }
+                        return false;
+                    },
+                    [&](const auto&) {
+                        return false;
+                    })) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool SyntaxGraph::moduleHasGraph(std::string_view modulePath) const {
     const auto& g = *this;
     bool hasGraph = false;

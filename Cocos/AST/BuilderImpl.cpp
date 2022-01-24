@@ -985,7 +985,11 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             if (included.contains(moduleID))
                 continue;
             const auto& dep = get(mg.modules, mg, moduleID);
-            OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Fwd.h>\n";
+            if (dep.mFilePrefix.ends_with(".h")) {
+                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << ">\n";
+            } else {
+                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Fwd.h>\n";
+            }
         }
         if (mBoost) {
             OSS << "#include <boost/variant2/variant.hpp>\n";
@@ -1009,7 +1013,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             if (included.contains(moduleID))
                 continue;
             const auto& dep = get(mg.modules, mg, moduleID);
-            OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Names.h>\n";
+            if (!dep.mFilePrefix.ends_with(".h")) {
+                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Names.h>\n";
+            }
         }
         copyString(oss, generateNames_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
@@ -1044,10 +1050,23 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 if (included.contains(moduleID))
                     continue;
                 const auto& dep = get(mg.modules, mg, moduleID);
-                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Types.h>\n";
+                if (dep.mFilePrefix.ends_with(".h")) {
+                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << ">\n";
+                } else {
+                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Types.h>\n";
+                }
             }
             if (g.moduleHasGraph(modulePath)) {
+                OSS << "#include <boost/graph/graph_traits.hpp>\n";
+                OSS << "#include <boost/graph/adjacency_iterator.hpp>\n";
+                OSS << "#include <boost/graph/properties.hpp>\n";
+                OSS << "#include <boost/range/irange.hpp>\n";
+                OSS << "#include <boost/container/pmr/vector.hpp>\n";
                 OSS << "#include <cocos/renderer/pipeline/GraphTypes.h>\n";
+            }
+            if (g.moduleHasMap(modulePath, "/cc/PmrMap")
+                || g.moduleHasMap(modulePath, "/cc/Map")) {
+                OSS << "#include <cocos/renderer/pipeline/Map.h>\n";
             }
             if (!moduleInfo.mHeader.empty()) {
                 copyCppString(oss, space, moduleInfo.mHeader);
@@ -1115,7 +1134,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 const auto& moduleInfo = get(mg.modules, mg, moduleID);
                 const auto& dep = get(mg.modules, mg, moduleID);
                 if (moduleInfo.mFeatures & Reflection) {
-                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Reflection.h>\n";
+                    if (!dep.mFilePrefix.ends_with(".h")) {
+                        OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Reflection.h>\n";
+                    }
                 }
             }
             copyString(oss, generateReflection_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));

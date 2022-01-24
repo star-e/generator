@@ -237,15 +237,15 @@ std::pmr::string CppGraphBuilder::componentContainerType() const {
     auto bPmr = g.isPmr(mStruct.mCurrentVertex);
     if (s.isVector()) {
         if (bPmr) {
-            oss << "/std/pmr/vector";
+            oss << "/boost/container/pmr/vector";
         } else {
-            oss << "/std/vector";
+            oss << "/boost/container/vector";
         }
     } else {
         if (bPmr) {
-            oss << "/std/pmr/list";
+            oss << "/boost/container/pmr/list";
         } else {
-            oss << "/std/list";
+            oss << "/boost/container/list";
         }
     }
     return oss.str();
@@ -1049,7 +1049,7 @@ std::pmr::string CppGraphBuilder::generateAllocator_h() {
     if (g.isPmr(vertID)) {
         if (mCount++)
             oss << "\n";
-        OSS << "using allocator_type = std::pmr::polymorphic_allocator<std::byte>;\n";
+        OSS << "using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n";
         if (mDLL) {
             OSS << api << "_API " << cpp.generateGetAllocatorSignature(true) << ";\n";
         } else {
@@ -1061,7 +1061,7 @@ std::pmr::string CppGraphBuilder::generateAllocator_h() {
             OSS << "}\n";
         }
         copyString(oss, space, R"(
-inline std::pmr::memory_resource* resource() const noexcept {
+inline boost::container::pmr::memory_resource* resource() const noexcept {
     return get_allocator().resource();
 })");
     }
@@ -1280,8 +1280,8 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
             OSS << "}\n";
             if (s.mColorMap) {
                 oss << "\n";
-                OSS << "[[nodiscard]] inline std::pmr::vector<boost::default_color_type> colors(std::pmr::memory_resource* mr) const {\n";
-                OSS << "    return std::pmr::vector<boost::default_color_type>{ mVertices.size(), mr };\n";
+                OSS << "inline boost::container::pmr::vector<boost::default_color_type> colors(boost::container::pmr::memory_resource* mr) const {\n";
+                OSS << "    return boost::container::pmr::vector<boost::default_color_type>{ mVertices.size(), mr };\n";
                 OSS << "}\n";
             }
         } else {

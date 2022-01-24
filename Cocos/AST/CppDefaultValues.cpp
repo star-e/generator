@@ -139,6 +139,13 @@ void addCppDefaultValues(ModuleBuilder& builder) {
                 IMPORT_CLASS(strand);
             }
         }
+        NAMESPACE(container) {
+            NAMESPACE(pmr) {
+                PMR_CONTAINER(vector);
+                PMR_CONTAINER(set);
+                PMR_MAP(map);
+            }
+        }
     }
 
     NAMESPACE(cc) {

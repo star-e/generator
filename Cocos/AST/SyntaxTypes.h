@@ -598,7 +598,7 @@ struct Stack {
     ~Stack() noexcept;
 
     std::pmr::vector<Layer> mLayers;
-    std::pmr::string mContainer = std::pmr::string("/std/pmr/vector", get_allocator());
+    std::pmr::string mContainer = std::pmr::string("/boost/container/pmr/vector", get_allocator());
 };
 
 struct Named {
@@ -798,9 +798,9 @@ struct Graph {
     VertexListType mVertexListType;
     EdgeListType mEdgeListType;
     OutEdgeListType mOutEdgeListType;
-    std::string mVertexListPath = "/std/pmr/vector";
-    std::string mEdgeListPath = "/std/pmr/list";
-    std::string mOutEdgeListPath = "/std/pmr/vector";
+    std::string mVertexListPath = "/boost/container/pmr/vector";
+    std::string mEdgeListPath = "/boost/container/pmr/list";
+    std::string mOutEdgeListPath = "/boost/container/pmr/vector";
     std::string mVertexDescriptor;
     std::string mVertexSizeType = "uint32_t";
     std::string mDifferenceType = "int32_t";
@@ -1031,6 +1031,8 @@ struct SyntaxGraph {
     void propagate(vertex_descriptor vertID, GenerationFlags flags = {});
 
     vertex_descriptor getTemplate(vertex_descriptor instanceID, std::pmr::memory_resource* scratch) const;
+
+    bool moduleHasMap(std::string_view modulePath, std::string_view mapPath) const;
 
     bool moduleHasGraph(std::string_view modulePath) const;
 

@@ -6,7 +6,7 @@
 #include <boost/graph/properties.hpp>
 #include <cocos/renderer/pipeline/GraphTypes.h>
 
-namespace cocos::Impl {
+namespace cc::Impl {
 
 // OwnershipIterator (Bidirectional, !EdgeProperty)
 template<class VertexIterator, class OutEdgeIterator, class Graph>
@@ -358,35 +358,6 @@ struct EdgeBundleMemberPropertyMap
 
     Graph* mGraph = nullptr;
     MemberPointer mMemberPointer = {};
-};
-
-// Conceptual Graph
-template<class Tag, class Handle>
-struct ValueHandle : Tag {
-    ValueHandle() noexcept = default;
-    ValueHandle(ValueHandle&& rhs) noexcept
-        : mValue(std::move(rhs.mValue))
-    {}
-    ValueHandle(const ValueHandle& rhs) noexcept
-        : mValue(rhs.mValue)
-    {}
-    ValueHandle& operator=(ValueHandle&& rhs) noexcept {
-        mValue = std::move(rhs.mValue);
-        return *this;
-    }
-    ValueHandle& operator=(const ValueHandle& rhs) noexcept {
-        mValue = rhs.mValue;
-        return *this;
-    }
-
-    ValueHandle(const Handle& handle) noexcept : mValue(handle) {}
-    ValueHandle(Handle&& handle) noexcept : mValue(std::move(handle)) {}
-    template<class... Args>
-    ValueHandle(Args&&... args) noexcept
-        : mValue(std::forward<Args>(args)...)
-    {}
-
-    Handle mValue = {};
 };
 
 template<class Sequence, class Predicate>
@@ -745,8 +716,8 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type&, Color
 namespace std {
 
 template<class DirectedCategory, class VertexDescriptor>
-struct hash<cocos::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>> {
-    size_t operator()(const cocos::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>& e) const noexcept {
+struct hash<cc::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>> {
+    size_t operator()(const cc::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>& e) const noexcept {
         return boost::hash_value(e.get_property());
     }
 };

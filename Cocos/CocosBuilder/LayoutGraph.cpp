@@ -52,7 +52,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 STRUCT(ConstantBuffer) {
                     PUBLIC(
                         (uint32_t, mSize, 0)
-                        (std::pmr::vector<Constant>, mConstants, _)
+                        (boost::container::pmr::vector<Constant>, mConstants, _)
                     );
                 }
 
@@ -64,7 +64,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     PUBLIC(
                         (DescriptorType, mType, _)
                         (uint32_t, mCapacity, 0)
-                        (std::pmr::vector<uint32_t>, mAttributeIDs, _)
+                        (boost::container::pmr::vector<uint32_t>, mAttributeIDs, _)
                     );
                 }
 
@@ -78,7 +78,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 STRUCT(UnboundedDescriptor) {
                     PUBLIC(
                         (DescriptorType, mType, _)
-                        (std::pmr::vector<DescriptorArray>, mDescriptors, _)
+                        (boost::container::pmr::vector<DescriptorArray>, mDescriptors, _)
                     );
                 }
 
@@ -86,13 +86,13 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     PUBLIC(
                         (uint32_t, mSlot, 0)
                         (uint32_t, mCapacity, 0)
-                        (std::pmr::vector<DescriptorBlock>, mBlocks, _)
+                        (boost::container::pmr::vector<DescriptorBlock>, mBlocks, _)
                     );
                 }
 
                 STRUCT(DescriptorSet){
                     PUBLIC(
-                        (std::pmr::vector<DescriptorTable>, mTables, _)
+                        (boost::container::pmr::vector<DescriptorTable>, mTables, _)
                         (UnboundedDescriptor, mUnbounded, _)
                     );
                 }
@@ -123,7 +123,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 STRUCT(ShaderNodeData) {
                     PUBLIC(
                         (std::pmr::string, mRootSignature, _)
-                        (std::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
+                        (boost::container::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
                         ((PmrMap<std::pmr::string, uint32_t>), mShaderIndex, _)
                     );
                 }

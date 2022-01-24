@@ -606,7 +606,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             if (!bEmpty && g.isPmr(vertID)) {
                 if (count++)
                     oss << "\n";
-                OSS << "using allocator_type = std::pmr::polymorphic_allocator<std::byte>;\n";
+                OSS << "using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n";
                 if (mDLL) {
                     OSS << mAPI << cpp.generateGetAllocatorSignature(true) << ";\n";
                 } else {

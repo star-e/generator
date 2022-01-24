@@ -2,6 +2,7 @@
 #include <memory>
 #include <boost/optional.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
 
 namespace boost {
 
@@ -15,7 +16,7 @@ struct no_property;
 
 }
 
-namespace cocos {
+namespace cc {
 
 namespace Impl {
 
@@ -504,7 +505,7 @@ struct ListEdge {
 //template<class VertexDescriptor, PmrAllocatorUserClass_ EdgeProperty>
 template<class VertexDescriptor, class EdgeProperty>
 struct PmrListEdge {
-    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;
     allocator_type get_allocator() const noexcept {
         return allocator_type{ mProperty.get_allocator().resource() };
     }
@@ -550,6 +551,34 @@ struct PmrListEdge {
     VertexDescriptor m_source = {};
     VertexDescriptor m_target = {};
     EdgeProperty mProperty;
+};
+
+// Polymorphic Graph
+template <class Tag, class Handle>
+struct ValueHandle : Tag {
+    ValueHandle() noexcept = default;
+    ValueHandle(ValueHandle&& rhs) noexcept
+        : mValue(std::move(rhs.mValue)) {}
+    ValueHandle(const ValueHandle& rhs) noexcept
+        : mValue(rhs.mValue) {}
+    ValueHandle& operator=(ValueHandle&& rhs) noexcept {
+        mValue = std::move(rhs.mValue);
+        return *this;
+    }
+    ValueHandle& operator=(const ValueHandle& rhs) noexcept {
+        mValue = rhs.mValue;
+        return *this;
+    }
+
+    ValueHandle(const Handle& handle) noexcept
+        : mValue(handle) {}
+    ValueHandle(Handle&& handle) noexcept
+        : mValue(std::move(handle)) {}
+    template <class... Args>
+    ValueHandle(Args&&... args) noexcept
+        : mValue(std::forward<Args>(args)...) {}
+
+    Handle mValue = {};
 };
 
 }
