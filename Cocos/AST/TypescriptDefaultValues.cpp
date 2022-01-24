@@ -89,6 +89,17 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(std::pmr::vector<uint32_t>, Uint32Array);
     PROJECT_TS(std::pmr::vector<uint64_t>, BigUint64Array);
 
+    PROJECT_TS(boost::container::pmr::vector<std::byte>, Uint8Array);
+    PROJECT_TS(boost::container::pmr::vector<int>, Int32Array);
+    PROJECT_TS(boost::container::pmr::vector<int8_t>, Int8Array);
+    PROJECT_TS(boost::container::pmr::vector<int16_t>, Int16Array);
+    PROJECT_TS(boost::container::pmr::vector<int32_t>, Int32Array);
+    PROJECT_TS(boost::container::pmr::vector<int64_t>, BigInt64Array);
+    PROJECT_TS(boost::container::pmr::vector<uint8_t>, Uint8Array);
+    PROJECT_TS(boost::container::pmr::vector<uint16_t>, Uint16Array);
+    PROJECT_TS(boost::container::pmr::vector<uint32_t>, Uint32Array);
+    PROJECT_TS(boost::container::pmr::vector<uint64_t>, BigUint64Array);
+
     PROJECT_TS(cc::Map, Map);
     PROJECT_TS(cc::PmrMap, Map);
     PROJECT_TS(cc::UnorderedMap, Map);

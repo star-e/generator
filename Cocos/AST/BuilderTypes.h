@@ -430,6 +430,9 @@ struct ModuleBuilder {
     void setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
         std::string_view memberName, GenerationFlags flags);
 
+    void setTypescriptInitValue(SyntaxGraph::vertex_descriptor vertID,
+        std::string_view memberName, std::string_view init);
+
     void addConstructor(SyntaxGraph::vertex_descriptor vertID,
         std::initializer_list<std::string_view> members, bool hasDefault);
     void addMemberFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);

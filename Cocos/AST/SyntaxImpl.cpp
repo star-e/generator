@@ -1098,6 +1098,9 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
     const auto& g = *this;
     const auto& ts = get(g.typescripts, g, vertID);
 
+    if (!m.mTypescriptDefaultValue.empty())
+        return std::pmr::string(m.mTypescriptDefaultValue, scratch);
+
     Expects(m.mDefaultValue != "_");
     std::pmr::string initial1(m.mDefaultValue, scratch);
 

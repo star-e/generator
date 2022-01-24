@@ -590,6 +590,23 @@ void ModuleBuilder::setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
         });
 }
 
+void ModuleBuilder::setTypescriptInitValue(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view memberName, std::string_view init) {
+    auto& g = mSyntaxGraph;
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            for (Member& m : s.mMembers) {
+                if (m.mMemberName == memberName) {
+                    m.mTypescriptDefaultValue = init;
+                    break;
+                }
+            }
+        },
+        [&](const auto&) {
+        });
+}
+
 void ModuleBuilder::addConstructor(SyntaxGraph::vertex_descriptor vertID,
     std::initializer_list<std::string_view> members, bool hasDefault) {
     auto& g = mSyntaxGraph;
