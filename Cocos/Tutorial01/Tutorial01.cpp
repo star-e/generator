@@ -121,5 +121,7 @@ int main() {
     }
 
     builder.compile();
-    builder.outputModule("Tutorial");
+
+    std::pmr::set<std::pmr::string> files(std::pmr::get_default_resource());
+    builder.outputModule("Tutorial", files);
 }

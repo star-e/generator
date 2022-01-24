@@ -951,7 +951,7 @@ std::pmr::set<ModuleGraph::vertex_descriptor> getIndirectIncludes(
 
 }
 
-void ModuleBuilder::outputModule(std::string_view name) const {
+void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::string>& files) const {
     auto scratch = mScratch;
     Expects(!name.empty());
 
@@ -973,8 +973,9 @@ void ModuleBuilder::outputModule(std::string_view name) const {
     const auto& cppFolder = mCppFolder;
 
     if (features & Features::Fwd) {
-        std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
-        filename += "Fwd.h";
+        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Fwd.h" , scratch);
+        files.emplace(std::move(shortname));
+        std::filesystem::path filename = cppFolder / shortname;
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
@@ -992,8 +993,9 @@ void ModuleBuilder::outputModule(std::string_view name) const {
     }
 
     if (features & Features::Names) {
-        std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
-        filename += "Names.h";
+        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Names.h", scratch);
+        files.emplace(std::move(shortname));
+        std::filesystem::path filename = cppFolder / shortname;
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
@@ -1012,6 +1014,9 @@ void ModuleBuilder::outputModule(std::string_view name) const {
     }
 
     if (features & Features::Types) {
+        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Types.h", scratch);
+        files.emplace(std::move(shortname));
+
         const std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
 
         {
@@ -1050,6 +1055,9 @@ void ModuleBuilder::outputModule(std::string_view name) const {
         }
 
         {
+            std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Types.cpp", scratch);
+            files.emplace(std::move(shortname));
+
             auto filename1 = filename;
             filename1 += "Types.cpp";
 
@@ -1063,6 +1071,9 @@ void ModuleBuilder::outputModule(std::string_view name) const {
         }
     }
     if (features & Features::Graphs) {
+        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Graphs.h", scratch);
+        files.emplace(std::move(shortname));
+
         std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
         filename += "Graphs.h";
 
@@ -1078,6 +1089,9 @@ void ModuleBuilder::outputModule(std::string_view name) const {
     }
     if (features & Features::Reflection) {
         {
+            std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Reflection.h", scratch);
+            files.emplace(std::move(shortname));
+
             std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
             filename += "Reflection.h";
 
@@ -1106,6 +1120,9 @@ void ModuleBuilder::outputModule(std::string_view name) const {
             updateFile(filename, oss.str());
         }
         {
+            std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Reflection.cpp", scratch);
+            files.emplace(std::move(shortname));
+
             std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
             filename += "Reflection.cpp";
 

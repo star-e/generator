@@ -27,17 +27,21 @@ THE SOFTWARE.
 #include <Cocos/AST/CppDefaultValues.h>
 #include <Cocos/AST/TypescriptDefaultValues.h>
 #include <Cocos/FileUtils.h>
+#include <Cocos/Indent.h>
 #include "CocosModules.h"
 
 using namespace Cocos;
 using namespace Cocos::Meta;
 
 int main() {
+    std::pmr::unsynchronized_pool_resource pool;
+    std::pmr::memory_resource* scratch = &pool;
+
     // output folder
     std::filesystem::path typescriptFolder = "../../../engine";
     std::filesystem::path cppFolder = "../../../engine-native";
 
-    ModuleBuilder builder("cocos", cppFolder, typescriptFolder, std::pmr::get_default_resource());
+    ModuleBuilder builder("cocos", cppFolder, typescriptFolder, scratch);
 
     // type registration
     {
@@ -49,37 +53,76 @@ int main() {
 
         // build render pipeline
         buildRenderCommon(builder,
-            Typescripts /* | Fwd | Types | Names | Reflection*/);
+            Typescripts | Fwd | Types | Names | Reflection);
         buildLayoutGraph(builder,
-            Typescripts /* | Fwd | Types | Names | Reflection | Graphs*/);
+            Typescripts | Fwd | Types | Names | Reflection | Graphs);
         buildRenderGraph(builder,
-            Typescripts /* | Fwd | Types | Names | Reflection | Graphs*/);
+            Typescripts | Fwd | Types | Names | Reflection | Graphs);
 
         // build executor modules
         buildRenderExecutor(builder,
-            Typescripts /* | Fwd | Types | Names | Reflection | Graphs*/);
+            Typescripts | Fwd | Types | Names | Reflection | Graphs);
     }
 
     builder.compile();
+
+    std::pmr::set<std::pmr::string> files(scratch);
     // output files
     {
         // common types, shared by different modules
-        builder.outputModule("RenderCommon");
+        builder.outputModule("RenderCommon", files);
 
         // descriptor layout graph
-        builder.outputModule("LayoutGraph");
+        builder.outputModule("LayoutGraph", files);
 
         // render graph
-        builder.outputModule("RenderGraph");
+        builder.outputModule("RenderGraph", files);
 
         // executor
-        builder.outputModule("RenderExecutor");
+        builder.outputModule("RenderExecutor", files);
     }
 
     // copy graph interface
     {
         auto content = readFile("graph.ts");
         updateFile(typescriptFolder / "cocos/core/pipeline/graph.ts", content);
+    }
+
+    // update cmakelists
+    if (false) {
+        auto cmake = readFile(cppFolder / "CMakeLists.txt", true);
+        const auto pos = cmake.find("##### renderer");
+        Expects(pos != cmake.npos);
+        const auto beg = [&]() {
+            std::string_view prefix = "cocos_source_files(\n";
+            auto start = cmake.find(prefix, pos);
+            if (start != cmake.npos) {
+                start += prefix.size();
+            }
+            return start;
+        }();
+        Expects(pos != cmake.npos);
+        const auto end = cmake.find(")", pos);
+
+        std::pmr::string content(std::string_view(cmake).substr(beg, end - beg), scratch);
+        for (const auto& file : files) {
+            std::pmr::string line(file, scratch);
+            line.append("\n");
+            boost::algorithm::replace_all(content, line, "");
+        }
+        boost::algorithm::replace_all(content, " ", "");
+
+        for (const auto& file : files) {
+            content.append(file);
+            content.append("\n");
+        }
+        std::pmr::string space("                 ");
+        pmr_ostringstream oss(std::ios::out, scratch);
+        copyString(oss, space, content);
+
+        cmake.replace(beg, end - beg, oss.str());
+
+        updateFile(cppFolder / "CMakeLists.txt", cmake);
     }
 
     return 0;

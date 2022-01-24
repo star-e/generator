@@ -459,7 +459,7 @@ struct ModuleBuilder {
     void addNamedConcept(SyntaxGraph::vertex_descriptor vertID, bool bComponent,
         std::string_view componentName, std::string_view componentMemberName = "");
 
-    void outputModule(std::string_view name) const;
+    void outputModule(std::string_view name, std::pmr::set<std::pmr::string>& files) const;
 
     void projectTypescript(std::string_view cpp, std::string_view ts);
     void addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
