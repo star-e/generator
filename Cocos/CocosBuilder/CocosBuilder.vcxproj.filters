@@ -16,6 +16,18 @@
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="CocosModules.h" />
+    <ClInclude Include="GraphImpl.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphTypes.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphUtils.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphView.h">
+      <Filter>Modules</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="graph.ts" />

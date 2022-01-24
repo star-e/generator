@@ -246,6 +246,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CocosModules.h" />
+    <ClInclude Include="GraphImpl.h" />
+    <ClInclude Include="GraphTypes.h" />
+    <ClInclude Include="GraphUtils.h" />
+    <ClInclude Include="GraphView.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

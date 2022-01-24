@@ -987,6 +987,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             const auto& dep = get(mg.modules, mg, moduleID);
             OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Fwd.h>\n";
         }
+        if (mBoost) {
+            OSS << "#include <boost/variant2/variant.hpp>\n";
+        }
         copyString(oss, generateFwd_h(mSyntaxGraph, modulePath, scratch, scratch));
 
         updateFile(filename, oss.str());
@@ -1029,7 +1032,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             if (!moduleInfo.mAPI.empty()) {
                 oss << "#include <" << std::filesystem::path(moduleInfo.mFolder).generic_string()
-                    << "/SConfig.h>\n";
+                    << "/Config.h>\n";
             }
 
             if (features & Features::Fwd) {
@@ -1101,7 +1104,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             if (!moduleInfo.mAPI.empty()) {
                 oss << "#include <" << std::filesystem::path(moduleInfo.mFolder).generic_string()
-                    << "/SConfig.h>\n";
+                    << "/Config.h>\n";
             }
             OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
             const auto included = getIndirectIncludes(moduleID, mg, scratch);

@@ -482,7 +482,11 @@ std::pmr::string CppGraphBuilder::tagType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
-    oss << "std::variant<";
+    if (mStruct.mBoost) {
+        oss << "boost::variant2::variant<";
+    } else {
+        oss << "std::variant<";
+    }
     int count = 0;
     for (const auto& c : s.mPolymorphic.mConcepts) {
         if (count++)
@@ -501,7 +505,11 @@ std::pmr::string CppGraphBuilder::valueType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
-    oss << "std::variant<";
+    if (mStruct.mBoost) {
+        oss << "boost::variant2::variant<";
+    } else {
+        oss << "std::variant<";
+    }
     int count = 0;
     for (const auto& c : s.mPolymorphic.mConcepts) {
         if (count++)
@@ -521,7 +529,11 @@ std::pmr::string CppGraphBuilder::constValueType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
-    oss << "std::variant<";
+    if (mStruct.mBoost) {
+        oss << "boost::variant2::variant<";
+    } else {
+        oss << "std::variant<";
+    }
     int count = 0;
     for (const auto& c : s.mPolymorphic.mConcepts) {
         if (count++)
@@ -577,7 +589,11 @@ std::pmr::string CppGraphBuilder::handleType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
-    oss << "std::variant<\n";
+    if (mStruct.mBoost) {
+        oss << "boost::variant2::variant<\n";
+    } else {
+        oss << "std::variant<\n";
+    }
     {
         INDENT();
         int count = 0;

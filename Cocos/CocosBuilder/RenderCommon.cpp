@@ -34,7 +34,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Camera,
         .mTypescriptFolder = "cocos/core/renderer/scene",
         .mTypescriptFilePrefix = "camera",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             IMPORT_CLASS(Camera);
         }
@@ -42,7 +42,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Ambient,
         .mTypescriptFolder = "cocos/core/renderer/scene",
         .mTypescriptFilePrefix = "ambient",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             IMPORT_CLASS(Ambient);
         }
@@ -50,7 +50,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Fog,
         .mTypescriptFolder = "cocos/core/renderer/scene",
         .mTypescriptFilePrefix = "fog",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             IMPORT_CLASS(Fog);
         }
@@ -58,7 +58,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Shadows,
         .mTypescriptFolder = "cocos/core/renderer/scene",
         .mTypescriptFilePrefix = "shadows",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             IMPORT_CLASS(Shadows);
         }
@@ -66,7 +66,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(PipelineSceneData,
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "pipeline-scene-data",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             IMPORT_CLASS(PipelineSceneData);
         }
@@ -75,7 +75,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Gfx,
         .mTypescriptFolder = "cocos/core/gfx",
         .mTypescriptFilePrefix = "index",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             NAMESPACE(gfx) {
                 // define
@@ -230,7 +230,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "RenderCommon",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "types",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 ENUM(UpdateFrequency) {
@@ -268,7 +268,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 VARIANT(ResourceResidency, (Managed_, Persistent_, Backbuffer_, Memoryless_));
 
                 ENUM(QueueHint) {
-                    ENUMS(Opaque, Cutout, Transparent, Count);
+                    ENUMS(Opaque, Cutout, Transparent, QueueCount);
                 }
                 ENUM(ResourceDimension) {
                     ENUMS(Buffer, Texture1D, Texture2D, Texture3D);

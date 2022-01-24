@@ -92,6 +92,7 @@ struct CppStructBuilder {
     std::pmr::string mName;
     std::pmr::string mAPI;
     std::pmr::string mProjectName;
+    bool mBoost = true;
 };
 
 class GraphBuilder {
@@ -482,6 +483,7 @@ struct ModuleBuilder {
     std::pmr::memory_resource* mScratch = std::pmr::get_default_resource();
     bool mUnderscoreMemberName = true;
     bool mCompiled = false;
+    bool mBoost = true;
 };
 
 } // namespace Meta

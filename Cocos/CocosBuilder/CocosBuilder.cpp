@@ -87,9 +87,17 @@ int main() {
         auto content = readFile("graph.ts");
         updateFile(typescriptFolder / "cocos/core/pipeline/graph.ts", content);
     }
+    {
+        auto content = readFile("GraphTypes.h");
+        updateFile(cppFolder / "cocos/renderer/pipeline/GraphTypes.h", content);
+    }
+    {
+        auto content = readFile("GraphImpl.h");
+        updateFile(cppFolder / "cocos/renderer/pipeline/GraphImpl.h", content);
+    }
 
     // update cmakelists
-    if (false) {
+    if (true) {
         auto cmake = readFile(cppFolder / "CMakeLists.txt", true);
         const auto pos = cmake.find("##### renderer");
         Expects(pos != cmake.npos);

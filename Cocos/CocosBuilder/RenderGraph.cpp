@@ -36,7 +36,6 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "RenderGraph",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "render-graph",
-        .mAPI = "CC_DLL",
         .mTypescriptInclude = R"(import { Mat4 } from '../math';
 import { legacyCC } from '../global-exports';
 import { RenderScene } from '../renderer/scene';
@@ -595,7 +594,7 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "RenderExecutor",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "executor",
-        .mAPI = "CC_DLL") {
+    ) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 PMR_GRAPH(DeviceResourceGraph, _, _) {

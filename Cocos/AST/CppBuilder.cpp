@@ -33,6 +33,8 @@ namespace Cocos::Meta {
 
 namespace {
 
+constexpr bool sBoost = true;
+
 bool outputNamespaces(std::ostream& oss, std::pmr::string& space,
     CodegenContext& context, std::string_view typePath) {
     bool bNewNamespace = false;
@@ -317,7 +319,11 @@ std::pmr::string generateFwd_h(const SyntaxGraph& g,
             [&](const Variant& v) {
                 outputNs();
                 lineBreak(BreakType::Variant);
-                OSS << "using " << name << " = std::variant<";
+                if (sBoost) {
+                    OSS << "using " << name << " = boost::variant2::variant<";
+                } else {
+                    OSS << "using " << name << " = std::variant<";
+                }
                 for (auto count = 0; const auto& e : v.mVariants) {
                     if (count++)
                         oss << ", ";
@@ -698,7 +704,11 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             },
             [&](const Variant& v) {
                 lineBreak();
-                OSS << "using " << name << " = std::variant<";
+                if (sBoost) {
+                    OSS << "using " << name << " = boost::variant2::variant<";
+                } else {
+                    OSS << "using " << name << " = std::variant<";
+                }
                 for (auto count = 0; const auto& e : v.mVariants) {
                     if (count++)
                         oss << ", ";

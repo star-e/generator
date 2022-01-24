@@ -39,7 +39,8 @@ CppStructBuilder::CppStructBuilder(CppStructBuilder&& rhs, const allocator_type&
     , mCurrentPath(std::move(rhs.mCurrentPath), alloc)
     , mName(std::move(rhs.mName), alloc)
     , mAPI(std::move(rhs.mAPI), alloc)
-    , mProjectName(std::move(rhs.mProjectName), alloc) {}
+    , mProjectName(std::move(rhs.mProjectName), alloc)
+    , mBoost(std::move(rhs.mBoost)) {}
 
 CppStructBuilder::CppStructBuilder(CppStructBuilder const& rhs, const allocator_type& alloc)
     : mSyntaxGraph(rhs.mSyntaxGraph)
@@ -50,7 +51,8 @@ CppStructBuilder::CppStructBuilder(CppStructBuilder const& rhs, const allocator_
     , mCurrentPath(rhs.mCurrentPath, alloc)
     , mName(rhs.mName, alloc)
     , mAPI(rhs.mAPI, alloc)
-    , mProjectName(rhs.mProjectName, alloc) {}
+    , mProjectName(rhs.mProjectName, alloc)
+    , mBoost(rhs.mBoost) {}
 
 CppStructBuilder::~CppStructBuilder() noexcept = default;
 
@@ -118,7 +120,8 @@ ModuleBuilder::ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc)
     , mProjectName(std::move(rhs.mProjectName), alloc)
     , mScratch(std::move(rhs.mScratch))
     , mUnderscoreMemberName(std::move(rhs.mUnderscoreMemberName))
-    , mCompiled(std::move(rhs.mCompiled)) {}
+    , mCompiled(std::move(rhs.mCompiled))
+    , mBoost(std::move(rhs.mBoost)) {}
 
 ModuleBuilder::~ModuleBuilder() noexcept = default;
 

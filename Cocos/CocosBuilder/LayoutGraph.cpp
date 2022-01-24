@@ -36,7 +36,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "LayoutGraph",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "layout-graph",
-        .mAPI = "CC_DLL") {
+        .mRequires = { "RenderCommon" },
+    ) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 //-----------------------------------------------------------
