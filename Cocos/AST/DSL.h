@@ -111,7 +111,7 @@ builder.addEnumElement(vertID, \
 builder.addConstructor(s.mVertexDescriptor, {\
 BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) }, true)
 
-#define EXPLICIT_CNTR(...) \
+#define CNTR_NO_DEFAULT(...) \
 builder.addConstructor(s.mVertexDescriptor, {\
 BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) }, false)
 

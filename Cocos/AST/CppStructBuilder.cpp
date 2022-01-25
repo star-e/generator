@@ -194,6 +194,13 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             oss << " " << m.mMemberName;
             if (!m.mDefaultValue.empty()) {
                 oss << " = " << m.mDefaultValue;
+            } else {
+                if (holds_tag<Enum_>(memberID, g)) {
+                    const auto& e = get<Enum>(memberID, g);
+                    const auto enumType = g.getDependentCppName(ns, memberID, scratch, scratch);
+                    Expects(!e.mValues.empty());
+                    oss << " = " << enumType << "::" << e.mValues.front().mName;
+                }
             }
             oss << ";\n";
         }
@@ -375,8 +382,51 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
     const CppStructBuilder& cpp, const SyntaxGraph& g,
     const T& s, const Constructor& cntr,
     std::pmr::memory_resource* scratch) {
+    const auto vertID = cpp.mCurrentVertex;
+    const auto& bases = get(g.inherits, g, vertID).mBases;
     INDENT();
-    for (uint32_t i = 0, count = 0; const auto& m : s.mMembers) {
+    uint32_t count = 0;
+
+    for (const auto& base : bases) {
+        auto baseID = locate(base, g);
+        const auto& traits = get(g.traits, g, baseID);
+        if (!(traits.mFlags & NO_DEFAULT_CNTR))
+            continue;
+
+        bool bSkip = false;
+        visit_vertex(
+            baseID, g,
+            [&](const Composition_ auto& s) {
+                if (s.mConstructors.empty()) {
+                    bSkip = true;
+                    return true;
+                }
+            },
+            [&](const auto&) {
+                return false;
+            });
+
+        if (bSkip)
+            continue;
+
+        bool bPmr = g.isPmr(baseID);
+        if (count++) {
+            oss << "\n";
+            OSS << ", ";
+        } else {
+            OSS << ": ";
+        }
+        visit_vertex(
+            baseID, g,
+            [&](const Composition_ auto& s) {
+                Expects(s.mConstructors.size() == 1);
+                oss << cpp.generateConstructorCall(baseID, s.mConstructors.front());
+            },
+            [&](const auto&) {
+            });
+    }
+
+    for (uint32_t i = 0; const auto& m : s.mMembers) {
         auto memberID = locate(m.mTypePath, g);
         bool bPmr = g.isPmr(memberID);
         bool bCopyParam = false;
@@ -1063,35 +1113,61 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
         oss << name << "::";
     }
 
+    int count = 0;
+
+    auto generateCntrParameters = [&count, &oss, &g, &bNoexcept, scratch, this](
+        const Composition_ auto& s, const Constructor& cntr) {
+        for (const auto& k : cntr.mIndices) {
+            if (count++)
+                oss << ", ";
+            const auto& m = s.mMembers.at(k);
+            auto memberID = locate(m.mTypePath, g);
+            if (m.mTypePath == "/std/pmr/string") {
+                bNoexcept = false;
+                oss << "std::string_view " << getMemberName(m.mMemberName, scratch);
+            } else if (m.mTypePath == "/std/pmr/u8string") {
+                bNoexcept = false;
+                oss << "std::u8string_view " << getMemberName(m.mMemberName, scratch);
+            } else {
+                auto name = g.getDependentName(mCurrentNamespace, memberID, scratch, scratch);
+                oss << getCppPath(name, scratch);
+                if (m.mPointer) {
+                    oss << "*";
+                }
+                if (m.mReference) {
+                    oss << "&";
+                }
+                oss << " " << getMemberName(m.mMemberName, scratch);
+            }
+        }
+    };
+
     oss << name << "(";
+    {
+        const auto& bases = get(g.inherits, g, vertID).mBases;
+        for (const auto& base : bases) {
+            auto baseID = locate(base, g);
+            const auto& traits = get(g.traits, g, baseID);
+            if (!(traits.mFlags & NO_DEFAULT_CNTR))
+                continue;
+
+            bool bSkip = false;
+            visit_vertex(
+                baseID, g,
+                [&](const Composition_ auto& s) {
+                    Expects(!s.mConstructors.empty());
+                    Expects(s.mConstructors.size() == 1);
+                    generateCntrParameters(s, s.mConstructors.front());
+                },
+                [&](const auto&) {
+                });
+        }
+    }
 
     visit_vertex(
         vertID, g,
         [&](const Composition_ auto& s) {
-            int count = 0;
-            for (const auto& k : cntr.mIndices) {
-                if (count++)
-                    oss << ", ";
-                const auto& m = s.mMembers.at(k);
-                auto memberID = locate(m.mTypePath, g);
-                if (m.mTypePath == "/std/pmr/string") {
-                    bNoexcept = false;
-                    oss << "std::string_view " << getMemberName(m.mMemberName, scratch);
-                } else if (m.mTypePath == "/std/pmr/u8string") {
-                    bNoexcept = false;
-                    oss << "std::u8string_view " << getMemberName(m.mMemberName, scratch);
-                } else {
-                    auto name = g.getDependentName(mCurrentNamespace, memberID, scratch, scratch);
-                    oss << getCppPath(name, scratch);
-                    if (m.mPointer) {
-                        oss << "*";
-                    }
-                    if (m.mReference) {
-                        oss << "&";
-                    }
-                    oss << " " << getMemberName(m.mMemberName, scratch);
-                }
-            }
+            generateCntrParameters(s, cntr);
             if (g.isPmr(vertID)) {
                 if (count++)
                     oss << ", ";
@@ -1124,6 +1200,51 @@ std::pmr::string CppStructBuilder::generateConstructorBody(const Constructor& cn
     auto name = get(g.names, g, vertID);
     const auto& traits = get(g.traits, g, vertID);
 
+    return oss.str();
+}
+
+std::pmr::string CppStructBuilder::generateConstructorCall(
+    SyntaxGraph::vertex_descriptor vertID, const Constructor& cntr) const {
+    auto scratch = get_allocator().resource();
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+    std::pmr::string space(scratch);
+    const auto& g = *mSyntaxGraph;
+
+    auto name = getDependentName(vertID);
+    oss << name << "(";
+
+    visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            int count = 0;
+            for (const auto& k : cntr.mIndices) {
+                if (count++)
+                    oss << ", ";
+                const auto& m = s.mMembers.at(k);
+                auto memberID = locate(m.mTypePath, g);
+                if (m.mTypePath == "/std/pmr/string") {
+                    oss << "std::move(" << getMemberName(m.mMemberName, scratch) << ")";
+                } else if (m.mTypePath == "/std/pmr/u8string") {
+                    oss << "std::move(" << getMemberName(m.mMemberName, scratch) << ")";
+                } else {
+                    if (m.mPointer || m.mReference) {
+                        oss << getMemberName(m.mMemberName, scratch);
+                    } else {
+                        oss << "std::move(" << getMemberName(m.mMemberName, scratch) << ")";
+                    }
+                }
+            }
+            if (g.isPmr(vertID)) {
+                if (count++)
+                    oss << ", ";
+                oss << "alloc";
+            }
+        },
+        [&](const auto&) {
+
+        });
+
+    oss << ")";
     return oss.str();
 }
 

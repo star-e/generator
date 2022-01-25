@@ -81,6 +81,7 @@ struct CppStructBuilder {
     std::pmr::string generateCppConstructors() const;
     std::pmr::string generateConstructorSignature(const Constructor& cntr, bool bInline) const;
     std::pmr::string generateConstructorBody(const Constructor& cntr) const;
+    std::pmr::string generateConstructorCall(SyntaxGraph::vertex_descriptor vertID, const Constructor& cntr) const;
     std::pmr::string generateMemberFunctions(std::pmr::string& space) const;
 
     const SyntaxGraph* mSyntaxGraph = nullptr;

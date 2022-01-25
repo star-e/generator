@@ -693,6 +693,12 @@ std::pmr::string SyntaxGraph::getDependentName(std::string_view ns, vertex_descr
     return oss.str(std::pmr::polymorphic_allocator<char>(mr));
 }
 
+std::pmr::string SyntaxGraph::getDependentCppName(std::string_view ns, vertex_descriptor vertID,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
+    auto typePath = getDependentName(ns, vertID, scratch, scratch);
+    return getCppPath(typePath, mr);
+}
+
 SyntaxGraph::vertex_descriptor
 SyntaxGraph::lookupType(std::string_view currentScope, std::string_view dependentName,
     std::pmr::memory_resource* scratch) const {

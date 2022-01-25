@@ -321,7 +321,7 @@ import { RenderScene } from '../renderer/scene';
                     PRIVATE(
                         (RenderData&, mData, _)
                     );
-                    EXPLICIT_CNTR(mData);
+                    CNTR_NO_DEFAULT(mData);
                     TS_FUNCTIONS(R"(setMat4 (name: string, mat: Mat4): void {
 
 }
@@ -429,7 +429,7 @@ protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<PipelineScen
 )");
                 }
 
-                STRUCT(RasterQueue) {
+                STRUCT(RasterQueue, .mFlags = NO_DEFAULT_CNTR) {
                     INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
@@ -437,7 +437,7 @@ protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<PipelineScen
                         (RenderQueueData&, mQueue, _)
                         (pipeline::PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mPipeline);
+                    CNTR_NO_DEFAULT(mRenderGraph, mVertID, mQueue, mPipeline);
                     TS_FUNCTIONS(R"(addSceneOfCamera (camera: Camera, name = 'Camera'): RasterQueue {
     const sceneData = new SceneData(name);
     sceneData.camera = camera;
@@ -464,7 +464,7 @@ addFullscreenQuad (shader: string, name = 'Quad'): RasterQueue {
 )");
                 }
                                                 
-                STRUCT(RasterPass) {
+                STRUCT(RasterPass, .mFlags = NO_DEFAULT_CNTR) {
                     INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
@@ -472,7 +472,7 @@ addFullscreenQuad (shader: string, name = 'Quad'): RasterQueue {
                         (RasterPassData&, mPass, _)
                         (pipeline::PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mPipeline);
+                    CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass, mPipeline);
                     TS_FUNCTIONS(R"(addRasterView (name: string, view: RasterView) {
     this._pass.rasterViews.set(name, view);
 }
@@ -516,7 +516,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
 )");
                 }
 
-                STRUCT(ComputeQueue) {
+                STRUCT(ComputeQueue, .mFlags = NO_DEFAULT_CNTR) {
                     INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
@@ -524,7 +524,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (RenderQueueData&, mQueue, _)
                         (pipeline::PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mQueue, mPipeline);
+                    CNTR_NO_DEFAULT(mRenderGraph, mVertID, mQueue, mPipeline);
                     TS_FUNCTIONS(R"(addDispatch (shader: string,
     threadGroupCountX: number,
     threadGroupCountY: number,
@@ -540,7 +540,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
 )");
                 }
 
-                STRUCT(ComputePass) {
+                STRUCT(ComputePass, .mFlags = NO_DEFAULT_CNTR) {
                     INHERITS(Setter);
                     PRIVATE(
                         (RenderGraph&, mRenderGraph, _)
@@ -548,7 +548,7 @@ addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
                         (ComputePassData&, mPass, _)
                         (pipeline::PipelineSceneData&, mPipeline, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass, mPipeline);
+                    CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass, mPipeline);
                     TS_FUNCTIONS(R"(addComputeView (name: string, view: ComputeView) {
     if (this._pass.computeViews.has(name)) {
         this._pass.computeViews.get(name)?.push(view);
@@ -577,7 +577,7 @@ addDispatch (shader: string,
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (MovePassData&, mPass, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
+                    CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass);
                     TS_FUNCTIONS(R"(addMove (pair: MovePair) {
     this._pass.movePairs.push(pair);
 }
@@ -590,7 +590,7 @@ addDispatch (shader: string,
                         (const uint32_t, mVertID, 0xFFFFFFFF)
                         (CopyPassData&, mPass, _)
                     );
-                    EXPLICIT_CNTR(mRenderGraph, mVertID, mPass);
+                    CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass);
                     TS_FUNCTIONS(R"(addCopy (pair: CopyPair) {
     this._pass.copyPairs.push(pair);
 }

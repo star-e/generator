@@ -1017,6 +1017,9 @@ struct SyntaxGraph {
     std::pmr::string getDependentName(std::string_view ns, vertex_descriptor vertID,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
 
+    std::pmr::string getDependentCppName(std::string_view ns, vertex_descriptor vertID,
+        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+
     vertex_descriptor lookupType(std::string_view currentScope, std::string_view dependentName,
         std::pmr::memory_resource* scratch) const;
 
