@@ -1007,7 +1007,7 @@ std::pmr::string CppStructBuilder::generateCppConstructors() const {
                 for (const auto& cntr : s.mConstructors) {
                     if (bPmr) {
                         oss << "\n";
-                        OSS << generateConstructorSignature(cntr, false) << "\n";
+                        OSS << structName << "::" << generateConstructorSignature(cntr, false) << "\n";
                         generateCntr(oss, space, *this, g, s, cntr, scratch);
                         needNewLine = true;
                     }
@@ -1109,8 +1109,6 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
     if (bInline) {
         if (bDLL && bPmr)
             oss << mAPI << "_API ";
-    } else {
-        oss << name << "::";
     }
 
     int count = 0;

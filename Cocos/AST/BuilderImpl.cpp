@@ -1117,8 +1117,13 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
-        oss << "#include <cocos/renderer/pipeline/GraphImpl.h>\n";
         OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
+        oss << "#include <cocos/renderer/pipeline/GraphImpl.h>\n";
+        oss << "#include <cocos/renderer/pipeline/Overload.h>\n";
+        oss << "#include <cocos/renderer/pipeline/PathUtils.h>\n";
+        oss << "#include <cocos/renderer/pipeline/GslUtils.h>\n";
+        oss << "#include <cocos/renderer/pipeline/invoke.hpp>\n";
+        oss << "#include <boost/utility/string_view.hpp>\n";
 
         copyString(oss, generateGraphs_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
@@ -1406,6 +1411,7 @@ int ModuleBuilder::compile() {
             }
             if (s.hasVertexProperty()) {
                 addMember(vertexID, true, builder.vertexPropertyType(), "mProperty");
+                addConstructor(vertexID, { "mProperty" }, false);
             }
             if (s.isPolymorphic()) {
                 addMember(vertexID, true, "vertex_handle_type", "mHandle");

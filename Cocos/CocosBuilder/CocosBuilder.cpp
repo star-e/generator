@@ -41,7 +41,7 @@ int main() {
     std::filesystem::path typescriptFolder = "../../../engine";
     std::filesystem::path cppFolder = "../../../engine-native";
 
-    ModuleBuilder builder("cocos", cppFolder, typescriptFolder, scratch);
+    ModuleBuilder builder("cc", cppFolder, typescriptFolder, scratch);
 
     // type registration
     {
@@ -98,6 +98,22 @@ int main() {
     {
         auto content = readFile("Map.h");
         updateFile(cppFolder / "cocos/renderer/pipeline/Map.h", content);
+    }
+    {
+        auto content = readFile("GslUtils.h");
+        updateFile(cppFolder / "cocos/renderer/pipeline/GslUtils.h", content);
+    }
+    {
+        auto content = readFile("Overload.h");
+        updateFile(cppFolder / "cocos/renderer/pipeline/Overload.h", content);
+    }
+    {
+        auto content = readFile("PathUtils.h");
+        updateFile(cppFolder / "cocos/renderer/pipeline/PathUtils.h", content);
+    }
+    {
+        auto content = readFile("invoke.hpp");
+        updateFile(cppFolder / "cocos/renderer/pipeline/invoke.hpp", content);
     }
     // update cmakelists
     if (true) {

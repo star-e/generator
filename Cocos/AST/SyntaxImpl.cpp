@@ -553,6 +553,61 @@ SyntaxGraph::vertex_descriptor SyntaxGraph::getFirstMemberUtf8(vertex_descriptor
         });
 }
 
+bool SyntaxGraph::isPathPmr(const Graph& s) const noexcept {
+    Expects(s.mNamed);
+    const auto& g = *this;
+    if (s.mNamedConcept.mComponent) {
+        const auto& c = s.getComponent(s.mNamedConcept.mComponentName);
+        const auto componentID = locate(c.mValuePath, g);
+        if (s.mNamedConcept.mComponentMemberName.empty()) {
+            return g.isPmr(componentID);
+        } else {
+            return visit_vertex(
+                componentID, g,
+                [&](const Composition_ auto& s1) {
+                    for (const auto& member : s1.mMembers) {
+                        if (member.mMemberName == s.mNamedConcept.mComponentMemberName) {
+                            auto memberID = locate(member.mTypePath, g);
+                            return g.isPmr(memberID);
+                        }
+                    }
+                    // should never reach here
+                    Expects(false);
+                    return false;
+                },
+                [&](const auto&) {
+                    // should never reach here
+                    Expects(false);
+                    return false;
+                });
+        }
+    } else {
+        auto vpID = locate(s.mVertexProperty, g);
+        if (s.mNamedConcept.mComponentMemberName.empty()) {
+            return g.isPmr(vpID);
+        } else {
+            return visit_vertex(
+                vpID, g,
+                [&](const Composition_ auto& s1) {
+                    for (const auto& member : s1.mMembers) {
+                        if (member.mMemberName == s.mNamedConcept.mComponentMemberName) {
+                            auto memberID = locate(member.mTypePath, g);
+                            return g.isPmr(memberID);
+                        }
+                    }
+                    // should never reach here
+                    Expects(false);
+                    return false;
+                },
+                [&](const auto&) {
+                    // should never reach here
+                    Expects(false);
+                    return false;
+                });
+        }
+    }
+}
+
 std::pmr::string SyntaxGraph::getTypePath(vertex_descriptor vertID,
     std::pmr::memory_resource* mr) const {
     const auto& g = *this;

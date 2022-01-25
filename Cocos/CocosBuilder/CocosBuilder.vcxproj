@@ -250,7 +250,11 @@
     <ClInclude Include="GraphTypes.h" />
     <ClInclude Include="GraphUtils.h" />
     <ClInclude Include="GraphView.h" />
+    <ClInclude Include="GslUtils.h" />
+    <ClInclude Include="invoke.hpp" />
     <ClInclude Include="Map.h" />
+    <ClInclude Include="Overload.h" />
+    <ClInclude Include="PathUtils.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

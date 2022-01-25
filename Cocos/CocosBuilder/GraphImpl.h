@@ -1,12 +1,15 @@
 #pragma once
 #include <functional>
-#include <compare>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/graph/adjacency_iterator.hpp>
 #include <boost/graph/properties.hpp>
+#include <boost/container/pmr/vector.hpp>
 #include <cocos/renderer/pipeline/GraphTypes.h>
+#include <cocos/renderer/pipeline/GslUtils.h>
 
-namespace cc::Impl {
+namespace cc {
+
+namespace Impl {
 
 //--------------------------------------------------------------------
 // PropertyMap
@@ -501,12 +504,12 @@ inline void reindexEdgeList(IncidenceList& el, VertexDescriptor u) {
 
 template<class Tag, class Container, class HandleDescriptor>
 inline void reindexVectorHandle(Container& container, HandleDescriptor u) {
-    static_assert(std::is_arithmetic_v<HandleDescriptor>);
+    static_assert(std::is_arithmetic_v<HandleDescriptor>, "reindexVectorHandle");
 
     using handle_type = ValueHandle<Tag, HandleDescriptor>;
     for (auto& vert : container) {
-        if (std::holds_alternative<handle_type>(vert.mHandle)) {
-            auto& v = std::get<handle_type>(vert.mHandle).mValue;
+        if (boost::variant2::holds_alternative<handle_type>(vert.mHandle)) {
+            auto& v = boost::variant2::get<handle_type>(vert.mHandle).mValue;
             if (v > u) {
                 --v;
             }
@@ -593,7 +596,7 @@ inline void removeVectorOwner(Graph& g, typename Graph::vertex_descriptor u) {
 }
 
 // AddressableGraph
-template<class AddressableGraph>
+template <class AddressableGraph>
 inline std::ptrdiff_t pathLength(typename AddressableGraph::vertex_descriptor u, const AddressableGraph& g,
     typename AddressableGraph::vertex_descriptor parentID = AddressableGraph::null_vertex()) noexcept {
     if (u == parentID)
@@ -603,14 +606,14 @@ inline std::ptrdiff_t pathLength(typename AddressableGraph::vertex_descriptor u,
 
     std::ptrdiff_t sz = 0;
     while (u != parentID) {
-        sz += std::ssize(get(pmap, u)) + 1;
+        sz += static_cast<std::ptrdiff_t>(get(pmap, u).size()) + 1;
         u = parent(u, g);
     }
 
     return sz;
 }
 
-template<class AddressableGraph, class CharT, class Allocator>
+template <class AddressableGraph, class CharT, class Allocator>
 inline void pathComposite(
     std::basic_string<CharT, std::char_traits<CharT>, Allocator>& str,
     std::ptrdiff_t& sz,
@@ -620,10 +623,10 @@ inline void pathComposite(
     const auto& pmap = get(boost::vertex_name, g);
 
     while (u != parentID) {
-        Expects(sz <= std::ssize(str));
+        Expects(sz <= static_cast<std::ptrdiff_t>(str.size()));
 
         const auto& name = get(pmap, u);
-        sz -= std::ssize(name) + 1;
+        sz -= static_cast<std::ptrdiff_t>(name.size()) + 1;
         Ensures(sz >= 0);
         str[sz] = '/';
         std::copy(name.begin(), name.end(), str.begin() + sz + 1);
@@ -640,7 +643,7 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type&, Color
     using key_type = Key;
     using category = boost::lvalue_property_map_tag;
 
-    ColorMap(std::pmr::vector<boost::default_color_type>& vec) noexcept
+    ColorMap(boost::container::pmr::vector<boost::default_color_type>& vec) noexcept
         : mContainer{ &vec }
     {}
 
@@ -651,10 +654,12 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type&, Color
         return this->operator[](v);
     }
 
-    std::pmr::vector<boost::default_color_type>* mContainer = nullptr;
+    boost::container::pmr::vector<boost::default_color_type>* mContainer = nullptr;
 };
 
-}
+} // namespace Impl
+
+} // namespace cc
 
 namespace std {
 

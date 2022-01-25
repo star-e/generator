@@ -638,7 +638,7 @@ struct Addressable {
     Addressable& operator=(Addressable const& rhs) = default;
     ~Addressable() noexcept;
 
-    bool mUtf8 = true;
+    bool mUtf8 = false;
     bool mPathPropertyMap = false;
     PathIndexType mType = Map_{};
     std::pmr::string mMemberName;
@@ -1004,6 +1004,9 @@ struct SyntaxGraph {
     vertex_descriptor getMemberType(vertex_descriptor vertID, std::string_view member) const noexcept;
     vertex_descriptor getFirstMemberString(vertex_descriptor vertID) const noexcept;
     vertex_descriptor getFirstMemberUtf8(vertex_descriptor vertID) const noexcept;
+
+    // graph
+    bool isPathPmr(const Graph& s) const noexcept;
 
     // general
     std::pmr::string getTypePath(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
