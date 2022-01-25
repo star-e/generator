@@ -47,7 +47,7 @@ import { RenderScene } from '../renderer/scene';
 )") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
-                FLAG(ResourceFlags) {
+                FLAG_CLASS(ResourceFlags) {
                     FLAGS(
                         (None, 0)
                         (AllowRenderTarget, 0x1)
@@ -60,7 +60,7 @@ import { RenderScene } from '../renderer/scene';
                     );
                 }
 
-                ENUM(TextureLayout) {
+                ENUM_CLASS(TextureLayout) {
                     ENUMS(Unknown, RowMajor, UndefinedSwizzle, StandardSwizzle);
                 }
 
@@ -128,17 +128,17 @@ import { RenderScene } from '../renderer/scene';
                 //    );
                 //}
 
-                ENUM(AttachmentType) {
+                ENUM_CLASS(AttachmentType) {
                     ENUMS(RenderTarget, DepthStencil);
                 }
-                ENUM(AccessType) {
+                ENUM_CLASS(AccessType) {
                     ENUMS(Read, ReadWrite, Write);
                 }
 
                 STRUCT(RasterView) {
                     PUBLIC(
                         (std::string, mSlotName, _)
-                        (AccessType, mAccessType, Write)
+                        (AccessType, mAccessType, AccessType::Write)
                         (AttachmentType, mAttachmentType, _)
                         (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
                         (gfx::StoreOp, mStoreOp, gfx::StoreOp::STORE)
@@ -152,7 +152,7 @@ import { RenderScene } from '../renderer/scene';
                     CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor);
                 }
 
-                ENUM(ClearValueType) {
+                ENUM_CLASS(ClearValueType) {
                     ENUMS(Float, Int);
                 }
 

@@ -246,7 +246,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     ) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
-                ENUM(UpdateFrequency) {
+                ENUM_CLASS(UpdateFrequency) {
                     ENUMS(PerInstance, PerBatch, PerQueue, PerPass, Count);
                 }
 
@@ -280,10 +280,10 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 TAGS((_), Managed_, Persistent_, Backbuffer_, Memoryless_);
                 VARIANT(ResourceResidency, (Managed_, Persistent_, Backbuffer_, Memoryless_));
 
-                ENUM(QueueHint) {
-                    ENUMS(Opaque, Cutout, Transparent, QueueCount);
+                ENUM_CLASS(QueueHint) {
+                    ENUMS(Opaque, Cutout, Transparent, Count);
                 }
-                ENUM(ResourceDimension) {
+                ENUM_CLASS(ResourceDimension) {
                     ENUMS(Buffer, Texture1D, Texture2D, Texture3D);
                 }
 
@@ -292,7 +292,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                         (uint32_t, mCount, 1)(uint32_t, mQuality, 0));
                 }
 
-                ENUM(NodeType) {
+                ENUM_CLASS(NodeType) {
                     ENUMS(Internal, Leaf);
                 }
             } // namespace render

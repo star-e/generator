@@ -701,8 +701,12 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                 if (bPmr) {
                     OSS << generateConstructorSignature(cntr, true) << ";\n";
                 } else {
-                    OSS << generateConstructorSignature(cntr, true) << "\n";
-                    generateCntr(oss, space, *this, g, s, cntr, scratch);
+                    if (traits.mFlags & GenerationFlags::CUSTOM_CNTR) {
+                        OSS << generateConstructorSignature(cntr, true) << ";\n";
+                    } else {
+                        OSS << generateConstructorSignature(cntr, true) << "\n";
+                        generateCntr(oss, space, *this, g, s, cntr, scratch);
+                    }
                 }
             }
             
@@ -727,10 +731,11 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                 switch (needMove) {
                 case ImplEnum::Inline:
                     OSS << name << "(" << name << "&& rhs)";
-                    if (bNoexcept)
-                        oss << " noexcept";
-                    oss << "\n";
-                    generateMove(oss, space, *this, g, s, scratch);
+                    if (bNoexcept) {
+                        oss << " noexcept = default;\n";
+                    } else {
+                        oss << " = default;\n";
+                    }
                     break;
                 case ImplEnum::Separated:
                     OSS << api << name << "(" << name << "&& rhs)";
@@ -792,11 +797,19 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                         }
                         oss << ";\n";
                     } else {
-                        OSS << name << "(" << name << "&& rhs) = default;\n";
+                        if (bNoexcept) {
+                            OSS << name << "(" << name << "&& rhs) noexcept = default;\n";
+                        } else {
+                            OSS << name << "(" << name << "&& rhs) = default;\n";
+                        }
                     }
                 }
                 if (needMove == ImplEnum::Inline) {
-                    OSS << name << "(" << name << "&& rhs) = default;\n";
+                    if (bNoexcept) {
+                        OSS << name << "(" << name << "&& rhs) noexcept = default;\n";
+                    } else {
+                        OSS << name << "(" << name << "&& rhs) = default;\n";
+                    }
                 }
                 if (needCopy != ImplEnum::None) {
                     OSS << name << "(" << name << " const& rhs) = delete;\n";
@@ -805,11 +818,25 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
 
             switch (needMove) {
             case ImplEnum::Inline:
-            case ImplEnum::Separated:
-                if (bDLL) {
-                    OSS << api << name << "& operator=(" << name << "&& rhs);\n";
+                if (bNoexcept && !bPmr) {
+                    OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
                 } else {
                     OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
+                }
+                break;
+            case ImplEnum::Separated:
+                if (bDLL) {
+                    if (bNoexcept && !bPmr) {
+                        OSS << api << name << "& operator=(" << name << "&& rhs) noexcept;\n";
+                    } else {
+                        OSS << api << name << "& operator=(" << name << "&& rhs);\n";
+                    }
+                } else {
+                    if (bNoexcept && !bPmr) {
+                        OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
+                    } else {
+                        OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
+                    }
                 }
                 break;
             case ImplEnum::Delete:

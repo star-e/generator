@@ -352,9 +352,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addEnum(std::string_view name, Tra
         g, parentID);
 
     auto& e = get<Enum>(vertID, g);
-    if (traits.mClass) {
-        e.mUnderlyingType = "uint32_t";
-    }
+
     return vertID;
 }
 
