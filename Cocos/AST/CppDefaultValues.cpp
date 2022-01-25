@@ -149,10 +149,10 @@ void addCppDefaultValues(ModuleBuilder& builder) {
     }
 
     NAMESPACE(cc) {
-        MAP(Map);
-        PMR_MAP(PmrMap);
-        MAP(UnorderedMap);
-        PMR_MAP(PmrUnorderedMap);
+        MAP(TransparentMap);
+        MAP(TransparentMultiMap);
+        PMR_MAP(PmrTransparentMap);
+        PMR_MAP(PmrTransparentMultiMap);
     }
 }
 

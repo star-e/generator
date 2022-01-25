@@ -792,9 +792,9 @@ void ModuleBuilder::addGraphComponent(SyntaxGraph::vertex_descriptor vertID,
     c.mVector = true;
     bool bPmr = g.isPmr(valueID) || g.isPmr(vertID);
     if (bPmr) {
-        c.mContainerPath = "/std/pmr/vector";
+        c.mContainerPath = "/boost/container/pmr/vector";
     } else {
-        c.mContainerPath = "/std/vector";
+        c.mContainerPath = "/boost/container/vector";
     }
 }
 
@@ -827,9 +827,9 @@ void ModuleBuilder::addGraphPolymorphic(SyntaxGraph::vertex_descriptor vertID,
     c.mMemberName = memberName;
     bool bPmr = g.isPmr(valueID) || g.isPmr(vertID);
     if (bPmr) {
-        c.mContainerPath = "/std/pmr/vector";
+        c.mContainerPath = "/boost/container/pmr/vector";
     } else {
-        c.mContainerPath = "/std/vector";
+        c.mContainerPath = "/boost/container/vector";
     }
 }
 
@@ -1081,8 +1081,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include <boost/container/pmr/vector.hpp>\n";
                 OSS << "#include <cocos/renderer/pipeline/GraphTypes.h>\n";
             }
-            if (g.moduleHasMap(modulePath, "/cc/PmrMap")
-                || g.moduleHasMap(modulePath, "/cc/Map")) {
+            if (g.moduleHasMap(modulePath, "/cc/PmrTransparentMap")
+                || g.moduleHasMap(modulePath, "/cc/TransparentMap")) {
                 OSS << "#include <cocos/renderer/pipeline/Map.h>\n";
             }
             if (!moduleInfo.mHeader.empty()) {
@@ -1406,6 +1406,9 @@ int ModuleBuilder::compile() {
                     addMember(vertexID, true, builder.inEdgeListType(), "mInEdges");
                 }
             }
+            if (s.hasVertexProperty()) {
+                addMember(vertexID, true, builder.vertexPropertyType(), "mProperty");
+            }
             if (s.isPolymorphic()) {
                 addMember(vertexID, true, "vertex_handle_type", "mHandle");
             }
@@ -1457,11 +1460,11 @@ int ModuleBuilder::compile() {
             auto typeName = g.getDependentName(mCurrentScope, conceptID, scratch, scratch);
             auto listID = g.null_vertex();
             if (bPmr) {
-                listID = c.isVector() ? locate("/std/pmr/vector", g)
-                                      : locate("/std/pmr/list", g);
+                listID = c.isVector() ? locate("/boost/container/pmr/vector", g)
+                                      : locate("/boost/container/pmr/list", g);
             } else {
-                listID = c.isVector() ? locate("/std/vector", g)
-                                      : locate("/std/list", g);
+                listID = c.isVector() ? locate("/boost/container/vector", g)
+                                      : locate("/boost/container/list", g);
             }
             Ensures(listID != g.null_vertex());
             oss << g.getDependentName(mCurrentScope, listID, scratch, scratch);
@@ -1500,15 +1503,15 @@ int ModuleBuilder::compile() {
                         std::pmr::string indexName(scratch);
                         if (bPmr) {
                             if (s.mAddressableConcept.mUtf8) {
-                                indexName = "PmrMap<std::pmr::u8string, vertex_descriptor>";
+                                indexName = "PmrTransparentMap<std::string, vertex_descriptor>";
                             } else {
-                                indexName = "PmrMap<std::pmr::string, vertex_descriptor>";
+                                indexName = "PmrTransparentMap<std::string, vertex_descriptor>";
                             }
                         } else {
                             if (s.mAddressableConcept.mUtf8) {
-                                indexName = "Map<std::u8string, vertex_descriptor>";
+                                indexName = "TransparentMap<std::string, vertex_descriptor>";
                             } else {
-                                indexName = "Map<std::string, vertex_descriptor>";
+                                indexName = "TransparentMap<std::string, vertex_descriptor>";
                             }
                         }
                         addMember(vertID, true, indexName,

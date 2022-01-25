@@ -99,15 +99,15 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
                 STRUCT(LayoutData) {
                     PUBLIC(
-                        ((PmrMap<ParameterType, ConstantBuffer>), mConstantBuffers, _)
-                        ((PmrMap<ParameterType, DescriptorSet>), mDescriptorSets, _)
+                        ((PmrTransparentMap<ParameterType, ConstantBuffer>), mConstantBuffers, _)
+                        ((PmrTransparentMap<ParameterType, DescriptorSet>), mDescriptorSets, _)
                     );
                 }
                 //-----------------------------------------------------------
                 // Shader Program
                 STRUCT(ShaderProgramData) {
                     PUBLIC(
-                        ((PmrMap<UpdateFrequency, LayoutData>), mLayouts, _)
+                        ((PmrTransparentMap<UpdateFrequency, LayoutData>), mLayouts, _)
                     );
                 }
 
@@ -122,9 +122,9 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
                 STRUCT(ShaderNodeData) {
                     PUBLIC(
-                        (std::pmr::string, mRootSignature, _)
+                        (std::string, mRootSignature, _)
                         (boost::container::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
-                        ((PmrMap<std::pmr::string, uint32_t>), mShaderIndex, _)
+                        ((PmrTransparentMap<std::string, uint32_t>), mShaderIndex, _)
                     );
                 }
 
@@ -136,7 +136,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     ADDRESSABLE_GRAPH(mPathIndex);
 
                     COMPONENT_GRAPH(
-                        (Name_, std::pmr::string, mName)
+                        (Name_, std::string, mName)
                         (Update_, UpdateFrequency, mUpdateFrequencies)
                         (Layout_, LayoutData, mLayouts)
                     );

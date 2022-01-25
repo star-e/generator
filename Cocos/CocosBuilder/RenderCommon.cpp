@@ -32,11 +32,15 @@ namespace Cocos::Meta {
 
 void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(Camera,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "Camera.h",
         .mTypescriptFolder = "cocos/core/renderer/scene",
         .mTypescriptFilePrefix = "camera",
     ) {
         NAMESPACE(cc) {
-            IMPORT_CLASS(Camera);
+            NAMESPACE(scene) {
+                IMPORT_STRUCT(Camera);
+            }
         }
     }
     MODULE(Ambient,
@@ -64,11 +68,15 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         }
     }
     MODULE(PipelineSceneData,
+        .mFolder = "cocos/renderer/pipeline",
+        .mFilePrefix = "PipelineSceneData.h",
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "pipeline-scene-data",
     ) {
         NAMESPACE(cc) {
-            IMPORT_CLASS(PipelineSceneData);
+            NAMESPACE(pipeline) {
+                IMPORT_CLASS(PipelineSceneData);
+            }
         }
     }
 
@@ -224,7 +232,10 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 IMPORT_CLASS(GlobalBarrier);
                 IMPORT_CLASS(TextureBarrier);
             } // namespace gfx
-        }
+        } // namespace cc
+        PROJECT_TS(std::unique_ptr<cc::gfx::Buffer>, Buffer);
+        PROJECT_TS(std::unique_ptr<cc::gfx::Texture>, Texture);
+        PROJECT_TS(std::unique_ptr<cc::gfx::Sampler>, Sampler);
     }
 
     MODULE(RenderCommon,

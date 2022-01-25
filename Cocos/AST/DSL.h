@@ -100,7 +100,10 @@ builder.addEnumElement(vertID, \
         Traits{ .mImport = true, .mClass = false, .mPmr = true }); true)
 
 #define STRUCT(NAME, ...) \
-    if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME), __VA_ARGS__); true)
+    for (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); \
+        s.mVertexDescriptor != SyntaxGraph::null_vertex(); \
+        builder.syntax().propagate(s.mVertexDescriptor), \
+        s.mVertexDescriptor = SyntaxGraph::null_vertex())
 
 #define CNTR_MEMBER(r, _, i, MEMBER) BOOST_PP_STRINGIZE(MEMBER),
 
@@ -236,3 +239,7 @@ BOOST_PP_SEQ_FOR_EACH_I(POLYMORPHIC_GRAPH_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(
 // Typescript
 #define PROJECT_TS(TYPE, JS) \
 	builder.projectTypescript(BOOST_PP_STRINGIZE(TYPE), BOOST_PP_STRINGIZE(JS))
+
+#define TS_INIT(MEMBER, VALUE) \
+    builder.setTypescriptInitValue(s.mVertexDescriptor, \
+        BOOST_PP_STRINGIZE(MEMBER), BOOST_PP_STRINGIZE(VALUE))

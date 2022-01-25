@@ -188,6 +188,9 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (m.mPointer) {
                 oss << "*";
             }
+            if (m.mReference) {
+                oss << "&";
+            }
             oss << " " << m.mMemberName;
             if (!m.mDefaultValue.empty()) {
                 oss << " = " << m.mDefaultValue;
@@ -376,8 +379,11 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
     for (uint32_t i = 0, count = 0; const auto& m : s.mMembers) {
         auto memberID = locate(m.mTypePath, g);
         bool bPmr = g.isPmr(memberID);
-        if (m.mReference || m.mPointer)
+        bool bCopyParam = false;
+        if (m.mReference || m.mPointer) {
             bPmr = false;
+            bCopyParam = true;
+        }
         bool isParam = false;
         isParam = std::find(cntr.mIndices.begin(), cntr.mIndices.end(), i) != cntr.mIndices.end();
 
@@ -400,7 +406,11 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
                     oss << m.mMemberName << "(std::move(" << paramName << "))";
                 }
             } else {
-                oss << m.mMemberName << "(std::move(" << paramName << ")";
+                if (bCopyParam) {
+                    oss << m.mMemberName << "(" << paramName << "";
+                } else {
+                    oss << m.mMemberName << "(std::move(" << paramName << ")";
+                }
                 if (bPmr) {
                     oss << ", alloc)";
                 } else {

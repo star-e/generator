@@ -1271,12 +1271,20 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
                 oss << "\n";
             }
             OSS << "inline boost::integer_range<vertex_descriptor> vertex_set() const noexcept {\n";
+#ifdef CC_USE_GSL
             OSS << "    return boost::integer_range<vertex_descriptor>(0, gsl::narrow_cast<vertices_size_type>(mVertices.size()));\n";
+#else
+            OSS << "    return boost::integer_range<vertex_descriptor>(0, static_cast<vertices_size_type>(mVertices.size()));\n";
+#endif
             OSS << "}\n";
 
             oss << "\n";
             OSS << "inline vertex_descriptor current_id() const noexcept {\n";
+#ifdef CC_USE_GSL
             OSS << "    return gsl::narrow_cast<vertex_descriptor>(mVertices.size());\n";
+#else
+            OSS << "    return static_cast<vertex_descriptor>(mVertices.size());\n";
+#endif
             OSS << "}\n";
             if (s.mColorMap) {
                 oss << "\n";
@@ -1403,7 +1411,7 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
     const auto& s = *mGraph;
     std::pmr::string space(get_allocator());
 
-    if (!s.mAddressable)
+    if (!s.mReferenceGraph)
         return oss.str();
 
     oss << "\n";

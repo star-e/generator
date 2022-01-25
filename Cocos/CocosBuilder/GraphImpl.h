@@ -8,63 +8,6 @@
 
 namespace cc::Impl {
 
-// OwnershipIterator (Bidirectional, !EdgeProperty)
-template<class VertexIterator, class OutEdgeIterator, class Graph>
-class OwnershipIterator {
-public:
-    using iterator_category = std::forward_iterator_tag;
-    using value_type = typename OutEdgeIterator::value_type;
-    using reference = typename OutEdgeIterator::reference;
-    using pointer = typename OutEdgeIterator::pointer;
-    using difference_type = typename OutEdgeIterator::difference_type;
-    using distance_type = difference_type;
-
-    OwnershipIterator() = default;
-    template<class G>
-    OwnershipIterator(VertexIterator b, VertexIterator c, VertexIterator e, const G& g) noexcept
-        : mBegin(b), mCurr(c), mEnd(e), mG(&g)
-    {
-        if (mCurr != mEnd) {
-            while (mCurr != mEnd && num_children(*mCurr, *mG) == 0)
-                ++mCurr;
-            if (mCurr != mEnd)
-                mEdges = children(*mCurr, *mG);
-        }
-    }
-
-    OwnershipIterator& operator++() noexcept {
-        ++mEdges->first;
-        if (mEdges->first == mEdges->second) {
-            ++mCurr;
-            while (mCurr != mEnd && num_children(*mCurr, *mG) == 0)
-                ++mCurr;
-            if (mCurr != mEnd)
-                mEdges = children(*mCurr, *mG);
-        }
-        return *this;
-    }
-    OwnershipIterator operator++(int) noexcept {
-        OwnershipIterator tmp = *this;
-        ++(*this);
-        return tmp;
-    }
-    value_type operator*() const noexcept {
-        return *mEdges->first;
-    }
-    bool operator==(const OwnershipIterator& x) const noexcept {
-        return mCurr == x.mCurr && (mCurr == mEnd || mEdges->first == x.mEdges->first);
-    }
-    bool operator!=(const OwnershipIterator& x) const noexcept {
-        return mCurr != x.mCurr || (mCurr != mEnd && mEdges->first != x.mEdges->first);
-    }
-protected:
-    VertexIterator mBegin = {};
-    VertexIterator mCurr = {};
-    VertexIterator mEnd = {};
-    std::optional<std::pair<OutEdgeIterator, OutEdgeIterator>> mEdges;
-    const Graph* mG = nullptr;
-};
-
 //--------------------------------------------------------------------
 // PropertyMap
 //--------------------------------------------------------------------
