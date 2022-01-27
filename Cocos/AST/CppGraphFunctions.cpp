@@ -3641,14 +3641,14 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << ") {\n";
             {
                 INDENT();
-                OSS << "return add_vertex(";
-                if (s.isPolymorphic()) {
-                    oss << "t,\n";
-                } else {
-                    oss << "std::piecewise_construct,\n";
-                }
+                OSS << "return add_vertex(\n";
                 {
                     INDENT();
+                    if (s.isPolymorphic()) {
+                        OSS << "t,\n";
+                    } else {
+                        OSS << "std::piecewise_construct,\n";
+                    }
                     if (s.hasVertexProperty()) {
                         OSS << "std::forward_as_tuple(std::move(vp)),\n";
                     }

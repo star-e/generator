@@ -653,9 +653,9 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapName(bool bConst) const {
         } else {
             OSS << "" << cpp.getDependentName(s.mVertexProperty) << ",\n";
         }
-        OSS << (bConst ? "const " : "") << cpp.getDependentName(s.mVertexProperty) << "&\n";
+        OSS << (bConst ? "const " : "") << cpp.getDependentName(s.mVertexProperty) << "&";
     }
-    OSS << ">";
+    oss << ">";
 
     return oss.str();
 }
@@ -709,20 +709,20 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapMemberName(bool bConst) const
         }
         if (!isString) {
             OSS << (bConst ? "const " : "") << "T&,\n";
-            OSS << "T " << cpp.getDependentName(s.mVertexProperty) << "::*\n";
+            OSS << "T " << cpp.getDependentName(s.mVertexProperty) << "::*";
         } else {
             // implementation is inappropriate
             Expects(false);
             if (isU8String) {
                 OSS << (bConst ? "const " : "") << "std::pmr::u8string&,\n";
-                OSS << (bConst ? "const " : "") << "std::pmr::u8string " << cpp.getDependentName(s.mVertexProperty) << "::*\n";
+                OSS << (bConst ? "const " : "") << "std::pmr::u8string " << cpp.getDependentName(s.mVertexProperty) << "::*";
             } else {
                 OSS << (bConst ? "const " : "") << "std::pmr::string&,\n";
-                OSS << (bConst ? "const " : "") << "std::pmr::string " << cpp.getDependentName(s.mVertexProperty) << "::*\n";
+                OSS << (bConst ? "const " : "") << "std::pmr::string " << cpp.getDependentName(s.mVertexProperty) << "::*";
             }
         }
     }
-    OSS << ">";
+    oss << ">";
 
     return oss.str();
 }
@@ -819,13 +819,13 @@ std::pmr::string CppGraphBuilder::edgePropertyMapMemberName(bool bConst, std::st
         }
         if (!isString) {
             OSS << (bConst ? "const " : "") << "T&,\n";
-            OSS << "T " << cpp.getDependentName(s.mEdgeProperty) << "::*\n";
+            OSS << "T " << cpp.getDependentName(s.mEdgeProperty) << "::*";
         } else {
             OSS << (bConst ? "const " : "") << stringPath << "&,\n";
-            OSS << stringPath << " " << cpp.getDependentName(s.mEdgeProperty) << "::*\n";
+            OSS << stringPath << " " << cpp.getDependentName(s.mEdgeProperty) << "::*";
         }
     }
-    OSS << ">";
+    oss << ">";
 
     return oss.str();
 }
