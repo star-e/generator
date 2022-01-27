@@ -2600,8 +2600,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             oss << ",\n";
                         }
                         OSS << "[](const " << handleElemType(c, cn, true) << "&) {\n";
-                        OSS << "    return " << name << "::vertex_tag_type{ "
-                            << cpp.getDependentName(c.mTag) << "{} };\n";
+                        OSS << "    return " << name << "::vertex_tag_type{"
+                            << cpp.getDependentName(c.mTag) << "{}};\n";
                         OSS << "}";
                     }
                 }
@@ -2650,15 +2650,15 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             {
                                 INDENT();
                                 if (c.isIntrusive()) {
-                                    OSS << "return " << name << "::" << valueType << "{ ";
+                                    OSS << "return " << name << "::" << valueType << "{";
                                     oss << "&h.mValue";
-                                    oss << " };\n";
+                                    oss << "};\n";
                                 } else {
                                     if (c.isVector()) {
-                                        OSS << "return " << name << "::" << valueType << "{ &g."
-                                            << c.mMemberName << "[h.mValue] };\n";
+                                        OSS << "return " << name << "::" << valueType << "{&g."
+                                            << c.mMemberName << "[h.mValue]};\n";
                                     } else {
-                                        OSS << "return " << name << "::" << valueType << "{ &*h.mValue };\n";
+                                        OSS << "return " << name << "::" << valueType << "{&*h.mValue};\n";
                                     }
                                 }
                             }
