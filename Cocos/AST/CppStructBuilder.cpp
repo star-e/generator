@@ -384,7 +384,7 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
     std::pmr::memory_resource* scratch) {
     const auto vertID = cpp.mCurrentVertex;
     const auto& bases = get(g.inherits, g, vertID).mBases;
-    INDENT();
+
     uint32_t count = 0;
 
     for (const auto& base : bases) {
@@ -411,8 +411,8 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
 
         bool bPmr = g.isPmr(baseID);
         if (count++) {
-            oss << "\n";
-            OSS << ", ";
+            oss << ",\n";
+            OSS << "  ";
         } else {
             OSS << ": ";
         }
@@ -441,8 +441,8 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
 
         if (isParam) {
             if (count++) {
-                oss << "\n";
-                OSS << ", ";
+                oss << ",\n";
+                OSS << "  ";
             } else {
                 OSS << ": ";
             }
@@ -471,8 +471,8 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
             if (!g.isOptional(memberID)) {
                 if (bPmr) {
                     if (count++) {
-                        oss << "\n";
-                        OSS << ", ";
+                        oss << ",\n";
+                        OSS << "  ";
                     } else {
                         OSS << ": ";
                     }
@@ -489,7 +489,6 @@ template <Composition_ T>
 void generateMove(std::ostream& oss, std::pmr::string& space,
     const CppStructBuilder& cpp, const SyntaxGraph& g, const T& s,
     std::pmr::memory_resource* scratch) {
-    INDENT();
     int count = 0;
     const auto optionalID = locate("/std/optional", g);
     for (const auto& m : s.mMembers) {
@@ -498,8 +497,8 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
         if (m.mReference || m.mPointer)
             bPmr = false;
         if (count++) {
-            oss << "\n";
-            OSS << ", ";
+            oss << ",\n";
+            OSS << "  ";
         } else {
             OSS << ": ";
         }
@@ -539,7 +538,6 @@ template <Composition_ T>
 void generateCopy(std::ostream& oss, std::pmr::string& space,
     const CppStructBuilder& cpp, const SyntaxGraph& g, const T& s,
     std::pmr::memory_resource* scratch) {
-    INDENT();
     int count = 0;
     const auto optionalID = locate("/std/optional", g);
     for (const auto& m : s.mMembers) {
@@ -548,8 +546,8 @@ void generateCopy(std::ostream& oss, std::pmr::string& space,
         if (m.mReference || m.mPointer)
             bPmr = false;
         if (count++) {
-            oss << "\n";
-            OSS << ", ";
+            oss << ",\n";
+            OSS << "  ";
         } else {
             OSS << ": ";
         }
