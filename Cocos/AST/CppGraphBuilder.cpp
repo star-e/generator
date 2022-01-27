@@ -1296,7 +1296,7 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
             if (s.mColorMap) {
                 oss << "\n";
                 OSS << "inline boost::container::pmr::vector<boost::default_color_type> colors(boost::container::pmr::memory_resource* mr) const {\n";
-                OSS << "    return boost::container::pmr::vector<boost::default_color_type>{ mVertices.size(), mr };\n";
+                OSS << "    return boost::container::pmr::vector<boost::default_color_type>(mVertices.size(), mr);\n";
                 OSS << "}\n";
             }
         } else {
