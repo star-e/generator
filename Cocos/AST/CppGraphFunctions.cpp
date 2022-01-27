@@ -158,7 +158,7 @@ std::pmr::string clearOutEdges(const Graph& s, std::string_view name,
 
     OSS << "// Bidirectional (OutEdges)\n";
     OSS << "auto& " << outEdgeList << " = g." << out_edge_list << "(u);\n";
-    OSS << "auto outEnd = " << outEdgeList << ".end();\n";
+    OSS << "auto  outEnd" << std::string(std::max(0, int(outEdgeList.size()) - 6), ' ') << " = " << outEdgeList << ".end();\n";
     OSS << "for (auto iter = " << outEdgeList << ".begin(); iter != outEnd; ++iter) {\n";
     {
         INDENT();
@@ -207,7 +207,7 @@ std::pmr::string clearInEdges(const Graph& s, std::string_view name,
     }
 
     OSS << "auto& " << inEdgeList << " = g." << in_edge_list << "(u);\n";
-    OSS << "auto inEnd = " << inEdgeList << ".end();\n";
+    OSS << "auto  inEnd" << std::string(std::max(0, int(inEdgeList.size()) - 5), ' ') << " = " << inEdgeList << ".end();\n";
     OSS << "for (auto iter = " << inEdgeList << ".begin(); iter != inEnd; ++iter) {\n";
     {
         INDENT();
@@ -1106,12 +1106,11 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
                                 if (c.isVector()) {
                                     OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
                                     if (c.isIntrusive()) {
-                                        oss << " std::forward<decltype(args)>(args)... ";
+                                        oss << " std::forward<decltype(args)>(args)...";
                                     } else {
                                         oss << "\n";
                                         OSS << "    gsl::narrow_cast<"
-                                            << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())\n";
-                                        OSS;
+                                            << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
                                     }
                                     oss << "};\n";
 
@@ -1158,13 +1157,12 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
                             OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
                             if (c.isIntrusive()) {
                                 if (propertyParam) {
-                                    oss << " std::forward<ValueT>(val) ";
+                                    oss << " std::forward<ValueT>(val)";
                                 }
                             } else {
                                 oss << "\n";
                                 OSS << "    gsl::narrow_cast<"
-                                    << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())\n";
-                                OSS;
+                                    << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
                             }
                             oss << "};\n";
 
@@ -1274,15 +1272,15 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
         visit(
             overload(
                 [&]<BackInsertionSequence_ T>(T) {
-                    OSS << "auto iter = std::find(outEdgeList.begin(), outEdgeList.end(), "
+                    OSS << "auto  iter        = std::find(outEdgeList.begin(), outEdgeList.end(), "
                         << name << "::out_edge_type(v));\n";
                 },
                 [&]<Associative_ U>(U) {
-                    OSS << "auto iter = outEdgeList.find("
+                    OSS << "auto  iter        = outEdgeList.find("
                         << name << "::out_edge_type(v));\n";
                 }),
             s.mOutEdgeListType);
-        OSS << "bool hasEdge = (iter != outEdgeList.end());\n";
+        OSS << "bool  hasEdge     = (iter != outEdgeList.end());\n";
         OSS << "return {" << name << "::ownership_descriptor(u, v), hasEdge};\n";
     }
     OSS << "}\n";
@@ -1321,7 +1319,7 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
         INDENT();
         copyString(oss, space, std::string(R"(Expects(u != v);
 bool isAncestor = false;
-auto r = parents(v, g);
+auto r          = parents(v, g);
 while (r.first != r.second) {
     v = parent(*r.first, g);
     if (u == v) {
@@ -1351,7 +1349,7 @@ return isAncestor;
     {
         INDENT();
         OSS << name << "::ownerships_size_type numEdges = 0;\n";
-        OSS << "auto range = vertices(g);\n";
+        OSS << "auto" << std::string(std::max(0, int(name.size() + 22) - 4), ' ') << " range    = vertices(g);\n";
         OSS << "for (auto iter = range.first; iter != range.second; ++iter) {\n";
         OSS << "    numEdges += num_children(*iter, g);\n";
         OSS << "}\n";
@@ -1413,15 +1411,15 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             visit(
                 overload(
                     [&]<BackInsertionSequence_ T>(T) {
-                        OSS << "auto iter = std::find(outEdgeList.begin(), outEdgeList.end(), "
+                        OSS << "auto  iter        = std::find(outEdgeList.begin(), outEdgeList.end(), "
                             << name << "::out_edge_type(v));\n";
                     },
                     [&]<Associative_ U>(U) {
-                        OSS << "auto iter = outEdgeList.find("
+                        OSS << "auto  iter        = outEdgeList.find("
                             << name << "::out_edge_type(v));\n";
                     }),
                 s.mOutEdgeListType);
-            OSS << "bool hasEdge = (iter != outEdgeList.end());\n";
+            OSS << "bool  hasEdge     = (iter != outEdgeList.end());\n";
             if (s.hasEdgeProperty() || s.needEdgeList()) {
                 OSS << "return {" << name << "::edge_descriptor(u, v, (hasEdge ? &(*iter).get_property() : nullptr)), hasEdge};\n";
             } else {
@@ -1530,6 +1528,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             {
                 INDENT();
                 OSS << name << "::edges_size_type numEdges = 0;\n";
+                oss << "\n";
                 OSS << "auto range = vertices(g);\n";
                 OSS << "for (auto iter = range.first; iter != range.second; ++iter) {\n";
                 OSS << "    numEdges += out_degree(*iter, g);\n";
@@ -1690,7 +1689,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 {
                     INDENT();
                     if (s.isDirectedOnly()) {
-                        OSS << "auto e = *iter;\n";
+                        OSS << "auto  e           = *iter;\n";
                         OSS << "auto& outEdgeList = g.out_edge_list(source(e, g));\n";
                         OSS << "outEdgeList.erase(iter.base());\n";
                     } else {
@@ -1698,9 +1697,9 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "remove_edge(*iter, g);\n";
                         } else {
                             Expects(s.mBidirectional);
-                            OSS << "auto e = *iter;\n";
+                            OSS << "auto  e           = *iter;\n";
                             OSS << "auto& outEdgeList = g.out_edge_list(source(e, g));\n";
-                            OSS << "auto& inEdgeList = g.in_edge_list(target(e, g));\n";
+                            OSS << "auto& inEdgeList  = g.in_edge_list(target(e, g));\n";
                             OSS << "Impl::removeIncidenceEdge(e, inEdgeList);\n";
                             if (s.hasEdgeProperty()) {
                                 OSS << "g.mEdges.erase(iter.base()->get_iter());\n";
@@ -1722,11 +1721,11 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                     INDENT();
                     if (s.isDirectedOnly()) {
                         OSS << "auto [first, last] = out_edges(u, g);\n";
-                        OSS << "auto& outEdgeList = g.out_edge_list(u);\n";
+                        OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
                         copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
                     } else if (s.mUndirected) {
                         OSS << "auto [first, last] = out_edges(u, g);\n";
-                        OSS << "auto& outEdgeList = g.out_edge_list(u);\n";
+                        OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
                         visit(
                             overload(
                                 [&]<Sequence_ T>(T) {
@@ -1749,7 +1748,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             {
                                 INDENT();
                                 OSS << "auto& inEdgeList = g.in_edge_list(target(*out_i, g));\n";
-                                OSS << "auto e = *out_i;\n";
+                                OSS << "auto  e          = *out_i;\n";
                                 OSS << "Impl::removeIncidenceEdge(e, inEdgeList);\n";
                                 if (s.hasEdgeProperty()) {
                                     OSS << "garbage.emplace_back((*out_i.base()).get_iter());\n";
@@ -1760,7 +1759,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                         OSS << "}\n";
 
                         OSS << "auto [first, last] = out_edges(u, g);\n";
-                        OSS << "auto& outEdgeList = g.out_edge_list(u);\n";
+                        OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
                         copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
 
                         if (s.hasEdgeProperty()) {
@@ -1797,7 +1796,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                 {
                                     INDENT();
                                     OSS << "auto& outEdgeList = g.out_edge_list(source(*in_i, g));\n";
-                                    OSS << "auto e = *in_i;\n";
+                                    OSS << "auto  e           = *in_i;\n";
                                     OSS << "Impl::removeIncidenceEdge(e, outEdgeList);\n";
                                     if (s.hasEdgeProperty()) {
                                         OSS << "garbage.emplace_back((*in_i.base()).get_iter());\n";
@@ -1808,7 +1807,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "}\n";
 
                             OSS << "auto [first, last] = in_edges(v, g);\n";
-                            OSS << "auto& inEdgeList = g.in_edge_list(v);\n";
+                            OSS << "auto& inEdgeList   = g.in_edge_list(v);\n";
                             copyString(oss, space, removeDirectedEdgeIf(s, "inEdgeList", scratch));
                             if (s.hasEdgeProperty()) {
                                 OSS << "for (auto iter = garbage.begin(); iter != garbage.end(); ++iter) {\n";
@@ -2009,7 +2008,7 @@ std::pmr::string CppGraphBuilder::generateGraphBoostFunctions_h() const {
             {
                 INDENT();
                 OSS << "using const_type = identity_property_map;\n";
-                OSS << "using type = identity_property_map;\n";
+                OSS << "using type       = identity_property_map;\n";
             }
             OSS << "};\n";
         }
@@ -2825,9 +2824,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
                 if (bConst) {
-                    OSS << "const ValueT* ptr = nullptr;\n";
+                    OSS << "const ValueT* ptr       = nullptr;\n";
                 } else {
-                    OSS << "ValueT* ptr = nullptr;\n";
+                    OSS << "ValueT* ptr             = nullptr;\n";
                 }
                 oss << "\n";
                 OSS << "if (!pGraph) {\n";
@@ -3100,7 +3099,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         OSS << "template <class Allocator>\n";
         OSS << "inline void\n";
-        OSS << "path_composite(std::basic_string<" << charName
+        OSS << "path_composite(\n";
+        OSS << "    std::basic_string<" << charName
             << ", std::char_traits<" << charName << ">, Allocator>& str,\n";
         OSS << "    std::ptrdiff_t& sz, " << name << "::vertex_descriptor u,\n";
         OSS << "    const " << name << "& g) noexcept {\n";
@@ -3135,13 +3135,13 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (general) {
                 OSS << "template <class Allocator>\n";
                 OSS << "inline const std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>&\n";
-                OSS << "get_path(std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
-                OSS << "    ";
+                OSS << "get_path(\n";
+                OSS << "    std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
             } else {
                 OSS << "[[nodiscard]] inline " << stringName << "\n";
-                OSS << "get_path(";
+                OSS << "get_path(\n";
             }
-            oss << name << "::vertex_descriptor u" << 0;
+            OSS << "    " << name << "::vertex_descriptor u" << 0;
 
             oss << ", const " << name << "& g,\n";
             if (!general && pmr) {
@@ -3149,8 +3149,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             } else {
                 OSS << "    ";
             }
-            oss << viewName << " prefix = {},\n";
-            OSS << "    " << name << "::vertex_descriptor parent = "
+            oss << viewName << " prefix = {}, " << name << "::vertex_descriptor parent = "
                 << name << "::null_vertex()) {\n";
             {
                 INDENT();
@@ -3167,7 +3166,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 if (general) {
                     auto graphName = camelToVariable(name, scratch);
                     OSS << "const auto sz0 = static_cast<std::ptrdiff_t>(prefix.size());\n";
-                    OSS << "auto sz = sz0;\n";
+                    OSS << "auto       sz  = sz0;\n";
                     oss << "\n";
                     OSS << "const auto& " << graphName << " = g;\n";
                     OSS << "sz += Impl::pathLength(u" << 0 << ", " << graphName << ", parent);\n";
@@ -3220,7 +3219,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (general) {
                 OSS << "template <class Allocator>\n";
                 OSS << "inline const std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>&\n";
-                OSS << "get_path(std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
+                OSS << "get_path(\n";
+                OSS << "    std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
                 OSS << "    ";
             } else {
                 OSS << "[[nodiscard]] inline " << stringName << "\n";
@@ -3443,7 +3443,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             } else {
                                 OSS << "auto pathName = get_path(v, g);\n";
                             }
-                            OSS << "auto res = g." << s.mAddressableConcept.mMemberName
+                            OSS << "auto res      = g." << s.mAddressableConcept.mMemberName
                                 << ".emplace(std::move(pathName), v);\n";
                             OSS << "Ensures(res.second);\n";
                             if (s.mAddressableConcept.mPathPropertyMap) {
@@ -3496,9 +3496,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS << "auto pathName = get_path(u, g);\n";
                     }
                     if (s.mAddressableConcept.mUtf8) {
-                        OSS << "auto iter = g." << member << ".find(std::u8string_view(pathName));\n";
+                        OSS << "auto iter     = g." << member << ".find(std::u8string_view(pathName));\n";
                     } else {
-                        OSS << "auto iter = g." << member << ".find(boost::string_view(pathName));\n";
+                        OSS << "auto iter     = g." << member << ".find(boost::string_view(pathName));\n";
                     }
                     OSS << "Expects(iter != g." << member << ".end());\n";
                     OSS << "g." << member << ".erase(iter);\n";
@@ -3643,6 +3643,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << ") {\n";
             {
                 INDENT();
+                int numSpaces = 0;
                 OSS << "return add_vertex(\n";
                 {
                     INDENT();
@@ -3658,25 +3659,27 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         if (s.mNamed && s.mNamedConcept.mComponentName == c.mName) {
                             if (cstr || !str) {
                                 OSS << "std::forward_as_tuple(name), // " << c.mMemberName << "\n";
+                                numSpaces = 4;
                             } else {
                                 OSS << "std::forward_as_tuple(std::move(name)), // " << c.mMemberName << "\n";
+                                numSpaces = 15;
                             }
                         } else {
                             bool isKey = false;
                             for (const auto& map : s.mVertexMaps) {
                                 if (map.mComponentName == c.mName) {
-                                    OSS << "std::forward_as_tuple(key), // " << c.mMemberName << "\n";
+                                    OSS << "std::forward_as_tuple(key)," << std::string(numSpaces, ' ') << " // " << c.mMemberName << "\n";
                                     isKey = true;
                                     break;
                                 }
                             }
                             if (!isKey) {
-                                OSS << "std::forward_as_tuple(), // " << c.mMemberName << "\n";
+                                OSS << "std::forward_as_tuple()," << std::string(numSpaces, ' ') << " // " << c.mMemberName << "\n";
                             }
                         }
                     }
                     if (s.isPolymorphic()) {
-                        OSS << "std::forward_as_tuple(), // PolymorphicType\n";
+                        OSS << "std::forward_as_tuple()," << std::string(numSpaces, ' ') << " // PolymorphicType\n";
                     }
                     OSS << "g";
                     if (s.mAddressable)
