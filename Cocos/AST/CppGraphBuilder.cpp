@@ -761,9 +761,9 @@ std::pmr::string CppGraphBuilder::edgePropertyMapName(bool bConst) const {
         } else {
             OSS << "" << cpp.getDependentName(s.mEdgeProperty) << ",\n";
         }
-        OSS << (bConst ? "const " : "") << cpp.getDependentName(s.mEdgeProperty) << "&\n";
+        OSS << (bConst ? "const " : "") << cpp.getDependentName(s.mEdgeProperty) << "&";
     }
-    OSS << ">";
+    oss << ">";
 
     return oss.str();
 }
@@ -907,22 +907,22 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
         if (isString) {
             if (isU8String) {
                 if (bPmr) {
-                    OSS << (bConst ? "const " : "") << "std::pmr::u8string&\n";
+                    OSS << (bConst ? "const " : "") << "std::pmr::u8string&";
                 } else {
-                    OSS << (bConst ? "const " : "") << "std::u8string&\n";
+                    OSS << (bConst ? "const " : "") << "std::u8string&";
                 }
             } else {
                 if (bPmr) {
-                    OSS << (bConst ? "const " : "") << "std::pmr::string&\n";
+                    OSS << (bConst ? "const " : "") << "std::pmr::string&";
                 } else {
-                    OSS << (bConst ? "const " : "") << "std::string&\n";
+                    OSS << (bConst ? "const " : "") << "std::string&";
                 }
             }
         } else {
-            OSS << (bConst ? "const " : "") << component << "&\n";
+            OSS << (bConst ? "const " : "") << component << "&";
         }
     }
-    OSS << ">";
+    oss << ">";
     return oss.str();
 }
 
@@ -1003,28 +1003,28 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
         // reference & member
         if (!isString) {
             OSS << (bConst ? "const " : "") << "T&,\n";
-            OSS << "T " << component << "::*\n";
+            OSS << "T " << component << "::*";
         } else {
             if (isU8String) {
                 if (bPmr) {
                     OSS << (bConst ? "const " : "") << "std::pmr::u8string&,\n";
-                    OSS << (bConst ? "const " : "") << "std::pmr::u8string " << component << "::*\n";
+                    OSS << (bConst ? "const " : "") << "std::pmr::u8string " << component << "::*";
                 } else {
                     OSS << (bConst ? "const " : "") << "std::u8string&,\n";
-                    OSS << (bConst ? "const " : "") << "std::u8string " << component << "::*\n";
+                    OSS << (bConst ? "const " : "") << "std::u8string " << component << "::*";
                 }
             } else {
                 if (bPmr) {
                     OSS << (bConst ? "const " : "") << "std::pmr::string&,\n";
-                    OSS << (bConst ? "const " : "") << "std::pmr::string " << component << "::*\n";
+                    OSS << (bConst ? "const " : "") << "std::pmr::string " << component << "::*";
                 } else {
                     OSS << (bConst ? "const " : "") << "std::string&,\n";
-                    OSS << (bConst ? "const " : "") << "std::string " << component << "::*\n";
+                    OSS << (bConst ? "const " : "") << "std::string " << component << "::*";
                 }
             }
         }
     }
-    OSS << ">";
+    oss << ">";
 
     return oss.str();
 }
