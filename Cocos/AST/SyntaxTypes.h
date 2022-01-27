@@ -692,10 +692,10 @@ struct Graph {
             return false;
 
         Expects(mBidirectional);
-        
+
         if (mEdgeProperty.empty())
             return false;
-        
+
         return true;
     }
 
