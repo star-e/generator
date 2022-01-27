@@ -842,7 +842,11 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     OSS << api << name << "(" << name << "&& rhs, const allocator_type& alloc);\n";
                     break;
                 case ImplEnum::Delete:
-                    OSS << name << "(" << name << "&& rhs) = delete;\n";
+                    if (sFormat) {
+                        OSS << name << "(" << name << "&& rhs)      = delete;\n";
+                    } else {
+                        OSS << name << "(" << name << "&& rhs) = delete;\n";
+                    }
                     break;
                 case ImplEnum::None:
                 default:
@@ -941,7 +945,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     }
                 }
                 if (needCopy != ImplEnum::None) {
-                    if (sFormat && bNoexcept) {
+                    if (sFormat && (bNoexcept && needMove != ImplEnum::Delete)) {
                         OSS << name << "(" << name << " const& rhs)     = delete;\n";
                     } else {
                         OSS << name << "(" << name << " const& rhs) = delete;\n";
