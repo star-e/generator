@@ -33,6 +33,7 @@ namespace Cocos::Meta {
 
 namespace {
 
+constexpr bool sFormat = true;
 constexpr bool sBoost = true;
 
 bool outputNamespaces(std::ostream& oss, std::pmr::string& space,
@@ -687,8 +688,17 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                         }
                     }
                 } else {
+                    size_t maxLength = 0;
                     for (const auto& v : e.mValues) {
-                        oss << "    " << v.mName << " = " << v.mValue << ",\n";
+                        maxLength = std::max(maxLength, v.mName.size());
+                    }
+
+                    for (const auto& v : e.mValues) {
+                        oss << "    " << v.mName;
+                        if (sFormat) {
+                            oss << std::pmr::string(maxLength - v.mName.size(), ' ');
+                        }
+                        oss << " = " << v.mValue << ",\n";
                     }
                 }
                 OSS << "};\n";
