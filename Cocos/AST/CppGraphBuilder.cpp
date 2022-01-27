@@ -1119,44 +1119,51 @@ std::pmr::string CppGraphBuilder::generateGraph_h() {
         int count = 0;
         OSS << "struct traversal_category";
         {
-            INDENT();
             if (s.mIncidence) {
-                oss << "\n";
-                if (count++)
-                    OSS << ", ";
-                else
+                if (count++) {
+                    oss << ",\n";
+                    OSS << "  ";
+                } else {
+                    oss << "\n";
                     OSS << ": ";
+                }
                 oss << "virtual boost::incidence_graph_tag";
                 if (s.mBidirectional) {
-                    oss << "\n";
-                    OSS << ", virtual boost::bidirectional_graph_tag";
+                    oss << ",\n";
+                    OSS << "  virtual boost::bidirectional_graph_tag";
                 }
             }
 
             if (s.mAdjacency) {
-                oss << "\n";
-                if (count++)
-                    OSS << ", ";
-                else
+                if (count++) {
+                    oss << ",\n";
+                    OSS << "  ";
+                } else {
+                    oss << "\n";
                     OSS << ": ";
+                }
                 oss << "virtual boost::adjacency_graph_tag";
             }
 
             if (s.mVertexList) {
-                oss << "\n";
-                if (count++)
-                    OSS << ", ";
-                else
+                if (count++) {
+                    oss << ",\n";
+                    OSS << "  ";
+                } else {
+                    oss << "\n";
                     OSS << ": ";
+                }
                 oss << "virtual boost::vertex_list_graph_tag";
             }
 
             if (s.mEdgeList) {
-                oss << "\n";
-                if (count++)
-                    OSS << ", ";
-                else
+                if (count++) {
+                    oss << ",\n";
+                    OSS << "  ";
+                } else {
+                    oss << "\n";
                     OSS << ": ";
+                }
                 oss << "virtual boost::edge_list_graph_tag";
             }
         }
