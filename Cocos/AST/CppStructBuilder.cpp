@@ -30,6 +30,8 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+static const bool sFormat = true;
+
 CppStructBuilder::CppStructBuilder(const allocator_type& alloc)
     : mCurrentNamespace(alloc)
     , mCurrentPath(alloc)
@@ -148,8 +150,6 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     std::pmr::memory_resource* scratch) {
     MemberFormatter f(scratch);
 
-    const bool bFormat = true;
-
     auto outputFormatted = [&]() {
         for (int beg = 0, end = 0, maxLength = 0; auto& member : f.mMembers) {
             if (member.mDefaultValue.empty()) {
@@ -176,14 +176,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 OSS << member.mComment;
             }
             OSS << member.mType;
-            if (bFormat) {
+            if (sFormat) {
                 oss << std::pmr::string(1 + f.mTypeLength - uint32_t(member.mType.size()), ' ');
             } else {
                 oss << " ";
             }
             oss << member.mMember;
             if (!member.mDefaultValue.empty()) {
-                if (bFormat) {
+                if (sFormat) {
                     oss << std::pmr::string(member.mDefaultValueOffset, ' ');
                 }
                 oss << " = " << member.mDefaultValue;
@@ -745,7 +745,8 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
     }
 
     // Default
-    auto needDefault = g.needDefaultCntr(vertID);
+    const auto needDefault = g.needDefaultCntr(vertID);
+    const auto needMove = g.needMoveCntr(vertID);
     if (bPmr) {
         if (needDefault == ImplEnum::Inline || needDefault == ImplEnum::Separated) {
             oss << "\n";
@@ -782,7 +783,12 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
     } else {
         switch (needDefault) {
         case ImplEnum::Inline: {
-            OSS << name << "() = default;\n";
+            if (sFormat && (!bPmr && needMove == ImplEnum::Inline)) {
+                OSS << name << "()" << std::pmr::string(name.size(), ' ', scratch)
+                    << "                = default;\n";
+            } else {
+                OSS << name << "() = default;\n";
+            }
             break;
         }
         case ImplEnum::Separated:
@@ -826,7 +832,6 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                 }
             }
             
-            auto needMove = g.needMoveCntr(vertID);
             if (bPmr) {
                 switch (needMove) {
                 case ImplEnum::Inline:
@@ -860,7 +865,11 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     oss << ";\n";
                     break;
                 case ImplEnum::Delete:
-                    OSS << name << "(" << name << "&& rhs) = delete;\n";
+                    if (sFormat) {
+                        OSS << name << "(" << name << "&& rhs)      = delete;\n";
+                    } else {
+                        OSS << name << "(" << name << "&& rhs) = delete;\n";
+                    }
                     break;
                 case ImplEnum::None:
                 default:
@@ -895,7 +904,11 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     oss << ";\n";
                     break;
                 case ImplEnum::Delete:
-                    OSS << name << "(" << name << " const& rhs) = delete;\n";
+                    if (sFormat && (bNoexcept && needMove != ImplEnum::Delete)) {
+                        OSS << name << "(" << name << " const& rhs)     = delete;\n";
+                    } else {
+                        OSS << name << "(" << name << " const& rhs) = delete;\n";
+                    }
                     break;
                 case ImplEnum::None:
                 default:
@@ -928,7 +941,11 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     }
                 }
                 if (needCopy != ImplEnum::None) {
-                    OSS << name << "(" << name << " const& rhs) = delete;\n";
+                    if (sFormat && bNoexcept) {
+                        OSS << name << "(" << name << " const& rhs)     = delete;\n";
+                    } else {
+                        OSS << name << "(" << name << " const& rhs) = delete;\n";
+                    }
                 }
             }
 
@@ -985,6 +1002,8 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
             case ImplEnum::Inline:
             case ImplEnum::Separated:
                 if (traits.mInterface) {
+                    if (sFormat)
+                        oss << "\n";
                     if (bDerived) {
                         OSS << api << "~" << name << "() noexcept override = 0;\n";
                     } else {
