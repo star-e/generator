@@ -2912,7 +2912,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << "\n";
             oss << "// Vertex Setter\n";
             OSS << "template <class Tag, class... Args>\n";
-            OSS << "inline void put(Tag tag, " << name << "& g,\n";
+            OSS << "inline void put(\n";
+            OSS << "    Tag tag, " << name << "& g,\n";
             OSS << "    " << name << "::vertex_descriptor v,\n";
             OSS << "    Args&&... args) {\n";
             OSS << "    put(get(tag, g), v, std::forward<Args>(args)...);\n";
@@ -3015,7 +3016,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         oss << "// Edge Setter\n";
         OSS << "template <class Tag, class... Args>\n";
-        OSS << "inline void put(Tag tag, " << name << "& g,\n";
+        OSS << "inline void put(\n";
+        OSS << "    Tag tag, " << name << "& g,\n";
         OSS << "    " << name << "::edge_descriptor e,\n";
         OSS << "    Args&&... args) {\n";
         OSS << "    put(get(tag, g), e, std::forward<Args>(args)...);\n";
