@@ -644,6 +644,53 @@ struct Addressable {
     std::pmr::string mMemberName;
 };
 
+struct MemberRecord {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mComment.get_allocator().resource());
+    }
+
+    MemberRecord(const allocator_type& alloc) noexcept;
+    MemberRecord(MemberRecord&& rhs, const allocator_type& alloc);
+    MemberRecord(MemberRecord const& rhs, const allocator_type& alloc);
+
+    MemberRecord(MemberRecord&& rhs) = default;
+    MemberRecord(MemberRecord const& rhs) = delete;
+    MemberRecord& operator=(MemberRecord&& rhs) = default;
+    MemberRecord& operator=(MemberRecord const& rhs) = default;
+    ~MemberRecord() noexcept;
+
+    std::pmr::string mComment;
+    std::pmr::string mType;
+    std::pmr::string mMember;
+    std::pmr::string mDefaultValue;
+    uint32_t mDefaultValueOffset = 0;
+};
+
+struct MemberFormatter {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mMembers.get_allocator().resource());
+    }
+
+    MemberFormatter(const allocator_type& alloc) noexcept;
+    MemberFormatter(MemberFormatter&& rhs, const allocator_type& alloc);
+    MemberFormatter(MemberFormatter const& rhs, const allocator_type& alloc);
+
+    MemberFormatter(MemberFormatter&& rhs) = default;
+    MemberFormatter(MemberFormatter const& rhs) = delete;
+    MemberFormatter& operator=(MemberFormatter&& rhs) = default;
+    MemberFormatter& operator=(MemberFormatter const& rhs) = default;
+    ~MemberFormatter() noexcept;
+    void clear() noexcept {
+        mMembers.clear();
+        mTypeLength = 0;
+    }
+
+    std::pmr::vector<MemberRecord> mMembers;
+    uint32_t mTypeLength = 0;
+};
+
 struct Graph {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {

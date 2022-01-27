@@ -382,6 +382,41 @@ Addressable::Addressable(Addressable const& rhs, const allocator_type& alloc)
 
 Addressable::~Addressable() noexcept = default;
 
+MemberRecord::MemberRecord(const allocator_type& alloc) noexcept
+    : mComment(alloc)
+    , mType(alloc)
+    , mMember(alloc)
+    , mDefaultValue(alloc) {}
+
+MemberRecord::MemberRecord(MemberRecord&& rhs, const allocator_type& alloc)
+    : mComment(std::move(rhs.mComment), alloc)
+    , mType(std::move(rhs.mType), alloc)
+    , mMember(std::move(rhs.mMember), alloc)
+    , mDefaultValue(std::move(rhs.mDefaultValue), alloc)
+    , mDefaultValueOffset(std::move(rhs.mDefaultValueOffset)) {}
+
+MemberRecord::MemberRecord(MemberRecord const& rhs, const allocator_type& alloc)
+    : mComment(rhs.mComment, alloc)
+    , mType(rhs.mType, alloc)
+    , mMember(rhs.mMember, alloc)
+    , mDefaultValue(rhs.mDefaultValue, alloc)
+    , mDefaultValueOffset(rhs.mDefaultValueOffset) {}
+
+MemberRecord::~MemberRecord() noexcept = default;
+
+MemberFormatter::MemberFormatter(const allocator_type& alloc) noexcept
+    : mMembers(alloc) {}
+
+MemberFormatter::MemberFormatter(MemberFormatter&& rhs, const allocator_type& alloc)
+    : mMembers(std::move(rhs.mMembers), alloc)
+    , mTypeLength(std::move(rhs.mTypeLength)) {}
+
+MemberFormatter::MemberFormatter(MemberFormatter const& rhs, const allocator_type& alloc)
+    : mMembers(rhs.mMembers, alloc)
+    , mTypeLength(rhs.mTypeLength) {}
+
+MemberFormatter::~MemberFormatter() noexcept = default;
+
 Graph::Graph(const allocator_type& alloc) noexcept
     : mMembers(alloc)
     , mConstructors(alloc)

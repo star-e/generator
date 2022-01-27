@@ -76,6 +76,8 @@ inline const char* getName(const Layer& v) noexcept { return "Layer"; }
 inline const char* getName(const Stack& v) noexcept { return "Stack"; }
 inline const char* getName(const Named& v) noexcept { return "Named"; }
 inline const char* getName(const Addressable& v) noexcept { return "Addressable"; }
+inline const char* getName(const MemberRecord& v) noexcept { return "MemberRecord"; }
+inline const char* getName(const MemberFormatter& v) noexcept { return "MemberFormatter"; }
 inline const char* getName(const Graph& v) noexcept { return "Graph"; }
 inline const char* getName(const Typescript& v) noexcept { return "Typescript"; }
 inline const char* getName(ImplEnum e) noexcept {

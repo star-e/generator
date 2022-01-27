@@ -143,6 +143,8 @@ struct Layer;
 struct Stack;
 struct Named;
 struct Addressable;
+struct MemberRecord;
+struct MemberFormatter;
 struct Graph;
 struct Typescript;
 template <> struct IsIdentifier<Define_> { static constexpr bool value = true; };

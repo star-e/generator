@@ -146,13 +146,59 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const SyntaxGraph& g, std::string_view ns,
     SyntaxGraph::vertex_descriptor vertID, const T& s,
     std::pmr::memory_resource* scratch) {
-    for (const Member& m : s.mMembers) {
+    MemberFormatter f(scratch);
+
+    const bool bFormat = true;
+
+    auto outputFormatted = [&]() {
+        for (int beg = 0, end = 0, maxLength = 0; auto& member : f.mMembers) {
+            if (member.mDefaultValue.empty()) {
+                for (int i = beg; i != end; ++i) {
+                    f.mMembers[i].mDefaultValueOffset = maxLength - int(f.mMembers[i].mMember.size());
+                }
+                beg = end + 1;
+                maxLength = 0;
+            } else {
+                maxLength = std::max(maxLength, int(f.mMembers[end].mMember.size()));
+            }
+            ++end;
+            if (end == f.mMembers.size()) {
+                for (int i = beg; i != end; ++i) {
+                    Expects(maxLength >= int(f.mMembers[i].mMember.size()));
+                    f.mMembers[i].mDefaultValueOffset = maxLength - int(f.mMembers[i].mMember.size());
+                }
+            }
+        }
+            
+        for (const auto& member : f.mMembers) {
+            Expects(f.mTypeLength >= member.mType.size());
+            if (!member.mComment.empty()) {
+                OSS << member.mComment;
+            }
+            OSS << member.mType;
+            if (bFormat) {
+                oss << std::pmr::string(1 + f.mTypeLength - uint32_t(member.mType.size()), ' ');
+            } else {
+                oss << " ";
+            }
+            oss << member.mMember;
+            if (!member.mDefaultValue.empty()) {
+                if (bFormat) {
+                    oss << std::pmr::string(member.mDefaultValueOffset, ' ');
+                }
+                oss << " = " << member.mDefaultValue;
+            }
+            oss << ";\n";
+        }
+        f.clear();
+    };
+
+    uint32_t start = 0;
+    for (int i = 0; const Member& m : s.mMembers) {
         auto memberID = locate(m.mTypePath, g);
         const auto& traits = get(g.traits, g, memberID);
-        if (!m.mComments.empty()) {
-            copyString(oss, space, m.mComments);
-        }
         if (traits.mUnknown) {
+            outputFormatted();
             visit_vertex(
                 memberID, g,
                 [&](const Struct& s) {
@@ -166,14 +212,25 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 [&](const auto&) {
                     Expects(false);
                 });
-        } else {
+            ++i;
+            start = i;
+            continue;
+        }
+
+        if (!m.mComments.empty()) {
+            outputFormatted();
+            start = i;
+        }
+
+        auto& content = f.mMembers.emplace_back();
+        {
+            pmr_ostringstream oss(std::ios::out, scratch);
             auto name = g.getDependentName(ns, memberID, scratch, scratch);
             if (name.empty()) {
                 // if dependent name is empty, the scope is the same of input type
                 name = get(g.names, g, vertID);
             }
             boost::algorithm::replace_all(name, "/", "::");
-            OSS;
             if (m.mConst) {
                 oss << "const ";
             }
@@ -191,20 +248,31 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (m.mReference) {
                 oss << "&";
             }
-            oss << " " << m.mMemberName;
+
+            // comment
+            content.mComment = m.mComments;
+            // type
+            content.mType = oss.str();
+            f.mTypeLength = std::max(uint32_t(content.mType.size()), f.mTypeLength);
+            // member
+            content.mMember = m.mMemberName;
+            // default value
             if (!m.mDefaultValue.empty()) {
-                oss << " = " << m.mDefaultValue;
+                content.mDefaultValue = m.mDefaultValue;
             } else {
                 if (holds_tag<Enum_>(memberID, g)) {
+                    pmr_ostringstream oss(std::ios::out, scratch);
                     const auto& e = get<Enum>(memberID, g);
                     const auto enumType = g.getDependentCppName(ns, memberID, scratch, scratch);
                     Expects(!e.mValues.empty());
-                    oss << " = " << enumType << "::" << e.mValues.front().mName;
+                    oss << enumType << "::" << e.mValues.front().mName;
+                    content.mDefaultValue = oss.str();
                 }
             }
-            oss << ";\n";
         }
+        ++i;
     }
+    outputFormatted();
 }
 
 }
