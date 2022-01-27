@@ -1021,7 +1021,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
-        OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+        OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
         const auto included = getIndirectIncludes(moduleID, mg, scratch);
         for (const auto& require : m.mRequires) {
             auto moduleID = locate(mg.null_vertex(), require, mg);

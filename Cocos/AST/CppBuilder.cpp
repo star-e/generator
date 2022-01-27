@@ -453,13 +453,14 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
 
                 outputNs();
                 OSS << "inline const char* getName(" << name << " e) noexcept {\n";
-                OSS << "    switch(e) {\n";
+                OSS << "    switch (e) {\n";
                 for (const auto& e : s.mValues) {
+                    INDENT();
                     OSS << "    case ";
                     if (traits.mClass) {
-                        OSS << name << "::";
+                        oss << name << "::";
                     }
-                    OSS << e.mName << ": return \"" << e.mName << "\";\n";
+                    oss << e.mName << ": return \"" << e.mName << "\";\n";
                 }
                 OSS << "    }\n";
                 OSS << "    return \"\";\n";
