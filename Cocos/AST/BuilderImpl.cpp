@@ -964,6 +964,60 @@ std::pmr::set<ModuleGraph::vertex_descriptor> getIndirectIncludes(
     return included;
 }
 
+static const bool sReorder = true;
+
+std::pmr::string reorderIncludes(std::pmr::string content,
+    std::pmr::memory_resource* scratch) {
+    if (!sReorder) {
+        return std::pmr::string(content, scratch);
+    }
+
+    pmr_ostringstream oss(std::ios::out, scratch);
+
+    std::istringstream iss(content);
+    std::pmr::set<std::pmr::string> includes(scratch);
+    std::pmr::set<std::pmr::string> includesHpp(scratch);
+    std::pmr::set<std::pmr::string> includesComma(scratch);
+    std::pmr::string line(scratch);
+
+    auto outputIncludes = [&]() {
+        for (const auto& line : includes) {
+            oss << line << "\n";
+        }
+        for (const auto& line : includesHpp) {
+            oss << line << "\n";
+        }
+        for (const auto& line : includesComma) {
+            oss << line << "\n";
+        }
+        includes.clear();
+        includesHpp.clear();
+        includesComma.clear();
+    };
+
+    while (std::getline(iss, line)) {
+        const std::string_view include = "#include";
+        if (!line.starts_with(include)) {
+            outputIncludes();
+            oss << line << "\n";
+        } else {
+            std::string_view content = line.substr(include.size());
+            content = boost::algorithm::trim_copy(content);
+            if (content.starts_with("<") && content.ends_with(">")) {
+                if (content.ends_with(".hpp>")) {
+                    includesHpp.emplace(line);
+                } else {
+                    includes.emplace(line);
+                }
+            } else {
+                includesComma.emplace(line);
+            }
+        }
+    }
+    outputIncludes();
+    return oss.str();
+}
+
 }
 
 void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::string>& files) const {
@@ -1011,7 +1065,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         }
         copyString(oss, generateFwd_h(mSyntaxGraph, modulePath, scratch, scratch));
 
-        updateFile(filename, oss.str());
+        updateFile(filename, reorderIncludes(oss.str(), scratch));
     }
 
     if (features & Features::Names) {
@@ -1034,7 +1088,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         }
         copyString(oss, generateNames_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
-        updateFile(filename, oss.str());
+        updateFile(filename, reorderIncludes(oss.str(), scratch));
     }
 
     if (features & Features::Types) {
@@ -1088,7 +1142,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             }
             copyString(oss, generateTypes_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
-            updateFile(filename1, oss.str());
+            updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
 
         {
@@ -1104,7 +1158,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             copyString(oss, generateTypes_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
-            updateFile(filename1, oss.str());
+            updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
     }
     if (features & Features::Graphs) {
@@ -1127,7 +1181,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
         copyString(oss, generateGraphs_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
-        updateFile(filename, oss.str());
+        updateFile(filename, reorderIncludes(oss.str(), scratch));
     }
     if (features & Features::Reflection) {
         {
@@ -1161,7 +1215,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             }
             copyString(oss, generateReflection_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
-            updateFile(filename, oss.str());
+            updateFile(filename, reorderIncludes(oss.str(), scratch));
         }
         {
             std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Reflection.cpp", scratch);
@@ -1177,7 +1231,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             copyString(oss, generateReflection_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
-            updateFile(filename, oss.str());
+            updateFile(filename, reorderIncludes(oss.str(), scratch));
         }
     }
 
