@@ -1099,17 +1099,17 @@ std::pmr::string CppGraphBuilder::generateGraph_h() {
 
     OSS << "// Graph\n";
     if (s.mUndirected) {
-        OSS << "using directed_category = boost::undirected_tag;\n";
+        OSS << "using directed_category      = boost::undirected_tag;\n";
     } else {
         if (s.mBidirectional) {
-            OSS << "using directed_category = boost::bidirectional_tag;\n";
+            OSS << "using directed_category      = boost::bidirectional_tag;\n";
         } else {
-            OSS << "using directed_category = boost::directed_tag;\n";
+            OSS << "using directed_category      = boost::directed_tag;\n";
         }
     }
 
-    OSS << "using vertex_descriptor = " << vertexDescType() << ";\n";
-    OSS << "using edge_descriptor = " << edgeDescType() << ";\n";
+    OSS << "using vertex_descriptor      = " << vertexDescType() << ";\n";
+    OSS << "using edge_descriptor        = " << edgeDescType() << ";\n";
 
     // edge_parallel_category
     OSS << "using edge_parallel_category = boost::allow_parallel_edge_tag;\n";
@@ -1199,7 +1199,7 @@ std::pmr::string CppGraphBuilder::generateIncidenceGraph_h() const {
 
     oss << "\n";
     OSS << "// IncidenceGraph\n";
-    OSS << "using out_edge_type = ";
+    OSS << "using out_edge_type     = ";
     copyString(oss, space, outEdgeType(), true);
     oss << ";\n";
     OSS << "using out_edge_iterator = " << outIterType() << ";\n";
@@ -1216,7 +1216,7 @@ std::pmr::string CppGraphBuilder::generateBidirectionalGraph_h() const {
     std::pmr::string space(get_allocator());
     oss << "\n";
     OSS << "// BidirectionalGraph\n";
-    OSS << "using in_edge_type = ";
+    OSS << "using in_edge_type     = ";
     copyString(oss, space, outEdgeType(), true);
     oss << ";\n";
     OSS << "using in_edge_iterator = " << inIterType() << ";\n";
@@ -1248,9 +1248,10 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
     std::pmr::string space(get_allocator());
     oss << "\n";
     OSS << "// VertexListGraph\n";
-    OSS << "using vertex_iterator = " << vertexIterType() << ";\n";
+    OSS << "using vertex_iterator    = " << vertexIterType() << ";\n";
     OSS << "using vertices_size_type = " << s.mVertexSizeType << ";\n";
     if (s.hasVertexProperty()) {
+        oss << "\n";
         OSS << "using vertex_property_type = " << vertexPropertyType() << ";\n";
     }
 
@@ -1346,15 +1347,16 @@ std::pmr::string CppGraphBuilder::generateEdgeListGraph_h() const {
     oss << "\n";
     OSS << "// EdgeListGraph\n";
     if (s.needEdgeList()) {
-        OSS << "using edge_iterator = Impl::UndirectedEdgeIter<\n";
+        OSS << "using edge_iterator   = Impl::UndirectedEdgeIter<\n";
         OSS << "    " << edgeListType() << "::iterator,\n";
         OSS << "    edge_descriptor, " << s.mEdgeDifferenceType << ">;\n";
     } else {
-        OSS << "using edge_iterator = Impl::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, "
+        OSS << "using edge_iterator   = Impl::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, "
             << graphType(mStruct.mCurrentNamespace) << ">;\n";
     }
     OSS << "using edges_size_type = " << s.mEdgeSizeType << ";\n";
     if (s.hasEdgeProperty()) {
+        oss << "\n";
         OSS << "using edge_property_type = " << edgePropertyType() << ";\n";
     }
     return oss.str();
@@ -1434,17 +1436,17 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
     OSS << "using children_edge_type = ";
     copyString(oss, space, childEdgeType(), true);
     oss << ";\n";
-    OSS << "using children_iterator = " << childIterType() << ";\n";
+    OSS << "using children_iterator  = " << childIterType() << ";\n";
     OSS << "using children_size_type = " << s.mDegreeSizeType << ";\n";
 
     oss << "\n";
     OSS << "using parent_edge_type = ";
     copyString(oss, space, parentEdgeType(), true);
     oss << ";\n";
-    OSS << "using parent_iterator = " << parentIterType() << ";\n";
+    OSS << "using parent_iterator  = " << parentIterType() << ";\n";
 
     oss << "\n";
-    OSS << "using ownership_iterator = " << referenceIterType() << ";\n";
+    OSS << "using ownership_iterator   = " << referenceIterType() << ";\n";
     OSS << "using ownerships_size_type = edges_size_type;\n";
 
     oss << "\n";
@@ -1559,10 +1561,10 @@ std::pmr::string CppGraphBuilder::generatePolymorphicGraph_h() const {
 
     oss << "\n";
     OSS << "// PolymorphicGraph\n";
-    OSS << "using vertex_tag_type = " << tagType() << ";\n";
-    OSS << "using vertex_value_type = " << valueType() << ";\n";
+    OSS << "using vertex_tag_type         = " << tagType() << ";\n";
+    OSS << "using vertex_value_type       = " << valueType() << ";\n";
     OSS << "using vertex_const_value_type = " << constValueType() << ";\n";
-    OSS << "using vertex_handle_type = ";
+    OSS << "using vertex_handle_type      = ";
     {
         INDENT();
         copyString(oss, space, handleType(), true);
