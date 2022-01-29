@@ -53,15 +53,15 @@ int main() {
 
         // build render pipeline
         buildRenderCommon(builder,
-            Typescripts | Fwd | Types | Names | Reflection);
+            Typescripts | Fwd | Types | Names | Reflection | Jsb);
         buildLayoutGraph(builder,
-            Typescripts | Fwd | Types | Names | Reflection | Graphs);
+            Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
         buildRenderGraph(builder,
-            Typescripts | Fwd | Types | Names | Reflection | Graphs);
+            Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
 
         // build executor modules
         buildRenderExecutor(builder,
-            Typescripts | Fwd | Types | Names | Reflection | Graphs);
+            Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
     }
 
     builder.compile();
@@ -114,6 +114,10 @@ int main() {
     {
         auto content = readFile("invoke.hpp");
         updateFile(cppFolder / "cocos/renderer/pipeline/invoke.hpp", content);
+    }
+    {
+        auto content = readFile("JsbConversion.h");
+        updateFile(cppFolder / "cocos/renderer/pipeline/JsbConversion.h", content);
     }
     // update cmakelists
     if (true) {

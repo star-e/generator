@@ -98,6 +98,9 @@
     <ClInclude Include="..\GraphView.h">
       <Filter>0.Common</Filter>
     </ClInclude>
+    <ClInclude Include="JsbBuilder.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SyntaxReflection.cpp">
@@ -143,6 +146,9 @@
       <Filter>2.Builder</Filter>
     </ClCompile>
     <ClCompile Include="CppStructBuilder.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="JsbBuilder.cpp">
       <Filter>2.Builder</Filter>
     </ClCompile>
   </ItemGroup>

@@ -53,6 +53,7 @@ enum GenerationFlags : uint64_t {
     NO_ENUM_OPERATOR = 1 << 16,
     PMR_DEFAULT = 1 << 17,
     IMPL_DETAIL = 1 << 18,
+    JSB = 1 << 19,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -1210,6 +1211,7 @@ enum Features : uint32_t {
     Graphs = 1 << 6,
     Sender = 1 << 7,
     Typescripts = 1 << 8,
+    Jsb = 1 << 9,
 };
 
 constexpr Features operator|(const Features lhs, const Features rhs) noexcept {

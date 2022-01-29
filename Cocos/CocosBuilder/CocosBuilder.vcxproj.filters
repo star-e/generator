@@ -43,6 +43,9 @@
     <ClInclude Include="PathUtils.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="JsbConversion.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="graph.ts" />

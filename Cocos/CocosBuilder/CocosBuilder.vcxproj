@@ -252,6 +252,7 @@
     <ClInclude Include="GraphView.h" />
     <ClInclude Include="GslUtils.h" />
     <ClInclude Include="invoke.hpp" />
+    <ClInclude Include="JsbConversion.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="Overload.h" />
     <ClInclude Include="PathUtils.h" />

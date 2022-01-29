@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include "TypescriptBuilder.h"
 #include "BuilderMacros.h"
 #include "CppBuilder.h"
+#include "JsbBuilder.h"
 
 namespace Cocos::Meta {
 
@@ -1232,6 +1233,61 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             copyString(oss, generateReflection_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
 
             updateFile(filename, reorderIncludes(oss.str(), scratch));
+        }
+    }
+
+    if (features & Features::Jsb) {
+        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Jsb.h", scratch);
+        files.emplace(std::move(shortname));
+        const std::filesystem::path filename = cppFolder / m.mFolder / m.mFilePrefix;
+        {
+            auto filename1 = filename;
+            filename1 += "Jsb.h";
+
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            OSS << "#pragma once\n";
+
+            if (!moduleInfo.mAPI.empty()) {
+                oss << "#include <" << std::filesystem::path(moduleInfo.mFolder).generic_string()
+                    << "/Config.h>\n";
+            }
+
+            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+            OSS << "#include <cocos/bindings/manual/jsb_conversions.h>\n";
+
+            copyString(oss, generateJsbConversions_h(*this, moduleID));
+
+            updateFile(filename1, reorderIncludes(oss.str(), scratch));
+        }
+
+        {
+            std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Jsb.cpp", scratch);
+            files.emplace(std::move(shortname));
+
+            auto filename1 = filename;
+            filename1 += "Jsb.cpp";
+
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            OSS << "#pragma once\n";
+
+            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Jsb.h>\n";
+            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
+            const auto included = getIndirectIncludes(moduleID, mg, scratch);
+            for (const auto& require : m.mRequires) {
+                auto moduleID = locate(mg.null_vertex(), require, mg);
+                if (included.contains(moduleID))
+                    continue;
+                const auto& dep = get(mg.modules, mg, moduleID);
+                if (!dep.mFilePrefix.ends_with(".h")) {
+                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Jsb.h>\n";
+                }
+            }
+            OSS << "#include <cocos/renderer/pipeline/JsbConversion.h>\n";
+            copyString(oss, generateJsbConversions_cpp(*this, moduleID));
+
+            updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
     }
 

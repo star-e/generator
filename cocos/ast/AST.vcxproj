@@ -260,6 +260,7 @@
     <ClInclude Include="CppDefaultValues.h" />
     <ClInclude Include="DSL.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="JsbBuilder.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="SyntaxFwd.h" />
     <ClInclude Include="SyntaxGraphs.h" />
@@ -276,6 +277,7 @@
     <ClCompile Include="BuilderTypes.cpp" />
     <ClCompile Include="CppBuilder.cpp" />
     <ClCompile Include="CppDefaultValues.cpp" />
+    <ClCompile Include="JsbBuilder.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
