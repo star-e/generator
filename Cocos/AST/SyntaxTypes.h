@@ -846,9 +846,9 @@ struct Graph {
     VertexListType mVertexListType;
     EdgeListType mEdgeListType;
     OutEdgeListType mOutEdgeListType;
-    std::string mVertexListPath = "/boost/container/pmr/vector";
-    std::string mEdgeListPath = "/boost/container/pmr/list";
-    std::string mOutEdgeListPath = "/boost/container/pmr/vector";
+    std::string mVertexListPath;
+    std::string mEdgeListPath;
+    std::string mOutEdgeListPath;
     std::string mVertexDescriptor;
     std::string mVertexSizeType = "uint32_t";
     std::string mDifferenceType = "int32_t";

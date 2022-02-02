@@ -1464,6 +1464,34 @@ int ModuleBuilder::compile() {
     for (auto vertID : make_range(vertices(g))) {
         if (!holds_alternative<Graph>(vertID, g))
             continue;
+
+        { // complete vertex list
+            auto& s = get<Graph>(vertID, g);
+            if (g.isPmr(vertID)) {
+                auto& traits = get(g.traits, g, vertID);
+                traits.mPmr |= true;
+                if (s.mVertexListPath.empty()) {
+                    s.mVertexListPath = "/boost/container/pmr/vector";
+                }
+                if (s.mEdgeListPath.empty()) {
+                    s.mEdgeListPath = "/boost/container/pmr/list";
+                }
+                if (s.mOutEdgeListPath.empty()) {
+                    s.mOutEdgeListPath = "/boost/container/pmr/vector";
+                }
+            } else {
+                if (s.mVertexListPath.empty()) {
+                    s.mVertexListPath = "/std/vector";
+                }
+                if (s.mEdgeListPath.empty()) {
+                    s.mEdgeListPath = "/std/list";
+                }
+                if (s.mOutEdgeListPath.empty()) {
+                    s.mOutEdgeListPath = "/std/vector";
+                }
+            }
+        }
+
         // copy graph, vertex might be invalidated
         Graph s(get<Graph>(vertID, g), scratch);
         mCurrentScope = g.getScope(vertID, scratch);

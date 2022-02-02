@@ -1156,9 +1156,6 @@ std::pmr::string generateGraphs_h(std::string_view projectName,
     const auto moduleID = locate(moduleName0, mg);
     const auto& moduleInfo = get(mg.modules, mg, moduleID);
     const bool bDLL = !moduleInfo.mAPI.empty();
-    if (!(g.moduleHasImpl(moduleName0, bDLL))) {
-        return std::pmr::string(mr);
-    }
 
     pmr_ostringstream oss(std::ios_base::out, mr);
     std::pmr::string space(scratch);
