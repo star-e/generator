@@ -43,27 +43,37 @@ void buildRenderCompiler(ModuleBuilder& builder, Features features) {
                 }
                 STRUCT(RenderPass, .mFlags = NO_SERIALIZATION) {
                     PUBLIC(
-                        (PmrFlatSet<uint32_t>, mOutputs, _)(PmrFlatSet<uint32_t>, mInputs, _));
+                        (PmrFlatSet<uint32_t>, mOutputs, _)
+                        (PmrFlatSet<uint32_t>, mInputs, _)
+                    );
                 }
 
                 PMR_GRAPH(RenderDependencyGraph, _, DependencyType, .mFlags = NO_MOVE_NO_COPY | NO_SERIALIZATION) {
                     COMPONENT_GRAPH(
-                        (Pass_, RenderPass, mPasses)(ValueID_, PmrFlatSet<uint32_t>, mValueIDs)(PassID_, RenderGraph::vertex_descriptor, mPassIDs));
+                        (Pass_, RenderPass, mPasses)
+                        (ValueID_, PmrFlatSet<uint32_t>, mValueIDs)
+                        (PassID_, RenderGraph::vertex_descriptor, mPassIDs)
+                    );
                     COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
 
                     PUBLIC(
-                        ((PmrFlatMap<PmrString, uint32_t>), mValueIndex, _)(boost::container::pmr::vector<PmrString>, mValueNames, _));
+                        ((PmrFlatMap<PmrString, uint32_t>), mValueIndex, _)
+                        (boost::container::pmr::vector<PmrString>, mValueNames, _)
+                    );
                 }
 
                 STRUCT(RenderValueNode, .mFlags = EQUAL | HASH_COMBINE | NO_SERIALIZATION) {
                     PUBLIC(
-                        (uint32_t, mPassID, 0xFFFFFFFF)(uint32_t, mValueID, 0xFFFFFFFF));
+                        (uint32_t, mPassID, 0xFFFFFFFF)
+                        (uint32_t, mValueID, 0xFFFFFFFF)
+                    );
                     CNTR(mPassID, mValueID);
                 }
 
                 PMR_GRAPH(RenderValueGraph, _, _, .mFlags = NO_MOVE_NO_COPY | NO_SERIALIZATION) {
                     COMPONENT_GRAPH(
-                        (Node_, RenderValueNode, mNodes));
+                        (Node_, RenderValueNode, mNodes)
+                    );
                     COMPONENT_BIMAP(PmrUnorderedMap, mIndex, Node_);
                 }
             }
