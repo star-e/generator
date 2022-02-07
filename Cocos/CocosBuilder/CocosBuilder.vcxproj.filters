@@ -12,38 +12,47 @@
     <ClCompile Include="RenderCommon.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="RenderExecutor.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="CocosModules.h" />
-    <ClInclude Include="GraphView.h">
+    <ClInclude Include="..\renderer\pipeline\GraphImpl.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="GraphImpl.h">
+    <ClInclude Include="..\renderer\pipeline\GraphTypes.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="GraphTypes.h">
+    <ClInclude Include="..\renderer\pipeline\GraphUtils.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="GraphUtils.h">
+    <ClInclude Include="..\renderer\pipeline\GraphView.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Map.h">
+    <ClInclude Include="..\renderer\pipeline\GslUtils.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="GslUtils.h">
+    <ClInclude Include="..\renderer\pipeline\invoke.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Overload.h">
+    <ClInclude Include="..\renderer\pipeline\Map.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="invoke.hpp">
+    <ClInclude Include="..\renderer\pipeline\Overload.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="PathUtils.h">
+    <ClInclude Include="..\renderer\pipeline\PathUtils.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="JsbConversion.h">
+    <ClInclude Include="..\renderer\pipeline\Set.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer\pipeline\Utility.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer\pipeline\JsbConversion.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

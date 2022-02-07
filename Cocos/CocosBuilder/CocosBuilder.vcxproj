@@ -242,20 +242,23 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="RenderCommon.cpp" />
+    <ClCompile Include="RenderExecutor.cpp" />
     <ClCompile Include="RenderGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\renderer\pipeline\GraphImpl.h" />
+    <ClInclude Include="..\renderer\pipeline\GraphTypes.h" />
+    <ClInclude Include="..\renderer\pipeline\GraphUtils.h" />
+    <ClInclude Include="..\renderer\pipeline\GraphView.h" />
+    <ClInclude Include="..\renderer\pipeline\GslUtils.h" />
+    <ClInclude Include="..\renderer\pipeline\invoke.hpp" />
+    <ClInclude Include="..\renderer\pipeline\JsbConversion.h" />
+    <ClInclude Include="..\renderer\pipeline\Map.h" />
+    <ClInclude Include="..\renderer\pipeline\Overload.h" />
+    <ClInclude Include="..\renderer\pipeline\PathUtils.h" />
+    <ClInclude Include="..\renderer\pipeline\Set.h" />
+    <ClInclude Include="..\renderer\pipeline\Utility.h" />
     <ClInclude Include="CocosModules.h" />
-    <ClInclude Include="GraphImpl.h" />
-    <ClInclude Include="GraphTypes.h" />
-    <ClInclude Include="GraphUtils.h" />
-    <ClInclude Include="GraphView.h" />
-    <ClInclude Include="GslUtils.h" />
-    <ClInclude Include="invoke.hpp" />
-    <ClInclude Include="JsbConversion.h" />
-    <ClInclude Include="Map.h" />
-    <ClInclude Include="Overload.h" />
-    <ClInclude Include="PathUtils.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

@@ -601,33 +601,4 @@ addDispatch (shader: string,
     }
 }
 
-void buildRenderExecutor(ModuleBuilder& builder, Features features) {
-    MODULE(RenderExecutor,
-        .mFolder = "cocos/renderer/pipeline",
-        .mFilePrefix = "RenderExecutor",
-        .mTypescriptFolder = "cocos/core/pipeline",
-        .mTypescriptFilePrefix = "executor",
-        .mRequires = { "RenderCommon", "Gfx" },
-        .mHeader = R"(#include <cocos/renderer/gfx-base/GFXBuffer.h>
-#include <cocos/renderer/gfx-base/GFXTexture.h>
-)"
-    ) {
-        NAMESPACE(cc) {
-            NAMESPACE(render) {
-                PMR_GRAPH(DeviceResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
-                    NAMED_GRAPH(Name_);
-                    COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
-                        (RefCount_, int32_t, mRefCounts)
-                    );
-                    POLYMORPHIC_GRAPH(
-                        (Buffer_, std::unique_ptr<gfx::Buffer>, mBuffers)
-                        (Texture_, std::unique_ptr<gfx::Texture>, mTextures)
-                    );
-                }
-            }
-        }
-    }
-}
-
 } // namespace Cocos::Meta

@@ -151,8 +151,34 @@ void addCppDefaultValues(ModuleBuilder& builder) {
     NAMESPACE(cc) {
         MAP(TransparentMap);
         MAP(TransparentMultiMap);
+        MAP(FlatMap);
+        MAP(FlatMultiMap);
+        MAP(UnorderedStringMap);
+        MAP(UnorderedStringMultiMap);
         PMR_MAP(PmrTransparentMap);
         PMR_MAP(PmrTransparentMultiMap);
+        PMR_MAP(PmrFlatMap);
+        PMR_MAP(PmrFlatMultiMap);
+        PMR_MAP(PmrUnorderedMap);
+        PMR_MAP(PmrUnorderedMultiMap);
+        PMR_MAP(PmrUnorderedStringMap);
+        PMR_MAP(PmrUnorderedStringMultiMap);
+
+
+        CONTAINER(TransparentSet);
+        CONTAINER(TransparentMultiSet);
+        CONTAINER(FlatSet);
+        CONTAINER(FlatMultiSet);
+        CONTAINER(UnorderedStringSet);
+        CONTAINER(UnorderedStringMultiSet);
+        PMR_CONTAINER(PmrTransparentSet);
+        PMR_CONTAINER(PmrTransparentMultiSet);
+        PMR_CONTAINER(PmrFlatSet);
+        PMR_CONTAINER(PmrFlatMultiSet);
+        PMR_CONTAINER(PmrUnorderedSet);
+        PMR_CONTAINER(PmrUnorderedMultiSet);
+        PMR_CONTAINER(PmrUnorderedStringSet);
+        PMR_CONTAINER(PmrUnorderedStringMultiSet);
     }
 }
 

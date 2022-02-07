@@ -88,37 +88,24 @@ int main() {
         updateFile(typescriptFolder / "cocos/core/pipeline/graph.ts", content);
     }
     {
-        auto content = readFile("GraphTypes.h");
-        updateFile(cppFolder / "cocos/renderer/pipeline/GraphTypes.h", content);
+        std::filesystem::path srcFolder("../renderer/pipeline");
+        std::filesystem::path dstFolder = cppFolder / "cocos/renderer/pipeline";
+        auto copyFile = [&](std::string_view filename) {
+            auto content = readFile(srcFolder / filename);
+            updateFile(dstFolder / filename, content);
+        };
+        copyFile("GraphImpl.h");
+        copyFile("GraphTypes.h");
+        copyFile("GslUtils.h");
+        copyFile("invoke.hpp");
+        copyFile("JsbConversion.h");
+        copyFile("Map.h");
+        copyFile("Overload.h");
+        copyFile("PathUtils.h");
+        copyFile("Set.h");
+        copyFile("Utility.h");
     }
-    {
-        auto content = readFile("GraphImpl.h");
-        updateFile(cppFolder / "cocos/renderer/pipeline/GraphImpl.h", content);
-    }
-    {
-        auto content = readFile("Map.h");
-        updateFile(cppFolder / "cocos/renderer/pipeline/Map.h", content);
-    }
-    {
-        auto content = readFile("GslUtils.h");
-        updateFile(cppFolder / "cocos/renderer/pipeline/GslUtils.h", content);
-    }
-    {
-        auto content = readFile("Overload.h");
-        updateFile(cppFolder / "cocos/renderer/pipeline/Overload.h", content);
-    }
-    {
-        auto content = readFile("PathUtils.h");
-        updateFile(cppFolder / "cocos/renderer/pipeline/PathUtils.h", content);
-    }
-    {
-        auto content = readFile("invoke.hpp");
-        updateFile(cppFolder / "cocos/renderer/pipeline/invoke.hpp", content);
-    }
-    {
-        auto content = readFile("JsbConversion.h");
-        updateFile(cppFolder / "cocos/renderer/pipeline/JsbConversion.h", content);
-    }
+
     // update cmakelists
     if (true) {
         auto cmake = readFile(cppFolder / "CMakeLists.txt", true);
