@@ -25,6 +25,9 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
         if (traits.mImport)
             continue;
 
+        if (!(traits.mFlags & JSB))
+            continue;
+
         if (traits.mFlags & IMPL_DETAIL)
             continue;
 
@@ -80,6 +83,9 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
         const auto& traits = get(g.traits, g, vertID);
 
         if (traits.mImport)
+            continue;
+
+        if (!(traits.mFlags & JSB))
             continue;
 
         if (traits.mFlags & IMPL_DETAIL)

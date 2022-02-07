@@ -69,6 +69,9 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(std::pmr::map, Map);
     PROJECT_TS(std::pmr::unordered_map, Map);
 
+    PROJECT_TS(boost::container::list, Set);
+    PROJECT_TS(boost::container::pmr::list, Set);
+
     PROJECT_TS(std::vector<std::byte>, Uint8Array);
     PROJECT_TS(std::vector<int>, Int32Array);
     PROJECT_TS(std::vector<int8_t>, Int8Array);
@@ -102,8 +105,37 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(boost::container::pmr::vector<uint32_t>, Uint32Array);
     PROJECT_TS(boost::container::pmr::vector<uint64_t>, BigUint64Array);
 
+    PROJECT_TS(cc::PmrString, string);
+
     PROJECT_TS(cc::TransparentMap, Map);
+    PROJECT_TS(cc::TransparentMultiMap, Map);
     PROJECT_TS(cc::PmrTransparentMap, Map);
+    PROJECT_TS(cc::PmrTransparentMultiMap, Map);
+    PROJECT_TS(cc::FlatMap, Map);
+    PROJECT_TS(cc::FlatMultiMap, Map);
+    PROJECT_TS(cc::PmrFlatMap, Map);
+    PROJECT_TS(cc::PmrFlatMultiMap, Map);
+    PROJECT_TS(cc::PmrUnorderedMap, Map);
+    PROJECT_TS(cc::PmrUnorderedMultiMap, Map);
+    PROJECT_TS(cc::UnorderedStringMap, Map);
+    PROJECT_TS(cc::UnorderedStringMultiMap, Map);
+    PROJECT_TS(cc::PmrUnorderedStringMap, Map);
+    PROJECT_TS(cc::PmrUnorderedStringMultiMap, Map);
+
+    PROJECT_TS(cc::TransparentSet, Set);
+    PROJECT_TS(cc::TransparentMultiSet, Set);
+    PROJECT_TS(cc::PmrTransparentSet, Set);
+    PROJECT_TS(cc::PmrTransparentMultiSet, Set);
+    PROJECT_TS(cc::FlatSet, Set);
+    PROJECT_TS(cc::FlatMultiSet, Set);
+    PROJECT_TS(cc::PmrFlatSet, Set);
+    PROJECT_TS(cc::PmrFlatMultiSet, Set);
+    PROJECT_TS(cc::PmrUnorderedSet, Set);
+    PROJECT_TS(cc::PmrUnorderedMultiSet, Set);
+    PROJECT_TS(cc::UnorderedStringSet, Set);
+    PROJECT_TS(cc::UnorderedStringMultiSet, Set);
+    PROJECT_TS(cc::PmrUnorderedStringSet, Set);
+    PROJECT_TS(cc::PmrUnorderedStringMultiSet, Set);
 }
 
 }

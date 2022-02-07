@@ -30,28 +30,41 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildRenderExecutor(ModuleBuilder& builder, Features features) {
-    MODULE(RenderExecutor,
+void buildRenderCompiler(ModuleBuilder& builder, Features features) {
+    MODULE(RenderCompiler,
         .mFolder = "cocos/renderer/pipeline",
-        .mFilePrefix = "RenderExecutor",
-        .mTypescriptFolder = "cocos/core/pipeline",
-        .mTypescriptFilePrefix = "executor",
-        .mRequires = { "RenderCommon", /*"RenderGraph", */"Gfx" },
-        .mHeader = R"(#include <cocos/renderer/gfx-base/GFXBuffer.h>
-#include <cocos/renderer/gfx-base/GFXTexture.h>
-)") {
+        .mFilePrefix = "RenderCompiler",
+        .mRequires = { "RenderGraph" },
+) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
-                PMR_GRAPH(DeviceResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
-                    NAMED_GRAPH(Name_);
+                ENUM_CLASS(DependencyType) {
+                    ENUMS(Order, Value);
+                }
+                STRUCT(RenderPass, .mFlags = NO_SERIALIZATION) {
+                    PUBLIC(
+                        (PmrFlatSet<uint32_t>, mOutputs, _)(PmrFlatSet<uint32_t>, mInputs, _));
+                }
+
+                PMR_GRAPH(RenderDependencyGraph, _, DependencyType, .mFlags = NO_MOVE_NO_COPY | NO_SERIALIZATION) {
                     COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
-                        (RefCount_, int32_t, mRefCounts)
-                    );
-                    POLYMORPHIC_GRAPH(
-                        (Buffer_, std::unique_ptr<gfx::Buffer>, mBuffers)
-                        (Texture_, std::unique_ptr<gfx::Texture>, mTextures)
-                    );
+                        (Pass_, RenderPass, mPasses)(ValueID_, PmrFlatSet<uint32_t>, mValueIDs)(PassID_, RenderGraph::vertex_descriptor, mPassIDs));
+                    COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
+
+                    PUBLIC(
+                        ((PmrFlatMap<PmrString, uint32_t>), mValueIndex, _)(boost::container::pmr::vector<PmrString>, mValueNames, _));
+                }
+
+                STRUCT(RenderValueNode, .mFlags = EQUAL | HASH_COMBINE | NO_SERIALIZATION) {
+                    PUBLIC(
+                        (uint32_t, mPassID, 0xFFFFFFFF)(uint32_t, mValueID, 0xFFFFFFFF));
+                    CNTR(mPassID, mValueID);
+                }
+
+                PMR_GRAPH(RenderValueGraph, _, _, .mFlags = NO_MOVE_NO_COPY | NO_SERIALIZATION) {
+                    COMPONENT_GRAPH(
+                        (Node_, RenderValueNode, mNodes));
+                    COMPONENT_BIMAP(PmrUnorderedMap, mIndex, Node_);
                 }
             }
         }

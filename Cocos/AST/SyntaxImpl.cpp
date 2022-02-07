@@ -496,6 +496,64 @@ bool SyntaxGraph::hasHeader(vertex_descriptor vertID) const noexcept {
         });
 }
 
+bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept {
+    if (vertID == typeID)
+        return true;
+
+    const auto& g = *this;
+
+    if (visit_vertex(
+            vertID, g,
+            [&](const Struct& s) {
+                for (const auto& member : s.mMembers) {
+                    const auto& memberID = locate(member.mTypePath, g);
+                    if (memberID == vertID)
+                        continue;
+                    if (hasType(memberID, typeID))
+                        return true;
+                }
+                return false;
+            },
+            [&](const Graph& s) {
+                for (const auto& component : s.mComponents) {
+                    const auto& componentID = locate(component.mValuePath, g);
+                    if (componentID == vertID)
+                        continue;
+                    if (hasType(componentID, typeID))
+                        return true;
+                }
+                for (const auto& c : s.mPolymorphic.mConcepts) {
+                    const auto& objectID = locate(c.mValue, g);
+                    if (objectID == vertID)
+                        continue;
+                    if (hasType(objectID, typeID))
+                        return true;
+                }
+                for (const auto& member : s.mMembers) {
+                    const auto& memberID = locate(member.mTypePath, g);
+                    if (memberID == vertID)
+                        continue;
+                    if (hasType(memberID, typeID))
+                        return true;
+                }
+                return false;
+            },
+            [&](const Instance& s) {
+                for (const auto& paramType : s.mParameters) {
+                    const auto& paramID = locate(paramType, g);
+                    if (hasType(paramID, typeID))
+                        return true;
+                }
+                return false;
+            },
+            [&](const auto&) {
+                return false;
+            })) {
+        return true;
+    }
+    return false;
+}
+
 SyntaxGraph::vertex_descriptor SyntaxGraph::getMemberType(
     vertex_descriptor vertID, std::string_view member) const noexcept {
     const auto& g = *this;
@@ -982,6 +1040,47 @@ bool SyntaxGraph::moduleHasMap(std::string_view modulePath, std::string_view map
                     })) {
                 return true;
             }
+        }
+    }
+    return false;
+}
+
+bool SyntaxGraph::moduleHasContainer(std::string_view modulePath, std::string_view typePath) const {
+    const auto& g = *this;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path == modulePath) {
+            if (visit_vertex(
+                    vertID, g,
+                    [&](const Composition_ auto& s) {
+                        for (const auto& member : s.mMembers) {
+                            const auto& memberID = locate(member.mTypePath, g);
+                            if (holds_tag<Instance_>(memberID, g)) {
+                                const auto& inst = get<Instance>(memberID, g);
+                                if (inst.mTemplate == typePath)
+                                    return true;
+                            }
+                        }
+                        return false;
+                    },
+                    [&](const auto&) {
+                        return false;
+                    })) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool SyntaxGraph::moduleHasType(std::string_view modulePath, std::string_view typePath) const {
+    const auto& g = *this;
+    const auto typeID = locate(typePath, g);
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path == modulePath) {
+            if (hasType(vertID, typeID))
+                return true;
         }
     }
     return false;

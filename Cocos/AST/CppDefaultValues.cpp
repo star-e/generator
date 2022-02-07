@@ -140,8 +140,12 @@ void addCppDefaultValues(ModuleBuilder& builder) {
             }
         }
         NAMESPACE(container) {
+            CONTAINER(vector);
+            CONTAINER(list);
+            CONTAINER(set);
             NAMESPACE(pmr) {
                 PMR_CONTAINER(vector);
+                PMR_CONTAINER(list);
                 PMR_CONTAINER(set);
                 PMR_MAP(map);
             }
@@ -149,6 +153,8 @@ void addCppDefaultValues(ModuleBuilder& builder) {
     }
 
     NAMESPACE(cc) {
+        IMPORT_CLASS(PmrString);
+
         MAP(TransparentMap);
         MAP(TransparentMultiMap);
         MAP(FlatMap);
@@ -163,7 +169,6 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         PMR_MAP(PmrUnorderedMultiMap);
         PMR_MAP(PmrUnorderedStringMap);
         PMR_MAP(PmrUnorderedStringMultiMap);
-
 
         CONTAINER(TransparentSet);
         CONTAINER(TransparentMultiSet);

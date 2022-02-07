@@ -1048,6 +1048,7 @@ struct SyntaxGraph {
     bool hasString(vertex_descriptor vertID) const noexcept;
     bool hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept;
     bool hasHeader(vertex_descriptor vertID) const noexcept;
+    bool hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept;
 
     vertex_descriptor getMemberType(vertex_descriptor vertID, std::string_view member) const noexcept;
     vertex_descriptor getFirstMemberString(vertex_descriptor vertID) const noexcept;
@@ -1087,6 +1088,10 @@ struct SyntaxGraph {
     vertex_descriptor getTemplate(vertex_descriptor instanceID, std::pmr::memory_resource* scratch) const;
 
     bool moduleHasMap(std::string_view modulePath, std::string_view mapPath) const;
+
+    bool moduleHasContainer(std::string_view modulePath, std::string_view typePath) const;
+
+    bool moduleHasType(std::string_view modulePath, std::string_view typePath) const;
 
     bool moduleHasGraph(std::string_view modulePath) const;
 

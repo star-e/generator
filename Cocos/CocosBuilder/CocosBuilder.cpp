@@ -59,6 +59,10 @@ int main() {
         buildRenderGraph(builder,
             Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
 
+        // build render native
+        buildRenderCompiler(builder,
+            Fwd | Types | Names | Reflection | Graphs);
+
         // build executor modules
         buildRenderExecutor(builder,
             Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
@@ -77,6 +81,9 @@ int main() {
 
         // render graph
         builder.outputModule("RenderGraph", files);
+
+        // render compiler
+        builder.outputModule("RenderCompiler", files);
 
         // executor
         builder.outputModule("RenderExecutor", files);
@@ -103,6 +110,7 @@ int main() {
         copyFile("Overload.h");
         copyFile("PathUtils.h");
         copyFile("Set.h");
+        copyFile("String.h");
         copyFile("Utility.h");
     }
 

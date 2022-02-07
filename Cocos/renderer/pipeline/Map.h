@@ -48,7 +48,7 @@ using PmrTransparentMap = std::map<Key, Value, std::less<>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
 template<class Key, class Value>
-using PmrTransparentMultimap = std::multimap<Key, Value, std::less<>,
+using PmrTransparentMultiMap = std::multimap<Key, Value, std::less<>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
 // flat_map

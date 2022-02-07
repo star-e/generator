@@ -24,38 +24,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "CocosModules.h"
-#include <Cocos/AST/DSL.h>
-#include <Cocos/AST/SyntaxGraphs.h>
+#pragma once
+#include <string>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
 
-namespace Cocos::Meta {
+namespace cc {
 
-void buildRenderExecutor(ModuleBuilder& builder, Features features) {
-    MODULE(RenderExecutor,
-        .mFolder = "cocos/renderer/pipeline",
-        .mFilePrefix = "RenderExecutor",
-        .mTypescriptFolder = "cocos/core/pipeline",
-        .mTypescriptFilePrefix = "executor",
-        .mRequires = { "RenderCommon", /*"RenderGraph", */"Gfx" },
-        .mHeader = R"(#include <cocos/renderer/gfx-base/GFXBuffer.h>
-#include <cocos/renderer/gfx-base/GFXTexture.h>
-)") {
-        NAMESPACE(cc) {
-            NAMESPACE(render) {
-                PMR_GRAPH(DeviceResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
-                    NAMED_GRAPH(Name_);
-                    COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
-                        (RefCount_, int32_t, mRefCounts)
-                    );
-                    POLYMORPHIC_GRAPH(
-                        (Buffer_, std::unique_ptr<gfx::Buffer>, mBuffers)
-                        (Texture_, std::unique_ptr<gfx::Texture>, mTextures)
-                    );
-                }
-            }
-        }
-    }
-}
+using PmrString = std::basic_string<char, std::char_traits<char>,
+    boost::container::pmr::polymorphic_allocator<char>>;
 
 }

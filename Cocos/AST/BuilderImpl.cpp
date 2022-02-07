@@ -1134,9 +1134,43 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include <boost/container/pmr/vector.hpp>\n";
                 OSS << "#include <cocos/renderer/pipeline/GraphTypes.h>\n";
             }
-            if (g.moduleHasMap(modulePath, "/cc/PmrTransparentMap")
-                || g.moduleHasMap(modulePath, "/cc/TransparentMap")) {
+            if (g.moduleHasMap(modulePath, "/cc/TransparentMap")
+                || g.moduleHasMap(modulePath, "/cc/TransparentMultiMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrTransparentMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrTransparentMultiMap")
+                || g.moduleHasMap(modulePath, "/cc/FlatMap")
+                || g.moduleHasMap(modulePath, "/cc/FlatMultiMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrFlatMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrFlatMultiMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrUnorderedMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrUnorderedMultiMap")
+                || g.moduleHasMap(modulePath, "/cc/UnorderedStringMap")
+                || g.moduleHasMap(modulePath, "/cc/UnorderedStringMultiMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMap")
+                || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMultiMap")) {
                 OSS << "#include <cocos/renderer/pipeline/Map.h>\n";
+            }
+            if (g.moduleHasContainer(modulePath, "/cc/TransparentSet")
+                || g.moduleHasContainer(modulePath, "/cc/TransparentMultiSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrTransparentSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrTransparentMultiSet")
+                || g.moduleHasContainer(modulePath, "/cc/FlatSet")
+                || g.moduleHasContainer(modulePath, "/cc/FlatMultiSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrFlatSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrFlatMultiSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedMultiSet")
+                || g.moduleHasContainer(modulePath, "/cc/UnorderedStringSet")
+                || g.moduleHasContainer(modulePath, "/cc/UnorderedStringMultiSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringSet")
+                || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringMultiSet")) {
+                OSS << "#include <cocos/renderer/pipeline/Set.h>\n";
+            }
+            if (g.moduleHasType(modulePath, "/cc/PmrString")) {
+                OSS << "#include <cocos/renderer/pipeline/String.h>\n";
+            }
+            if (g.moduleHasContainer(modulePath, "/boost/container/pmr/list")) {
+                OSS << "#include <boost/container/pmr/list.hpp>\n";
             }
             if (!moduleInfo.mHeader.empty()) {
                 copyCppString(oss, space, moduleInfo.mHeader);
