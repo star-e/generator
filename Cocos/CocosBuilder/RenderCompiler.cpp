@@ -34,8 +34,8 @@ void buildRenderCompiler(ModuleBuilder& builder, Features features) {
     MODULE(RenderCompiler,
         .mFolder = "cocos/renderer/pipeline",
         .mFilePrefix = "RenderCompiler",
-        .mRequires = { "RenderGraph" },
-) {
+        .mRequires = { "RenderGraph", "LayoutGraph" },
+    ) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 ENUM_CLASS(DependencyType) {

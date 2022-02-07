@@ -274,15 +274,18 @@ std::pmr::string CppGraphBuilder::outEdgeType(std::string_view ns) const {
     if (s.hasEdgeProperty()) {
         auto edgePropType = edgePropertyType(ns);
         if (s.isDirectedOnly()) {
-            oss << "Impl::StoredEdgeWithProperty<" << vertexDesc(ns) << ",\n";
+            oss << "Impl::StoredEdgeWithProperty<\n";
+            oss << "    " << vertexDesc(ns) << ",\n";
             oss << "    " << edgeListType(ns) << ">";
         } else {
             if (s.isEdgeListVector()) {
-                oss << "Impl::StoredEdgeWithRandomAccessEdgeIter<" << vertexDesc(ns) << ",\n";
+                oss << "Impl::StoredEdgeWithRandomAccessEdgeIter<\n";
+                oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << ",\n";
                 oss << "    " << edgePropertyType(ns) << ">";
             } else {
-                oss << "Impl::StoredEdgeWithEdgeIter<" << vertexDesc(ns) << ",\n";
+                oss << "Impl::StoredEdgeWithEdgeIter<\n";
+                oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << "::iterator,\n";
                 oss << "    " << edgePropertyType(ns) << ">";
             }
@@ -290,10 +293,12 @@ std::pmr::string CppGraphBuilder::outEdgeType(std::string_view ns) const {
     } else {
         if (s.needEdgeList()) {
             if (s.isEdgeListVector()) {
-                oss << "Impl::StoredEdgeWithRandomAccessEdgeIter<" << vertexDesc(ns) << ",\n";
+                oss << "Impl::StoredEdgeWithRandomAccessEdgeIter<\n";
+                oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << ">";
             } else {
-                oss << "Impl::StoredEdgeWithEdgeIter<" << vertexDesc(ns) << ",\n";
+                oss << "Impl::StoredEdgeWithEdgeIter<\n";
+                oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << "::iterator>";
             }
         } else {
@@ -1187,9 +1192,16 @@ std::pmr::string CppGraphBuilder::generateIncidenceGraph_h() const {
 
     oss << "\n";
     OSS << "// IncidenceGraph\n";
-    OSS << "using out_edge_type     = ";
-    copyString(oss, space, outEdgeType(), true);
-    oss << ";\n";
+    {
+        auto content = outEdgeType();
+        if (content.find_first_of('\n') != content.npos) {
+            OSS << "using out_edge_type = ";
+        } else {
+            OSS << "using out_edge_type     = ";
+        }
+        copyString(oss, space, content, true);
+        oss << ";\n";
+    }
     OSS << "using out_edge_iterator = " << outIterType() << ";\n";
     OSS << "using degree_size_type = " << s.mDegreeSizeType << ";\n";
     return oss.str();
@@ -1204,9 +1216,16 @@ std::pmr::string CppGraphBuilder::generateBidirectionalGraph_h() const {
     std::pmr::string space(get_allocator());
     oss << "\n";
     OSS << "// BidirectionalGraph\n";
-    OSS << "using in_edge_type     = ";
-    copyString(oss, space, outEdgeType(), true);
-    oss << ";\n";
+    {
+        auto content = inEdgeType();
+        if (content.find_first_of('\n') != content.npos) {
+            OSS << "using in_edge_type = ";
+        } else {
+            OSS << "using in_edge_type     = ";
+        }
+        copyString(oss, space, content, true);
+        oss << ";\n";
+    }
     OSS << "using in_edge_iterator = " << inIterType() << ";\n";
 
     return oss.str();
@@ -1335,7 +1354,7 @@ std::pmr::string CppGraphBuilder::generateEdgeListGraph_h() const {
     oss << "\n";
     OSS << "// EdgeListGraph\n";
     if (s.needEdgeList()) {
-        OSS << "using edge_iterator   = Impl::UndirectedEdgeIter<\n";
+        OSS << "using edge_iterator = Impl::UndirectedEdgeIter<\n";
         OSS << "    " << edgeListType() << "::iterator,\n";
         OSS << "    edge_descriptor, " << s.mEdgeDifferenceType << ">;\n";
     } else {

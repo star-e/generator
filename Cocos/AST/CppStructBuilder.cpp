@@ -425,8 +425,8 @@ std::pmr::string CppStructBuilder::generateOperatorBody(OperatorType type) const
                     oss << ", ";
                 oss << v << m.mMemberName;
             }
-            oss << ")\n";
-            OSS << "    " << op << " std::forward_as_tuple(";
+            oss << ") " << op << "\n";
+            oss << "       std::forward_as_tuple(";
             v = "rhs.";
             count = 0;
             for (const Member& m : s.mMembers) {
