@@ -196,7 +196,7 @@ bool SyntaxGraph::isComposition(vertex_descriptor vertID) const noexcept {
 bool SyntaxGraph::isString(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     const auto& name = get(g.names, g, vertID);
-    return name == "string" || name == "u8string";
+    return name == "string" || name == "u8string" || name == "PmrString";
 }
 
 bool SyntaxGraph::isUtf8(vertex_descriptor vertID) const noexcept {

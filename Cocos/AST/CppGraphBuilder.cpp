@@ -868,6 +868,10 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
         isU8String = true;
         if (c.mValuePath == "/std/pmr/u8string")
             bPmr = true;
+    } else if (c.mValuePath == "/cc/PmrString") {
+        isString = true;
+        isU8String = false;
+        bPmr = true;
     }
 
     {
@@ -904,23 +908,7 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
         }
 
         // reference
-        if (isString) {
-            if (isU8String) {
-                if (bPmr) {
-                    OSS << (bConst ? "const " : "") << "std::pmr::u8string&";
-                } else {
-                    OSS << (bConst ? "const " : "") << "std::u8string&";
-                }
-            } else {
-                if (bPmr) {
-                    OSS << (bConst ? "const " : "") << "std::pmr::string&";
-                } else {
-                    OSS << (bConst ? "const " : "") << "std::string&";
-                }
-            }
-        } else {
-            OSS << (bConst ? "const " : "") << component << "&";
-        }
+        OSS << (bConst ? "const " : "") << component << "&";
     }
     oss << ">";
     return oss.str();

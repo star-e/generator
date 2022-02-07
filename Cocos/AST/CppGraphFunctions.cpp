@@ -483,9 +483,10 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                                 OSS << "const auto& key = g." << member << "[u];\n";
                                 OSS << "auto num = g." << map.mMemberName << ".erase(key);\n";
                                 OSS << "Ensures(num == 1);\n";
-                                OSS << "for (auto& [key, v] : g." << map.mMemberName << ") {\n";
+                                OSS << "for (auto&& pair : g." << map.mMemberName << ") {\n";
                                 {
                                     INDENT();
+                                    OSS << "auto& v = pair.second;\n";
                                     OSS << "if (v > u)\n";
                                     OSS << "    --v;\n";
                                 }
@@ -1978,10 +1979,7 @@ std::pmr::string CppGraphBuilder::generateGraphBoostFunctions_h() const {
             OSS << "struct property_map<" << name << ", vertex_name_t> {\n";
             {
                 INDENT();
-                if (s.mVertexProperty == "/std/string"
-                    || s.mVertexProperty == "/std/pmr/string"
-                    || s.mVertexProperty == "/std/u8string"
-                    || s.mVertexProperty == "/std/pmr/u8string") {
+                if (g.isString(vpID)) {
                     OSS << "using const_type = ";
                     copyString(oss, space, vertexPropertyMapName(true), true);
                     oss << ";\n";
@@ -3068,14 +3066,32 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "[[nodiscard]] inline bool\n";
             OSS << "contains(const " << cpp.getDependentName(map.mKeyType)
                 << "& key, const " << name << "& g) noexcept {\n";
-            OSS << "    return g." << map.mMemberName << ".contains(key);\n";
+            {
+                INDENT();
+                if (true) {
+                    OSS << "auto iter = g." << map.mMemberName << ".find(key);\n";
+                    OSS << "return iter != g." << map.mMemberName << ".end();\n";
+                } else {
+                    // c++17
+                    OSS << "return g." << map.mMemberName << ".contains(key);\n";
+                }
+            }
             OSS << "}\n";
 
             oss << "\n";
             OSS << "template <class KeyLike>\n";
             OSS << "[[nodiscard]] inline bool\n";
             OSS << "contains(const KeyLike& key, const " << name << "& g) noexcept {\n";
-            OSS << "    return g." << map.mMemberName << ".contains(key);\n";
+            {
+                INDENT();
+                if (true) {
+                    OSS << "auto iter = g." << map.mMemberName << ".find(key);\n";
+                    OSS << "return iter != g." << map.mMemberName << ".end();\n";
+                } else {
+                    // c++17
+                    OSS << "return g." << map.mMemberName << ".contains(key);\n";
+                }
+            }
             OSS << "}\n";
         }
     }
@@ -3564,7 +3580,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     u8Name = ", const char8_t* name";
                 } else if (str) {
                     if (g.isPathPmr(s)) {
-                        strName = ", std::pmr::string&& name";
+                        // TODO: cocos workaround
+                        strName = ", PmrString&& name";
                         u8Name = ", std::pmr::u8string&& name";
                     } else {
                         strName = ", std::string&& name";
@@ -3695,9 +3712,10 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         if (s.mComponents.empty() && !s.isPolymorphic() && !s.mAddressable && !s.mNamed && s.mVertexMaps.empty()) {
             copyString(oss, space, addVertex(false, false));
         } else {
-            addDefaultVertex(false, false);
+            // TODO: cocos workaround
+            // addDefaultVertex(false, false);
             if (s.mNamed) {
-                oss << "\n";
+                //oss << "\n";
                 addDefaultVertex(true, false);
                 oss << "\n";
                 addDefaultVertex(false, true);

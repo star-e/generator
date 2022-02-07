@@ -91,7 +91,7 @@ import { RenderScene } from '../renderer/scene';
                 PMR_GRAPH(ResourceGraph, _, _) {
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
+                        (Name_, PmrString, mName)
                         (Desc_, ResourceDesc, mDescs)
                         (Traits_, ResourceTraits, mTraits)
                     );
@@ -100,7 +100,7 @@ import { RenderScene } from '../renderer/scene';
                 //STRUCT(NodeValue) {
                 //    PUBLIC(
                 //        (std::pmr::u8string, mNodeName, _)
-                //        (std::string, mValueName, _)
+                //        (PmrString, mValueName, _)
                 //    );
                 //}
                 //PROJECT_TS((PmrTransparentMap<NodeValue, uint32_t>), (Map<string, number>));
@@ -124,7 +124,7 @@ import { RenderScene } from '../renderer/scene';
                 //        (ResourceType, mResourceType, _)
                 //        (ValueType, mValueType, _)
                 //        (uint32_t, mNumDescriptors, 1)
-                //        (std::string, mValue, "")
+                //        (PmrString, mValue, "")
                 //    );
                 //}
 
@@ -137,7 +137,7 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(RasterView) {
                     PUBLIC(
-                        (std::string, mSlotName, _)
+                        (PmrString, mSlotName, _)
                         (AccessType, mAccessType, AccessType::Write)
                         (AttachmentType, mAttachmentType, _)
                         (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
@@ -158,7 +158,7 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(ComputeView) {
                     PUBLIC(
-                        (std::string, mName, _)
+                        (PmrString, mName, _)
                         (AccessType, mAccessType, AccessType::Read)
                         (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
                         (gfx::Color, mClearColor, _)
@@ -170,36 +170,36 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(RasterSubpass) {
                     PUBLIC(
-                        ((PmrTransparentMap<std::string, RasterView>), mRasterViews, _)
-                        ((PmrTransparentMap<std::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrTransparentMap<PmrString, RasterView>), mRasterViews, _)
+                        ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                     );
                 }
 
                 PMR_GRAPH(SubpassGraph, RasterSubpass, _) {
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
+                        (Name_, PmrString, mName)
                     );
                 }
                 
                 STRUCT(RasterPassData) {
                     PUBLIC(
-                        ((PmrTransparentMap<std::string, RasterView>), mRasterViews, _)
-                        ((PmrTransparentMap<std::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrTransparentMap<PmrString, RasterView>), mRasterViews, _)
+                        ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                         (SubpassGraph, mSubpassGraph, _)
                     );
                 }
 
                 STRUCT(ComputePassData) {
                     PUBLIC(
-                        ((PmrTransparentMap<std::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                     );
                 }
 
                 STRUCT(CopyPair) {
                     PUBLIC(
-                        (std::string, mSource, _)
-                        (std::string, mTarget, _)
+                        (PmrString, mSource, _)
+                        (PmrString, mTarget, _)
                         (uint32_t, mMipLevels, 0xFFFFFFFF)
                         (uint32_t, mNumSlices, 0xFFFFFFFF)
                         (uint32_t, mSourceMostDetailedMip, 0)
@@ -222,8 +222,8 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(MovePair) {
                     PUBLIC(
-                        (std::string, mSource, _)
-                        (std::string, mTarget, _)
+                        (PmrString, mSource, _)
+                        (PmrString, mTarget, _)
                         (uint32_t, mMipLevels, 0xFFFFFFFF)
                         (uint32_t, mNumSlices, 0xFFFFFFFF)
                         (uint32_t, mTargetMostDetailedMip, 0)
@@ -243,7 +243,7 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(RaytracePassData) {
                     PUBLIC(
-                        ((PmrTransparentMap<std::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                        ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                     );
                 }
 
@@ -258,16 +258,16 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(SceneData) {
                     PUBLIC(
-                        (std::string, mName, _)
+                        (PmrString, mName, _)
                         (scene::Camera*, mCamera, nullptr)
-                        (boost::container::pmr::vector<std::string>, mScenes, _)
+                        (boost::container::pmr::vector<PmrString>, mScenes, _)
                     );
                     CNTR(mName);
                 }
 
                 STRUCT(Dispatch) {
                     PUBLIC(
-                        (std::string, mShader, _)
+                        (PmrString, mShader, _)
                         (uint32_t, mThreadGroupCountX, 0)
                         (uint32_t, mThreadGroupCountY, 0)
                         (uint32_t, mThreadGroupCountZ, 0)
@@ -277,17 +277,17 @@ import { RenderScene } from '../renderer/scene';
 
                 STRUCT(Blit) {
                     PUBLIC(
-                        (std::string, mShader, _)
+                        (PmrString, mShader, _)
                     );
                     CNTR(mShader);
                 }
 
                 STRUCT(RenderData, .mFlags = NO_COPY) {
                     PUBLIC(
-                        ((std::unordered_map<uint32_t, boost::container::pmr::vector<uint8_t>>), mConstants, _)
-                        ((std::unordered_map<uint32_t, std::unique_ptr<gfx::Buffer>>), mBuffers, _)
-                        ((std::unordered_map<uint32_t, std::unique_ptr<gfx::Texture>>), mTextures, _)
-                        ((std::unordered_map<uint32_t, std::unique_ptr<gfx::Sampler>>), mSamplers, _)
+                        ((PmrUnorderedMap<uint32_t, boost::container::pmr::vector<uint8_t>>), mConstants, _)
+                        ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Buffer>>), mBuffers, _)
+                        ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Texture>>), mTextures, _)
+                        ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Sampler>>), mSamplers, _)
                     );
                 }
 
@@ -296,8 +296,8 @@ import { RenderScene } from '../renderer/scene';
                     REFERENCE_GRAPH();
 
                     COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
-                        (Layout_, std::string, mLayoutNodes)
+                        (Name_, PmrString, mName)
+                        (Layout_, PmrString, mLayoutNodes)
                         (Data_, RenderData, mData)
                     );
 
@@ -313,7 +313,7 @@ import { RenderScene } from '../renderer/scene';
                         (Dispatch_, Dispatch, mDispatches)
                     );
                     PUBLIC(
-                        ((std::unordered_map<std::string, uint32_t>), mIndex, _)
+                        ((PmrUnorderedMap<PmrString, uint32_t>), mIndex, _)
                     );
                 }
 
