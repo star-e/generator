@@ -1,11 +1,12 @@
 #pragma once
-#include <functional>
-#include <boost/iterator/iterator_adaptor.hpp>
-#include <boost/graph/adjacency_iterator.hpp>
-#include <boost/graph/properties.hpp>
-#include <boost/container/pmr/vector.hpp>
 #include <cocos/renderer/pipeline/GraphTypes.h>
 #include <cocos/renderer/pipeline/GslUtils.h>
+#include <boost/container/pmr/vector.hpp>
+#include <boost/graph/adjacency_iterator.hpp>
+#include <boost/graph/properties.hpp>
+#include <boost/iterator/iterator_adaptor.hpp>
+#include <boost/variant2/variant.hpp>
+#include <functional>
 
 namespace cc {
 

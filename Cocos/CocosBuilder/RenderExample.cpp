@@ -41,18 +41,25 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
                 ENUM_CLASS(DependencyType) {
                     ENUMS(Order, Value);
                 }
-                STRUCT(RenderPass, .mFlags = NO_SERIALIZATION) {
+                STRUCT(RenderPass) {
                     PUBLIC(
                         (PmrFlatSet<uint32_t>, mOutputs, _)
                         (PmrFlatSet<uint32_t>, mInputs, _)
                     );
                 }
 
-                PMR_GRAPH(RenderDependencyGraph, _, DependencyType, .mFlags = NO_MOVE_NO_COPY | NO_SERIALIZATION) {
+                STRUCT(RenderPassTraits) {
+                    PUBLIC(
+                        (bool, mKeep, false)
+                    );
+                }
+
+                PMR_GRAPH(RenderDependencyGraph, _, DependencyType, .mFlags = NO_MOVE_NO_COPY) {
                     COMPONENT_GRAPH(
                         (Pass_, RenderPass, mPasses)
                         (ValueID_, PmrFlatSet<uint32_t>, mValueIDs)
                         (PassID_, RenderGraph::vertex_descriptor, mPassIDs)
+                        (Traits_, RenderPassTraits, mTraits)
                     );
                     COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
 
@@ -62,7 +69,7 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
                     );
                 }
 
-                STRUCT(RenderValueNode, .mFlags = EQUAL | HASH_COMBINE | NO_SERIALIZATION) {
+                STRUCT(RenderValueNode, .mFlags = EQUAL | HASH_COMBINE) {
                     PUBLIC(
                         (uint32_t, mPassID, 0xFFFFFFFF)
                         (uint32_t, mValueID, 0xFFFFFFFF)
@@ -70,20 +77,21 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
                     CNTR(mPassID, mValueID);
                 }
 
-                PMR_GRAPH(RenderValueGraph, _, _, .mFlags = NO_MOVE_NO_COPY | NO_SERIALIZATION) {
+                PMR_GRAPH(RenderValueGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
                     COMPONENT_GRAPH(
                         (Node_, RenderValueNode, mNodes)
                     );
                     COMPONENT_BIMAP(PmrUnorderedMap, mIndex, Node_);
                 }
 
-                STRUCT(RenderCompiler, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR | NO_SERIALIZATION) {
+                STRUCT(RenderCompiler, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
                     PUBLIC(
+                        (ResourceGraph&, mResourceGraph, _)
                         (RenderGraph&, mGraph, _)
                         (LayoutGraph&, mLayoutGraph, _)
                         (boost::container::pmr::memory_resource*, mScratch, nullptr)
                     );
-                    CNTR(mGraph, mLayoutGraph, mScratch);
+                    CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
                     MEMBER_FUNCTIONS(R"(
 int validate() const;
 int audit(std::ostream& oss) const;

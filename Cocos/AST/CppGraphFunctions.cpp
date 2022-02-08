@@ -1012,21 +1012,45 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
                 }
                 Expects(componentID != -1);
 
-                OSS << "const auto& uuid = c" << componentID << ";\n";
                 if (piecewise) {
-                    visit(
-                        overload(
-                            [&](Vector_) {
-                                OSS << "auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, uuid, std::forward_as_tuple(v));\n";
-                            },
-                            [&]<BackInsertionSequence_ T0>(T0) {
-                                OSS << "auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, uuid, std::forward_as_tuple(&(*iter)));\n";
-                            },
-                            [&]<Associative_ T1>(T1) {
-                                OSS << "auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, uuid, std::forward_as_tuple(&(*iter)));\n";
-                            }),
-                        s.mVertexListType);
+                    if (true) {
+                        OSS << "invoke_hpp::apply(\n";
+                        {
+                            INDENT();
+                            OSS << "[&](const auto&... args) {\n";
+                            visit(
+                                overload(
+                                    [&](Vector_) {
+                                        OSS << "    auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, std::forward_as_tuple(args...), std::forward_as_tuple(v));\n";
+                                    },
+                                    [&]<BackInsertionSequence_ T0>(T0) {
+                                        OSS << "    auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, std::forward_as_tuple(args...), std::forward_as_tuple(&(*iter)));\n";
+                                    },
+                                    [&]<Associative_ T1>(T1) {
+                                        OSS << "    auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, std::forward_as_tuple(args...), std::forward_as_tuple(&(*iter)));\n";
+                                    }),
+                                s.mVertexListType);
+                            OSS << "    Ensures(res.second);\n";
+                            OSS << "},\n";
+                            OSS << "c" << componentID << ");\n";
+                        }
+                    } else {
+                        OSS << "const auto& uuid = c" << componentID << ";\n";
+                        visit(
+                            overload(
+                                [&](Vector_) {
+                                    OSS << "auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, uuid, std::forward_as_tuple(v));\n";
+                                },
+                                [&]<BackInsertionSequence_ T0>(T0) {
+                                    OSS << "auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, uuid, std::forward_as_tuple(&(*iter)));\n";
+                                },
+                                [&]<Associative_ T1>(T1) {
+                                    OSS << "auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, uuid, std::forward_as_tuple(&(*iter)));\n";
+                                }),
+                            s.mVertexListType);
+                    }
                 } else {
+                    OSS << "const auto& uuid = c" << componentID << ";\n";
                     visit(
                         overload(
                             [&](Vector_) {
@@ -1039,8 +1063,8 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
                                 OSS << "auto res = g." << map.mMemberName << ".emplace(uuid, &(*iter));\n";
                             }),
                         s.mVertexListType);
+                    OSS << "Ensures(res.second);\n";
                 }
-                OSS << "Ensures(res.second);\n";
             }
             UNINDENT();
             OSS << "}\n";

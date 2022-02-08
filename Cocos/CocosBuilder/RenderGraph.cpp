@@ -91,10 +91,11 @@ import { RenderScene } from '../renderer/scene';
                 PMR_GRAPH(ResourceGraph, _, _) {
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        (Name_, PmrString, mName)
+                        (Name_, PmrString, mNames)
                         (Desc_, ResourceDesc, mDescs)
                         (Traits_, ResourceTraits, mTraits)
                     );
+                    COMPONENT_BIMAP(PmrUnorderedMap, mValueIndex, Name_);
                 }
 
                 //STRUCT(NodeValue) {
@@ -186,7 +187,7 @@ bool isWrite() const {
                 PMR_GRAPH(SubpassGraph, RasterSubpass, _) {
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        (Name_, PmrString, mName)
+                        (Name_, PmrString, mNames)
                     );
                 }
                 
@@ -304,7 +305,7 @@ bool isWrite() const {
                     REFERENCE_GRAPH();
 
                     COMPONENT_GRAPH(
-                        (Name_, PmrString, mName)
+                        (Name_, PmrString, mNames)
                         (Layout_, PmrString, mLayoutNodes)
                         (Data_, RenderData, mData)
                     );
