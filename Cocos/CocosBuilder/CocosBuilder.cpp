@@ -60,7 +60,7 @@ int main() {
             Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
 
         // build render native
-        buildRenderCompiler(builder,
+        buildRenderExample(builder,
             Fwd | Types | Names | Reflection | Graphs);
 
         // build executor modules
@@ -83,7 +83,7 @@ int main() {
         builder.outputModule("RenderGraph", files);
 
         // render compiler
-        builder.outputModule("RenderCompiler", files);
+        builder.outputModule("RenderExample", files);
 
         // executor
         builder.outputModule("RenderExecutor", files);

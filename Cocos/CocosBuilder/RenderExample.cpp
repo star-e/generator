@@ -30,10 +30,10 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildRenderCompiler(ModuleBuilder& builder, Features features) {
-    MODULE(RenderCompiler,
+void buildRenderExample(ModuleBuilder& builder, Features features) {
+    MODULE(RenderExample,
         .mFolder = "cocos/renderer/pipeline",
-        .mFilePrefix = "RenderCompiler",
+        .mFilePrefix = "RenderExample",
         .mRequires = { "RenderGraph", "LayoutGraph" },
     ) {
         NAMESPACE(cc) {

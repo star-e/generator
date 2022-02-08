@@ -15,7 +15,7 @@
     <ClCompile Include="RenderExecutor.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
-    <ClCompile Include="RenderCompiler.cpp">
+    <ClCompile Include="RenderExample.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
   </ItemGroup>
