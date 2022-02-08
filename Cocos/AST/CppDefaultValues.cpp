@@ -155,6 +155,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
 
     NAMESPACE(cc) {
         IMPORT_PMR_CLASS(PmrString);
+        PMR_CONTAINER(PmrList);
 
         MAP(TransparentMap);
         MAP(TransparentMultiMap);

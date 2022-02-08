@@ -1508,7 +1508,7 @@ int ModuleBuilder::compile() {
                     s.mVertexListPath = "/boost/container/pmr/vector";
                 }
                 if (s.mEdgeListPath.empty()) {
-                    s.mEdgeListPath = "/boost/container/pmr/list";
+                    s.mEdgeListPath = "/cc/PmrList";
                 }
                 if (s.mOutEdgeListPath.empty()) {
                     s.mOutEdgeListPath = "/boost/container/pmr/vector";
@@ -1637,7 +1637,7 @@ int ModuleBuilder::compile() {
             auto listID = g.null_vertex();
             if (bPmr) {
                 listID = c.isVector() ? locate("/boost/container/pmr/vector", g)
-                                      : locate("/boost/container/pmr/list", g);
+                                      : locate("/cc/PmrList", g);
             } else {
                 listID = c.isVector() ? locate("/boost/container/vector", g)
                                       : locate("/boost/container/list", g);

@@ -86,6 +86,12 @@ import { RenderScene } from '../renderer/scene';
                         (ResourceResidency, mResidency, _)
                     );
                     CNTR(mResidency);
+                    MEMBER_FUNCTIONS(R"(
+bool hasSideEffects() const noexcept {
+    return boost::variant2::holds_alternative<Persistent_>(mResidency) ||
+           boost::variant2::holds_alternative<Backbuffer_>(mResidency);
+}
+)");
                 }
 
                 PMR_GRAPH(ResourceGraph, _, _) {
