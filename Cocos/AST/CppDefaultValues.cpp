@@ -144,6 +144,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
             CONTAINER(list);
             CONTAINER(set);
             NAMESPACE(pmr) {
+                IMPORT_CLASS(memory_resource);
                 PMR_CONTAINER(vector);
                 PMR_CONTAINER(list);
                 PMR_CONTAINER(set);

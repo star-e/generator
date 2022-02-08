@@ -164,6 +164,14 @@ import { RenderScene } from '../renderer/scene';
                         (gfx::Color, mClearColor, _)
                         (ClearValueType, mClearValueType, _)
                     );
+                    MEMBER_FUNCTIONS(R"(
+bool isRead() const {
+    return mAccessType != AccessType::Write;
+}
+bool isWrite() const {
+    return mAccessType != AccessType::Read;
+}
+)");
                     TS_INIT(mAccessType, AccessType.Read);
                     TS_INIT(mClearFlags, ClearFlagBit.NONE);
                 }

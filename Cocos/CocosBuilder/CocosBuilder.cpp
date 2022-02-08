@@ -109,6 +109,7 @@ int main() {
         copyFile("Map.h");
         copyFile("Overload.h");
         copyFile("PathUtils.h");
+        copyFile("Range.h");
         copyFile("Set.h");
         copyFile("String.h");
         copyFile("Utility.h");

@@ -28,9 +28,6 @@
     <ClInclude Include="..\renderer\pipeline\GraphTypes.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\GraphUtils.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\renderer\pipeline\GraphView.h">
       <Filter>Headers</Filter>
     </ClInclude>

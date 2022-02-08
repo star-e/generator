@@ -166,6 +166,9 @@ builder.addMember(s.mVertexDescriptor, COND,\
 #define PRIVATE(SEQ) \
     BOOST_PP_SEQ_FOR_EACH_I(STRUCT_MEMBER, false, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
 
+#define MEMBER_FUNCTIONS(STR) \
+    builder.addMemberFunctions(s.mVertexDescriptor, STR)
+
 #define TS_FUNCTIONS(STR) \
     builder.addTypescriptFunctions(s.mVertexDescriptor, STR)
 

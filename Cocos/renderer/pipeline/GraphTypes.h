@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <type_traits>
 #include <boost/optional.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
@@ -17,6 +18,9 @@ struct no_property;
 }
 
 namespace cc {
+
+template <class T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
 namespace Impl {
 

@@ -249,7 +249,6 @@
   <ItemGroup>
     <ClInclude Include="..\renderer\pipeline\GraphImpl.h" />
     <ClInclude Include="..\renderer\pipeline\GraphTypes.h" />
-    <ClInclude Include="..\renderer\pipeline\GraphUtils.h" />
     <ClInclude Include="..\renderer\pipeline\GraphView.h" />
     <ClInclude Include="..\renderer\pipeline\GslUtils.h" />
     <ClInclude Include="..\renderer\pipeline\invoke.hpp" />

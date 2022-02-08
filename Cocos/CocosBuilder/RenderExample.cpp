@@ -76,6 +76,20 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
                     );
                     COMPONENT_BIMAP(PmrUnorderedMap, mIndex, Node_);
                 }
+
+                STRUCT(RenderCompiler, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR | NO_SERIALIZATION) {
+                    PUBLIC(
+                        (RenderGraph&, mGraph, _)
+                        (LayoutGraph&, mLayoutGraph, _)
+                        (boost::container::pmr::memory_resource*, mScratch, nullptr)
+                    );
+                    CNTR(mGraph, mLayoutGraph, mScratch);
+                    MEMBER_FUNCTIONS(R"(
+int validate() const;
+int audit(std::ostream& oss) const;
+int compile();
+)");
+                }
             }
         }
     }

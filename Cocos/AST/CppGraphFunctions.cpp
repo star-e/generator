@@ -1094,7 +1094,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
                     else
                         OSS;
 
-                    oss << "if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, "
+                    oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<Tag>, "
                         << cpp.getDependentName(c.mTag) << ">) {\n";
                     {
                         INDENT();
@@ -1146,10 +1146,10 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
                         OSS;
 
                     if (propertyParam) {
-                        oss << "if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, "
+                        oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<ValueT>, "
                             << cpp.getDependentName(c.mValue) << ">) {\n";
                     } else {
-                        oss << "if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, "
+                        oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<Tag>, "
                             << cpp.getDependentName(c.mTag) << ">) {\n";
                     }
                     {
@@ -2701,15 +2701,15 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         oss << " else ";
                     }
                     if (bTag) {
-                        oss << "if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, "
+                        oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<Tag>, "
                             << cpp.getDependentName(c.mTag) << ">) {\n";
                     } else {
-                        oss << "if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, "
+                        oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<ValueT>, "
                             << cpp.getDependentName(c.mValue) << ">) {\n";
                     }
                     {
                         INDENT();
-                        OSS << "return std::holds_alternative<" << handleElemType(c, cn, true) << ">(g.mVertices[v].mHandle);\n";
+                        OSS << "return holds_alternative<" << handleElemType(c, cn, true) << ">(g.mVertices[v].mHandle);\n";
                     }
                     OSS << "}";
                 }
@@ -2767,7 +2767,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     if (count++) {
                         oss << " else ";
                     }
-                    oss << "if constexpr (std::is_same_v<std::remove_cvref_t<" << valueType << ">, ";
+                    oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<" << valueType << ">, ";
                     if (bTag) {
                         oss << cpp.getDependentName(c.mTag);
                     } else {
@@ -2838,7 +2838,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     if (count++) {
                         oss << " else ";
                     }
-                    oss << "if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, "
+                    oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<ValueT>, "
                         << cpp.getDependentName(c.mValue) << ">) {\n";
                     {
                         INDENT();
@@ -3712,13 +3712,14 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         if (s.mComponents.empty() && !s.isPolymorphic() && !s.mAddressable && !s.mNamed && s.mVertexMaps.empty()) {
             copyString(oss, space, addVertex(false, false));
         } else {
-            // TODO: cocos workaround
-            // addDefaultVertex(false, false);
             if (s.mNamed) {
                 //oss << "\n";
                 addDefaultVertex(true, false);
                 oss << "\n";
                 addDefaultVertex(false, true);
+            } else {
+                // TODO: cocos workaround
+                addDefaultVertex(false, false);
             }
         }
     }
