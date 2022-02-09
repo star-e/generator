@@ -36,71 +36,75 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "RenderExample",
         .mRequires = { "RenderGraph", "LayoutGraph" },
     ) {
-        NAMESPACE(cc) {
-            NAMESPACE(render) {
-                ENUM_CLASS(DependencyType) {
-                    ENUMS(Order, Value);
-                }
-                STRUCT(RenderPass) {
-                    PUBLIC(
-                        (PmrFlatSet<uint32_t>, mOutputs, _)
-                        (PmrFlatSet<uint32_t>, mInputs, _)
-                    );
-                }
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
+        NAMESPACE_BEG(example);
 
-                STRUCT(RenderPassTraits) {
-                    PUBLIC(
-                        (bool, mKeep, false)
-                    );
-                }
+        ENUM_CLASS(DependencyType) {
+            ENUMS(Order, Value);
+        }
+        STRUCT(RenderPass) {
+            PUBLIC(
+                (PmrFlatSet<uint32_t>, mOutputs, _)
+                (PmrFlatSet<uint32_t>, mInputs, _)
+            );
+        }
 
-                PMR_GRAPH(RenderDependencyGraph, _, DependencyType, .mFlags = NO_MOVE_NO_COPY) {
-                    COMPONENT_GRAPH(
-                        (Pass_, RenderPass, mPasses)
-                        (ValueID_, PmrFlatSet<uint32_t>, mValueIDs)
-                        (PassID_, RenderGraph::vertex_descriptor, mPassIDs)
-                        (Traits_, RenderPassTraits, mTraits)
-                    );
-                    COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
+        STRUCT(RenderPassTraits) {
+            PUBLIC(
+                (bool, mKeep, false)
+            );
+        }
 
-                    PUBLIC(
-                        ((PmrUnorderedMap<PmrString, uint32_t>), mValueIndex, _)
-                        (boost::container::pmr::vector<PmrString>, mValueNames, _)
-                        (boost::container::pmr::vector<ResourceGraph::vertex_descriptor>, mResourceHandles, _)
-                    );
-                }
+        PMR_GRAPH(RenderDependencyGraph, _, DependencyType, .mFlags = NO_MOVE_NO_COPY) {
+            COMPONENT_GRAPH(
+                (Pass_, RenderPass, mPasses)
+                (ValueID_, PmrFlatSet<uint32_t>, mValueIDs)
+                (PassID_, RenderGraph::vertex_descriptor, mPassIDs)
+                (Traits_, RenderPassTraits, mTraits)
+            );
+            COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
 
-                STRUCT(RenderValueNode, .mFlags = EQUAL | HASH_COMBINE) {
-                    PUBLIC(
-                        (uint32_t, mPassID, 0xFFFFFFFF)
-                        (uint32_t, mValueID, 0xFFFFFFFF)
-                    );
-                    CNTR(mPassID, mValueID);
-                }
+            PUBLIC(
+                ((PmrUnorderedMap<PmrString, uint32_t>), mValueIndex, _)
+                (boost::container::pmr::vector<PmrString>, mValueNames, _)
+                (boost::container::pmr::vector<ResourceGraph::vertex_descriptor>, mResourceHandles, _)
+            );
+        }
 
-                PMR_GRAPH(RenderValueGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
-                    COMPONENT_GRAPH(
-                        (Node_, RenderValueNode, mNodes)
-                    );
-                    COMPONENT_BIMAP(PmrUnorderedMap, mIndex, Node_);
-                }
+        STRUCT(RenderValueNode, .mFlags = EQUAL | HASH_COMBINE) {
+            PUBLIC(
+                (uint32_t, mPassID, 0xFFFFFFFF)
+                (uint32_t, mValueID, 0xFFFFFFFF)
+            );
+            CNTR(mPassID, mValueID);
+        }
 
-                STRUCT(RenderCompiler, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
-                    PUBLIC(
-                        (ResourceGraph&, mResourceGraph, _)
-                        (RenderGraph&, mGraph, _)
-                        (LayoutGraph&, mLayoutGraph, _)
-                        (boost::container::pmr::memory_resource*, mScratch, nullptr)
-                    );
-                    CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
-                    MEMBER_FUNCTIONS(R"(
+        PMR_GRAPH(RenderValueGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
+            COMPONENT_GRAPH(
+                (Node_, RenderValueNode, mNodes)
+            );
+            COMPONENT_BIMAP(PmrUnorderedMap, mIndex, Node_);
+        }
+
+        STRUCT(RenderCompiler, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
+            PUBLIC(
+                (ResourceGraph&, mResourceGraph, _)
+                (RenderGraph&, mGraph, _)
+                (LayoutGraph&, mLayoutGraph, _)
+                (boost::container::pmr::memory_resource*, mScratch, nullptr)
+            );
+            CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
+            MEMBER_FUNCTIONS(R"(
 int validate() const;
 int audit(std::ostream& oss) const;
 int compile();
 )");
-                }
-            }
         }
+
+        NAMESPACE_END(example);
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
     }
 }
 

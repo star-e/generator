@@ -38,6 +38,11 @@ THE SOFTWARE.
 #define NAMESPACE(NAME) \
     if (auto ns = builder.openNamespace(BOOST_PP_STRINGIZE(NAME)); true)
 
+#define NAMESPACE_BEG(NAME) { \
+    auto ns = builder.openNamespace(BOOST_PP_STRINGIZE(NAME))
+
+#define NAMESPACE_END(...) }
+
 #define VALUE(NAME) \
     builder.addValue(BOOST_PP_STRINGIZE(NAME))
 
