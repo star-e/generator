@@ -2880,6 +2880,83 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             }
             OSS << "}\n";
         };
+        
+        auto generateGet2 = [&](bool bConst, bool bTag) {
+            std::string valueType = bTag ? "Tag" : "ValueT";
+            if (bTag) {
+                if (false) {
+                    oss << "\n";
+                    OSS << "template <class Tag>\n";
+                    OSS << "inline void get(Tag, " << name << "::vertex_descriptor v, ";
+                    if (bConst)
+                        oss << "const ";
+                    oss << name << "& g) noexcept {\n";
+                    OSS << "    static_assert(false, \"Tag type is not in PolymorphicGraph\");\n";
+                    OSS << "}\n";
+                }
+            } else {
+                oss << "\n";
+                OSS << "template <class ValueT>\n";
+                if (bConst) {
+                    OSS << "[[nodiscard]] inline const ValueT&\n";
+                } else {
+                    OSS << "[[nodiscard]] inline ValueT&\n";
+                }
+                OSS << "get(" << name << "::vertex_descriptor v, ";
+
+                if (bConst)
+                    oss << "const ";
+                oss << name << "& g) noexcept {\n";
+                OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
+                OSS << "}\n";
+            }
+
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                oss << "\n";
+                if (!bTag) {
+                    OSS << "template <>\n";
+                }
+                if (bConst) {
+                    OSS << "[[nodiscard]] inline const " << cpp.getDependentName(c.mValue) << "&\n";
+                } else {
+                    OSS << "[[nodiscard]] inline " << cpp.getDependentName(c.mValue) << "&\n";
+                }
+                if (bTag) {
+                    OSS << "get(";
+                    oss << cpp.getDependentName(c.mTag) << ", ";
+                } else {
+                    OSS << "get<";
+                    oss << cpp.getDependentName(c.mValue);
+                    oss << ">(";
+                }
+                oss << name << "::vertex_descriptor v, ";
+                if (bConst)
+                    oss << "const ";
+                oss << name << "& g) noexcept {\n";
+                {
+                    INDENT();
+                    if (s.isVector()) {
+                        OSS << "auto& handle = boost::variant2::get<\n";
+                        OSS << "    " << handleElemType(c, cn, false) << ">(\n";
+                        OSS << "    g.mVertices[v].mHandle);\n";
+                    } else {
+                        OSS << "auto& handle = boost::variant2::get<\n";
+                        OSS << "    " << handleElemType(c, cn, false) << ">(\n";
+                        OSS << "    static_cast<" << name << "::vertex_type*>(v)->mHandle);\n";
+                    }
+                    if (c.mMemberName.empty()) {
+                        OSS << "return handle.mValue;\n";
+                    } else {
+                        if (c.isVector()) {
+                            OSS << "return g." << c.mMemberName << "[handle.mValue];\n";
+                        } else {
+                            OSS << "return *handle.mValue;\n";
+                        }
+                    }
+                }
+                OSS << "}\n";
+            }
+        };
 
         auto generateGetIf = [&](bool bConst) {
             oss << "\n";
@@ -2951,10 +3028,17 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "}\n";
         };
 
-        generateGet(false, false);
-        generateGet(true, false);
-        generateGet(false, true);
-        generateGet(true, true);
+        if (true) {
+            generateGet2(false, false);
+            generateGet2(true, false);
+            generateGet2(false, true);
+            generateGet2(true, true);
+        } else {
+            generateGet(false, false);
+            generateGet(true, false);
+            generateGet(false, true);
+            generateGet(true, true);
+        }
 
         generateGetIf(false);
         generateGetIf(true);

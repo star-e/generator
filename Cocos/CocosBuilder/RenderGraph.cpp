@@ -190,10 +190,11 @@ bool isWrite() const {
                     );
                 }
 
-                PMR_GRAPH(SubpassGraph, RasterSubpass, _) {
+                PMR_GRAPH(SubpassGraph, _, _) {
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
                         (Name_, PmrString, mNames)
+                        (Subpass_, RasterSubpass, mSubpasses)
                     );
                 }
                 
