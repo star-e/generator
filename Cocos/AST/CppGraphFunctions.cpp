@@ -3028,6 +3028,71 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "}\n";
         };
 
+        auto generateGetIf2 = [&](bool bConst) {
+            oss << "\n";
+            OSS << "template <class ValueT>\n";
+            if (bConst) {
+                OSS << "[[nodiscard]] inline const ValueT*\n";
+            } else {
+                OSS << "[[nodiscard]] inline ValueT*\n";
+            }
+            OSS << "get_if(" << name << "::vertex_descriptor v, ";
+            if (bConst)
+                oss << "const ";
+            oss << name << "* pGraph) noexcept {\n";
+            OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
+            OSS << "}\n";
+
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                auto valueType = cpp.getDependentName(c.mValue);
+                oss << "\n";
+                OSS << "template <>\n";
+                if (bConst) {
+                    OSS << "[[nodiscard]] inline const " << valueType << "*\n";
+                } else {
+                    OSS << "[[nodiscard]] inline " << valueType << "*\n";
+                }
+                OSS << "get_if<" << cpp.getDependentName(c.mValue) << ">(" << name << "::vertex_descriptor v, ";
+                if (bConst)
+                    oss << "const ";
+                oss << name << "* pGraph) noexcept {\n";
+                {
+                    INDENT();
+                    if (bConst) {
+                        OSS << "const " << valueType << "* ptr = nullptr;\n";
+                    } else {
+                        OSS << valueType << "* ptr = nullptr;\n";
+                    }
+                    OSS << "if (!pGraph) {\n";
+                    OSS << "    return ptr;\n";
+                    OSS << "}\n";
+                    OSS << "auto& g       = *pGraph;\n";
+                    if (s.isVector()) {
+                        OSS << "auto* pHandle = boost::variant2::get_if<\n";
+                        OSS << "    " << handleElemType(c, cn, false) << ">(\n";
+                        OSS << "    &g.mVertices[v].mHandle);\n";
+                    } else {
+                        OSS << "auto* pHandle = boost::variant2::get_if<\n";
+                        OSS << "    " << handleElemType(c, cn, false) << ">(\n";
+                        OSS << "    &(static_cast<" << name << "::vertex_type*>(v)->mHandle));\n";
+                    }
+                    OSS << "if (pHandle) {\n";
+                    if (c.mMemberName.empty()) {
+                        OSS << "    ptr = &pHandle->mValue;\n";
+                    } else {
+                        if (c.isVector()) {
+                            OSS << "    ptr = &g." << c.mMemberName << "[pHandle->mValue];\n";
+                        } else {
+                            OSS << "    ptr = &(*(pHandle->mValue));\n";
+                        }
+                    }
+                    OSS << "}\n";
+                    OSS << "return ptr;\n";
+                }
+                OSS << "}\n";
+            }
+        };
+
         if (true) {
             generateGet2(false, false);
             generateGet2(true, false);
@@ -3040,8 +3105,13 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             generateGet(true, true);
         }
 
-        generateGetIf(false);
-        generateGetIf(true);
+        if (true) {
+            generateGetIf2(false);
+            generateGetIf2(true);
+        } else {
+            generateGetIf(false);
+            generateGetIf(true);
+        }
     } // Polymorphic
 
     bool hasPropertyMap = s.hasVertexProperty() || !s.mComponents.empty();
