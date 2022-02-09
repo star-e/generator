@@ -18,6 +18,9 @@
     <ClCompile Include="RenderExample.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="RenderCompiler.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

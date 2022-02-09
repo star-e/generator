@@ -242,6 +242,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="RenderCommon.cpp" />
+    <ClCompile Include="RenderCompiler.cpp" />
     <ClCompile Include="RenderExample.cpp" />
     <ClCompile Include="RenderExecutor.cpp" />
     <ClCompile Include="RenderGraph.cpp" />

@@ -59,13 +59,17 @@ int main() {
         buildRenderGraph(builder,
             Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
 
-        // build render native
-        buildRenderExample(builder,
+        // build render compiler (native)
+        buildRenderCompiler(builder,
             Fwd | Types | Names | Reflection | Graphs);
 
         // build executor modules
         buildRenderExecutor(builder,
             Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
+
+        // build render example
+        buildRenderExample(builder,
+            Fwd | Types | Names | Reflection | Graphs);
     }
 
     builder.compile();
@@ -83,10 +87,13 @@ int main() {
         builder.outputModule("RenderGraph", files);
 
         // render compiler
-        builder.outputModule("RenderExample", files);
+        builder.outputModule("RenderCompiler", files);
 
         // executor
         builder.outputModule("RenderExecutor", files);
+
+        // render example
+        builder.outputModule("RenderExample", files);
     }
 
     // copy graph interface
