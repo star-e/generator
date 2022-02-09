@@ -2752,9 +2752,60 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             }
             OSS << "}\n";
         };
+        auto generateHold2 = [&](bool bTag) {
+            oss << "\n";
+            if (bTag) {
+                OSS << "template <class Tag>\n";
+            } else {
+                OSS << "template <class ValueT>\n";
+            }
+            OSS << "[[nodiscard]] inline bool\n";
+            if (bTag) {
+                OSS << "holds_tag(" << name << "::vertex_descriptor v, ";
+            } else {
+                OSS << "holds_alternative(" << name << "::vertex_descriptor v, ";
+            }
+            oss << "const " << name << "& g) noexcept {\n";
+            {
+                INDENT();
+                if (bTag) {
+                    OSS << "static_assert(false, \"Tag type is not in PolymorphicGraph\");\n";
+                } else {
+                    OSS << "static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
+                }
+                OSS << "return false;\n";
+            }
+            OSS << "}\n";
 
-        generateHold(true);
-        generateHold(false);
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                oss << "\n";
+                OSS << "template <>\n";
+                OSS << "[[nodiscard]] inline bool\n";
+                if (bTag) {
+                    OSS << "holds_tag<" << cpp.getDependentName(c.mTag) << ">("
+                        << name << "::vertex_descriptor v, ";
+                } else {
+                    OSS << "holds_alternative<" << cpp.getDependentName(c.mValue) << ">("
+                        << name << "::vertex_descriptor v, ";
+                }
+                oss << "const " << name << "& g) noexcept {\n";
+                {
+                    INDENT();
+                    OSS << "return boost::variant2::holds_alternative<\n";
+                    OSS << "    " << handleElemType(c, cn, false) << ">(\n";
+                    OSS << "    g.mVertices[v].mHandle);\n";
+                }
+                OSS << "}\n";
+            }
+        };
+
+        if (true) {
+            generateHold2(true);
+            generateHold2(false);
+        } else {
+            generateHold(true);
+            generateHold(false);
+        }
 
         auto generateGet = [&](bool bConst, bool bTag) {
             std::string valueType = bTag ? "Tag" : "ValueT";
