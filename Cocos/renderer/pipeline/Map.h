@@ -25,11 +25,11 @@ THE SOFTWARE.
 */
 
 #pragma once
-#include <map>
-#include <unordered_map>
 #include <cocos/renderer/pipeline/Utility.h>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/pmr/flat_map.hpp>
+#include <map>
+#include <unordered_map>
 
 // for std::less<> the transparent comparator
 // see https://stackoverflow.com/questions/20317413/what-are-transparent-comparators
@@ -37,18 +37,20 @@ THE SOFTWARE.
 namespace cc {
 
 // map
-template<class Key, class Value>
+template <class Key, class Value>
 using TransparentMap = std::map<Key, Value, std::less<>>;
 
-template<class Key, class Value>
+template <class Key, class Value>
 using TransparentMultiMap = std::multimap<Key, Value, std::less<>>;
 
-template<class Key, class Value>
-using PmrTransparentMap = std::map<Key, Value, std::less<>,
+template <class Key, class Value>
+using PmrTransparentMap = std::map<
+    Key, Value, std::less<>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
-template<class Key, class Value>
-using PmrTransparentMultiMap = std::multimap<Key, Value, std::less<>,
+template <class Key, class Value>
+using PmrTransparentMultiMap = std::multimap<
+    Key, Value, std::less<>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
 // flat_map
@@ -65,30 +67,36 @@ template <class Key, class Value>
 using PmrFlatMultiMap = boost::container::pmr::flat_multimap<Key, Value, std::less<>>;
 
 // unordered_map
-template<class Key, class Value>
-using PmrUnorderedMap = std::unordered_map<Key, Value, std::hash<Key>, std::equal_to<Key>,
+template <class Key, class Value>
+using PmrUnorderedMap = std::unordered_map<
+    Key, Value, std::hash<Key>, std::equal_to<Key>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
-template<class Key, class Value>
-using PmrUnorderedMultiMap = std::unordered_multimap<Key, Value, std::hash<Key>, std::equal_to<Key>,
+template <class Key, class Value>
+using PmrUnorderedMultiMap = std::unordered_multimap<
+    Key, Value, std::hash<Key>, std::equal_to<Key>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
 // transparent string unordered_map
 template <class Key, class Value>
-using UnorderedStringMap = std::unordered_map<Key, Value,
+using UnorderedStringMap = std::unordered_map<
+    Key, Value,
     TransparentStringHash<typename Key::value_type>, std::equal_to<>>;
 
 template <class Key, class Value>
-using UnorderedStringMultiMap = std::unordered_multimap<Key, Value,
+using UnorderedStringMultiMap = std::unordered_multimap<
+    Key, Value,
     TransparentStringHash<typename Key::value_type>, std::equal_to<>>;
 
 template <class Key, class Value>
-using PmrUnorderedStringMap = std::unordered_map<Key, Value,
+using PmrUnorderedStringMap = std::unordered_map<
+    Key, Value,
     TransparentStringHash<typename Key::value_type>, std::equal_to<>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
 template <class Key, class Value>
-using PmrUnorderedStringMultiMap = std::unordered_multimap<Key, Value,
+using PmrUnorderedStringMultiMap = std::unordered_multimap<
+    Key, Value,
     TransparentStringHash<typename Key::value_type>, std::equal_to<>,
     boost::container::pmr::polymorphic_allocator<std::pair<const Key, Value>>>;
 
