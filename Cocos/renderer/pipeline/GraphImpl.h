@@ -15,300 +15,260 @@ namespace Impl {
 //--------------------------------------------------------------------
 // PropertyMap
 //--------------------------------------------------------------------
-template<class Category, class Graph, class Value, class Reference>
+template <class Category, class Graph, class Value, class Reference>
 struct VectorVertexBundlePropertyMap
-    : public boost::put_get_helper<
-        Reference, VectorVertexBundlePropertyMap<Category, Graph, Value, Reference>
-    >
-{
+: public boost::put_get_helper<
+      Reference, VectorVertexBundlePropertyMap<Category, Graph, Value, Reference>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    explicit VectorVertexBundlePropertyMap(Graph& g) noexcept
-        : mGraph(&g)
-    {}
+    explicit VectorVertexBundlePropertyMap(Graph &g) noexcept
+    : mGraph(&g) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
+    inline reference operator[](const key_type &v) const noexcept {
         return mGraph->mVertices[v].mProperty;
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Graph* mGraph = nullptr;
+    Graph *mGraph = nullptr;
 };
 
-template<class Category, class Graph, class Value, class Reference>
+template <class Category, class Graph, class Value, class Reference>
 struct PointerVertexBundlePropertyMap
-    : public boost::put_get_helper<
-        Reference, PointerVertexBundlePropertyMap<Category, Graph, Value, Reference>
-    >
-{
+: public boost::put_get_helper<
+      Reference, PointerVertexBundlePropertyMap<Category, Graph, Value, Reference>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    explicit PointerVertexBundlePropertyMap(Graph& g) noexcept
-        : mGraph(&g)
-    {}
+    explicit PointerVertexBundlePropertyMap(Graph &g) noexcept
+    : mGraph(&g) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
-        auto* sv = static_cast<typename Graph::vertex_type*>(v);
+    inline reference operator[](const key_type &v) const noexcept {
+        auto *sv = static_cast<typename Graph::vertex_type *>(v);
         return sv->mProperty;
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Graph* mGraph = nullptr;
+    Graph *mGraph = nullptr;
 };
 
-template<class Category, class Graph, class Value, class Reference, class MemberPointer>
+template <class Category, class Graph, class Value, class Reference, class MemberPointer>
 struct VectorVertexBundleMemberPropertyMap
-    : public boost::put_get_helper<
-        Reference, VectorVertexBundleMemberPropertyMap<Category, Graph, Value, Reference, MemberPointer>
-    >
-{
+: public boost::put_get_helper<
+      Reference, VectorVertexBundleMemberPropertyMap<Category, Graph, Value, Reference, MemberPointer>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    VectorVertexBundleMemberPropertyMap(Graph& g, MemberPointer ptr) noexcept
-        : mGraph(&g)
-        , mMemberPointer(ptr)
-    {}
+    VectorVertexBundleMemberPropertyMap(Graph &g, MemberPointer ptr) noexcept
+    : mGraph(&g), mMemberPointer(ptr) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
+    inline reference operator[](const key_type &v) const noexcept {
         return mGraph->mVertices[v].mProperty.*mMemberPointer;
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Graph* mGraph = nullptr;
+    Graph        *mGraph         = nullptr;
     MemberPointer mMemberPointer = {};
 };
 
-template<class Category, class Graph, class Value, class Reference, class MemberPointer>
+template <class Category, class Graph, class Value, class Reference, class MemberPointer>
 struct PointerVertexBundleMemberPropertyMap
-    : public boost::put_get_helper<
-        Reference, PointerVertexBundleMemberPropertyMap<Category, Graph, Value, Reference, MemberPointer>
-    >
-{
+: public boost::put_get_helper<
+      Reference, PointerVertexBundleMemberPropertyMap<Category, Graph, Value, Reference, MemberPointer>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    PointerVertexBundleMemberPropertyMap(Graph& g, MemberPointer ptr) noexcept
-        : mGraph(&g)
-        , mMemberPointer(ptr)
-    {}
+    PointerVertexBundleMemberPropertyMap(Graph &g, MemberPointer ptr) noexcept
+    : mGraph(&g), mMemberPointer(ptr) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
-        auto* sv = static_cast<typename Graph::vertex_type*>(v);
+    inline reference operator[](const key_type &v) const noexcept {
+        auto *sv = static_cast<typename Graph::vertex_type *>(v);
         return sv->mProperty.*mMemberPointer;
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Graph* mGraph = nullptr;
+    Graph        *mGraph         = nullptr;
     MemberPointer mMemberPointer = {};
 };
 
-template<class Category, class Graph, class Container, class Value, class Reference>
+template <class Category, class Graph, class Container, class Value, class Reference>
 struct VectorVertexComponentPropertyMap
-    : public boost::put_get_helper<
-        Reference, VectorVertexComponentPropertyMap<Category, Graph, Container, Value, Reference>
-    >
-{
+: public boost::put_get_helper<
+      Reference, VectorVertexComponentPropertyMap<Category, Graph, Container, Value, Reference>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    explicit VectorVertexComponentPropertyMap(Container& c) noexcept
-        : mContainer(&c)
-    {}
+    explicit VectorVertexComponentPropertyMap(Container &c) noexcept
+    : mContainer(&c) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
+    inline reference operator[](const key_type &v) const noexcept {
         return (*mContainer)[v];
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Container* mContainer = nullptr;
+    Container *mContainer = nullptr;
 };
 
-template<class Category, class Graph, class Container, class Value, class Reference, class MemberPointer>
+template <class Category, class Graph, class Container, class Value, class Reference, class MemberPointer>
 struct VectorVertexComponentMemberPropertyMap
-    : public boost::put_get_helper<
-        Reference, VectorVertexComponentMemberPropertyMap<Category, Graph, Container, Value, Reference, MemberPointer>
-    >
-{
+: public boost::put_get_helper<
+      Reference, VectorVertexComponentMemberPropertyMap<Category, Graph, Container, Value, Reference, MemberPointer>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    VectorVertexComponentMemberPropertyMap(Container& c, MemberPointer ptr) noexcept
-        : mContainer(&c)
-        , mMemberPointer(ptr)
-    {}
+    VectorVertexComponentMemberPropertyMap(Container &c, MemberPointer ptr) noexcept
+    : mContainer(&c), mMemberPointer(ptr) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
+    inline reference operator[](const key_type &v) const noexcept {
         return (*mContainer)[v].*mMemberPointer;
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Container* mContainer = nullptr;
+    Container    *mContainer     = nullptr;
     MemberPointer mMemberPointer = {};
 };
 
-template<class Category, class Graph, class ComponentPointer, class Value, class Reference>
+template <class Category, class Graph, class ComponentPointer, class Value, class Reference>
 struct VectorVertexIteratorComponentPropertyMap
-    : public boost::put_get_helper<
-        Reference, VectorVertexIteratorComponentPropertyMap<Category, Graph, ComponentPointer, Value, Reference>
-    >
-{
+: public boost::put_get_helper<
+      Reference, VectorVertexIteratorComponentPropertyMap<Category, Graph, ComponentPointer, Value, Reference>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    VectorVertexIteratorComponentPropertyMap(Graph& g, ComponentPointer component) noexcept
-        : mGraph(&g)
-        , mComponentPointer(component)
-    {}
+    VectorVertexIteratorComponentPropertyMap(Graph &g, ComponentPointer component) noexcept
+    : mGraph(&g), mComponentPointer(component) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
+    inline reference operator[](const key_type &v) const noexcept {
         return *(mGraph->mVertices[v].*mComponentPointer);
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Graph* mGraph = nullptr;
+    Graph           *mGraph            = nullptr;
     ComponentPointer mComponentPointer = {};
 };
 
-template<class Category, class Graph, class ComponentPointer, class Value, class Reference, class MemberPointer>
+template <class Category, class Graph, class ComponentPointer, class Value, class Reference, class MemberPointer>
 struct VectorVertexIteratorComponentMemberPropertyMap
-    : public boost::put_get_helper<
-        Reference, VectorVertexIteratorComponentMemberPropertyMap<Category, Graph, ComponentPointer, Value, Reference, MemberPointer>
-    >
-{
+: public boost::put_get_helper<
+      Reference, VectorVertexIteratorComponentMemberPropertyMap<Category, Graph, ComponentPointer, Value, Reference, MemberPointer>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::vertex_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::vertex_descriptor;
+    using category   = Category;
 
-    VectorVertexIteratorComponentMemberPropertyMap(Graph& g, ComponentPointer component, MemberPointer ptr) noexcept
-        : mGraph(&g)
-        , mComponentPointer(component)
-        , mMemberPointer(ptr)
-    {}
+    VectorVertexIteratorComponentMemberPropertyMap(Graph &g, ComponentPointer component, MemberPointer ptr) noexcept
+    : mGraph(&g), mComponentPointer(component), mMemberPointer(ptr) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
+    inline reference operator[](const key_type &v) const noexcept {
         return (*(mGraph->mVertices[v].*mComponentPointer)).*mMemberPointer;
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Graph* mGraph = nullptr;
+    Graph           *mGraph            = nullptr;
     ComponentPointer mComponentPointer = {};
-    MemberPointer mMemberPointer = {};
+    MemberPointer    mMemberPointer    = {};
 };
 
-template<class Category, class VertexDescriptor, class Container, class Value, class Reference>
+template <class Category, class VertexDescriptor, class Container, class Value, class Reference>
 struct VectorPathPropertyMap
-    : public boost::put_get_helper<
-        Reference, VectorPathPropertyMap<Category, VertexDescriptor, Container, Value, Reference>
-    >
-{
+: public boost::put_get_helper<
+      Reference, VectorPathPropertyMap<Category, VertexDescriptor, Container, Value, Reference>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = VertexDescriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = VertexDescriptor;
+    using category   = Category;
 
-    explicit VectorPathPropertyMap(Container& c) noexcept
-        : mContainer(&c)
-    {}
+    explicit VectorPathPropertyMap(Container &c) noexcept
+    : mContainer(&c) {}
 
-    inline reference operator[](const key_type& v) const noexcept {
+    inline reference operator[](const key_type &v) const noexcept {
         return (*mContainer)[v].mPathIterator->first;
     }
-    inline reference operator()(const key_type& v) const noexcept {
+    inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    Container* mContainer = nullptr;
+    Container *mContainer = nullptr;
 };
 
-template<class Category, class Graph, class Value, class Reference>
+template <class Category, class Graph, class Value, class Reference>
 struct EdgeBundlePropertyMap
-    : public boost::put_get_helper<
-        Reference, EdgeBundlePropertyMap<Category, Graph, Value, Reference>
-    >
-{
+: public boost::put_get_helper<
+      Reference, EdgeBundlePropertyMap<Category, Graph, Value, Reference>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::edge_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::edge_descriptor;
+    using category   = Category;
 
-    explicit EdgeBundlePropertyMap(Graph& g) noexcept
-        : mGraph(&g)
-    {}
+    explicit EdgeBundlePropertyMap(Graph &g) noexcept
+    : mGraph(&g) {}
 
-    inline reference operator[](const key_type& e) const noexcept {
-        return *static_cast<typename Graph::edge_property_type*>(e.get_property());
+    inline reference operator[](const key_type &e) const noexcept {
+        return *static_cast<typename Graph::edge_property_type *>(e.get_property());
     }
-    inline reference operator()(const key_type& e) const noexcept {
+    inline reference operator()(const key_type &e) const noexcept {
         return this->operator[](e);
     }
 
-    Graph* mGraph = nullptr;
+    Graph *mGraph = nullptr;
 };
 
-template<class Category, class Graph, class Value, class Reference, class MemberPointer>
+template <class Category, class Graph, class Value, class Reference, class MemberPointer>
 struct EdgeBundleMemberPropertyMap
-    : public boost::put_get_helper<
-        Reference, EdgeBundleMemberPropertyMap<Category, Graph, Value, Reference, MemberPointer>
-    >
-{
+: public boost::put_get_helper<
+      Reference, EdgeBundleMemberPropertyMap<Category, Graph, Value, Reference, MemberPointer>> {
     using value_type = Value;
-    using reference = Reference;
-    using key_type = typename Graph::edge_descriptor;
-    using category = Category;
+    using reference  = Reference;
+    using key_type   = typename Graph::edge_descriptor;
+    using category   = Category;
 
-    EdgeBundleMemberPropertyMap(Graph& g, MemberPointer ptr) noexcept
-        : mGraph(&g)
-        , mMemberPointer(ptr)
-    {}
+    EdgeBundleMemberPropertyMap(Graph &g, MemberPointer ptr) noexcept
+    : mGraph(&g), mMemberPointer(ptr) {}
 
-    inline reference operator[](const key_type& e) const noexcept {
-        auto& p = *static_cast<typename Graph::edge_property_type*>(e.get_property());
+    inline reference operator[](const key_type &e) const noexcept {
+        auto &p = *static_cast<typename Graph::edge_property_type *>(e.get_property());
         return p.*mMemberPointer;
     }
-    inline reference operator()(const key_type& e) const noexcept {
+    inline reference operator()(const key_type &e) const noexcept {
         return this->operator[](e);
     }
 
-    Graph* mGraph = nullptr;
+    Graph        *mGraph         = nullptr;
     MemberPointer mMemberPointer = {};
 };
 
-template<class Sequence, class Predicate>
-void sequenceEraseIf(Sequence& c, Predicate&& p) noexcept {
+template <class Sequence, class Predicate>
+void sequenceEraseIf(Sequence &c, Predicate &&p) noexcept {
     if (!c.empty()) {
         c.erase(std::remove_if(c.begin(), c.end(), p), c.end());
     }
@@ -316,8 +276,8 @@ void sequenceEraseIf(Sequence& c, Predicate&& p) noexcept {
 
 // notice: Predicate might be different from associative key
 // when Predicate is associative key, it is slower than erase [lower_bound, upper_bound)
-template<class AssociativeContainer, class Predicate>
-void associativeEraseIf(AssociativeContainer& c, Predicate&& p) noexcept {
+template <class AssociativeContainer, class Predicate>
+void associativeEraseIf(AssociativeContainer &c, Predicate &&p) noexcept {
     auto next = c.begin();
     for (auto i = next; next != c.end(); i = next) {
         ++next;
@@ -329,8 +289,8 @@ void associativeEraseIf(AssociativeContainer& c, Predicate&& p) noexcept {
 
 // notice: Predicate might be different from associative key
 // when Predicate is associative key, it is slower than erase [lower_bound, upper_bound)
-template<class AssociativeContainer, class Predicate>
-void unstableAssociativeEraseIf(AssociativeContainer& c, Predicate&& p) noexcept {
+template <class AssociativeContainer, class Predicate>
+void unstableAssociativeEraseIf(AssociativeContainer &c, Predicate &&p) noexcept {
     auto n = c.size();
     while (n--) {
         for (auto i = c.begin(); i != c.end(); ++i) {
@@ -342,8 +302,8 @@ void unstableAssociativeEraseIf(AssociativeContainer& c, Predicate&& p) noexcept
     }
 }
 
-template<class EdgeDescriptor, class IncidenceList>
-inline void removeIncidenceEdge(EdgeDescriptor e, IncidenceList& el) noexcept {
+template <class EdgeDescriptor, class IncidenceList>
+inline void removeIncidenceEdge(EdgeDescriptor e, IncidenceList &el) noexcept {
     e.expectsNoProperty();
     for (auto i = el.begin(); i != el.end(); ++i) {
         if ((*i).get_target() == e.m_target) {
@@ -353,20 +313,20 @@ inline void removeIncidenceEdge(EdgeDescriptor e, IncidenceList& el) noexcept {
     }
 }
 
-template<class DirectedCategory, class VertexDescriptor, class IncidenceList, class EdgeProperty>
+template <class DirectedCategory, class VertexDescriptor, class IncidenceList, class EdgeProperty>
 inline void removeIncidenceEdge(
-    EdgeDescriptorWithProperty<DirectedCategory, VertexDescriptor> e, IncidenceList& el) noexcept {
+    EdgeDescriptorWithProperty<DirectedCategory, VertexDescriptor> e, IncidenceList &el) noexcept {
     for (auto i = el.begin(); i != el.end(); ++i) {
-        if (static_cast<void*>(&(*i).get_property()) == e.get_property()) {
+        if (static_cast<void *>(&(*i).get_property()) == e.get_property()) {
             el.erase(i);
             return;
         }
     }
 }
 
-template<class Graph, class IncidenceList, class VertexDescriptor>
-inline void removeDirectedAllEdgeProperties(Graph& g, IncidenceList& el, VertexDescriptor v) noexcept {
-    auto i = el.begin();
+template <class Graph, class IncidenceList, class VertexDescriptor>
+inline void removeDirectedAllEdgeProperties(Graph &g, IncidenceList &el, VertexDescriptor v) noexcept {
+    auto i   = el.begin();
     auto end = el.end();
     for (; i != end; ++i) {
         if ((*i).get_target() == v) {
@@ -375,8 +335,7 @@ inline void removeDirectedAllEdgeProperties(Graph& g, IncidenceList& el, VertexD
             // observation that the incidence edges of a vertex with a loop
             // are adjacent in the out edge list. This *may* actually hold
             // for multisets also.
-            bool skip = (std::next(i) != end
-                && i->get_iter() == std::next(i)->get_iter());
+            bool skip = (std::next(i) != end && i->get_iter() == std::next(i)->get_iter());
             g.mEdges.erase((*i).get_iter());
             if (skip) {
                 ++i;
@@ -385,10 +344,9 @@ inline void removeDirectedAllEdgeProperties(Graph& g, IncidenceList& el, VertexD
     }
 }
 
-template<class IncidenceIterator, class IncidenceList, class Predicate>
+template <class IncidenceIterator, class IncidenceList, class Predicate>
 inline void sequenceRemoveIncidenceEdgeIf(IncidenceIterator first, IncidenceIterator last,
-    IncidenceList& el, Predicate&& pred
-) noexcept {
+                                          IncidenceList &el, Predicate &&pred) noexcept {
     // remove_if
     while (first != last && !pred(*first)) {
         ++first;
@@ -405,10 +363,9 @@ inline void sequenceRemoveIncidenceEdgeIf(IncidenceIterator first, IncidenceIter
     el.erase(first.base(), el.end());
 }
 
-template<class IncidenceIterator, class IncidenceList, class Predicate>
+template <class IncidenceIterator, class IncidenceList, class Predicate>
 inline void associativeRemoveIncidenceEdgeIf(IncidenceIterator first, IncidenceIterator last,
-    IncidenceList& el, Predicate&& pred
-) noexcept {
+                                             IncidenceList &el, Predicate &&pred) noexcept {
     for (auto next = first; first != last; first = next) {
         ++next;
         if (pred(*first)) {
@@ -417,10 +374,10 @@ inline void associativeRemoveIncidenceEdgeIf(IncidenceIterator first, IncidenceI
     }
 }
 
-template<class Graph, class EdgeDescriptor, class EdgeProperty >
-inline void removeUndirectedEdge(Graph& g, EdgeDescriptor e, EdgeProperty& p) noexcept {
-    auto& outEdgeList = g.out_edge_list(source(e, g));
-    auto outEdgeIter = outEdgeList.begin();
+template <class Graph, class EdgeDescriptor, class EdgeProperty>
+inline void removeUndirectedEdge(Graph &g, EdgeDescriptor e, EdgeProperty &p) noexcept {
+    auto                               &outEdgeList = g.out_edge_list(source(e, g));
+    auto                                outEdgeIter = outEdgeList.begin();
     decltype((*outEdgeIter).get_iter()) edgeIterToErase;
     for (; outEdgeIter != outEdgeList.end(); ++outEdgeIter) {
         if (&(*outEdgeIter).get_property() == &p) {
@@ -429,8 +386,8 @@ inline void removeUndirectedEdge(Graph& g, EdgeDescriptor e, EdgeProperty& p) no
             break;
         }
     }
-    auto& inEdgeList = g.out_edge_list(target(e, g));
-    auto inEdgeIter = inEdgeList.begin();
+    auto &inEdgeList = g.out_edge_list(target(e, g));
+    auto  inEdgeIter = inEdgeList.begin();
     for (; inEdgeIter != inEdgeList.end(); ++inEdgeIter) {
         if (&(*inEdgeIter).get_property() == &p) {
             inEdgeList.erase(inEdgeIter);
@@ -440,16 +397,15 @@ inline void removeUndirectedEdge(Graph& g, EdgeDescriptor e, EdgeProperty& p) no
     g.mEdges.erase(edgeIterToErase);
 }
 
-template<class Graph, class IncidenceIterator, class IncidenceList, class Predicate>
-inline void sequenceRemoveUndirectedOutEdgeIf(Graph& g,
-    IncidenceIterator first, IncidenceIterator last, IncidenceList& el,
-    Predicate&& pred
-) noexcept {
+template <class Graph, class IncidenceIterator, class IncidenceList, class Predicate>
+inline void sequenceRemoveUndirectedOutEdgeIf(Graph            &g,
+                                              IncidenceIterator first, IncidenceIterator last, IncidenceList &el,
+                                              Predicate &&pred) noexcept {
     // remove_if
     while (first != last && !pred(*first)) {
         ++first;
     }
-    auto i = first;
+    auto i               = first;
     bool selfLoopRemoved = false;
     if (first != last) {
         for (; i != last; ++i) {
@@ -478,11 +434,10 @@ inline void sequenceRemoveUndirectedOutEdgeIf(Graph& g,
     el.erase(first.base(), el.end());
 }
 
-template<class Graph, class IncidenceIterator, class IncidenceList, class Predicate>
-inline void associativeRemoveUndirectedOutEdgeIf(Graph& g,
-    IncidenceIterator first, IncidenceIterator last, IncidenceList& el,
-    Predicate&& pred
-) noexcept {
+template <class Graph, class IncidenceIterator, class IncidenceList, class Predicate>
+inline void associativeRemoveUndirectedOutEdgeIf(Graph            &g,
+                                                 IncidenceIterator first, IncidenceIterator last, IncidenceList &el,
+                                                 Predicate &&pred) noexcept {
     for (auto next = first; first != last; first = next) {
         ++next;
         if (pred(*first)) {
@@ -501,9 +456,9 @@ inline void associativeRemoveUndirectedOutEdgeIf(Graph& g,
 }
 
 // list/vector out_edge_list
-template<class IncidenceList, class VertexDescriptor>
-inline void reindexEdgeList(IncidenceList& el, VertexDescriptor u) {
-    auto ei = el.begin();
+template <class IncidenceList, class VertexDescriptor>
+inline void reindexEdgeList(IncidenceList &el, VertexDescriptor u) {
+    auto ei   = el.begin();
     auto eEnd = el.end();
     for (; ei != eEnd; ++ei) {
         if ((*ei).get_target() > u) {
@@ -512,14 +467,14 @@ inline void reindexEdgeList(IncidenceList& el, VertexDescriptor u) {
     }
 }
 
-template<class Tag, class Container, class HandleDescriptor>
-inline void reindexVectorHandle(Container& container, HandleDescriptor u) {
+template <class Tag, class Container, class HandleDescriptor>
+inline void reindexVectorHandle(Container &container, HandleDescriptor u) {
     static_assert(std::is_arithmetic_v<HandleDescriptor>, "reindexVectorHandle");
 
     using handle_type = ValueHandle<Tag, HandleDescriptor>;
-    for (auto& vert : container) {
+    for (auto &vert : container) {
         if (boost::variant2::holds_alternative<handle_type>(vert.mHandle)) {
-            auto& v = boost::variant2::get<handle_type>(vert.mHandle).mValue;
+            auto &v = boost::variant2::get<handle_type>(vert.mHandle).mValue;
             if (v > u) {
                 --v;
             }
@@ -527,8 +482,8 @@ inline void reindexVectorHandle(Container& container, HandleDescriptor u) {
     }
 }
 
-template<class Graph, class VertexDescriptor>
-inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::directed_tag /*tag*/) {
+template <class Graph, class VertexDescriptor>
+inline void removeVectorVertex(Graph &g, VertexDescriptor u, boost::directed_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
     auto numV = num_vertices(g);
     if (u != numV) {
@@ -538,15 +493,15 @@ inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::directed_tag
     }
 }
 
-template<class Graph, class VertexDescriptor>
-inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::undirected_tag /*tag*/) {
+template <class Graph, class VertexDescriptor>
+inline void removeVectorVertex(Graph &g, VertexDescriptor u, boost::undirected_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
     VertexDescriptor numV = num_vertices(g);
     for (VertexDescriptor v = 0; v < numV; ++v) {
         reindexEdgeList(g.out_edge_list(v), u);
     }
 
-    auto ei = g.mEdges.begin();
+    auto ei    = g.mEdges.begin();
     auto eiEnd = g.mEdges.end();
     for (; ei != eiEnd; ++ei) {
         if (ei->m_source > u) {
@@ -558,8 +513,8 @@ inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::undirected_t
     }
 }
 
-template<class Graph, class VertexDescriptor>
-inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::bidirectional_tag /*tag*/) {
+template <class Graph, class VertexDescriptor>
+inline void removeVectorVertex(Graph &g, VertexDescriptor u, boost::bidirectional_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
     VertexDescriptor numV = num_vertices(g);
     VertexDescriptor v;
@@ -568,15 +523,15 @@ inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::bidirectiona
             reindexEdgeList(g.out_edge_list(v), u);
         }
 
-        for (v = 0; v < numV; ++v){
+        for (v = 0; v < numV; ++v) {
             reindexEdgeList(g.in_edge_list(v), u);
         }
     }
 }
 
-template<class Graph, class VertexDescriptor, class EdgeList>
-inline void removeVectorVertex(Graph& g, EdgeList& /*edges*/,
-    VertexDescriptor u, boost::bidirectional_tag /*tag*/) {
+template <class Graph, class VertexDescriptor, class EdgeList>
+inline void removeVectorVertex(Graph           &g, EdgeList           &/*edges*/,
+                               VertexDescriptor u, boost::bidirectional_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
     VertexDescriptor numV = num_vertices(g);
     VertexDescriptor v;
@@ -589,7 +544,7 @@ inline void removeVectorVertex(Graph& g, EdgeList& /*edges*/,
             reindexEdgeList(g.in_edge_list(v), u);
         }
 
-        auto ei = g.mEdges.begin();
+        auto ei    = g.mEdges.begin();
         auto eiEnd = g.mEdges.end();
         for (; ei != eiEnd; ++ei) {
             if (ei->m_source > u) {
@@ -602,8 +557,8 @@ inline void removeVectorVertex(Graph& g, EdgeList& /*edges*/,
     }
 }
 
-template<class Graph>
-inline void removeVectorOwner(Graph& g, typename Graph::vertex_descriptor u) {
+template <class Graph>
+inline void removeVectorOwner(Graph &g, typename Graph::vertex_descriptor u) {
     // might make children detached
     g.mObjects.erase(g.mObjects.begin() + u);
     auto numV = num_vertices(g);
@@ -620,13 +575,13 @@ inline void removeVectorOwner(Graph& g, typename Graph::vertex_descriptor u) {
 
 // AddressableGraph
 template <class AddressableGraph>
-inline std::ptrdiff_t pathLength(typename AddressableGraph::vertex_descriptor u, const AddressableGraph& g,
-    typename AddressableGraph::vertex_descriptor parentID = AddressableGraph::null_vertex()) noexcept {
+inline std::ptrdiff_t pathLength(typename AddressableGraph::vertex_descriptor u, const AddressableGraph &g,
+                                 typename AddressableGraph::vertex_descriptor parentID = AddressableGraph::null_vertex()) noexcept {
     if (u == parentID) {
         return 0;
     }
 
-    const auto& pmap = get(boost::vertex_name, g);
+    const auto &pmap = get(boost::vertex_name, g);
 
     std::ptrdiff_t sz = 0;
     while (u != parentID) {
@@ -639,17 +594,16 @@ inline std::ptrdiff_t pathLength(typename AddressableGraph::vertex_descriptor u,
 
 template <class AddressableGraph, class CharT, class Allocator>
 inline void pathComposite(
-    std::basic_string<CharT, std::char_traits<CharT>, Allocator>& str,
-    std::ptrdiff_t& sz,
-    typename AddressableGraph::vertex_descriptor u, const AddressableGraph& g,
+    std::basic_string<CharT, std::char_traits<CharT>, Allocator> &str,
+    std::ptrdiff_t                                               &sz,
+    typename AddressableGraph::vertex_descriptor u, const AddressableGraph &g,
     typename AddressableGraph::vertex_descriptor parentID = AddressableGraph::null_vertex()) noexcept {
-
-    const auto& pmap = get(boost::vertex_name, g);
+    const auto &pmap = get(boost::vertex_name, g);
 
     while (u != parentID) {
         Expects(sz <= static_cast<std::ptrdiff_t>(str.size()));
 
-        const auto& name = get(pmap, u);
+        const auto &name = get(pmap, u);
         sz -= static_cast<std::ptrdiff_t>(name.size()) + 1;
         Ensures(sz >= 0);
         str[sz] = '/';
@@ -660,25 +614,24 @@ inline void pathComposite(
     Ensures(sz == 0);
 }
 
-template<class Key>
-struct ColorMap : public boost::put_get_helper<boost::default_color_type&, ColorMap<Key>> {
+template <class Key>
+struct ColorMap : public boost::put_get_helper<boost::default_color_type &, ColorMap<Key>> {
     using value_type = boost::default_color_type;
-    using reference = boost::default_color_type&;
-    using key_type = Key;
-    using category = boost::lvalue_property_map_tag;
+    using reference  = boost::default_color_type &;
+    using key_type   = Key;
+    using category   = boost::lvalue_property_map_tag;
 
-    explicit ColorMap(boost::container::pmr::vector<boost::default_color_type>& vec) noexcept
-        : mContainer{ &vec }
-    {}
+    explicit ColorMap(boost::container::pmr::vector<boost::default_color_type> &vec) noexcept
+    : mContainer{&vec} {}
 
-    [[nodiscard]] inline reference operator[](const key_type& v) const noexcept {
+    [[nodiscard]] inline reference operator[](const key_type &v) const noexcept {
         return (*mContainer)[v];
     }
-    [[nodiscard]] inline reference operator()(const key_type& v) const noexcept {
+    [[nodiscard]] inline reference operator()(const key_type &v) const noexcept {
         return this->operator[](v);
     }
 
-    boost::container::pmr::vector<boost::default_color_type>* mContainer = nullptr;
+    boost::container::pmr::vector<boost::default_color_type> *mContainer = nullptr;
 };
 
 } // namespace Impl
@@ -687,11 +640,11 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type&, Color
 
 namespace std {
 
-template<class DirectedCategory, class VertexDescriptor>
+template <class DirectedCategory, class VertexDescriptor>
 struct hash<cc::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>> {
-    size_t operator()(const cc::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>& e) const noexcept {
+    size_t operator()(const cc::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor> &e) const noexcept {
         return boost::hash_value(e.get_property());
     }
 };
 
-}
+} // namespace std
