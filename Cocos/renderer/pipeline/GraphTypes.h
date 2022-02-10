@@ -17,7 +17,7 @@ struct bidirectional_tag;
 
 struct no_property;
 
-}
+} // namespace boost
 
 namespace cc {
 
@@ -29,7 +29,7 @@ using PmrList = std::list<T, boost::container::pmr::polymorphic_allocator<T>>;
 
 namespace impl {
 
-struct path_t {} static constexpr path;
+struct path_t {} static constexpr path; // NOLINT
 
 //--------------------------------------------------------------------
 // EdgeDescriptor
@@ -37,15 +37,15 @@ struct path_t {} static constexpr path;
 template<class DirectedCategory, class VertexDescriptor>
 struct EdgeDescriptor {
     EdgeDescriptor() = default;
-    EdgeDescriptor(VertexDescriptor s, VertexDescriptor t) noexcept
+    EdgeDescriptor(VertexDescriptor s, VertexDescriptor t) noexcept // NOLINT
         : m_source(s), m_target(t)
     {}
 
     void expectsNoProperty() const noexcept {
         // Expects(false);
     }
-    VertexDescriptor m_source = (VertexDescriptor)-1;
-    VertexDescriptor m_target = (VertexDescriptor)-1;
+    VertexDescriptor m_source = static_cast<VertexDescriptor>(-1);
+    VertexDescriptor m_target = static_cast<VertexDescriptor>(-1);
 };
 
 template<class VertexDescriptor>
@@ -94,16 +94,10 @@ struct EdgeDescriptorWithProperty : EdgeDescriptor<DirectedCategory, VertexDescr
         , mEdgeProperty(const_cast<property_type*>(p))
     {}
 
-    property_type* get_property() const noexcept {
+    property_type* get_property() const noexcept { // NOLINT
         return mEdgeProperty;
     }
 
-    //std::strong_ordering operator<=>(const EdgeDescriptorWithProperty& rhs) const noexcept {
-    //    return mEdgeProperty <=> rhs.mEdgeProperty;
-    //}
-    //bool operator==(const EdgeDescriptorWithProperty& rhs) const noexcept {
-    //    return mEdgeProperty == rhs.mEdgeProperty;
-    //}
     property_type* mEdgeProperty = nullptr;
 };
 
@@ -137,13 +131,13 @@ inline bool operator<(
 template<class VertexDescriptor>
 class StoredEdge {
 public:
-    StoredEdge(VertexDescriptor target) noexcept
+    StoredEdge(VertexDescriptor target) noexcept // NOLINT(google-explicit-constructor)
         : m_target(target)
     {}
-    const VertexDescriptor& get_target() const noexcept {
+    const VertexDescriptor& get_target() const noexcept { // NOLINT
         return m_target;
     }
-    VertexDescriptor& get_target() noexcept {
+    VertexDescriptor& get_target() noexcept { // NOLINT
         return m_target;
     }
     //auto operator<=>(const StoredEdge&) const noexcept = default;
@@ -186,18 +180,18 @@ public:
         : StoredEdge<VertexDescriptor>(target)
         , mProperty(std::move(ptr))
     {}
-    StoredEdgeWithProperty(VertexDescriptor target)
+    StoredEdgeWithProperty(VertexDescriptor target) // NOLINT(google-explicit-constructor)
         : StoredEdge<VertexDescriptor>(target)
     {}
 
-    StoredEdgeWithProperty(StoredEdgeWithProperty&&) = default;
-    StoredEdgeWithProperty& operator=(StoredEdgeWithProperty&&) = default;
+    StoredEdgeWithProperty(StoredEdgeWithProperty&&) noexcept = default;
+    StoredEdgeWithProperty& operator=(StoredEdgeWithProperty&&) noexcept = default;
 
-    EdgeProperty& get_property() noexcept {
+    EdgeProperty& get_property() noexcept { // NOLINT
         Expects(mProperty);
         return *mProperty;
     }
-    const EdgeProperty& get_property() const noexcept {
+    const EdgeProperty& get_property() const noexcept { // NOLINT
         Expects(mProperty);
         return *mProperty;
     }
@@ -209,51 +203,51 @@ class StoredEdgeWithEdgeIter : public StoredEdge<VertexDescriptor> {
 public:
     StoredEdgeWithEdgeIter(VertexDescriptor v, EdgeListIter iter) noexcept
         : StoredEdge<VertexDescriptor>(v)
-        , mEdgeListIter(iter)
+        , _edgeListIter(iter)
     {}
-    StoredEdgeWithEdgeIter(VertexDescriptor v) noexcept
+    StoredEdgeWithEdgeIter(VertexDescriptor v) noexcept // NOLINT(google-explicit-constructor)
         : StoredEdge<VertexDescriptor>(v)
     {}
 
-    EdgeListIter get_iter() const noexcept {
-        return mEdgeListIter;
+    EdgeListIter get_iter() const noexcept { // NOLINT
+        return _edgeListIter;
     }
-    EdgeProperty& get_property() noexcept {
-        return this->mEdgeListIter->get_property();
+    EdgeProperty& get_property() noexcept { // NOLINT
+        return this->_edgeListIter->get_property();
     }
-    const EdgeProperty& get_property() const noexcept {
-        return this->mEdgeListIter->get_property();
+    const EdgeProperty& get_property() const noexcept { // NOLINT
+        return this->_edgeListIter->get_property();
     }
 protected:
-    EdgeListIter mEdgeListIter = {};
+    EdgeListIter _edgeListIter = {};
 };
 
 template<class VertexDescriptor, class EdgeVec, class EdgeProperty = boost::no_property>
 class StoredEdgeWithRandomAccessEdgeIter : public StoredEdge<VertexDescriptor> {
 public:
     StoredEdgeWithRandomAccessEdgeIter(
-        VertexDescriptor v, typename EdgeVec::iterator i, EdgeVec* edge_vec
+        VertexDescriptor v, typename EdgeVec::iterator i, EdgeVec* edgeVec
     ) noexcept
         : StoredEdge<VertexDescriptor>(v)
-        , mID(i - edge_vec->begin())
-        , mVector(edge_vec)
+        , _id(i - edgeVec->begin())
+        , _vector(edgeVec)
     {}
 
-    typename EdgeVec::iterator get_iter() const noexcept {
-        Expects(mVector);
-        return mVector->begin() + mID;
+    typename EdgeVec::iterator get_iter() const noexcept { // NOLINT
+        Expects(_vector);
+        return _vector->begin() + _id;
     }
-    EdgeProperty& get_property() noexcept {
-        Expects(this->mVector);
-        return (*this->mVector)[this->mID].get_property();
+    EdgeProperty& get_property() noexcept { // NOLINT
+        Expects(this->_vector);
+        return (*this->_vector)[this->_id].get_property();
     }
-    const EdgeProperty& get_property() const noexcept {
-        Expects(this->mVector);
-        return (*this->mVector)[this->mID].get_property();
+    const EdgeProperty& get_property() const noexcept { // NOLINT
+        Expects(this->_vector);
+        return (*this->_vector)[this->_id].get_property();
     }
 protected:
-    size_t mID = (size_t)-1;
-    EdgeVec* mVector = nullptr;
+    size_t _id = static_cast<size_t>(-1);
+    EdgeVec* _vector = nullptr;
 };
 
 //--------------------------------------------------------------------
@@ -270,7 +264,7 @@ struct VertexIter : boost::iterator_adaptor<
     >;
 
     VertexIter() = default;
-    VertexIter(const BaseIter& i) noexcept
+    VertexIter(const BaseIter& i) noexcept // NOLINT(google-explicit-constructor)
         : Base(i) {}
 
     VertexDescriptor dereference() const noexcept {
@@ -289,7 +283,7 @@ struct VertexMapPtrIter : boost::iterator_adaptor<
     >;
 
     VertexMapPtrIter() = default;
-    VertexMapPtrIter(const BaseIter& i) noexcept
+    VertexMapPtrIter(const BaseIter& i) noexcept // NOLINT(google-explicit-constructor)
         : Base(i) {}
 
     VertexDescriptor dereference() const noexcept {
@@ -435,24 +429,28 @@ public:
     DirectedEdgeIterator() = default;
     template<class G>
     DirectedEdgeIterator(VertexIterator b, VertexIterator c, VertexIterator e, const G& g) noexcept
-        : mBegin(b), mCurr(c), mEnd(e), mG(&g)
+        : _begin(b), _curr(c), _end(e), _g(&g)
     {
-        if (mCurr != mEnd) {
-            while (mCurr != mEnd && out_degree(*mCurr, *mG) == 0)
-                ++mCurr;
-            if (mCurr != mEnd)
-                mEdges = out_edges(*mCurr, *mG);
+        if (_curr != _end) {
+            while (_curr != _end && out_degree(*_curr, *_g) == 0) {
+                ++_curr;
+            }
+            if (_curr != _end) {
+                _edges = out_edges(*_curr, *_g);
+            }
         }
     }
 
     DirectedEdgeIterator& operator++() noexcept {
-        ++mEdges->first;
-        if (mEdges->first == mEdges->second) {
-            ++mCurr;
-            while (mCurr != mEnd && out_degree(*mCurr, *mG) == 0)
-                ++mCurr;
-            if (mCurr != mEnd)
-                mEdges = out_edges(*mCurr, *mG);
+        ++_edges->first;
+        if (_edges->first == _edges->second) {
+            ++_curr;
+            while (_curr != _end && out_degree(*_curr, *_g) == 0) {
+                ++_curr;
+            }
+            if (_curr != _end) {
+                _edges = out_edges(*_curr, *_g);
+            }
         }
         return *this;
     }
@@ -462,20 +460,20 @@ public:
         return tmp;
     }
     value_type operator*() const noexcept {
-        return *mEdges->first;
+        return *_edges->first;
     }
     bool operator==(const DirectedEdgeIterator& x) const noexcept {
-        return mCurr == x.mCurr && (mCurr == mEnd || mEdges->first == x.mEdges->first);
+        return _curr == x._curr && (_curr == _end || _edges->first == x._edges->first);
     }
     bool operator!=(const DirectedEdgeIterator& x) const noexcept {
-        return mCurr != x.mCurr || (mCurr != mEnd && mEdges->first != x.mEdges->first);
+        return _curr != x._curr || (_curr != _end && _edges->first != x._edges->first);
     }
 protected:
-    VertexIterator mBegin = {};
-    VertexIterator mCurr = {};
-    VertexIterator mEnd = {};
-    boost::optional<std::pair<OutEdgeIterator, OutEdgeIterator>> mEdges;
-    const Graph* mG = nullptr;
+    VertexIterator _begin = {};
+    VertexIterator _curr = {};
+    VertexIterator _end = {};
+    boost::optional<std::pair<OutEdgeIterator, OutEdgeIterator>> _edges;
+    const Graph* _g = nullptr;
 };
 
 //--------------------------------------------------------------------
@@ -483,28 +481,28 @@ protected:
 //--------------------------------------------------------------------
 template<class VertexDescriptor, class EdgeProperty = boost::no_property>
 struct ListEdge {
-    ListEdge(VertexDescriptor s, VertexDescriptor t)
+    ListEdge(VertexDescriptor s, VertexDescriptor t) // NOLINT
         : m_source(s), m_target(t)
     {}
     
-    ListEdge(VertexDescriptor s, VertexDescriptor t, EdgeProperty&& p)
+    ListEdge(VertexDescriptor s, VertexDescriptor t, EdgeProperty&& p) // NOLINT
         : m_source(s), m_target(t)
         , mProperty(std::move(p))
     {}
 
-    ListEdge(VertexDescriptor s, VertexDescriptor t, const EdgeProperty& p)
+    ListEdge(VertexDescriptor s, VertexDescriptor t, const EdgeProperty& p) // NOLINT
         : m_source(s), m_target(t)
         , mProperty(p)
     {}
 
     template<class... T>
-    ListEdge(VertexDescriptor s, VertexDescriptor t, T&&... args)
+    ListEdge(VertexDescriptor s, VertexDescriptor t, T&&... args) // NOLINT
         : m_source(s), m_target(t)
         , mProperty(std::forward<T>(args)...)
     {}
 
-    EdgeProperty& get_property() noexcept { return mProperty; }
-    const EdgeProperty& get_property() const noexcept { return mProperty; }
+    EdgeProperty& get_property() noexcept { return mProperty; } // NOLINT
+    const EdgeProperty& get_property() const noexcept { return mProperty; } // NOLINT
 
     VertexDescriptor m_source = {};
     VertexDescriptor m_target = {};
@@ -515,27 +513,27 @@ struct ListEdge {
 template<class VertexDescriptor, class EdgeProperty>
 struct PmrListEdge {
     using allocator_type = boost::container::pmr::polymorphic_allocator<char>;
-    allocator_type get_allocator() const noexcept {
+    allocator_type get_allocator() const noexcept { // NOLINT
         return allocator_type{ mProperty.get_allocator().resource() };
     }
     // cntrs
-    PmrListEdge(VertexDescriptor s, VertexDescriptor t, const allocator_type& alloc)
+    PmrListEdge(VertexDescriptor s, VertexDescriptor t, const allocator_type& alloc) // NOLINT
         : m_source(s), m_target(t)
         , mProperty(alloc)
     {}
     
-    PmrListEdge(VertexDescriptor s, VertexDescriptor t, EdgeProperty&& p, const allocator_type& alloc)
+    PmrListEdge(VertexDescriptor s, VertexDescriptor t, EdgeProperty&& p, const allocator_type& alloc) // NOLINT
         : m_source(s), m_target(t)
         , mProperty(std::move(p), alloc)
     {}
 
-    PmrListEdge(VertexDescriptor s, VertexDescriptor t, const EdgeProperty& p, const allocator_type& alloc)
+    PmrListEdge(VertexDescriptor s, VertexDescriptor t, const EdgeProperty& p, const allocator_type& alloc) // NOLINT
         : m_source(s), m_target(t)
         , mProperty(p, alloc)
     {}
 
     template<class... T>
-    PmrListEdge(VertexDescriptor s, VertexDescriptor t, T&&... args)
+    PmrListEdge(VertexDescriptor s, VertexDescriptor t, T&&... args) // NOLINT
         : m_source(s), m_target(t)
         , mProperty(std::forward<T>(args)...)
     {}
@@ -554,8 +552,8 @@ struct PmrListEdge {
 
     PmrListEdge(const PmrListEdge&) = delete;
 
-    EdgeProperty& get_property() noexcept { return mProperty; }
-    const EdgeProperty& get_property() const noexcept { return mProperty; }
+    EdgeProperty& get_property() noexcept { return mProperty; } // NOLINT
+    const EdgeProperty& get_property() const noexcept { return mProperty; } // NOLINT
 
     VertexDescriptor m_source = {};
     VertexDescriptor m_target = {};
@@ -579,12 +577,12 @@ struct ValueHandle : Tag {
         return *this;
     }
 
-    ValueHandle(const Handle& handle) noexcept
+    ValueHandle(const Handle& handle) noexcept // NOLINT(google-explicit-constructor)
         : mValue(handle) {}
-    ValueHandle(Handle&& handle) noexcept
+    ValueHandle(Handle&& handle) noexcept // NOLINT(google-explicit-constructor)
         : mValue(std::move(handle)) {}
     template <class... Args>
-    ValueHandle(Args&&... args) noexcept
+    ValueHandle(Args&&... args) noexcept // NOLINT(google-explicit-constructor)
         : mValue(std::forward<Args>(args)...) {}
 
     Handle mValue = {};
@@ -605,26 +603,30 @@ public:
     OwnershipIterator() = default;
     template <class G>
     OwnershipIterator(VertexIterator b, VertexIterator c, VertexIterator e, const G& g) noexcept
-        : mBegin(b)
-        , mCurr(c)
-        , mEnd(e)
-        , mG(&g) {
-        if (mCurr != mEnd) {
-            while (mCurr != mEnd && num_children(*mCurr, *mG) == 0)
-                ++mCurr;
-            if (mCurr != mEnd)
-                mEdges = children(*mCurr, *mG);
+        : _begin(b)
+        , _curr(c)
+        , _end(e)
+        , _g(&g) {
+        if (_curr != _end) {
+            while (_curr != _end && num_children(*_curr, *_g) == 0) {
+                ++_curr;
+            }
+            if (_curr != _end) {
+                _edges = children(*_curr, *_g);
+            }
         }
     }
 
     OwnershipIterator& operator++() noexcept {
-        ++mEdges->first;
-        if (mEdges->first == mEdges->second) {
-            ++mCurr;
-            while (mCurr != mEnd && num_children(*mCurr, *mG) == 0)
-                ++mCurr;
-            if (mCurr != mEnd)
-                mEdges = children(*mCurr, *mG);
+        ++_edges->first;
+        if (_edges->first == _edges->second) {
+            ++_curr;
+            while (_curr != _end && num_children(*_curr, *_g) == 0) {
+                ++_curr;
+            }
+            if (_curr != _end) {
+                _edges = children(*_curr, *_g);
+            }
         }
         return *this;
     }
@@ -634,23 +636,23 @@ public:
         return tmp;
     }
     value_type operator*() const noexcept {
-        return *mEdges->first;
+        return *_edges->first;
     }
     bool operator==(const OwnershipIterator& x) const noexcept {
-        return mCurr == x.mCurr && (mCurr == mEnd || mEdges->first == x.mEdges->first);
+        return _curr == x._curr && (_curr == _end || _edges->first == x._edges->first);
     }
     bool operator!=(const OwnershipIterator& x) const noexcept {
-        return mCurr != x.mCurr || (mCurr != mEnd && mEdges->first != x.mEdges->first);
+        return _curr != x._curr || (_curr != _end && _edges->first != x._edges->first);
     }
 
 protected:
-    VertexIterator mBegin = {};
-    VertexIterator mCurr = {};
-    VertexIterator mEnd = {};
-    boost::optional<std::pair<OutEdgeIterator, OutEdgeIterator>> mEdges;
-    const Graph* mG = nullptr;
+    VertexIterator _begin = {};
+    VertexIterator _curr = {};
+    VertexIterator _end = {};
+    boost::optional<std::pair<OutEdgeIterator, OutEdgeIterator>> _edges;
+    const Graph* _g = nullptr;
 };
 
-}
+} // namespace impl
 
-}
+} // namespace cc
