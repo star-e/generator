@@ -24,7 +24,7 @@ struct VectorVertexBundlePropertyMap
     using key_type   = typename Graph::vertex_descriptor;
     using category   = Category;
 
-    explicit VectorVertexBundlePropertyMap(Graph &g) noexcept
+    VectorVertexBundlePropertyMap(Graph &g) noexcept // NOLINT(google-explicit-constructor)
     : mGraph(&g) {}
 
     inline reference operator[](const key_type &v) const noexcept {
@@ -46,7 +46,7 @@ struct PointerVertexBundlePropertyMap
     using key_type   = typename Graph::vertex_descriptor;
     using category   = Category;
 
-    explicit PointerVertexBundlePropertyMap(Graph &g) noexcept
+    PointerVertexBundlePropertyMap(Graph &g) noexcept // NOLINT(google-explicit-constructor)
     : mGraph(&g) {}
 
     inline reference operator[](const key_type &v) const noexcept {
@@ -116,7 +116,7 @@ struct VectorVertexComponentPropertyMap
     using key_type   = typename Graph::vertex_descriptor;
     using category   = Category;
 
-    explicit VectorVertexComponentPropertyMap(Container &c) noexcept
+    VectorVertexComponentPropertyMap(Container &c) noexcept // NOLINT(google-explicit-constructor)
     : mContainer(&c) {}
 
     inline reference operator[](const key_type &v) const noexcept {
@@ -208,7 +208,7 @@ struct VectorPathPropertyMap
     using key_type   = VertexDescriptor;
     using category   = Category;
 
-    explicit VectorPathPropertyMap(Container &c) noexcept
+    VectorPathPropertyMap(Container &c) noexcept // NOLINT(google-explicit-constructor)
     : mContainer(&c) {}
 
     inline reference operator[](const key_type &v) const noexcept {
@@ -230,7 +230,7 @@ struct EdgeBundlePropertyMap
     using key_type   = typename Graph::edge_descriptor;
     using category   = Category;
 
-    explicit EdgeBundlePropertyMap(Graph &g) noexcept
+    EdgeBundlePropertyMap(Graph &g) noexcept // NOLINT(google-explicit-constructor)
     : mGraph(&g) {}
 
     inline reference operator[](const key_type &e) const noexcept {
@@ -621,7 +621,7 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type &, Colo
     using key_type   = Key;
     using category   = boost::lvalue_property_map_tag;
 
-    explicit ColorMap(boost::container::pmr::vector<boost::default_color_type> &vec) noexcept
+    ColorMap(boost::container::pmr::vector<boost::default_color_type> &vec) noexcept // NOLINT(google-explicit-constructor)
     : mContainer{&vec} {}
 
     [[nodiscard]] inline reference operator[](const key_type &v) const noexcept {
