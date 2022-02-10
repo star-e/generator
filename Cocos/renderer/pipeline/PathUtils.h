@@ -6,10 +6,10 @@
 namespace cc {
 
 template <class CharT, class Allocator>
-inline void cleanPath(std::basic_string<CharT, std::char_traits<CharT>, Allocator>& str) noexcept {
-    using string_t = std::basic_string<CharT, std::char_traits<CharT>, Allocator>;
-    constexpr CharT slash[] = { '/', '\0' };
-    constexpr CharT doubleSlash[] = { '/', '/', '\0' };
+inline void cleanPath(std::basic_string<CharT, std::char_traits<CharT>, Allocator> &str) noexcept {
+    using string_t                = std::basic_string<CharT, std::char_traits<CharT>, Allocator>;
+    constexpr CharT slash[]       = {'/', '\0'};
+    constexpr CharT doubleSlash[] = {'/', '/', '\0'};
 
     Expects(!str.empty());
     Expects(boost::algorithm::starts_with(str, boost::string_view(slash)));
@@ -24,7 +24,7 @@ inline void cleanPath(std::basic_string<CharT, std::char_traits<CharT>, Allocato
     }());
 
     { // remove all /./
-        constexpr CharT current[] = { '/', '.', '/', '\0' };
+        constexpr CharT current[] = {'/', '.', '/', '\0'};
 
         auto pos = str.rfind(current);
         while (pos != string_t::npos) {
@@ -32,15 +32,15 @@ inline void cleanPath(std::basic_string<CharT, std::char_traits<CharT>, Allocato
             pos = str.rfind(current);
         }
         // remove tailing /.
-        constexpr CharT ending[] = { '/', '.', '\0' };
+        constexpr CharT ending[] = {'/', '.', '\0'};
         if (boost::algorithm::ends_with(str, boost::string_view(ending))) {
             str.resize(str.size() - 2);
         }
     }
 
     // try remove /..
-    constexpr std::array<CharT, 4> previous = { CharT('/'), CharT('.'), CharT('.'), CharT('\0') };
-    auto pos = str.find(previous.data());
+    constexpr std::array<CharT, 4> previous = {CharT('/'), CharT('.'), CharT('.'), CharT('\0')};
+    auto                           pos      = str.find(previous.data());
     while (pos != string_t::npos) {
         if (pos == 0) {
             // root element has not parent path
