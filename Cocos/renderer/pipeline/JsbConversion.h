@@ -4,8 +4,9 @@
 #include <boost/container/vector.hpp>
 
 template <typename T, typename allocator>
-inline bool nativevalue_to_se(const boost::container::vector<T, allocator>& from,
-    se::Value& to, se::Object* ctx) { // NOLINT(readability-identifier-naming)
+inline bool nativevalue_to_se( // NOLINT(readability-identifier-naming)
+    const boost::container::vector<T, allocator>& from,
+    se::Value& to, se::Object* ctx) {
     se::Object* array = se::Object::createArrayObject(from.size());
     se::Value tmp;
     for (size_t i = 0; i < from.size(); i++) {
