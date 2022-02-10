@@ -1264,13 +1264,13 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
     oss << "\n";
     OSS << "// AddressableGraph\n";
     OSS << "inline " << name << "::vertex_descriptor\n";
-    OSS << "parent(const " << name << "::ownership_descriptor& e, const " << name << "& g) noexcept {\n";
+    OSS << "parent(const " << name << "::ownership_descriptor& e, const " << name << "& /*g*/) noexcept {\n";
     OSS << "    return e.m_source;\n";
     OSS << "}\n";
 
     oss << "\n";
     OSS << "inline " << name << "::vertex_descriptor\n";
-    OSS << "child(const " << name << "::ownership_descriptor& e, const " << name << "& g) noexcept {\n";
+    OSS << "child(const " << name << "::ownership_descriptor& e, const " << name << "& /*g*/) noexcept {\n";
     OSS << "    return e.m_target;\n";
     OSS << "}\n";
 
@@ -1284,7 +1284,7 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
 
     oss << "\n";
     OSS << "inline " << name << "::children_size_type\n";
-    OSS << "num_children(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+    OSS << "num_children(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
     OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.children_list(u).size());\n";
     OSS << "}\n";
 
@@ -1321,7 +1321,7 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
 
     oss << "\n";
     OSS << "inline " << name << "::children_size_type\n";
-    OSS << "num_parents(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+    OSS << "num_parents(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
     OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.parents_list(u).size());\n";
     OSS << "}\n";
 
@@ -1331,9 +1331,8 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
     OSS << "    auto r = parents(u, g);\n";
     OSS << "    if (r.first == r.second) {\n";
     OSS << "        return " << name << "::null_vertex();\n";
-    OSS << "    } else {\n";
-    OSS << "        return parent(*r.first, g);\n";
     OSS << "    }\n";
+    OSS << "    return parent(*r.first, g);\n";
     OSS << "}\n";
 
     oss << "\n";
@@ -1370,7 +1369,7 @@ return isAncestor;
 
     oss << "\n";
     OSS << "inline " << name << "::ownerships_size_type\n";
-    OSS << "num_ownerships(const " << name << "& g) noexcept {\n";
+    OSS << "num_ownerships(const " << name << "& g) noexcept { // NOLINT\n";
     {
         INDENT();
         OSS << name << "::ownerships_size_type numEdges = 0;\n";
@@ -1403,19 +1402,19 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         oss << "\n";
         OSS << "// IncidenceGraph\n";
         OSS << "inline " << name << "::vertex_descriptor\n";
-        OSS << "source(const " << name << "::edge_descriptor& e, const " << name << "& g) noexcept {\n";
+        OSS << "source(const " << name << "::edge_descriptor& e, const " << name << "& /*g*/) noexcept {\n";
         OSS << "    return e.m_source;\n";
         OSS << "}\n";
 
         oss << "\n";
         OSS << "inline " << name << "::vertex_descriptor\n";
-        OSS << "target(const " << name << "::edge_descriptor& e, const " << name << "& g) noexcept {\n";
+        OSS << "target(const " << name << "::edge_descriptor& e, const " << name << "& /*g*/) noexcept {\n";
         OSS << "    return e.m_target;\n";
         OSS << "}\n";
 
         oss << "\n";
         OSS << "inline std::pair<" << name << "::out_edge_iterator, " << name << "::out_edge_iterator>\n";
-        OSS << "out_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+        OSS << "out_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
         OSS << "    return std::make_pair(\n";
         OSS << "        " << name << "::out_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).begin(), u),\n";
         OSS << "        " << name << "::out_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).end(), u));\n";
@@ -1423,7 +1422,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
 
         oss << "\n";
         OSS << "inline " << name << "::degree_size_type\n";
-        OSS << "out_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+        OSS << "out_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
         OSS << "    return gsl::narrow_cast<" << name << "::degree_size_type>(g.out_edge_list(u).size());\n";
         OSS << "}\n";
 
@@ -1432,7 +1431,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         OSS << "edge(" << name << "::vertex_descriptor u, " << name << "::vertex_descriptor v, const " << name << "& g) noexcept {\n";
         {
             INDENT();
-            OSS << "auto& outEdgeList = g.out_edge_list(u);\n";
+            OSS << "const auto& outEdgeList = g.out_edge_list(u);\n";
             visit(
                 overload(
                     [&]<BackInsertionSequence_ T>(T) {
@@ -1457,7 +1456,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             oss << "\n";
             OSS << "// BidirectionalGraph(Undirected)\n";
             OSS << "inline std::pair<" << name << "::in_edge_iterator, " << name << "::in_edge_iterator>\n";
-            OSS << "in_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+            OSS << "in_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
             OSS << "    return std::make_pair(\n";
             OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).begin(), u),\n";
             OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).end(), u));\n";
@@ -1465,7 +1464,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
 
             oss << "\n";
             OSS << "inline " << name << "::degree_size_type\n";
-            OSS << "in_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+            OSS << "in_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
             OSS << "    return out_degree(u, g);\n";
             OSS << "}\n";
 
@@ -1478,7 +1477,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             oss << "\n";
             OSS << "// BidirectionalGraph(Directed)\n";
             OSS << "inline std::pair<" << name << "::in_edge_iterator, " << name << "::in_edge_iterator>\n";
-            OSS << "in_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+            OSS << "in_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
             OSS << "    return std::make_pair(\n";
             OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).in_edge_list(u).begin(), u),\n";
             oss << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).in_edge_list(u).end(), u));\n";
@@ -1486,7 +1485,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
 
             oss << "\n";
             OSS << "inline " << name << "::degree_size_type\n";
-            OSS << "in_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+            OSS << "in_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
             OSS << "    return gsl::narrow_cast<" << name << "::degree_size_type>(g.in_edge_list(u).size());\n";
             OSS << "}\n";
             oss << "\n";
@@ -1501,7 +1500,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         oss << "\n";
         OSS << "// AdjacencyGraph\n";
         OSS << "inline std::pair<" << name << "::adjacency_iterator, " << name << "::adjacency_iterator>\n";
-        OSS << "adjacent_vertices(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+        OSS << "adjacent_vertices(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
         {
             INDENT();
             OSS << "auto edges = out_edges(u, g);\n";
@@ -1521,7 +1520,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
 
         oss << "\n";
         OSS << "inline " << name << "::vertices_size_type\n";
-        OSS << "num_vertices(const " << name << "& g) noexcept {\n";
+        OSS << "num_vertices(const " << name << "& g) noexcept { // NOLINT\n";
         OSS << "    return gsl::narrow_cast<" << name << "::vertices_size_type>(g.vertex_set().size());\n";
         OSS << "}\n";
     }
@@ -1549,7 +1548,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         oss << "\n";
         if (!s.needEdgeList()) {
             OSS << "inline " << name << "::edges_size_type\n";
-            OSS << "num_edges(const " << name << "& g) noexcept {\n";
+            OSS << "num_edges(const " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << name << "::edges_size_type numEdges = 0;\n";
@@ -1563,7 +1562,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             OSS << "}\n";
         } else {
             OSS << "inline " << name << "::edges_size_type\n";
-            OSS << "num_edges(const " << name << "& g) noexcept {\n";
+            OSS << "num_edges(const " << name << "& g) noexcept { // NOLINT\n";
             OSS << "    return gsl::narrow_cast<" << name << "::edges_size_type>(g.mEdges.size());\n";
             OSS << "}\n";
         }
@@ -1586,7 +1585,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             oss << "\n";
             OSS << "// MutableGraph(Edge)\n";
             OSS << "inline std::pair<" << name << "::edge_descriptor, bool>\n";
-            OSS << "add_edge(\n";
+            OSS << "add_edge( // NOLINT\n";
             OSS << "    " << name << "::vertex_descriptor u,\n";
             OSS << "    " << name << "::vertex_descriptor v, " << name << "& g) {\n";
             {
@@ -1598,7 +1597,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             // remove edge(s)
             oss << "\n";
             OSS << "inline void remove_edge(" << name << "::vertex_descriptor u, "
-                << name << "::vertex_descriptor v, " << name << "& g) noexcept {\n";
+                << name << "::vertex_descriptor v, " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
 
@@ -1659,11 +1658,11 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             // remove edge (iter) declare
             if (s.mBidirectional && s.hasEdgeProperty()) {
                 oss << "\n";
-                OSS << "void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept;\n";
+                OSS << "void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept; // NOLINT\n";
             }
             // remove edge (descriptor)
             oss << "\n";
-            OSS << "inline void remove_edge(" << name << "::edge_descriptor e, " << name << "& g) noexcept {\n";
+            OSS << "inline void remove_edge(" << name << "::edge_descriptor e, " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << "// remove_edge need rewrite\n";
@@ -1710,7 +1709,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             if (s.mIncidence) {
                 // remove edge (iter)
                 oss << "\n";
-                OSS << "inline void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept {\n";
+                OSS << "inline void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept { // NOLINT\n";
                 {
                     INDENT();
                     if (s.isDirectedOnly()) {
@@ -1741,15 +1740,19 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 OSS << "inline void remove_out_edge_if(" << name << "::vertex_descriptor u, Predicate&& pred, " << name << "& g)";
                 if (!s.mUndirected && !s.hasEdgeProperty())
                     oss << " noexcept";
-                oss << " {\n";
+                oss << " { // NOLINT\n";
                 {
                     INDENT();
                     if (s.isDirectedOnly()) {
-                        OSS << "auto [first, last] = out_edges(u, g);\n";
+                        OSS << "auto pair = out_edges(u, g);\n";
+                        OSS << "auto& first = pair.first;\n";
+                        OSS << "auto& last = pair.second;\n";
                         OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
                         copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
                     } else if (s.mUndirected) {
-                        OSS << "auto [first, last] = out_edges(u, g);\n";
+                        OSS << "auto pair = out_edges(u, g);\n";
+                        OSS << "auto& first = pair.first;\n";
+                        OSS << "auto& last = pair.second;\n";
                         OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
                         visit(
                             overload(
@@ -1766,24 +1769,28 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "std::vector<" << edgeListType(ns) << "::iterator> garbage;\n";
                         }
 
-                        OSS << "for (auto [out_i, out_end] = out_edges(u, g); out_i != out_end; ++out_i) {\n";
+                        OSS << "for (auto pair = out_edges(u, g); pair.first != pair.second; ++pair.first) {\n";
                         {
                             INDENT();
-                            OSS << "if (pred(*out_i)) {\n";
+                            OSS << "auto& outIter = pair.first;\n";
+                            OSS << "auto& outEnd = pair.second;\n";
+                            OSS << "if (pred(*outIter)) {\n";
                             {
                                 INDENT();
-                                OSS << "auto& inEdgeList = g.in_edge_list(target(*out_i, g));\n";
-                                OSS << "auto  e          = *out_i;\n";
+                                OSS << "auto& inEdgeList = g.in_edge_list(target(*outIter, g));\n";
+                                OSS << "auto  e          = *outIter;\n";
                                 OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                                 if (s.hasEdgeProperty()) {
-                                    OSS << "garbage.emplace_back((*out_i.base()).get_iter());\n";
+                                    OSS << "garbage.emplace_back((*outIter.base()).get_iter());\n";
                                 }
                             }
                             OSS << "}\n";
                         }
                         OSS << "}\n";
 
-                        OSS << "auto [first, last] = out_edges(u, g);\n";
+                        OSS << "auto pair = out_edges(u, g);\n";
+                        OSS << "auto& first = pair.first;\n";
+                        OSS << "auto& last = pair.second;\n";
                         OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
                         copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
 
@@ -1803,7 +1810,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                     OSS << "inline void remove_in_edge_if(" << name << "::vertex_descriptor v, Predicate&& pred, " << name << "& g)";
                     if (!s.mUndirected && !s.hasEdgeProperty())
                         oss << " noexcept";
-                    oss << " {\n";
+                    oss << " { // NOLINT\n";
                     {
                         INDENT();
                         if (s.mUndirected) {
@@ -1814,24 +1821,28 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                     << "::iterator> garbage;\n";
                             }
 
-                            OSS << "for (auto [in_i, in_end] = in_edges(v, g); in_i != in_end; ++in_i) {\n";
+                            OSS << "for (auto pair = in_edges(v, g); pair.first != pair.second; ++pair.first) {\n";
                             {
                                 INDENT();
-                                OSS << "if (pred(*in_i)) {\n";
+                                OSS << "auto& inIter = pair.first;\n";
+                                OSS << "auto& inEnd = pair.second;\n";
+                                OSS << "if (pred(*inIter)) {\n";
                                 {
                                     INDENT();
-                                    OSS << "auto& outEdgeList = g.out_edge_list(source(*in_i, g));\n";
-                                    OSS << "auto  e           = *in_i;\n";
+                                    OSS << "auto& outEdgeList = g.out_edge_list(source(*inIter, g));\n";
+                                    OSS << "auto  e           = *inIter;\n";
                                     OSS << "impl::removeIncidenceEdge(e, outEdgeList);\n";
                                     if (s.hasEdgeProperty()) {
-                                        OSS << "garbage.emplace_back((*in_i.base()).get_iter());\n";
+                                        OSS << "garbage.emplace_back((*inIter.base()).get_iter());\n";
                                     }
                                 }
                                 OSS << "}\n";
                             }
                             OSS << "}\n";
 
-                            OSS << "auto [first, last] = in_edges(v, g);\n";
+                            OSS << "auto pair = in_edges(v, g);\n";
+                            OSS << "auto& first = pair.first;\n";
+                            OSS << "auto& last = pair.second;\n";
                             OSS << "auto& inEdgeList   = g.in_edge_list(v);\n";
                             copyString(oss, space, removeDirectedEdgeIf(s, "inEdgeList", scratch));
                             if (s.hasEdgeProperty()) {
@@ -1850,21 +1861,26 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 OSS << "inline void remove_edge_if(Predicate&& pred, " << name << "& g)";
                 if (!s.mUndirected && !s.hasEdgeProperty())
                     oss << " noexcept";
-                oss << " {\n";
+                oss << " { // NOLINT\n";
                 {
                     INDENT();
                     if (s.isDirectedOnly()) {
-                        OSS << "for (auto [vi, vi_end] = vertices(g); vi != vi_end; ++vi) {\n";
+                        OSS << "for (auto pair = vertices(g); pair.first != pair.second; ++pair.first) {\n";
+                        OSS << "    auto& vi = pair.first;\n";
+                        OSS << "    auto& viEnd = pair.second;\n";
                         OSS << "    remove_out_edge_if(*vi, std::forward<Predicate>(pred), g);\n";
                         OSS << "}\n";
                     } else {
-                        OSS << "auto [ei, ei_end] = edges(g);\n";
-                        OSS << "for (auto next = ei; ei != ei_end; ei = next) {\n";
+                        OSS << "auto pair = edges(g);\n";
+                        OSS << "auto& ei = pair.first;\n";
+                        OSS << "auto& eiEnd = pair.second;\n";
+                        OSS << "for (auto next = ei; ei != eiEnd; ei = next) {\n";
                         {
                             INDENT();
                             OSS << "++next;\n";
-                            OSS << "if (pred(*ei))\n";
+                            OSS << "if (pred(*ei)) {\n";
                             OSS << "    remove_edge(*ei, g);\n";
+                            OSS << "}\n";
                         }
                         OSS << "}\n";
                     }
@@ -1893,7 +1909,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         OSS << "// MutablePropertyGraph(Edge)\n";
         OSS << "template <class EdgeProperty>\n";
         OSS << "inline std::pair<" << name << "::edge_descriptor, bool>\n";
-        OSS << "add_edge(\n";
+        OSS << "add_edge( // NOLINT\n";
         OSS << "    " << name << "::vertex_descriptor u,\n";
         OSS << "    " << name << "::vertex_descriptor v,\n";
         OSS << "    EdgeProperty&& p, " << name << "& g) {\n";
@@ -1906,7 +1922,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         oss << "\n";
         OSS << "template <class... T>\n";
         OSS << "inline std::pair<" << name << "::edge_descriptor, bool>\n";
-        OSS << "add_edge(\n";
+        OSS << "add_edge( // NOLINT\n";
         OSS << "    " << name << "::vertex_descriptor u,\n";
         OSS << "    " << name << "::vertex_descriptor v,\n";
         OSS << "    " << name << "& g, T&&... args) {\n";
@@ -2251,7 +2267,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         oss << "// Vertex Index\n";
         OSS << "inline boost::property_map<" << name << ", boost::vertex_index_t>::const_type\n";
-        OSS << "get(boost::vertex_index_t tag, const " << name << "& g) noexcept {\n";
+        OSS << "get(boost::vertex_index_t /*tag*/, const " << name << "& /*g*/) noexcept {\n";
         {
             INDENT();
             OSS << "return {};\n";
@@ -2260,7 +2276,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         oss << "\n";
         OSS << "inline boost::property_map<" << name << ", boost::vertex_index_t>::type\n";
-        OSS << "get(boost::vertex_index_t tag, " << name << "& g) noexcept {\n";
+        OSS << "get(boost::vertex_index_t /*tag*/, " << name << "& /*g*/) noexcept {\n";
         {
             INDENT();
             OSS << "return {};\n";
@@ -2270,7 +2286,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         if (s.mColorMap) {
             oss << "\n";
             OSS << "[[nodiscard]] inline impl::ColorMap<" << name << "::vertex_descriptor>\n";
-            OSS << "get(boost::container::pmr::vector<boost::default_color_type>& colors, const " << name << "& g) noexcept {\n";
+            OSS << "get(boost::container::pmr::vector<boost::default_color_type>& colors, const " << name << "& /*g*/) noexcept {\n";
             OSS << "    return {colors};\n";
             OSS << "}\n";
         }
@@ -2284,7 +2300,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         oss << "// Vertex All\n";
         OSS << "inline boost::property_map<" << name << ", boost::vertex_all_t>::const_type\n";
-        OSS << "get(boost::vertex_all_t tag, const " << name << "& g) noexcept {\n";
+        OSS << "get(boost::vertex_all_t /*tag*/, const " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
@@ -2293,7 +2309,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         oss << "\n";
         OSS << "inline boost::property_map<" << name << ", boost::vertex_all_t>::type\n";
-        OSS << "get(boost::vertex_all_t tag, " << name << "& g) noexcept {\n";
+        OSS << "get(boost::vertex_all_t /*tag*/, " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
@@ -2305,7 +2321,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         oss << "// Vertex Bundle\n";
         OSS << "inline boost::property_map<" << name << ", boost::vertex_bundle_t>::const_type\n";
-        OSS << "get(boost::vertex_bundle_t tag, const " << name << "& g) noexcept {\n";
+        OSS << "get(boost::vertex_bundle_t /*tag*/, const " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
@@ -2314,7 +2330,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         oss << "\n";
         OSS << "inline boost::property_map<" << name << ", boost::vertex_bundle_t>::type\n";
-        OSS << "get(boost::vertex_bundle_t tag, " << name << "& g) noexcept {\n";
+        OSS << "get(boost::vertex_bundle_t /*tag*/, " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
@@ -2559,7 +2575,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         OSS << "// PolymorphicGraph\n";
         if (holds_alternative<Vector_>(s.mVertexListType)) {
             OSS << "[[nodiscard]] inline " << name << "::vertices_size_type\n";
-            OSS << "value_id(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+            OSS << "value_id(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
@@ -2714,7 +2730,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             } else {
                 OSS << "holds_alternative(" << name << "::vertex_descriptor v, ";
             }
-            oss << "const " << name << "& g) noexcept {\n";
+            oss << "const " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
@@ -2765,7 +2781,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             } else {
                 OSS << "holds_alternative(" << name << "::vertex_descriptor v, ";
             }
-            oss << "const " << name << "& g) noexcept {\n";
+            oss << "const " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 if (bTag) {
@@ -2788,7 +2804,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     OSS << "holds_alternative<" << cpp.getDependentName(c.mValue) << ">("
                         << name << "::vertex_descriptor v, ";
                 }
-                oss << "const " << name << "& g) noexcept {\n";
+                oss << "const " << name << "& g) noexcept { // NOLINT\n";
                 {
                     INDENT();
                     OSS << "return boost::variant2::holds_alternative<\n";
@@ -2832,7 +2848,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << "(" << name << "::vertex_descriptor v, ";
             if (bConst)
                 oss << "const ";
-            oss << name << "& g) noexcept {\n";
+            oss << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
@@ -2969,7 +2985,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "get_if(" << name << "::vertex_descriptor v, ";
             if (bConst)
                 oss << "const ";
-            oss << name << "* pGraph) noexcept {\n";
+            oss << name << "* pGraph) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
@@ -3039,7 +3055,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "get_if(" << name << "::vertex_descriptor v, ";
             if (bConst)
                 oss << "const ";
-            oss << name << "* pGraph) noexcept {\n";
+            oss << name << "* pGraph) noexcept { // NOLINT\n";
             OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
             OSS << "}\n";
 
@@ -3279,7 +3295,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << "\n";
             OSS << "template <class KeyLike>\n";
             OSS << "[[nodiscard]] inline " << name << "::vertex_descriptor\n";
-            OSS << "find_vertex(const KeyLike& key, const " << name << "& g) noexcept {\n";
+            OSS << "find_vertex(const KeyLike& key, const " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << "const auto& index = g." << map.mMemberName << ";\n";
@@ -3334,7 +3350,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         OSS << "// AddressableGraph\n";
         OSS << "[[nodiscard]] inline std::ptrdiff_t\n";
-        OSS << "path_length(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
+        OSS << "path_length(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
         {
             INDENT();
             OSS << "return impl::pathLength(u, g);\n";
@@ -3344,7 +3360,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         OSS << "template <class Allocator>\n";
         OSS << "inline void\n";
-        OSS << "path_composite(\n";
+        OSS << "path_composite( // NOLINT\n";
         OSS << "    std::basic_string<" << charName
             << ", std::char_traits<" << charName << ">, Allocator>& str,\n";
         OSS << "    std::ptrdiff_t& sz, " << name << "::vertex_descriptor u,\n";
@@ -3380,11 +3396,11 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (general) {
                 OSS << "template <class Allocator>\n";
                 OSS << "inline const std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>&\n";
-                OSS << "get_path(\n";
+                OSS << "get_path( // NOLINT\n";
                 OSS << "    std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
             } else {
                 OSS << "[[nodiscard]] inline " << stringName << "\n";
-                OSS << "get_path(\n";
+                OSS << "get_path( // NOLINT\n";
             }
             OSS << "    " << name << "::vertex_descriptor u" << 0;
 
@@ -3464,7 +3480,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (general) {
                 OSS << "template <class Allocator>\n";
                 OSS << "inline const std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>&\n";
-                OSS << "get_path(\n";
+                OSS << "get_path( // NOLINT\n";
                 OSS << "    std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
                 OSS << "    ";
             } else {
@@ -3627,9 +3643,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "template <class ValueT>\n";
             OSS << "[[nodiscard]] inline ValueT*\n";
             if (s.mAddressableConcept.mUtf8) {
-                OSS << "get_if(std::u8string_view pt, " << name << "* pGraph) noexcept {\n";
+                OSS << "get_if(std::u8string_view pt, " << name << "* pGraph) noexcept { // NOLINT\n";
             } else {
-                OSS << "get_if(boost::string_view pt, " << name << "* pGraph) noexcept {\n";
+                OSS << "get_if(boost::string_view pt, " << name << "* pGraph) noexcept { // NOLINT\n";
             }
             OSS << "    if (pGraph) {\n";
             OSS << "        auto v = locate(pt, *pGraph);\n";
@@ -3644,9 +3660,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "template <class ValueT>\n";
             OSS << "[[nodiscard]] inline const ValueT*\n";
             if (s.mAddressableConcept.mUtf8) {
-                OSS << "get_if(std::u8string_view pt, const " << name << "* pGraph) {\n";
+                OSS << "get_if(std::u8string_view pt, const " << name << "* pGraph) { // NOLINT\n";
             } else {
-                OSS << "get_if(boost::string_view pt, const " << name << "* pGraph) {\n";
+                OSS << "get_if(boost::string_view pt, const " << name << "* pGraph) { // NOLINT\n";
             }
             OSS << "    if (pGraph) {\n";
             OSS << "        auto v = locate(pt, *pGraph);\n";
@@ -3663,7 +3679,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         OSS << "// MutableGraph(Vertex)\n";
         OSS << "inline void add_path_impl(" << name << "::vertex_descriptor u, "
-            << name << "::vertex_descriptor v, " << name << "& g) {\n";
+            << name << "::vertex_descriptor v, " << name << "& g) { // NOLINT\n";
         {
             INDENT();
             OSS << "// add to parent\n";
@@ -3706,7 +3722,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         if (holds_alternative<Map_>(s.mAddressableConcept.mType)) {
             oss << "\n";
-            OSS << "inline void remove_path_impl(" << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
+            OSS << "inline void remove_path_impl(" << name << "::vertex_descriptor u, " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 const auto& member = s.mAddressableConcept.mMemberName;
@@ -3886,7 +3902,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (s.mAddressable) {
                 oss << ", " << name << "::vertex_descriptor parentID = " << name << "::null_vertex()";
             }
-            oss << ") {\n";
+            oss << ") { // NOLINT\n";
             {
                 INDENT();
                 int numSpaces = 0;
