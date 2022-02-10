@@ -50,4 +50,4 @@ struct TransparentStringHash {
     }
 };
 
-}
+} // namespace cc
