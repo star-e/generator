@@ -263,7 +263,7 @@ bool isWrite() const {
             );
         }
 
-        TAGS((_), Queue_, Scene_, Dispatch_, Blit_);
+        TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Present_);
 
         STRUCT(RenderQueueData) {
             PUBLIC(
@@ -298,6 +298,15 @@ bool isWrite() const {
             CNTR(mShader);
         }
 
+        STRUCT(PresentPassData) {
+            PUBLIC(
+                (PmrString, mResourceName, _)
+                (uint32_t, mSyncInterval, 0)
+                (uint32_t, mFlags, 0)
+            );
+            CNTR(mResourceName, mSyncInterval, mFlags);
+        }
+
         STRUCT(RenderData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrUnorderedMap<uint32_t, boost::container::pmr::vector<uint8_t>>), mConstants, _)
@@ -322,6 +331,7 @@ bool isWrite() const {
                 (Compute_, ComputePassData, mComputePasses)
                 (Copy_, CopyPassData, mCopyPasses)
                 (Move_, MovePassData, mMovePasses)
+                (Present_, PresentPassData, mPresentPasses)
                 (Raytrace_, RaytracePassData, mRaytracePasses)
                 (Queue_, RenderQueueData, mRenderQueues)
                 (Scene_, SceneData, mScenes)
