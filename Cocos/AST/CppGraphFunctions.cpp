@@ -2563,7 +2563,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
-                OSS << "return visit(\n";
+                OSS << "return cc::visit(\n";
                 {
                     INDENT();
                     OSS << "overload(\n";
@@ -2609,7 +2609,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         {
             INDENT();
             OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
-            OSS << "return visit(\n";
+            OSS << "return cc::visit(\n";
             {
                 INDENT();
                 OSS << "overload(\n";
@@ -2648,7 +2648,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
-                OSS << "return visit(\n";
+                OSS << "return cc::visit(\n";
                 {
                     INDENT();
                     OSS << "overload(\n";

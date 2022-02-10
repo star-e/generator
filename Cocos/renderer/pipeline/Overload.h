@@ -1,4 +1,5 @@
 #pragma once
+#include <cocos/base/Variant.h>
 #include <type_traits>
 #include <utility>
 
@@ -41,7 +42,7 @@ struct vertex_overloaded : overloaded_t<Ts...> {
 
 template <class GraphT, class... Ts>
 auto visit_vertex(typename GraphT::vertex_descriptor v, GraphT& g, Ts... args) {
-    return visit(vertex_overloaded<Ts...>{std::move(args)...}, value(v, g));
+    return cc::visit(vertex_overloaded<Ts...>{std::move(args)...}, value(v, g));
 }
 
 } // namespace cc

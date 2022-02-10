@@ -39,7 +39,7 @@ int main() {
 
     // output folder
     std::filesystem::path typescriptFolder = "../../../engine";
-    std::filesystem::path cppFolder = "../../../engine-native";
+    std::filesystem::path cppFolder = "../../../engine/native";
 
     ModuleBuilder builder("cc", cppFolder, typescriptFolder, scratch);
 
