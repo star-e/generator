@@ -25,11 +25,11 @@ THE SOFTWARE.
 */
 
 #pragma once
-#include <set>
-#include <unordered_set>
 #include <cocos/renderer/pipeline/Utility.h>
 #include <boost/container/flat_set.hpp>
 #include <boost/container/pmr/flat_set.hpp>
+#include <set>
+#include <unordered_set>
 
 // for std::less<> the transparent comparator
 // see https://stackoverflow.com/questions/20317413/what-are-transparent-comparators
@@ -44,11 +44,13 @@ template <class Value>
 using TransparentMultiSet = std::multiset<Value, std::less<>>;
 
 template <class Value>
-using PmrTransparentSet = std::set<Value, std::less<>,
+using PmrTransparentSet = std::set<
+    Value, std::less<>,
     boost::container::pmr::polymorphic_allocator<Value>>;
 
 template <class Value>
-using PmrTransparentMultiSet = std::multiset<Value, std::less<>,
+using PmrTransparentMultiSet = std::multiset<
+    Value, std::less<>,
     boost::container::pmr::polymorphic_allocator<Value>>;
 
 // flat_set
@@ -66,29 +68,35 @@ using PmrFlatMultiSet = boost::container::pmr::flat_multiset<Value, std::less<>>
 
 // unordered_set
 template <class Value>
-using PmrUnorderedSet = std::unordered_set<Value, std::hash<Value>, std::equal_to<Value>,
+using PmrUnorderedSet = std::unordered_set<
+    Value, std::hash<Value>, std::equal_to<Value>,
     boost::container::pmr::polymorphic_allocator<Value>>;
 
 template <class Value>
-using PmrUnorderedMultiSet = std::unordered_multiset<Value, std::hash<Value>, std::equal_to<Value>,
+using PmrUnorderedMultiSet = std::unordered_multiset<
+    Value, std::hash<Value>, std::equal_to<Value>,
     boost::container::pmr::polymorphic_allocator<Value>>;
 
 // transparent string unordered_set
 template <class Value>
-using UnorderedStringSet = std::unordered_set<Value,
+using UnorderedStringSet = std::unordered_set<
+    Value,
     TransparentStringHash<typename Value::value_type>, std::equal_to<>>;
 
 template <class Value>
-using UnorderedStringMultiSet = std::unordered_multiset<Value,
+using UnorderedStringMultiSet = std::unordered_multiset<
+    Value,
     TransparentStringHash<typename Value::value_type>, std::equal_to<>>;
 
 template <class Value>
-using PmrUnorderedStringSet = std::unordered_set<Value,
+using PmrUnorderedStringSet = std::unordered_set<
+    Value,
     TransparentStringHash<typename Value::value_type>, std::equal_to<>,
     boost::container::pmr::polymorphic_allocator<Value>>;
 
 template <class Value>
-using PmrUnorderedStringMultiSet = std::unordered_multiset<Value,
+using PmrUnorderedStringMultiSet = std::unordered_multiset<
+    Value,
     TransparentStringHash<typename Value::value_type>, std::equal_to<>,
     boost::container::pmr::polymorphic_allocator<Value>>;
 
