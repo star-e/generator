@@ -67,21 +67,21 @@ std::pmr::string CppGraphBuilder::edgeDescType() const {
     if (s.mEdgeList) {
         if (s.isDirectedOnly()) {
             if (s.hasEdgeProperty()) {
-                type = "Impl::EdgeDescriptorWithProperty<directed_category, vertex_descriptor>";
+                type = "impl::EdgeDescriptorWithProperty<directed_category, vertex_descriptor>";
             } else {
-                type = "Impl::EdgeDescriptor<directed_category, vertex_descriptor>";
+                type = "impl::EdgeDescriptor<directed_category, vertex_descriptor>";
             }
         } else if (s.mUndirected) {
-            type = "Impl::EdgeDescriptorWithProperty<directed_category, vertex_descriptor>";
+            type = "impl::EdgeDescriptorWithProperty<directed_category, vertex_descriptor>";
         } else if (s.mBidirectional) {
             if (s.hasEdgeProperty()) {
-                type = "Impl::EdgeDescriptorWithProperty<directed_category, vertex_descriptor>";
+                type = "impl::EdgeDescriptorWithProperty<directed_category, vertex_descriptor>";
             } else {
-                type = "Impl::EdgeDescriptor<directed_category, vertex_descriptor>";
+                type = "impl::EdgeDescriptor<directed_category, vertex_descriptor>";
             }
         }
     } else {
-        type = "Impl::EdgeDescriptor<directed_category, vertex_descriptor>";
+        type = "impl::EdgeDescriptor<directed_category, vertex_descriptor>";
     }
     return type;
 }
@@ -153,12 +153,12 @@ std::pmr::string CppGraphBuilder::edgeType(std::string_view ns) const {
     if (s.hasEdgeProperty()) {
         auto epID = locate(s.mEdgeProperty, g);
         if (g.isPmr(epID)) {
-            oss << "Impl::PmrListEdge<vertex_descriptor, " << edgePropertyType(ns) << ">";
+            oss << "impl::PmrListEdge<vertex_descriptor, " << edgePropertyType(ns) << ">";
         } else {
-            oss << "Impl::ListEdge<vertex_descriptor, " << edgePropertyType(ns) << ">";
+            oss << "impl::ListEdge<vertex_descriptor, " << edgePropertyType(ns) << ">";
         }
     } else {
-        oss << "Impl::ListEdge<vertex_descriptor>";
+        oss << "impl::ListEdge<vertex_descriptor>";
     }
     return oss.str();
 }
@@ -274,17 +274,17 @@ std::pmr::string CppGraphBuilder::outEdgeType(std::string_view ns) const {
     if (s.hasEdgeProperty()) {
         auto edgePropType = edgePropertyType(ns);
         if (s.isDirectedOnly()) {
-            oss << "Impl::StoredEdgeWithProperty<\n";
+            oss << "impl::StoredEdgeWithProperty<\n";
             oss << "    " << vertexDesc(ns) << ",\n";
             oss << "    " << edgeListType(ns) << ">";
         } else {
             if (s.isEdgeListVector()) {
-                oss << "Impl::StoredEdgeWithRandomAccessEdgeIter<\n";
+                oss << "impl::StoredEdgeWithRandomAccessEdgeIter<\n";
                 oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << ",\n";
                 oss << "    " << edgePropertyType(ns) << ">";
             } else {
-                oss << "Impl::StoredEdgeWithEdgeIter<\n";
+                oss << "impl::StoredEdgeWithEdgeIter<\n";
                 oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << "::iterator,\n";
                 oss << "    " << edgePropertyType(ns) << ">";
@@ -293,16 +293,16 @@ std::pmr::string CppGraphBuilder::outEdgeType(std::string_view ns) const {
     } else {
         if (s.needEdgeList()) {
             if (s.isEdgeListVector()) {
-                oss << "Impl::StoredEdgeWithRandomAccessEdgeIter<\n";
+                oss << "impl::StoredEdgeWithRandomAccessEdgeIter<\n";
                 oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << ">";
             } else {
-                oss << "Impl::StoredEdgeWithEdgeIter<\n";
+                oss << "impl::StoredEdgeWithEdgeIter<\n";
                 oss << "    " << vertexDesc(ns) << ",\n";
                 oss << "    " << edgeListType(ns) << "::iterator>";
             }
         } else {
-            oss << "Impl::StoredEdge<" << vertexDesc(ns) << ">";
+            oss << "impl::StoredEdge<" << vertexDesc(ns) << ">";
         }
     }
 
@@ -313,9 +313,9 @@ std::pmr::string CppGraphBuilder::outIterType() const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& s = *mGraph;
     if (s.hasEdgeProperty() || s.mUndirected) {
-        oss << "Impl::OutPropertyEdgeIter<\n";
+        oss << "impl::OutPropertyEdgeIter<\n";
     } else {
-        oss << "Impl::OutEdgeIter<\n";
+        oss << "impl::OutEdgeIter<\n";
     }
     oss << "    " << outEdgeListType() << "::iterator,\n";
     oss << "    vertex_descriptor, edge_descriptor, "
@@ -346,9 +346,9 @@ std::pmr::string CppGraphBuilder::inIterType() const {
     const auto& s = *mGraph;
 
     if (s.hasEdgeProperty() || s.mUndirected) {
-        oss << "Impl::InPropertyEdgeIter<\n";
+        oss << "impl::InPropertyEdgeIter<\n";
     } else {
-        oss << "Impl::InEdgeIter<\n";
+        oss << "impl::InEdgeIter<\n";
     }
     oss << "    " << inEdgeListType() << "::iterator,\n";
     oss << "    vertex_descriptor, edge_descriptor, "
@@ -387,7 +387,7 @@ std::pmr::string CppGraphBuilder::childEdgeType(std::string_view ns) const {
     if (s.mAliasGraph) {
         oss << "out_edge_type";
     } else {
-        oss << "Impl::StoredEdge<vertex_descriptor>";
+        oss << "impl::StoredEdge<vertex_descriptor>";
     }
     return oss.str();
 }
@@ -396,7 +396,7 @@ std::pmr::string CppGraphBuilder::childIterType() const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& s = *mGraph;
 
-    oss << "Impl::OutEdgeIter<\n";
+    oss << "impl::OutEdgeIter<\n";
     oss << "    " << childListType() << "::iterator,\n";
     oss << "    vertex_descriptor, ownership_descriptor, " << s.mDifferenceType << ">";
 
@@ -410,7 +410,7 @@ std::pmr::string CppGraphBuilder::parentEdgeType(std::string_view ns) const {
     if (s.mAliasGraph) {
         oss << "in_edge_type";
     } else {
-        oss << "Impl::StoredEdge<vertex_descriptor>";
+        oss << "impl::StoredEdge<vertex_descriptor>";
     }
     return oss.str();
 }
@@ -438,7 +438,7 @@ std::pmr::string CppGraphBuilder::parentIterType() const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
 
-    oss << "Impl::InEdgeIter<\n";
+    oss << "impl::InEdgeIter<\n";
     oss << "    " << parentListType() << "::iterator,\n";
     oss << "    vertex_descriptor, ownership_descriptor, " << s.mDifferenceType << ">";
 
@@ -450,10 +450,10 @@ std::pmr::string CppGraphBuilder::referenceIterType() const {
     const auto& s = *mGraph;
 
     if (s.mAliasGraph) {
-        oss << "Impl::DirectedEdgeIterator<vertex_iterator, children_iterator, "
+        oss << "impl::DirectedEdgeIterator<vertex_iterator, children_iterator, "
             << graphType(mStruct.mCurrentNamespace) << ">";
     } else {
-        oss << "Impl::OwnershipIterator<vertex_iterator, children_iterator, "
+        oss << "impl::OwnershipIterator<vertex_iterator, children_iterator, "
             << graphType(mStruct.mCurrentNamespace) << ">";
     }
     return oss.str();
@@ -465,7 +465,7 @@ std::pmr::string CppGraphBuilder::vertexIterType() const {
     if (s.isVector()) {
         oss << "boost::integer_range<vertex_descriptor>::iterator";
     } else {
-        oss << "Impl::VertexIter<" << vertexListType()
+        oss << "impl::VertexIter<" << vertexListType()
             << "::iterator, vertex_descriptor, "
             << s.mDifferenceType << ">";
     }
@@ -566,7 +566,7 @@ std::pmr::string CppGraphBuilder::handleElemType(const PolymorphicPair& pair,
     auto tagName = getCppPath(g.getDependentName(ns, tagID, scratch, scratch), scratch);
     auto valueName = getCppPath(g.getDependentName(ns, valueID, scratch, scratch), scratch);
 
-    oss << "Impl::ValueHandle<" << tagName << ", ";
+    oss << "impl::ValueHandle<" << tagName << ", ";
     if (pair.mMemberName.empty()) {
         oss << valueName;
     } else {
@@ -627,9 +627,9 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapName(bool bConst) const {
         OSS << mStruct.mProjectName << "::";
     }
     if (s.isVector()) {
-        oss << "Impl::VectorVertexBundlePropertyMap<\n";
+        oss << "impl::VectorVertexBundlePropertyMap<\n";
     } else {
-        oss << "Impl::PointerVertexBundlePropertyMap<\n";
+        oss << "impl::PointerVertexBundlePropertyMap<\n";
     }
     {
         INDENT();
@@ -679,9 +679,9 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapMemberName(bool bConst) const
     }
 
     if (s.isVector()) {
-        oss << "Impl::VectorVertexBundleMemberPropertyMap<\n";
+        oss << "impl::VectorVertexBundleMemberPropertyMap<\n";
     } else {
-        oss << "Impl::PointerVertexBundleMemberPropertyMap<\n";
+        oss << "impl::PointerVertexBundleMemberPropertyMap<\n";
     }
 
     {
@@ -746,7 +746,7 @@ std::pmr::string CppGraphBuilder::edgePropertyMapName(bool bConst) const {
     if (cn.empty() || cn.substr(0, 6) != mStruct.mProjectName + "::") {
         OSS << mStruct.mProjectName << "::";
     }
-    oss << "Impl::EdgeBundlePropertyMap<\n";
+    oss << "impl::EdgeBundlePropertyMap<\n";
     {
         INDENT();
         auto epID = locate(s.mEdgeProperty, g);
@@ -787,7 +787,7 @@ std::pmr::string CppGraphBuilder::edgePropertyMapMemberName(bool bConst, std::st
     if (cn.empty() || cn.substr(0, 6) != mStruct.mProjectName + "::") {
         OSS << mStruct.mProjectName << "::";
     }
-    oss << "Impl::EdgeBundleMemberPropertyMap<\n";
+    oss << "impl::EdgeBundleMemberPropertyMap<\n";
     {
         INDENT();
         bool isString = false;
@@ -851,9 +851,9 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
     }
     if (s.isVector()) {
         if (c.isVector()) {
-            oss << "Impl::VectorVertexComponentPropertyMap<\n";
+            oss << "impl::VectorVertexComponentPropertyMap<\n";
         } else {
-            oss << "Impl::VectorVertexIteratorComponentPropertyMap<\n";
+            oss << "impl::VectorVertexIteratorComponentPropertyMap<\n";
         }
     } else {
         Expects(false);
@@ -936,9 +936,9 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
     }
     if (s.isVector()) {
         if (c.isVector()) {
-            oss << "Impl::VectorVertexComponentMemberPropertyMap<\n";
+            oss << "impl::VectorVertexComponentMemberPropertyMap<\n";
         } else {
-            oss << "Impl::VectorVertexIteratorComponentMemberPropertyMap<\n";
+            oss << "impl::VectorVertexIteratorComponentMemberPropertyMap<\n";
         }
     } else {
         Expects(false);
@@ -1354,11 +1354,11 @@ std::pmr::string CppGraphBuilder::generateEdgeListGraph_h() const {
     oss << "\n";
     OSS << "// EdgeListGraph\n";
     if (s.needEdgeList()) {
-        OSS << "using edge_iterator = Impl::UndirectedEdgeIter<\n";
+        OSS << "using edge_iterator = impl::UndirectedEdgeIter<\n";
         OSS << "    " << edgeListType() << "::iterator,\n";
         OSS << "    edge_descriptor, " << s.mEdgeDifferenceType << ">;\n";
     } else {
-        OSS << "using edge_iterator   = Impl::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, "
+        OSS << "using edge_iterator   = impl::DirectedEdgeIterator<vertex_iterator, out_edge_iterator, "
             << graphType(mStruct.mCurrentNamespace) << ">;\n";
     }
     OSS << "using edges_size_type = " << s.mEdgeSizeType << ";\n";
@@ -1437,7 +1437,7 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
         OSS << "// AddressableGraph (Separated)\n";
     }
 
-    OSS << "using ownership_descriptor = Impl::EdgeDescriptor<boost::bidirectional_tag, vertex_descriptor>;\n";
+    OSS << "using ownership_descriptor = impl::EdgeDescriptor<boost::bidirectional_tag, vertex_descriptor>;\n";
 
     oss << "\n";
     OSS << "using children_edge_type = ";

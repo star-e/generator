@@ -87,7 +87,7 @@ std::pmr::string eraseFromIncidenceList(const Graph& s,
     visit(
         overload(
             [&]<Sequence_ T>(T) {
-                OSS << "Impl::sequenceEraseIf(" << el << ", ";
+                OSS << "impl::sequenceEraseIf(" << el << ", ";
                 copyString(oss, space, p, true);
                 oss << ");\n";
             },
@@ -107,7 +107,7 @@ std::pmr::string eraseFromIncidenceList(const Graph& s,
                 }
             },
             [&](MultiSet_) {
-                OSS << "Impl::associativeEraseIf(" << el << ", ";
+                OSS << "impl::associativeEraseIf(" << el << ", ";
                 copyString(oss, space, p, true);
                 oss << ");\n";
             }),
@@ -123,10 +123,10 @@ std::pmr::string removeDirectedEdgeIf(const Graph& s,
     visit(
         overload(
             [&]<Sequence_ T>(T) {
-                OSS << "Impl::sequenceRemoveIncidenceEdgeIf(first, last, " << outEdgeList << ", std::forward<Predicate>(pred));\n";
+                OSS << "impl::sequenceRemoveIncidenceEdgeIf(first, last, " << outEdgeList << ", std::forward<Predicate>(pred));\n";
             },
             [&]<Associative_ T>(T) {
-                OSS << "Impl::associativeRemoveIncidenceEdgeIf(first, last, " << outEdgeList << ", std::forward<Predicate>(pred));\n";
+                OSS << "impl::associativeRemoveIncidenceEdgeIf(first, last, " << outEdgeList << ", std::forward<Predicate>(pred));\n";
             }),
         s.mOutEdgeListType);
     return oss.str();
@@ -376,7 +376,7 @@ std::pmr::string removePolymorphicType(const CppGraphBuilder& builder,
                             OSS << "if (h.mValue == g." << c.mMemberName << ".size()) {\n";
                             OSS << "    return;\n";
                             OSS << "}\n";
-                            OSS << "Impl::reindexVectorHandle<"
+                            OSS << "impl::reindexVectorHandle<"
                                 << cpp.getDependentName(c.mTag)
                                 << ">(g.mVertices, h.mValue);\n";
                         } else {
@@ -426,7 +426,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                         overload(
                             [&](Vector_) {
                                 oss << "\n";
-                                OSS << "Impl::removeVectorOwner(g, u);\n";
+                                OSS << "impl::removeVectorOwner(g, u);\n";
                             },
                             [&](auto) {
                                 throw std::invalid_argument("only vector vertex list supports external children list");
@@ -497,7 +497,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                         OSS << "}\n";
                     }
 
-                    OSS << "Impl::removeVectorVertex(const_cast<" << name << "&>(g), u, "
+                    OSS << "impl::removeVectorVertex(const_cast<" << name << "&>(g), u, "
                         << name << "::directed_category{});\n";
 
                     if (!s.mComponents.empty()) {
@@ -1624,7 +1624,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             },
                             [&](auto) {
                                 oss << "\n";
-                                OSS << "Impl::removeDirectedAllEdgeProperties(g, outEdgeList, v);\n";
+                                OSS << "impl::removeDirectedAllEdgeProperties(g, outEdgeList, v);\n";
                                 oss << "\n";
                                 OSS << "// remove out-edges\n";
                                 copyString(oss, space, eraseFromIncidenceList(
@@ -1669,14 +1669,14 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 OSS << "// remove_edge need rewrite\n";
                 if (!s.needEdgeList()) {
                     OSS << "auto& outEdgeList = g.out_edge_list(source(e, g));\n";
-                    OSS << "Impl::removeIncidenceEdge(e, outEdgeList);\n";
+                    OSS << "impl::removeIncidenceEdge(e, outEdgeList);\n";
                     if (s.isBidirectionalOnly()) {
                         OSS << "auto& inEdgeList = g.in_edge_list(target(e, g));\n";
-                        OSS << "Impl::removeIncidenceEdge(e, inEdgeList);\n";
+                        OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                     }
                 } else {
                     if (s.mUndirected) {
-                        OSS << "Impl::removeUndirectedEdge(g, e, *static_cast<";
+                        OSS << "impl::removeUndirectedEdge(g, e, *static_cast<";
                         if (s.hasEdgeProperty()) {
                             oss << cpp.getDependentName(s.mEdgeProperty);
                         } else {
@@ -1725,7 +1725,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "auto  e           = *iter;\n";
                             OSS << "auto& outEdgeList = g.out_edge_list(source(e, g));\n";
                             OSS << "auto& inEdgeList  = g.in_edge_list(target(e, g));\n";
-                            OSS << "Impl::removeIncidenceEdge(e, inEdgeList);\n";
+                            OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                             if (s.hasEdgeProperty()) {
                                 OSS << "g.mEdges.erase(iter.base()->get_iter());\n";
                             }
@@ -1754,10 +1754,10 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                         visit(
                             overload(
                                 [&]<Sequence_ T>(T) {
-                                    OSS << "Impl::sequenceRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
+                                    OSS << "impl::sequenceRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
                                 },
                                 [&]<Associative_ T>(T) {
-                                    OSS << "Impl::associativeRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
+                                    OSS << "impl::associativeRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
                                 }),
                             s.mOutEdgeListType);
                     } else {
@@ -1774,7 +1774,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                 INDENT();
                                 OSS << "auto& inEdgeList = g.in_edge_list(target(*out_i, g));\n";
                                 OSS << "auto  e          = *out_i;\n";
-                                OSS << "Impl::removeIncidenceEdge(e, inEdgeList);\n";
+                                OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                                 if (s.hasEdgeProperty()) {
                                     OSS << "garbage.emplace_back((*out_i.base()).get_iter());\n";
                                 }
@@ -1822,7 +1822,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                     INDENT();
                                     OSS << "auto& outEdgeList = g.out_edge_list(source(*in_i, g));\n";
                                     OSS << "auto  e           = *in_i;\n";
-                                    OSS << "Impl::removeIncidenceEdge(e, outEdgeList);\n";
+                                    OSS << "impl::removeIncidenceEdge(e, outEdgeList);\n";
                                     if (s.hasEdgeProperty()) {
                                         OSS << "garbage.emplace_back((*in_i.base()).get_iter());\n";
                                     }
@@ -2269,7 +2269,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         if (s.mColorMap) {
             oss << "\n";
-            OSS << "[[nodiscard]] inline Impl::ColorMap<" << name << "::vertex_descriptor>\n";
+            OSS << "[[nodiscard]] inline impl::ColorMap<" << name << "::vertex_descriptor>\n";
             OSS << "get(boost::container::pmr::vector<boost::default_color_type>& colors, const " << name << "& g) noexcept {\n";
             OSS << "    return {colors};\n";
             OSS << "}\n";
@@ -2538,8 +2538,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
     if (s.mAddressable && s.mAddressableConcept.mPathPropertyMap) {
         oss << "\n";
-        OSS << "inline boost::property_map<" << name << ", Impl::path_t>::const_type\n";
-        OSS << "get(Impl::path_t, const " << name << "& g";
+        OSS << "inline boost::property_map<" << name << ", impl::path_t>::const_type\n";
+        OSS << "get(impl::path_t, const " << name << "& g";
         oss << ") noexcept {\n";
         {
             INDENT();
@@ -3337,7 +3337,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         OSS << "path_length(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
         {
             INDENT();
-            OSS << "return Impl::pathLength(u, g);\n";
+            OSS << "return impl::pathLength(u, g);\n";
         }
         OSS << "}\n";
 
@@ -3351,7 +3351,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         OSS << "    const " << name << "& g) noexcept {\n";
         {
             INDENT();
-            OSS << "Impl::pathComposite(str, sz, u, g);\n";
+            OSS << "impl::pathComposite(str, sz, u, g);\n";
         }
         OSS << "}\n";
     }
@@ -3414,12 +3414,12 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     OSS << "auto       sz  = sz0;\n";
                     oss << "\n";
                     OSS << "const auto& " << graphName << " = g;\n";
-                    OSS << "sz += Impl::pathLength(u" << 0 << ", " << graphName << ", parent);\n";
+                    OSS << "sz += impl::pathLength(u" << 0 << ", " << graphName << ", parent);\n";
                     oss << "\n";
                     OSS << "output.resize(sz);\n";
 
                     oss << "\n";
-                    OSS << "Impl::pathComposite(output, sz, u" << 0 << ", " << graphName << ", parent);\n";
+                    OSS << "impl::pathComposite(output, sz, u" << 0 << ", " << graphName << ", parent);\n";
                     OSS << "Ensures(sz >= sz0);\n";
 
                     oss << "\n";

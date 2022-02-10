@@ -10,7 +10,7 @@
 
 namespace cc {
 
-namespace Impl {
+namespace impl {
 
 //--------------------------------------------------------------------
 // PropertyMap
@@ -634,15 +634,15 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type &, Colo
     boost::container::pmr::vector<boost::default_color_type> *mContainer = nullptr;
 };
 
-} // namespace Impl
+} // namespace impl
 
 } // namespace cc
 
 namespace std {
 
 template <class DirectedCategory, class VertexDescriptor>
-struct hash<cc::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>> {
-    size_t operator()(const cc::Impl::EdgeDescriptor<DirectedCategory, VertexDescriptor> &e) const noexcept {
+struct hash<cc::impl::EdgeDescriptor<DirectedCategory, VertexDescriptor>> {
+    size_t operator()(const cc::impl::EdgeDescriptor<DirectedCategory, VertexDescriptor> &e) const noexcept {
         return boost::hash_value(e.get_property());
     }
 };

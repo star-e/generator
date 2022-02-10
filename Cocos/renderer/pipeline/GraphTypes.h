@@ -27,7 +27,7 @@ using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 template<class T>
 using PmrList = std::list<T, boost::container::pmr::polymorphic_allocator<T>>;
 
-namespace Impl {
+namespace impl {
 
 struct path_t {} static constexpr path;
 
