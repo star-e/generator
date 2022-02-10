@@ -257,6 +257,7 @@
     <ClInclude Include="..\renderer\pipeline\Map.h" />
     <ClInclude Include="..\renderer\pipeline\Overload.h" />
     <ClInclude Include="..\renderer\pipeline\PathUtils.h" />
+    <ClInclude Include="..\renderer\pipeline\Range.h" />
     <ClInclude Include="..\renderer\pipeline\Set.h" />
     <ClInclude Include="..\renderer\pipeline\String.h" />
     <ClInclude Include="..\renderer\pipeline\Utility.h" />
