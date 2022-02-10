@@ -14,7 +14,7 @@ inline void cleanPath(std::basic_string<CharT, std::char_traits<CharT>, Allocato
     Expects(!str.empty());
     Expects(boost::algorithm::starts_with(str, boost::string_view(slash)));
     Expects(str.find(doubleSlash) == string_t::npos);
-    Expects([&]() {
+    Expects([&]() { // NOLINT
         bool valid = true;
         for (uint8_t c : str) {
             if (c < uint8_t('.'))
@@ -53,4 +53,4 @@ inline void cleanPath(std::basic_string<CharT, std::char_traits<CharT>, Allocato
     }
 }
 
-}
+} // namespace cc
