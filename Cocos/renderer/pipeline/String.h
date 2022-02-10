@@ -25,12 +25,13 @@ THE SOFTWARE.
 */
 
 #pragma once
-#include <string>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <string>
 
 namespace cc {
 
-using PmrString = std::basic_string<char, std::char_traits<char>,
+using PmrString = std::basic_string<
+    char, std::char_traits<char>,
     boost::container::pmr::polymorphic_allocator<char>>;
 
 }
