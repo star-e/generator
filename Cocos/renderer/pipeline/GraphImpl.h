@@ -26,7 +26,7 @@ struct VectorVertexBundlePropertyMap
     using key_type = typename Graph::vertex_descriptor;
     using category = Category;
 
-    VectorVertexBundlePropertyMap(Graph& g) noexcept
+    explicit VectorVertexBundlePropertyMap(Graph& g) noexcept
         : mGraph(&g)
     {}
 
@@ -51,7 +51,7 @@ struct PointerVertexBundlePropertyMap
     using key_type = typename Graph::vertex_descriptor;
     using category = Category;
 
-    PointerVertexBundlePropertyMap(Graph& g) noexcept
+    explicit PointerVertexBundlePropertyMap(Graph& g) noexcept
         : mGraph(&g)
     {}
 
@@ -132,7 +132,7 @@ struct VectorVertexComponentPropertyMap
     using key_type = typename Graph::vertex_descriptor;
     using category = Category;
 
-    VectorVertexComponentPropertyMap(Container& c) noexcept
+    explicit VectorVertexComponentPropertyMap(Container& c) noexcept
         : mContainer(&c)
     {}
 
@@ -240,7 +240,7 @@ struct VectorPathPropertyMap
     using key_type = VertexDescriptor;
     using category = Category;
 
-    VectorPathPropertyMap(Container& c) noexcept
+    explicit VectorPathPropertyMap(Container& c) noexcept
         : mContainer(&c)
     {}
 
@@ -265,7 +265,7 @@ struct EdgeBundlePropertyMap
     using key_type = typename Graph::edge_descriptor;
     using category = Category;
 
-    EdgeBundlePropertyMap(Graph& g) noexcept
+    explicit EdgeBundlePropertyMap(Graph& g) noexcept
         : mGraph(&g)
     {}
 
@@ -309,8 +309,9 @@ struct EdgeBundleMemberPropertyMap
 
 template<class Sequence, class Predicate>
 void sequenceEraseIf(Sequence& c, Predicate&& p) noexcept {
-    if (!c.empty())
+    if (!c.empty()) {
         c.erase(std::remove_if(c.begin(), c.end(), p), c.end());
+    }
 }
 
 // notice: Predicate might be different from associative key
@@ -320,8 +321,9 @@ void associativeEraseIf(AssociativeContainer& c, Predicate&& p) noexcept {
     auto next = c.begin();
     for (auto i = next; next != c.end(); i = next) {
         ++next;
-        if (p(*i))
+        if (p(*i)) {
             c.erase(i);
+        }
     }
 }
 
@@ -364,7 +366,8 @@ inline void removeIncidenceEdge(
 
 template<class Graph, class IncidenceList, class VertexDescriptor>
 inline void removeDirectedAllEdgeProperties(Graph& g, IncidenceList& el, VertexDescriptor v) noexcept {
-    auto i = el.begin(), end = el.end();
+    auto i = el.begin();
+    auto end = el.end();
     for (; i != end; ++i) {
         if ((*i).get_target() == v) {
             // NOTE: Wihtout this skip, this loop will double-delete
@@ -375,8 +378,9 @@ inline void removeDirectedAllEdgeProperties(Graph& g, IncidenceList& el, VertexD
             bool skip = (std::next(i) != end
                 && i->get_iter() == std::next(i)->get_iter());
             g.mEdges.erase((*i).get_iter());
-            if (skip)
+            if (skip) {
                 ++i;
+            }
         }
     }
 }
@@ -386,9 +390,11 @@ inline void sequenceRemoveIncidenceEdgeIf(IncidenceIterator first, IncidenceIter
     IncidenceList& el, Predicate&& pred
 ) noexcept {
     // remove_if
-    while (first != last && !pred(*first))
+    while (first != last && !pred(*first)) {
         ++first;
-    if (auto i = first; first != last) {
+    }
+    auto i = first;
+    if (first != last) {
         for (++i; i != last; ++i) {
             if (!pred(*i)) {
                 *first.base() = std::move(*i.base());
@@ -413,23 +419,25 @@ inline void associativeRemoveIncidenceEdgeIf(IncidenceIterator first, IncidenceI
 
 template<class Graph, class EdgeDescriptor, class EdgeProperty >
 inline void removeUndirectedEdge(Graph& g, EdgeDescriptor e, EdgeProperty& p) noexcept {
-    auto& out_el = g.out_edge_list(source(e, g));
-    auto out_i = out_el.begin();
-    decltype((*out_i).get_iter()) edge_iter_to_erase;
-    for (; out_i != out_el.end(); ++out_i)
-        if (&(*out_i).get_property() == &p) {
-            edge_iter_to_erase = (*out_i).get_iter();
-            out_el.erase(out_i);
+    auto& outEdgeList = g.out_edge_list(source(e, g));
+    auto outEdgeIter = outEdgeList.begin();
+    decltype((*outEdgeIter).get_iter()) edgeIterToErase;
+    for (; outEdgeIter != outEdgeList.end(); ++outEdgeIter) {
+        if (&(*outEdgeIter).get_property() == &p) {
+            edgeIterToErase = (*outEdgeIter).get_iter();
+            outEdgeList.erase(outEdgeIter);
             break;
         }
-    auto& in_el = g.out_edge_list(target(e, g));
-    auto in_i = in_el.begin();
-    for (; in_i != in_el.end(); ++in_i)
-        if (&(*in_i).get_property() == &p) {
-            in_el.erase(in_i);
+    }
+    auto& inEdgeList = g.out_edge_list(target(e, g));
+    auto inEdgeIter = inEdgeList.begin();
+    for (; inEdgeIter != inEdgeList.end(); ++inEdgeIter) {
+        if (&(*inEdgeIter).get_property() == &p) {
+            inEdgeList.erase(inEdgeIter);
             break;
         }
-    g.mEdges.erase(edge_iter_to_erase);
+    }
+    g.mEdges.erase(edgeIterToErase);
 }
 
 template<class Graph, class IncidenceIterator, class IncidenceList, class Predicate>
@@ -438,24 +446,25 @@ inline void sequenceRemoveUndirectedOutEdgeIf(Graph& g,
     Predicate&& pred
 ) noexcept {
     // remove_if
-    while (first != last && !pred(*first))
+    while (first != last && !pred(*first)) {
         ++first;
+    }
     auto i = first;
-    bool self_loop_removed = false;
+    bool selfLoopRemoved = false;
     if (first != last) {
         for (; i != last; ++i) {
-            if (self_loop_removed) {
+            if (selfLoopRemoved) {
                 /* With self loops, the descriptor will show up
                  * twice. The first time it will be removed, and now it
                  * will be skipped.
                  */
-                self_loop_removed = false;
+                selfLoopRemoved = false;
             } else if (!pred(*i)) {
                 *first.base() = std::move(*i.base());
                 ++first;
             } else {
                 if (source(*i, g) == target(*i, g)) {
-                    self_loop_removed = true;
+                    selfLoopRemoved = true;
                 } else {
                     // Remove the edge from the target
                     removeIncidenceEdge(*i, g.out_edge_list(target(*i, g)));
@@ -495,8 +504,8 @@ inline void associativeRemoveUndirectedOutEdgeIf(Graph& g,
 template<class IncidenceList, class VertexDescriptor>
 inline void reindexEdgeList(IncidenceList& el, VertexDescriptor u) {
     auto ei = el.begin();
-    auto e_end = el.end();
-    for (; ei != e_end; ++ei) {
+    auto eEnd = el.end();
+    for (; ei != eEnd; ++ei) {
         if ((*ei).get_target() > u) {
             --(*ei).get_target();
         }
@@ -519,65 +528,76 @@ inline void reindexVectorHandle(Container& container, HandleDescriptor u) {
 }
 
 template<class Graph, class VertexDescriptor>
-inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::directed_tag) {
+inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::directed_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
-    auto V = num_vertices(g);
-    if (u != V) {
-        for (VertexDescriptor v = 0; v < V; ++v) {
+    auto numV = num_vertices(g);
+    if (u != numV) {
+        for (VertexDescriptor v = 0; v < numV; ++v) {
             reindexEdgeList(g.out_edge_list(v), u);
         }
     }
 }
 
 template<class Graph, class VertexDescriptor>
-inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::undirected_tag) {
+inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::undirected_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
-    VertexDescriptor V = num_vertices(g);
-    for (VertexDescriptor v = 0; v < V; ++v)
+    VertexDescriptor numV = num_vertices(g);
+    for (VertexDescriptor v = 0; v < numV; ++v) {
         reindexEdgeList(g.out_edge_list(v), u);
+    }
 
-    auto ei = g.mEdges.begin(), ei_end = g.mEdges.end();
-    for (; ei != ei_end; ++ei) {
-        if (ei->m_source > u)
+    auto ei = g.mEdges.begin();
+    auto eiEnd = g.mEdges.end();
+    for (; ei != eiEnd; ++ei) {
+        if (ei->m_source > u) {
             --ei->m_source;
-        if (ei->m_target > u)
+        }
+        if (ei->m_target > u) {
             --ei->m_target;
+        }
     }
 }
 
 template<class Graph, class VertexDescriptor>
-inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::bidirectional_tag) {
+inline void removeVectorVertex(Graph& g, VertexDescriptor u, boost::bidirectional_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
-    VertexDescriptor V = num_vertices(g);
+    VertexDescriptor numV = num_vertices(g);
     VertexDescriptor v;
-    if (u != V) {
-        for (v = 0; v < V; ++v)
+    if (u != numV) {
+        for (v = 0; v < numV; ++v) {
             reindexEdgeList(g.out_edge_list(v), u);
+        }
 
-        for (v = 0; v < V; ++v)
+        for (v = 0; v < numV; ++v){
             reindexEdgeList(g.in_edge_list(v), u);
+        }
     }
 }
 
 template<class Graph, class VertexDescriptor, class EdgeList>
-inline void removeVectorVertex(Graph& g, EdgeList& edges,
-    VertexDescriptor u, boost::bidirectional_tag) {
+inline void removeVectorVertex(Graph& g, EdgeList& /*edges*/,
+    VertexDescriptor u, boost::bidirectional_tag /*tag*/) {
     g.mVertices.erase(g.mVertices.begin() + u);
-    VertexDescriptor V = num_vertices(g);
+    VertexDescriptor numV = num_vertices(g);
     VertexDescriptor v;
-    if (u != V) {
-        for (v = 0; v < V; ++v)
+    if (u != numV) {
+        for (v = 0; v < numV; ++v) {
             reindexEdgeList(g.out_edge_list(v), u);
+        }
 
-        for (v = 0; v < V; ++v)
+        for (v = 0; v < numV; ++v) {
             reindexEdgeList(g.in_edge_list(v), u);
+        }
 
-        auto ei = g.mEdges.begin(), ei_end = g.mEdges.end();
-        for (; ei != ei_end; ++ei) {
-            if (ei->m_source > u)
+        auto ei = g.mEdges.begin();
+        auto eiEnd = g.mEdges.end();
+        for (; ei != eiEnd; ++ei) {
+            if (ei->m_source > u) {
                 --ei->m_source;
-            if (ei->m_target > u)
+            }
+            if (ei->m_target > u) {
                 --ei->m_target;
+            }
         }
     }
 }
@@ -586,13 +606,15 @@ template<class Graph>
 inline void removeVectorOwner(Graph& g, typename Graph::vertex_descriptor u) {
     // might make children detached
     g.mObjects.erase(g.mObjects.begin() + u);
-    auto V = num_vertices(g);
-    if (u != V) {
-        for (typename Graph::vertex_descriptor v = 0; v < V; ++v)
+    auto numV = num_vertices(g);
+    if (u != numV) {
+        for (typename Graph::vertex_descriptor v = 0; v < numV; ++v) {
             reindexEdgeList(g.children_list(v), u);
+        }
 
-        for (typename Graph::vertex_descriptor v = 0; v < V; ++v)
+        for (typename Graph::vertex_descriptor v = 0; v < numV; ++v) {
             reindexEdgeList(g.parents_list(v), u);
+        }
     }
 }
 
@@ -600,8 +622,9 @@ inline void removeVectorOwner(Graph& g, typename Graph::vertex_descriptor u) {
 template <class AddressableGraph>
 inline std::ptrdiff_t pathLength(typename AddressableGraph::vertex_descriptor u, const AddressableGraph& g,
     typename AddressableGraph::vertex_descriptor parentID = AddressableGraph::null_vertex()) noexcept {
-    if (u == parentID)
+    if (u == parentID) {
         return 0;
+    }
 
     const auto& pmap = get(boost::vertex_name, g);
 
@@ -644,7 +667,7 @@ struct ColorMap : public boost::put_get_helper<boost::default_color_type&, Color
     using key_type = Key;
     using category = boost::lvalue_property_map_tag;
 
-    ColorMap(boost::container::pmr::vector<boost::default_color_type>& vec) noexcept
+    explicit ColorMap(boost::container::pmr::vector<boost::default_color_type>& vec) noexcept
         : mContainer{ &vec }
     {}
 
