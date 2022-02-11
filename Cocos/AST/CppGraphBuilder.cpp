@@ -1044,9 +1044,9 @@ std::pmr::string CppGraphBuilder::generateAllocator_h() {
             oss << "\n";
         OSS << "using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n";
         if (mDLL) {
-            OSS << api << "_API " << cpp.generateGetAllocatorSignature(true) << ";\n";
+            OSS << api << "_API " << cpp.generateGetAllocatorSignature(true) << "; // NOLINT\n";
         } else {
-            OSS << cpp.generateGetAllocatorSignature(true) << " {\n";
+            OSS << cpp.generateGetAllocatorSignature(true) << " { // NOLINT\n";
             {
                 INDENT();
                 copyString(oss, space, cpp.generateGetAllocatorBody());
@@ -1110,7 +1110,7 @@ std::pmr::string CppGraphBuilder::generateGraph_h() {
     // traversal_category
     {
         int count = 0;
-        OSS << "struct traversal_category";
+        OSS << "struct traversal_category // NOLINT";
         {
             if (s.mIncidence) {
                 if (count++) {
@@ -1165,7 +1165,7 @@ std::pmr::string CppGraphBuilder::generateGraph_h() {
 
     if (true) {
         oss << "\n";
-        OSS << "constexpr static vertex_descriptor null_vertex() noexcept {\n";
+        OSS << "constexpr static vertex_descriptor null_vertex() noexcept { // NOLINT\n";
         OSS << "    return " << nullVertexValue() << ";\n";
         OSS << "}\n";
     }
@@ -1267,34 +1267,34 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
         OSS << "// VertexList help functions\n";
         if (s.isVector()) {
             if (s.mIncidence) {
-                OSS << "inline " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) noexcept {\n";
+                OSS << "inline " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) noexcept { // NOLINT\n";
                 OSS << "    return mVertices[v].mOutEdges;\n";
                 OSS << "}\n";
-                OSS << "inline const " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) const noexcept {\n";
+                OSS << "inline const " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                 OSS << "    return mVertices[v].mOutEdges;\n";
                 OSS << "}\n";
 
                 if (s.mBidirectional) {
                     oss << "\n";
-                    OSS << "inline " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) noexcept {\n";
+                    OSS << "inline " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) noexcept { // NOLINT\n";
                     OSS << "    return mVertices[v].mInEdges;\n";
                     OSS << "}\n";
-                    OSS << "inline const " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) const noexcept {\n";
+                    OSS << "inline const " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                     OSS << "    return mVertices[v].mInEdges;\n";
                     OSS << "}\n";
                 }
                 oss << "\n";
             }
-            OSS << "inline boost::integer_range<vertex_descriptor> vertex_set() const noexcept {\n";
+            OSS << "inline boost::integer_range<vertex_descriptor> vertex_set() const noexcept { // NOLINT\n";
 #ifdef CC_USE_GSL
-            OSS << "    return boost::integer_range<vertex_descriptor>(0, gsl::narrow_cast<vertices_size_type>(mVertices.size()));\n";
+            OSS << "    return {0, gsl::narrow_cast<vertices_size_type>(mVertices.size())};\n";
 #else
-            OSS << "    return boost::integer_range<vertex_descriptor>(0, static_cast<vertices_size_type>(mVertices.size()));\n";
+            OSS << "    return {0, static_cast<vertices_size_type>(mVertices.size())};\n";
 #endif
             OSS << "}\n";
 
             oss << "\n";
-            OSS << "inline vertex_descriptor current_id() const noexcept {\n";
+            OSS << "inline vertex_descriptor current_id() const noexcept { // NOLINT\n";
 #ifdef CC_USE_GSL
             OSS << "    return gsl::narrow_cast<vertex_descriptor>(mVertices.size());\n";
 #else
@@ -1309,32 +1309,32 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
             }
         } else {
             if (s.mIncidence) {
-                OSS << "inline " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) noexcept {\n";
+                OSS << "inline " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) noexcept { // NOLINT\n";
                 OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
                 OSS << "    return pVertex->mOutEdges;\n";
                 OSS << "}\n";
-                OSS << "inline const " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) const noexcept {\n";
+                OSS << "inline const " << outEdgeListType() << "& out_edge_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                 OSS << "    auto pVertex = static_cast<const vertex_type*>(v);\n";
                 OSS << "    return pVertex->mOutEdges;\n";
                 OSS << "}\n";
 
                 if (s.mBidirectional) {
                     oss << "\n";
-                    OSS << "inline " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) noexcept {\n";
+                    OSS << "inline " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) noexcept { // NOLINT\n";
                     OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
                     OSS << "    return pVertex->mInEdges;\n";
                     OSS << "}\n";
-                    OSS << "inline const " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) const noexcept {\n";
+                    OSS << "inline const " << inEdgeListType() << "& in_edge_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                     OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
                     OSS << "    return pVertex->mInEdges;\n";
                     OSS << "}\n";
                 }
                 oss << "\n";
             }
-            OSS << "inline " << vertexListType() << "& vertex_set() noexcept {\n";
+            OSS << "inline " << vertexListType() << "& vertex_set() noexcept { // NOLINT\n";
             OSS << "    return mVertices;\n";
             OSS << "}\n";
-            OSS << "inline const " << vertexListType() << "& vertex_set() const noexcept {\n";
+            OSS << "inline const " << vertexListType() << "& vertex_set() const noexcept { // NOLINT\n";
             OSS << "    return mVertices;\n";
             OSS << "}\n";
         }
@@ -1460,39 +1460,39 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
     OSS << "// AddressableGraph help functions\n";
     if (s.mAliasGraph) {
         if (s.isVector()) {
-            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept {\n";
+            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept { // NOLINT\n";
             OSS << "    return mVertices[v].mOutEdges;\n";
             OSS << "}\n";
-            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept {\n";
+            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept { // NOLINT\n";
             OSS << "    return mVertices[v].mOutEdges;\n";
             OSS << "}\n";
 
             if (s.mBidirectional) {
                 oss << "\n";
-                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept {\n";
+                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept { // NOLINT\n";
                 OSS << "    return mVertices[v].mInEdges;\n";
                 OSS << "}\n";
-                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept {\n";
+                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                 OSS << "    return mVertices[v].mInEdges;\n";
                 OSS << "}\n";
             }
         } else {
-            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept {\n";
+            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept { // NOLINT\n";
             OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
             OSS << "    return pVertex->mOutEdges;\n";
             OSS << "}\n";
-            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept {\n";
+            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept { // NOLINT\n";
             OSS << "    auto pVertex = static_cast<const vertex_type*>(v);\n";
             OSS << "    return pVertex->mOutEdges;\n";
             OSS << "}\n";
 
             if (s.mBidirectional) {
                 oss << "\n";
-                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept {\n";
+                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept { // NOLINT\n";
                 OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
                 OSS << "    return pVertex->mInEdges;\n";
                 OSS << "}\n";
-                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept {\n";
+                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                 OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
                 OSS << "    return pVertex->mInEdges;\n";
                 OSS << "}\n";
@@ -1500,39 +1500,39 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
         }
     } else {
         if (s.isVector()) {
-            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept {\n";
+            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept { // NOLINT\n";
             OSS << "    return mObjects[v].mChildren;\n";
             OSS << "}\n";
-            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept {\n";
+            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept { // NOLINT\n";
             OSS << "    return mObjects[v].mChildren;\n";
             OSS << "}\n";
 
             if (s.mBidirectional) {
                 oss << "\n";
-                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept {\n";
+                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept { // NOLINT\n";
                 OSS << "    return mObjects[v].mParents;\n";
                 OSS << "}\n";
-                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept {\n";
+                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                 OSS << "    return mObjects[v].mParents;\n";
                 OSS << "}\n";
             }
         } else {
-            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept {\n";
+            OSS << "inline " << childListType() << "& children_list(vertex_descriptor v) noexcept { // NOLINT\n";
             OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
             OSS << "    return pVertex->mChildren;\n";
             OSS << "}\n";
-            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept {\n";
+            OSS << "inline const " << childListType() << "& children_list(vertex_descriptor v) const noexcept { // NOLINT\n";
             OSS << "    auto pVertex = static_cast<const vertex_type*>(v);\n";
             OSS << "    return pVertex->mChildren;\n";
             OSS << "}\n";
 
             if (s.mBidirectional) {
                 oss << "\n";
-                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept {\n";
+                OSS << "inline " << parentListType() << "& parents_list(vertex_descriptor v) noexcept { // NOLINT\n";
                 OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
                 OSS << "    return pVertex->mParents;\n";
                 OSS << "}\n";
-                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept {\n";
+                OSS << "inline const " << parentListType() << "& parents_list(vertex_descriptor v) const noexcept { // NOLINT\n";
                 OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
                 OSS << "    return pVertex->mParents;\n";
                 OSS << "}\n";
@@ -1639,8 +1639,8 @@ std::pmr::string CppGraphBuilder::generateTags_h() const {
     int count = 0;
     for (const auto& c : s.mComponents) {
         auto tagName = getTagName(c.mName, scratch);
-        OSS << "struct " << tagName << "_ {\n";
-        OSS << "} static constexpr " << tagName << " = {};\n";
+        OSS << "struct " << tagName << "_ { // NOLINT\n";
+        OSS << "} static constexpr " << tagName << " = {}; // NOLINT\n";
         ++count;
     }
     oss << "\n";

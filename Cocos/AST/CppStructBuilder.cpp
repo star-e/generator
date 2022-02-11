@@ -128,7 +128,7 @@ std::pmr::string CppStructBuilder::generateGetAllocatorBody() const {
                 }
                 if (g.isPmr(vertID)) {
                     found = true;
-                    OSS << "return allocator_type(" << m.mMemberName << ".get_allocator().resource());\n";
+                    OSS << "return {" << m.mMemberName << ".get_allocator().resource()};\n";
                     break;
                 }
             }
@@ -761,7 +761,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
         }
         switch (needDefault) {
         case ImplEnum::Inline: {
-            oss << "\n";
+            oss << " // NOLINT\n";
             visit_vertex(
                 vertID, g,
                 [&](const Composition_ auto& s) {
@@ -773,7 +773,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
             break;
         }
         case ImplEnum::Separated:
-            oss << ";\n";
+            oss << "; // NOLINT\n";
             break;
         case ImplEnum::None:
         case ImplEnum::Delete:
@@ -824,9 +824,17 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     OSS << generateConstructorSignature(cntr, true) << ";\n";
                 } else {
                     if (traits.mFlags & GenerationFlags::CUSTOM_CNTR) {
-                        OSS << generateConstructorSignature(cntr, true) << ";\n";
+                        OSS << generateConstructorSignature(cntr, true) << ";";
+                        if (cntr.mIndices.size() == 1) {
+                            oss << " // NOLINT";
+                        }
+                        oss << "\n";
                     } else {
-                        OSS << generateConstructorSignature(cntr, true) << "\n";
+                        OSS << generateConstructorSignature(cntr, true) << "";
+                        if (cntr.mIndices.size() == 1) {
+                            oss << " // NOLINT";
+                        }
+                        oss << "\n";
                         generateCntr(oss, space, *this, g, s, cntr, scratch);
                     }
                 }

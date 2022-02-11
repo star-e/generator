@@ -610,9 +610,9 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                     oss << "\n";
                 OSS << "using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n";
                 if (mDLL) {
-                    OSS << mAPI << cpp.generateGetAllocatorSignature(true) << ";\n";
+                    OSS << mAPI << cpp.generateGetAllocatorSignature(true) << "; // NOLINT\n";
                 } else {
-                    OSS << cpp.generateGetAllocatorSignature(true) << " {\n";
+                    OSS << cpp.generateGetAllocatorSignature(true) << " { // NOLINT\n";
                     {
                         INDENT();
                         copyString(oss, space, cpp.generateGetAllocatorBody());
@@ -757,6 +757,10 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 }
 
                 oss << " {";
+                auto pos = name.find('_');
+                if (pos != name.npos && pos != 0 && pos != name.size() - 1) {
+                    oss << " // NOLINT";
+                }
                 if (num_children(vertID, g) || !s.mMembers.empty() || g.hasHeader(vertID))
                     oss << "\n";
 
