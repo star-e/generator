@@ -180,7 +180,7 @@ public:
     virtual std::pmr::string generateRemoveEdges(bool bInline = true) const = 0;
     virtual std::pmr::string generateRemoveEdge(bool bInline = true) const = 0;
     virtual std::pmr::string generateRemoveEdgeIter(bool bInline = true) const = 0;
-    virtual std::pmr::string addVertex(bool propertyParam, bool piecewise) const = 0;
+    virtual std::pmr::string addVertex(bool propertyParam, bool piecewise, bool cpp14 = false) const = 0;
     virtual std::pmr::string generateAddressableGraph(bool bInline = true) const = 0;
 
     virtual std::pmr::string generateGraphFunctions_h() const = 0;
@@ -273,7 +273,7 @@ public:
     std::pmr::string generateRemoveEdges(bool bInline = true) const override;
     std::pmr::string generateRemoveEdge(bool bInline = true) const override;
     std::pmr::string generateRemoveEdgeIter(bool bInline = true) const override;
-    std::pmr::string addVertex(bool propertyParam, bool piecewise) const override;
+    std::pmr::string addVertex(bool propertyParam, bool piecewise, bool cpp14 = false) const override;
     std::pmr::string generateAddressableGraph(bool bInline = true) const override;
 
     std::pmr::string generateGraphFunctions_h() const override;

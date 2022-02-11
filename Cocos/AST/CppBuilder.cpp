@@ -472,7 +472,7 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
                 Expects(name2.size());
                 name2.resize(name2.size() - 1);
                 outputNs();
-                OSS << "inline const char* getName(const " << name << "& v) noexcept { "
+                OSS << "inline const char* getName(const " << name << "& /*v*/) noexcept { "
                     << "return \"" << name2 << "\"; }\n";
             },
             [&](const Composition_ auto&) {
@@ -482,7 +482,7 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
                     return;
 
                 outputNs();
-                OSS << "inline const char* getName(const " << name << "& v) noexcept { "
+                OSS << "inline const char* getName(const " << name << "& /*v*/) noexcept { "
                     << "return \"" << name << "\"; }\n";
             },
             [&](const auto&) {

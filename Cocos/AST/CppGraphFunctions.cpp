@@ -262,7 +262,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
         OSS << "}\n";
     } else {
         OSS << "inline void clear_out_edges("
-            << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
+            << name << "::vertex_descriptor u, " << name << "& g) noexcept { // NOLINT\n";
         {
             INDENT();
             if (s.mIncidence) {
@@ -302,7 +302,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
         if (s.mBidirectional) {
             oss << "\n";
             OSS << "inline void clear_in_edges("
-                << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
+                << name << "::vertex_descriptor u, " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 if (s.hasAddressIndex()) {
@@ -326,7 +326,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
 
         oss << "\n";
         OSS << "inline void clear_vertex("
-            << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
+            << name << "::vertex_descriptor u, " << name << "& g) noexcept { // NOLINT\n";
         {
             INDENT();
             OSS << "clear_out_edges(u, g);\n";
@@ -352,12 +352,12 @@ std::pmr::string removePolymorphicType(const CppGraphBuilder& builder,
     auto ns = builder.mStruct.mCurrentNamespace;
 
     OSS << "inline void remove_vertex_value_impl(const "
-        << name << "::vertex_handle_type& h, " << name << "& g) noexcept {\n";
+        << name << "::vertex_handle_type& h, " << name << "& g) noexcept { // NOLINT\n";
     {
         INDENT();
         OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
 
-        OSS << "visit(\n";
+        OSS << "cc::visit(\n";
         {
             INDENT();
             OSS << "overload(\n";
@@ -405,7 +405,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
     const auto& g = *builder.mStruct.mSyntaxGraph;
 
     OSS << "inline void remove_vertex("
-        << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
+        << name << "::vertex_descriptor u, " << name << "& g) noexcept { // NOLINT\n";
     {
         INDENT();
 
@@ -841,7 +841,7 @@ std::pmr::string CppGraphBuilder::generateRemoveEdgeIter(bool bInline) const {
     return oss.str();
 }
 
-std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) const {
+std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, bool cpp14) const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     std::pmr::string space(get_allocator());
     const auto& g = *mStruct.mSyntaxGraph;
@@ -852,6 +852,95 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
     const auto* ptr = &s;
     auto name = cpp.getImplName();
     auto ns = mStruct.mCurrentNamespace;
+
+    if (cpp14 && s.isPolymorphic()) {
+        for (const auto& c : s.mPolymorphic.mConcepts) {
+            auto tagType = cpp.getDependentName(c.mTag);
+            auto valueType = cpp.getDependentName(c.mValue);
+
+            if (piecewise) {
+                OSS << "template <class Tuple>\n";
+                OSS << "void add_vertex_impl("
+                    << tagType << " /*tag*/, Tuple &&val, "
+                    << name << " &g, " << name << "::vertex_type &vert) { // NOLINT\n";
+
+                {
+                    INDENT();
+                    OSS << "invoke_hpp::apply(\n";
+                    {
+                        INDENT();
+                        OSS << "[&](auto&&... args) {\n";
+                        {
+                            INDENT();
+                            if (c.isVector()) {
+                                OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
+                                if (c.isIntrusive()) {
+                                    oss << " std::forward<decltype(args)>(args)...";
+                                } else {
+                                    oss << "\n";
+                                    OSS << "    gsl::narrow_cast<"
+                                        << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
+                                }
+                                oss << "};\n";
+
+                                if (!c.isIntrusive()) {
+                                    OSS << "g." << c.mMemberName << ".emplace_back(std::forward<decltype(args)>(args)...);\n";
+                                }
+                            } else {
+                                if (!c.isIntrusive()) {
+                                    OSS << "vert.mHandle = " << handleElemType(c, ns) << "{ g." << c.mMemberName
+                                        << ".emplace(g." << c.mMemberName << ".end(), std::forward<decltype(args)>(args)...) };\n";
+                                }
+                            }
+                        }
+                        OSS << "},\n";
+                        OSS << "std::forward<Tuple>(val));\n";
+                    }
+                }
+                OSS << "}\n";
+            } else {
+                OSS << "template <class ValueT>\n";
+                OSS << "void add_vertex_impl( // NOLINT\n";
+                OSS << "    ValueT &&val, " << name << " &g, " << name << "::vertex_type &vert, // NOLINT\n";
+                OSS << "    std::enable_if_t<std::is_same_v<std::decay_t<ValueT>, " << valueType << ">>* dummy = nullptr) { // NOLINT\n";
+                {
+                    INDENT();
+                    if (c.isVector()) {
+                        OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
+                        if (c.isIntrusive()) {
+                            if (propertyParam) {
+                                oss << " std::forward<ValueT>(val)";
+                            }
+                        } else {
+                            oss << "\n";
+                            OSS << "    gsl::narrow_cast<"
+                                << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
+                        }
+                        oss << "};\n";
+
+                        if (!c.isIntrusive()) {
+                            OSS << "g." << c.mMemberName << ".emplace_back(";
+                            if (propertyParam) {
+                                oss << "std::forward<ValueT>(val)";
+                            }
+                            oss << ");\n";
+                        }
+                    } else {
+                        if (!c.isIntrusive()) {
+                            OSS << "vert.mHandle = " << handleElemType(c, ns) << "{ g." << c.mMemberName
+                                << ".emplace(g." << c.mMemberName << ".end(), ";
+                            if (propertyParam) {
+                                oss << "std::forward<ValueT>(val)";
+                            }
+                            oss << ") };\n";
+                        }
+                    }
+                }
+                OSS << "}\n";
+            }
+            oss << "\n";
+        }
+    }
 
     if (propertyParam && (s.hasVertexProperty()
         || !s.mComponents.empty()
@@ -884,13 +973,13 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
     OSS << "add_vertex(";
     if (piecewise) {
         if (s.isPolymorphic()) {
-            oss << "Tag, ";
+            oss << "Tag tag, ";
         } else {
             oss << "std::piecewise_construct_t, ";
         }
     } else {
         if (s.isPolymorphic() && !propertyParam) {
-            oss << "Tag, ";
+            oss << "Tag tag, ";
         }
     }
     {
@@ -921,7 +1010,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
             oss << ", " << name << "::vertex_descriptor u = " << name << "::null_vertex()";
         }
     }
-    oss << ") {\n";
+    oss << ") { // NOLINT\n";
     {
         INDENT();
         if (s.isVector()) {
@@ -1108,117 +1197,128 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise) 
             s.mVertexListType);
 
         if (s.isPolymorphic()) {
-            oss << "\n";
-            OSS << "// PolymorphicGraph\n";
-            if (propertyParam && piecewise) {
-                int count = 0;
-                for (const auto& c : s.mPolymorphic.mConcepts) {
-                    if (count++)
-                        oss << " else ";
-                    else
-                        OSS;
-
-                    oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<Tag>, "
-                        << cpp.getDependentName(c.mTag) << ">) {\n";
-                    {
-                        INDENT();
-                        OSS << "invoke_hpp::apply(\n";
-                        {
-                            INDENT();
-                            OSS << "[&](auto&&... args) {\n";
-                            {
-                                INDENT();
-                                if (c.isVector()) {
-                                    OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
-                                    if (c.isIntrusive()) {
-                                        oss << " std::forward<decltype(args)>(args)...";
-                                    } else {
-                                        oss << "\n";
-                                        OSS << "    gsl::narrow_cast<"
-                                            << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
-                                    }
-                                    oss << "};\n";
-
-                                    if (!c.isIntrusive()) {
-                                        OSS << "g." << c.mMemberName << ".emplace_back(std::forward<decltype(args)>(args)...);\n";
-                                    }
-                                } else {
-                                    if (!c.isIntrusive()) {
-                                        OSS << "vert.mHandle = " << handleElemType(c, ns) << "{ g." << c.mMemberName
-                                            << ".emplace(g." << c.mMemberName << ".end(), std::forward<decltype(args)>(args)...) };\n";
-                                    }
-                                }
-                            }
-                            OSS << "},\n";
-                            OSS << "std::forward<ValueT>(val));\n";
-                        }
-                    }
-                    OSS << "}";
+            if (cpp14) {
+                oss << "\n";
+                OSS << "// PolymorphicGraph\n";
+                OSS << "// if no matching overloaded function is found, Type is not supported by PolymorphicGraph\n";
+                if (propertyParam && piecewise) {
+                    OSS << "add_vertex_impl(tag, std::forward<ValueT>(val), g, vert);\n";
+                } else {
+                    OSS << "add_vertex_impl(std::forward<ValueT>(val), g, vert);\n";
                 }
-                oss << " else {\n";
-                OSS << "    []<bool flag = false>() {\n";
-                OSS << "        static_assert(flag, \"value not found in graph\");\n";
-                OSS << "    }\n";
-                OSS << "    ();\n";
-                OSS << "}\n";
-            } else { // no piecewise
-                int count = 0;
-                for (const auto& c : s.mPolymorphic.mConcepts) {
-                    if (count++)
-                        oss << " else ";
-                    else
-                        OSS;
+            } else {
+                oss << "\n";
+                OSS << "// PolymorphicGraph\n";
+                if (propertyParam && piecewise) {
+                    int count = 0;
+                    for (const auto& c : s.mPolymorphic.mConcepts) {
+                        if (count++)
+                            oss << " else ";
+                        else
+                            OSS;
 
-                    if (propertyParam) {
-                        oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<ValueT>, "
-                            << cpp.getDependentName(c.mValue) << ">) {\n";
-                    } else {
                         oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<Tag>, "
                             << cpp.getDependentName(c.mTag) << ">) {\n";
-                    }
-                    {
-                        INDENT();
-                        if (c.isVector()) {
-                            OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
-                            if (c.isIntrusive()) {
-                                if (propertyParam) {
-                                    oss << " std::forward<ValueT>(val)";
-                                }
-                            } else {
-                                oss << "\n";
-                                OSS << "    gsl::narrow_cast<"
-                                    << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
-                            }
-                            oss << "};\n";
+                        {
+                            INDENT();
+                            OSS << "invoke_hpp::apply(\n";
+                            {
+                                INDENT();
+                                OSS << "[&](auto&&... args) {\n";
+                                {
+                                    INDENT();
+                                    if (c.isVector()) {
+                                        OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
+                                        if (c.isIntrusive()) {
+                                            oss << " std::forward<decltype(args)>(args)...";
+                                        } else {
+                                            oss << "\n";
+                                            OSS << "    gsl::narrow_cast<"
+                                                << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
+                                        }
+                                        oss << "};\n";
 
-                            if (!c.isIntrusive()) {
-                                OSS << "g." << c.mMemberName << ".emplace_back(";
-                                if (propertyParam) {
-                                    oss << "std::forward<ValueT>(val)";
+                                        if (!c.isIntrusive()) {
+                                            OSS << "g." << c.mMemberName << ".emplace_back(std::forward<decltype(args)>(args)...);\n";
+                                        }
+                                    } else {
+                                        if (!c.isIntrusive()) {
+                                            OSS << "vert.mHandle = " << handleElemType(c, ns) << "{ g." << c.mMemberName
+                                                << ".emplace(g." << c.mMemberName << ".end(), std::forward<decltype(args)>(args)...) };\n";
+                                        }
+                                    }
                                 }
-                                oss << ");\n";
-                            }
-                        } else {
-                            if (!c.isIntrusive()) {
-                                OSS << "vert.mHandle = " << handleElemType(c, ns) << "{ g." << c.mMemberName
-                                    << ".emplace(g." << c.mMemberName << ".end(), ";
-                                if (propertyParam) {
-                                    oss << "std::forward<ValueT>(val)";
-                                }
-                                oss << ") };\n";
+                                OSS << "},\n";
+                                OSS << "std::forward<ValueT>(val));\n";
                             }
                         }
+                        OSS << "}";
                     }
-                    OSS << "}";
-                }
-                oss << " else {\n";
-                OSS << "    []<bool flag = false>() {\n";
-                OSS << "        static_assert(flag, \"value not found in graph\");\n";
-                OSS << "    }\n";
-                OSS << "    ();\n";
-                OSS << "}\n";
-            } // piecewise
-        } // Conceptual
+                    oss << " else {\n";
+                    OSS << "    []<bool flag = false>() {\n";
+                    OSS << "        static_assert(flag, \"value not found in graph\");\n";
+                    OSS << "    }\n";
+                    OSS << "    ();\n";
+                    OSS << "}\n";
+                } else { // no piecewise
+                    int count = 0;
+                    for (const auto& c : s.mPolymorphic.mConcepts) {
+                        if (count++)
+                            oss << " else ";
+                        else
+                            OSS;
+
+                        if (propertyParam) {
+                            oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<ValueT>, "
+                                << cpp.getDependentName(c.mValue) << ">) {\n";
+                        } else {
+                            oss << "if constexpr (std::is_same_v<cc::remove_cvref_t<Tag>, "
+                                << cpp.getDependentName(c.mTag) << ">) {\n";
+                        }
+                        {
+                            INDENT();
+                            if (c.isVector()) {
+                                OSS << "vert.mHandle = " << handleElemType(c, ns) << "{";
+                                if (c.isIntrusive()) {
+                                    if (propertyParam) {
+                                        oss << " std::forward<ValueT>(val)";
+                                    }
+                                } else {
+                                    oss << "\n";
+                                    OSS << "    gsl::narrow_cast<"
+                                        << name << "::vertex_descriptor>(g." << c.mMemberName << ".size())";
+                                }
+                                oss << "};\n";
+
+                                if (!c.isIntrusive()) {
+                                    OSS << "g." << c.mMemberName << ".emplace_back(";
+                                    if (propertyParam) {
+                                        oss << "std::forward<ValueT>(val)";
+                                    }
+                                    oss << ");\n";
+                                }
+                            } else {
+                                if (!c.isIntrusive()) {
+                                    OSS << "vert.mHandle = " << handleElemType(c, ns) << "{ g." << c.mMemberName
+                                        << ".emplace(g." << c.mMemberName << ".end(), ";
+                                    if (propertyParam) {
+                                        oss << "std::forward<ValueT>(val)";
+                                    }
+                                    oss << ") };\n";
+                                }
+                            }
+                        }
+                        OSS << "}";
+                    }
+                    oss << " else {\n";
+                    OSS << "    []<bool flag = false>() {\n";
+                    OSS << "        static_assert(flag, \"value not found in graph\");\n";
+                    OSS << "    }\n";
+                    OSS << "    ();\n";
+                    OSS << "}\n";
+                } // piecewise
+            }
+        } // PolymorphicGraph
 
         if (s.mAddressable) {
             oss << "\n";
@@ -1937,9 +2037,9 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         !s.mComponents.empty() || s.isPolymorphic()) && !s.mReferenceGraph) {
         oss << "\n";
         OSS << "// MutablePropertyGraph(Vertex)\n";
-        copyString(oss, space, addVertex(true, false));
+        copyString(oss, space, addVertex(true, false, true));
         oss << "\n";
-        copyString(oss, space, addVertex(true, true));
+        copyString(oss, space, addVertex(true, true, true));
     }
 
     if (s.mReferenceGraph) {
@@ -2781,18 +2881,21 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             } else {
                 OSS << "holds_alternative(" << name << "::vertex_descriptor v, ";
             }
-            oss << "const " << name << "& g) noexcept { // NOLINT\n";
-            {
-                INDENT();
-                if (bTag) {
-                    OSS << "static_assert(false, \"Tag type is not in PolymorphicGraph\");\n";
-                } else {
-                    OSS << "static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
+            if (true) {
+                oss << "const " << name << "& g); // NOLINT\n";
+            } else {
+                oss << "const " << name << "& g) noexcept { // NOLINT\n";
+                {
+                    INDENT();
+                    if (bTag) {
+                        OSS << "static_assert(false, \"Tag type is not in PolymorphicGraph\");\n";
+                    } else {
+                        OSS << "static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
+                    }
+                    OSS << "return false;\n";
                 }
-                OSS << "return false;\n";
+                OSS << "}\n"; 
             }
-            OSS << "}\n";
-
             for (const auto& c : s.mPolymorphic.mConcepts) {
                 oss << "\n";
                 OSS << "template <>\n";
@@ -2928,9 +3031,13 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
                 if (bConst)
                     oss << "const ";
-                oss << name << "& /*g*/) noexcept {\n";
-                OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
-                OSS << "}\n";
+                if (true) {
+                    oss << name << "& /*g*/) noexcept;\n";
+                } else {
+                    oss << name << "& /*g*/) noexcept {\n";
+                    OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
+                    OSS << "}\n";
+                }
             }
 
             for (const auto& c : s.mPolymorphic.mConcepts) {
@@ -3067,9 +3174,13 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "get_if(" << name << "::vertex_descriptor v, ";
             if (bConst)
                 oss << "const ";
-            oss << name << "* pGraph) noexcept { // NOLINT\n";
-            OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
-            OSS << "}\n";
+            if (true) {
+                oss << name << "* pGraph); // NOLINT\n";
+            } else {
+                oss << name << "* pGraph) noexcept { // NOLINT\n";
+                OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
+                OSS << "}\n";
+            }
 
             for (const auto& c : s.mPolymorphic.mConcepts) {
                 auto valueType = cpp.getDependentName(c.mValue);
@@ -3083,7 +3194,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 OSS << "get_if<" << cpp.getDependentName(c.mValue) << ">(" << name << "::vertex_descriptor v, ";
                 if (bConst)
                     oss << "const ";
-                oss << name << "* pGraph) noexcept {\n";
+                oss << name << "* pGraph) noexcept { // NOLINT\n";
                 {
                     INDENT();
                     if (bConst) {
@@ -3814,9 +3925,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         && (s.hasVertexProperty() || !s.mComponents.empty() || s.isPolymorphic())) {
         oss << "\n";
         OSS << "// MutablePropertyGraph(Vertex)\n";
-        copyString(oss, space, addVertex(true, false));
+        copyString(oss, space, addVertex(true, false, true));
         oss << "\n";
-        copyString(oss, space, addVertex(true, true));
+        copyString(oss, space, addVertex(true, true, true));
     }
 
     if (s.mVertexList) {
@@ -3974,7 +4085,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         OSS << "// MutableGraph(Vertex)\n";
         if (s.mComponents.empty() && !s.isPolymorphic() && !s.mAddressable && !s.mNamed && s.mVertexMaps.empty()) {
-            copyString(oss, space, addVertex(false, false));
+            copyString(oss, space, addVertex(false, false, true));
         } else {
             if (s.mNamed) {
                 //oss << "\n";
