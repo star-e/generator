@@ -44,7 +44,6 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
             vertID, g,
             [&](const Struct& s) {
                 oss << "\n";
-                OSS << "template <>\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
                     << " &from, se::Value &to, se::Object *ctx);\n";
             },
@@ -53,7 +52,6 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
                     return;
 
                 oss << "\n";
-                OSS << "template <>\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
                     << " &from, se::Value &to, se::Object *ctx);\n";
             },
@@ -104,7 +102,6 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
             vertID, g,
             [&](const Struct& s) {
                 oss << "\n";
-                OSS << "template <>\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
                     << " &from, se::Value &to, se::Object *ctx) {\n";
                 {
@@ -133,7 +130,6 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
                     return;
 
                 oss << "\n";
-                OSS << "template <>\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
                     << " &from, se::Value &to, se::Object *ctx) {\n";
                 {
