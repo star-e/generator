@@ -594,8 +594,16 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
                 continue;
             }
         }
+        bool bCopyParam = false;
+        if (m.mReference || m.mPointer) {
+            bPmr = false;
+            bCopyParam = true;
+        } else if (g.isValueType(memberID)) {
+            Expects(!bPmr);
+            bCopyParam = true;
+        }
 
-        if (g.isValueType(memberID)) {
+        if (bCopyParam) {
             Expects(!bPmr);
             oss << m.mMemberName << "(rhs." << m.mMemberName;
         } else {
