@@ -154,7 +154,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 IMPORT_CLASS(TextureBlit);
                 IMPORT_CLASS(BufferTextureCopy);
                 IMPORT_CLASS(Viewport);
-                IMPORT_CLASS(Color);
+                VALUE(Color);
                 IMPORT_CLASS(BindingMappingInfo);
                 IMPORT_CLASS(SwapchainInfo);
                 IMPORT_CLASS(DeviceInfo);
