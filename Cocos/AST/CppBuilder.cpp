@@ -679,12 +679,21 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 }
                 oss << " {\n";
                 if (!e.mIsFlags) {
+                    size_t maxLength = 0;
+                    for (const auto& v : e.mValues) {
+                        maxLength = std::max(maxLength, v.mName.size());
+                    }
                     for (const auto& v : e.mValues) {
                         if (v.mValue.empty()) {
-                            oss << "    " << v.mName << ",\n";
+                            oss << "    " << v.mName << ",";
                         } else {
                             oss << "    " << v.mName << " = "
-                                << v.mValue << ",\n";
+                                << v.mValue << ",";
+                        }
+                        if (sFormat) {
+                            oss << std::pmr::string(maxLength - v.mName.size(), ' ') << " // NOLINT\n";
+                        } else {
+                            oss << "\n";
                         }
                     }
                 } else {
@@ -692,13 +701,20 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                     for (const auto& v : e.mValues) {
                         maxLength = std::max(maxLength, v.mName.size());
                     }
-
+                    size_t maxLength2 = 0;
+                    for (const auto& v : e.mValues) {
+                        maxLength2 = std::max(maxLength2, v.mValue.size());
+                    }
                     for (const auto& v : e.mValues) {
                         oss << "    " << v.mName;
                         if (sFormat) {
                             oss << std::pmr::string(maxLength - v.mName.size(), ' ');
+                            oss << " = " << v.mValue << ",";
+                            oss << std::pmr::string(maxLength2 - v.mValue.size(), ' ');
+                            oss << " // NOLINT\n";
+                        } else {
+                            oss << " = " << v.mValue << ",\n";
                         }
-                        oss << " = " << v.mValue << ",\n";
                     }
                 }
                 OSS << "};\n";
