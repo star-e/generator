@@ -597,7 +597,7 @@ addDispatch (shader: string,
 )");
         }
 
-        STRUCT(MovePass) {
+        STRUCT(MovePass, .mFlags = NO_DEFAULT_CNTR) {
             PRIVATE(
                 (RenderGraph&, mRenderGraph, _)
                 (const uint32_t, mVertID, 0xFFFFFFFF)
@@ -610,7 +610,7 @@ addDispatch (shader: string,
 )");
         }
                 
-        STRUCT(CopyPass) {
+        STRUCT(CopyPass, .mFlags = NO_DEFAULT_CNTR) {
             PRIVATE(
                 (RenderGraph&, mRenderGraph, _)
                 (const uint32_t, mVertID, 0xFFFFFFFF)

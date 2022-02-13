@@ -832,7 +832,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                     oss << "const " << name << " rhs) noexcept {\n";
                     {
                         INDENT();
-                        OSS << "return (" << name << ")((" << t << ")lhs | (" << t << ")rhs);\n";
+                        OSS << "return static_cast<" << name << ">(static_cast<" << t << ">(lhs) | static_cast<" << t << ">(rhs));\n";
                     }
                     OSS << "}\n";
 
@@ -842,7 +842,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                     oss << "const " << name << " rhs) noexcept {\n";
                     {
                         INDENT();
-                        OSS << "return (" << name << ")((" << t << ")lhs & (" << t << ")rhs);\n";
+                        OSS << "return static_cast<" << name << ">(static_cast<" << t << ">(lhs) & static_cast<" << t << ">(rhs));\n";
                     }
                     OSS << "}\n";
 

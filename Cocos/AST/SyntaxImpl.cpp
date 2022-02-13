@@ -39,6 +39,16 @@ bool SyntaxGraph::isNamespace(std::string_view typePath) const noexcept {
     return parentID != g.null_vertex();
 }
 
+bool SyntaxGraph::isValueType(vertex_descriptor vertID) const noexcept {
+    if (holds_tag<Value_>(vertID, *this)
+        || holds_tag<Enum_>(vertID, *this)
+        || isTag(vertID)) {
+        return true;
+    }
+
+    return false;
+}
+
 bool SyntaxGraph::isInstantiation(vertex_descriptor vertID) const noexcept {
     if (holds_tag<Instance_>(vertID, *this)) {
         return true;

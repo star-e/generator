@@ -501,6 +501,9 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
         if (m.mReference || m.mPointer) {
             bPmr = false;
             bCopyParam = true;
+        } else if (g.isValueType(memberID)) {
+            Expects(!bPmr);
+            bCopyParam = true;
         }
         bool isParam = false;
         isParam = std::find(cntr.mIndices.begin(), cntr.mIndices.end(), i) != cntr.mIndices.end();
@@ -592,7 +595,13 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
             }
         }
 
-        oss << m.mMemberName << "(std::move(rhs." << m.mMemberName << ")";
+        if (g.isValueType(memberID)) {
+            Expects(!bPmr);
+            oss << m.mMemberName << "(rhs." << m.mMemberName;
+        } else {
+            oss << m.mMemberName << "(std::move(rhs." << m.mMemberName << ")";
+        }
+
         if (bPmr) {
             oss << ", alloc)";
         } else {

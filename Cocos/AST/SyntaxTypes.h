@@ -1027,6 +1027,7 @@ struct SyntaxGraph {
         Impl::ValueHandle<Instance_, vertex_descriptor>>;
 
     bool isNamespace(std::string_view typePath) const noexcept;
+    bool isValueType(vertex_descriptor vertID) const noexcept;
     bool isInstantiation(vertex_descriptor vertID) const noexcept;
     bool isTag(vertex_descriptor vertID) const noexcept;
     bool isPmr(vertex_descriptor vertID) const noexcept;
