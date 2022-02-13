@@ -564,6 +564,34 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) co
     return false;
 }
 
+bool SyntaxGraph::hasConsecutiveParameters(
+    vertex_descriptor vertID, const Constructor& cntr) const noexcept {
+    const auto& g = *this;
+
+    auto prevType = std::make_tuple(g.null_vertex(), false, false);
+
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (uint32_t i = 0; const auto& m : s.mMembers) {
+                bool isParam = std::find(cntr.mIndices.begin(), cntr.mIndices.end(), i) != cntr.mIndices.end();
+
+                if (!isParam)
+                    continue;
+
+                auto currType = std::make_tuple(locate(m.mTypePath, g), m.mReference, m.mPointer);
+                if (currType == prevType)
+                    return true;
+
+                prevType = currType;
+            }
+            return false;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
 SyntaxGraph::vertex_descriptor SyntaxGraph::getMemberType(
     vertex_descriptor vertID, std::string_view member) const noexcept {
     const auto& g = *this;

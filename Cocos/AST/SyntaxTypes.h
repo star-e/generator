@@ -1050,6 +1050,7 @@ struct SyntaxGraph {
     bool hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept;
     bool hasHeader(vertex_descriptor vertID) const noexcept;
     bool hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept;
+    bool hasConsecutiveParameters(vertex_descriptor vertID, const Constructor& cntr) const noexcept;
 
     vertex_descriptor getMemberType(vertex_descriptor vertID, std::string_view member) const noexcept;
     vertex_descriptor getFirstMemberString(vertex_descriptor vertID) const noexcept;

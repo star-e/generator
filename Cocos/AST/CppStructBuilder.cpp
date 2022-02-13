@@ -848,7 +848,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                         oss << "\n";
                     } else {
                         OSS << generateConstructorSignature(cntr, true) << "";
-                        if (cntr.mIndices.size() == 1) {
+                        if (cntr.mIndices.size() == 1 || g.hasConsecutiveParameters(vertID, cntr)) {
                             oss << " // NOLINT";
                         }
                         oss << "\n";
@@ -1123,7 +1123,11 @@ std::pmr::string CppStructBuilder::generateCppConstructors() const {
                 for (const auto& cntr : s.mConstructors) {
                     if (bPmr) {
                         oss << "\n";
-                        OSS << structName << "::" << generateConstructorSignature(cntr, false) << "\n";
+                        OSS << structName << "::" << generateConstructorSignature(cntr, false);
+                        if (g.hasConsecutiveParameters(vertID, cntr)) {
+                            oss << " // NOLINT";
+                        }
+                        oss << "\n";
                         generateCntr(oss, space, *this, g, s, cntr, scratch);
                         needNewLine = true;
                     }

@@ -487,8 +487,9 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                                 {
                                     INDENT();
                                     OSS << "auto& v = pair.second;\n";
-                                    OSS << "if (v > u)\n";
+                                    OSS << "if (v > u) {\n";
                                     OSS << "    --v;\n";
+                                    OSS << "}\n";
                                 }
                                 OSS << "}\n";
                                 break;
@@ -3302,7 +3303,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         oss << "// Edge All\n";
         OSS << "inline boost::property_map<" << name << ", boost::edge_all_t>::const_type\n";
-        OSS << "get(boost::edge_all_t tag, const " << name << "& g) noexcept {\n";
+        OSS << "get(boost::edge_all_t /*tag*/, const " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
@@ -3311,7 +3312,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         oss << "\n";
         OSS << "inline boost::property_map<" << name << ", boost::edge_all_t>::type\n";
-        OSS << "get(boost::edge_all_t tag, " << name << "& g) noexcept {\n";
+        OSS << "get(boost::edge_all_t /*tag*/, " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
@@ -3323,7 +3324,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         oss << "\n";
         oss << "// Edge Bundle\n";
         OSS << "inline boost::property_map<" << name << ", boost::edge_bundle_t>::const_type\n";
-        OSS << "get(boost::edge_bundle_t tag, const " << name << "& g) noexcept {\n";
+        OSS << "get(boost::edge_bundle_t /*tag*/, const " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
@@ -3332,7 +3333,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         oss << "\n";
         OSS << "inline boost::property_map<" << name << ", boost::edge_bundle_t>::type\n";
-        OSS << "get(boost::edge_bundle_t tag, " << name << "& g) noexcept {\n";
+        OSS << "get(boost::edge_bundle_t /*tag*/, " << name << "& g) noexcept {\n";
         {
             INDENT();
             OSS << "return {g};\n";
