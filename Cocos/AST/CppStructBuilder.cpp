@@ -1030,9 +1030,11 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     } else {
                         OSS << api << "virtual ~" << name << "() noexcept = 0";
                         if (bDLL) {
+                            // defaulted dtor is defined in cpp
                             oss << ";\n";
                         } else {
-                            oss << " {}\n";
+                            // defaulted dtor is defined out of class
+                            oss << ";\n";
                         }
                     }
                 } else {

@@ -927,6 +927,17 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 }
                 oss << "};\n";
 
+                if (auto needDtor = g.needDtor(vertID, mDLL);
+                    needDtor == ImplEnum::Separated || needDtor == ImplEnum::Inline) {
+                    if (traits.mInterface) {
+                        bool bDerived = !get(g.inherits, g, vertID).mBases.empty();
+                        if (!bDerived && !mDLL) {
+                            oss << "\n";
+                            OSS << "inline " << name << "::~" << name << "() noexcept = default;\n";
+                        }
+                    }
+                }
+
                 if (traits.mFlags & EQUAL) {
                     oss << "\n";
                     OSS << cpp.generateOperatorSignature(OperatorType::Equal, true) << " {\n";
