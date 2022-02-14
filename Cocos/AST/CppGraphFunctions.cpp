@@ -372,7 +372,7 @@ std::pmr::string removePolymorphicType(const CppGraphBuilder& builder,
                         INDENT();
                         oss << "\n";
                         if (c.isVector()) {
-                            OSS << "g." << c.mMemberName << ".erase(g." << c.mMemberName << ".begin() + h.mValue);\n";
+                            OSS << "g." << c.mMemberName << ".erase(g." << c.mMemberName << ".begin() + std::ptrdiff_t(h.mValue));\n";
                             OSS << "if (h.mValue == g." << c.mMemberName << ".size()) {\n";
                             OSS << "    return;\n";
                             OSS << "}\n";
@@ -507,7 +507,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                         for (const auto& c : s.mComponents) {
                             const auto& member = c.mMemberName;
                             if (s.isVector()) {
-                                OSS << "g." << member << ".erase(g." << member << ".begin() + u);\n";
+                                OSS << "g." << member << ".erase(g." << member << ".begin() + std::ptrdiff_t(u));\n";
                             } else {
                                 auto iterName = getMemberName(member, scratch) + "Iter";
                                 OSS << "g." << member << ".erase(" << iterName << ");\n";
@@ -1896,8 +1896,8 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                         copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
 
                         if (s.hasEdgeProperty()) {
-                            OSS << "for (auto iter = garbage.begin(); iter != garbage.end(); ++iter) {\n";
-                            OSS << "    g.mEdges.erase(*iter);\n";
+                            OSS << "for (const auto& v : garbage) {\n";
+                            OSS << "    g.mEdges.erase(v);\n";
                             OSS << "}\n";
                         }
                     }
@@ -1947,8 +1947,8 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "auto& inEdgeList   = g.in_edge_list(v);\n";
                             copyString(oss, space, removeDirectedEdgeIf(s, "inEdgeList", scratch));
                             if (s.hasEdgeProperty()) {
-                                OSS << "for (auto iter = garbage.begin(); iter != garbage.end(); ++iter) {\n";
-                                OSS << "    g.mEdges.erase(*iter);\n";
+                                OSS << "for (const auto& v : garbage) {\n";
+                                OSS << "    g.mEdges.erase(v);\n";
                                 OSS << "}\n";
                             }
                         }
@@ -3016,7 +3016,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     OSS << "inline void get(Tag, " << name << "::vertex_descriptor /*v*/, ";
                     if (bConst)
                         oss << "const ";
-                    oss << name << "& /*g*/) noexcept {\n";
+                    oss << name << "& /*g*/) {\n";
                     OSS << "    static_assert(false, \"Tag type is not in PolymorphicGraph\");\n";
                     OSS << "}\n";
                 }
@@ -3033,9 +3033,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 if (bConst)
                     oss << "const ";
                 if (true) {
-                    oss << name << "& /*g*/) noexcept;\n";
+                    oss << name << "& /*g*/);\n";
                 } else {
-                    oss << name << "& /*g*/) noexcept {\n";
+                    oss << name << "& /*g*/) {\n";
                     OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
                     OSS << "}\n";
                 }
@@ -3062,7 +3062,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 oss << name << "::vertex_descriptor v, ";
                 if (bConst)
                     oss << "const ";
-                oss << name << "& g) noexcept {\n";
+                oss << name << "& g) {\n";
                 {
                     INDENT();
                     if (s.isVector()) {

@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include <Cocos/FileUtils.h>
 #include <Cocos/Indent.h>
 #include "CocosModules.h"
+#include <iostream>
 
 using namespace Cocos;
 using namespace Cocos::Meta;
@@ -158,6 +159,13 @@ int main() {
         cmake.replace(beg, end - beg, oss.str());
 
         updateFile(cppFolder / "CMakeLists.txt", cmake);
+    }
+
+    // clang-tidy
+    if (true) {
+        for (const auto& file : files) {
+            std::cout << "clang-tidy '" << file << "'" << std::endl;
+        }
     }
 
     return 0;
