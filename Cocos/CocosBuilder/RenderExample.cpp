@@ -43,7 +43,7 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
         ENUM_CLASS(DependencyType) {
             ENUMS(Order, Value);
         }
-        STRUCT(RenderPass) {
+        STRUCT(RenderPassNode) {
             PUBLIC(
                 (PmrFlatSet<uint32_t>, mOutputs, _)
                 (PmrFlatSet<uint32_t>, mInputs, _)
@@ -58,7 +58,7 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
 
         PMR_GRAPH(RenderDependencyGraph, _, DependencyType, .mFlags = NO_MOVE_NO_COPY) {
             COMPONENT_GRAPH(
-                (Pass_, RenderPass, mPasses)
+                (Pass_, RenderPassNode, mPasses)
                 (ValueID_, PmrFlatSet<uint32_t>, mValueIDs)
                 (PassID_, RenderGraph::vertex_descriptor, mPassIDs)
                 (Traits_, RenderPassTraits, mTraits)

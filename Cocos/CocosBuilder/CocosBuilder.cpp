@@ -77,6 +77,10 @@ int main() {
 
     std::pmr::set<std::pmr::string> files(scratch);
     // output files
+    { // manually added
+        files.emplace("cocos/renderer/pipeline/custom/RenderCompilerImpl.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/RenderExampleImpl.cpp");
+    }
     {
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);
