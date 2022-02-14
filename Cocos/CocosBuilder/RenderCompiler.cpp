@@ -32,7 +32,7 @@ namespace Cocos::Meta {
 
 void buildRenderCompiler(ModuleBuilder& builder, Features features) {
     MODULE(RenderCompiler,
-        .mFolder = "cocos/renderer/pipeline",
+        .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderCompiler",
         .mRequires = { "RenderGraph", "LayoutGraph" },
     ) {

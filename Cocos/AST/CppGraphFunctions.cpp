@@ -903,7 +903,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                 OSS << "template <class ValueT>\n";
                 OSS << "void add_vertex_impl( // NOLINT\n";
                 OSS << "    ValueT &&val, " << name << " &g, " << name << "::vertex_type &vert, // NOLINT\n";
-                OSS << "    std::enable_if_t<std::is_same_v<std::decay_t<ValueT>, " << valueType << ">>* dummy = nullptr) { // NOLINT\n";
+                OSS << "    std::enable_if_t<std::is_same<std::decay_t<ValueT>, " << valueType << ">::value>* dummy = nullptr) { // NOLINT\n";
                 {
                     INDENT();
                     if (c.isVector()) {
@@ -2883,7 +2883,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 OSS << "holds_alternative(" << name << "::vertex_descriptor v, ";
             }
             if (true) {
-                oss << "const " << name << "& g); // NOLINT\n";
+                oss << "const " << name << "& g) noexcept; // NOLINT\n";
             } else {
                 oss << "const " << name << "& g) noexcept { // NOLINT\n";
                 {
@@ -3176,7 +3176,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (bConst)
                 oss << "const ";
             if (true) {
-                oss << name << "* pGraph); // NOLINT\n";
+                oss << name << "* pGraph) noexcept; // NOLINT\n";
             } else {
                 oss << name << "* pGraph) noexcept { // NOLINT\n";
                 OSS << "    static_assert(false, \"Value type is not in PolymorphicGraph\");\n";
@@ -3791,9 +3791,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "template <class ValueT>\n";
             OSS << "[[nodiscard]] inline const ValueT*\n";
             if (s.mAddressableConcept.mUtf8) {
-                OSS << "get_if(std::u8string_view pt, const " << name << "* pGraph) { // NOLINT\n";
+                OSS << "get_if(std::u8string_view pt, const " << name << "* pGraph) noexcept { // NOLINT\n";
             } else {
-                OSS << "get_if(boost::string_view pt, const " << name << "* pGraph) { // NOLINT\n";
+                OSS << "get_if(boost::string_view pt, const " << name << "* pGraph) noexcept { // NOLINT\n";
             }
             OSS << "    if (pGraph) {\n";
             OSS << "        auto v = locate(pt, *pGraph);\n";

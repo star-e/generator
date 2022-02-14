@@ -1,6 +1,6 @@
 #pragma once
 #include <cocos/bindings/manual/jsb_conversions.h>
-#include <cocos/renderer/pipeline/Map.h>
+#include <cocos/renderer/pipeline/custom/Map.h>
 #include <boost/container/vector.hpp>
 
 template <typename T, typename allocator>

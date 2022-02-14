@@ -32,9 +32,9 @@ namespace Cocos::Meta {
 
 void buildLayoutGraph(ModuleBuilder& builder, Features features) {
     MODULE(LayoutGraph,
-        .mFolder = "cocos/renderer/pipeline",
+        .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "LayoutGraph",
-        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "layout-graph",
         .mRequires = { "RenderCommon" },
     ) {

@@ -248,19 +248,20 @@
     <ClCompile Include="RenderGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\renderer\pipeline\GraphImpl.h" />
-    <ClInclude Include="..\renderer\pipeline\GraphTypes.h" />
-    <ClInclude Include="..\renderer\pipeline\GraphView.h" />
-    <ClInclude Include="..\renderer\pipeline\GslUtils.h" />
-    <ClInclude Include="..\renderer\pipeline\invoke.hpp" />
-    <ClInclude Include="..\renderer\pipeline\JsbConversion.h" />
-    <ClInclude Include="..\renderer\pipeline\Map.h" />
-    <ClInclude Include="..\renderer\pipeline\Overload.h" />
-    <ClInclude Include="..\renderer\pipeline\PathUtils.h" />
-    <ClInclude Include="..\renderer\pipeline\Range.h" />
-    <ClInclude Include="..\renderer\pipeline\Set.h" />
-    <ClInclude Include="..\renderer\pipeline\String.h" />
-    <ClInclude Include="..\renderer\pipeline\Utility.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\GraphImpl.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\GraphTypes.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\GraphUtils.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\GraphView.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\GslUtils.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\invoke.hpp" />
+    <ClInclude Include="..\renderer\pipeline\custom\JsbConversion.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\Map.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\Overload.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\PathUtils.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\Range.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\Set.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\String.h" />
+    <ClInclude Include="..\renderer\pipeline\custom\Utility.h" />
     <ClInclude Include="CocosModules.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>

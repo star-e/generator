@@ -1,6 +1,6 @@
 #pragma once
-#include <cocos/renderer/pipeline/GraphTypes.h>
-#include <cocos/renderer/pipeline/GslUtils.h>
+#include <cocos/renderer/pipeline/custom/GraphTypes.h>
+#include <cocos/renderer/pipeline/custom/GslUtils.h>
 #include <boost/container/pmr/vector.hpp>
 #include <boost/graph/adjacency_iterator.hpp>
 #include <boost/graph/properties.hpp>
@@ -469,7 +469,7 @@ inline void reindexEdgeList(IncidenceList &el, VertexDescriptor u) {
 
 template <class Tag, class Container, class HandleDescriptor>
 inline void reindexVectorHandle(Container &container, HandleDescriptor u) {
-    static_assert(std::is_arithmetic_v<HandleDescriptor>, "reindexVectorHandle");
+    static_assert(std::is_arithmetic<HandleDescriptor>::value, "reindexVectorHandle");
 
     using handle_type = ValueHandle<Tag, HandleDescriptor>;
     for (auto &vert : container) {

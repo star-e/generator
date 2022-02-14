@@ -239,9 +239,9 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(RenderCommon,
-        .mFolder = "cocos/renderer/pipeline",
+        .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderCommon",
-        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "types",
     ) {
         NAMESPACE(cc) {

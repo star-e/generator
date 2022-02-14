@@ -25,7 +25,7 @@ THE SOFTWARE.
 */
 
 #pragma once
-#include <cocos/renderer/pipeline/Utility.h>
+#include <cocos/renderer/pipeline/custom/Utility.h>
 #include <boost/container/flat_set.hpp>
 #include <boost/container/pmr/flat_set.hpp>
 #include <set>

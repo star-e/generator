@@ -32,9 +32,9 @@ namespace Cocos::Meta {
 
 void buildRenderExecutor(ModuleBuilder& builder, Features features) {
     MODULE(RenderExecutor,
-        .mFolder = "cocos/renderer/pipeline",
+        .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderExecutor",
-        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "executor",
         .mRequires = { "RenderCommon", /*"RenderGraph", */"Gfx" },
         .mHeader = R"(#include <cocos/renderer/gfx-base/GFXBuffer.h>

@@ -1132,7 +1132,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include <boost/graph/properties.hpp>\n";
                 OSS << "#include <boost/range/irange.hpp>\n";
                 OSS << "#include <boost/container/pmr/vector.hpp>\n";
-                OSS << "#include <cocos/renderer/pipeline/GraphTypes.h>\n";
+                OSS << "#include <cocos/renderer/pipeline/custom/GraphTypes.h>\n";
             }
             if (g.moduleHasMap(modulePath, "/cc/TransparentMap")
                 || g.moduleHasMap(modulePath, "/cc/TransparentMultiMap")
@@ -1148,7 +1148,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasMap(modulePath, "/cc/UnorderedStringMultiMap")
                 || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMap")
                 || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMultiMap")) {
-                OSS << "#include <cocos/renderer/pipeline/Map.h>\n";
+                OSS << "#include <cocos/renderer/pipeline/custom/Map.h>\n";
             }
             if (g.moduleHasContainer(modulePath, "/cc/TransparentSet")
                 || g.moduleHasContainer(modulePath, "/cc/TransparentMultiSet")
@@ -1164,10 +1164,10 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasContainer(modulePath, "/cc/UnorderedStringMultiSet")
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringSet")
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringMultiSet")) {
-                OSS << "#include <cocos/renderer/pipeline/Set.h>\n";
+                OSS << "#include <cocos/renderer/pipeline/custom/Set.h>\n";
             }
             if (g.moduleHasType(modulePath, "/cc/PmrString")) {
-                OSS << "#include <cocos/renderer/pipeline/String.h>\n";
+                OSS << "#include <cocos/renderer/pipeline/custom/String.h>\n";
             }
             if (g.moduleHasContainer(modulePath, "/boost/container/pmr/list")) {
                 OSS << "#include <boost/container/pmr/list.hpp>\n";
@@ -1207,11 +1207,11 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::pmr::string space(scratch);
         OSS << "#pragma once\n";
         OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
-        oss << "#include <cocos/renderer/pipeline/GraphImpl.h>\n";
-        oss << "#include <cocos/renderer/pipeline/Overload.h>\n";
-        oss << "#include <cocos/renderer/pipeline/PathUtils.h>\n";
-        oss << "#include <cocos/renderer/pipeline/GslUtils.h>\n";
-        oss << "#include <cocos/renderer/pipeline/invoke.hpp>\n";
+        oss << "#include <cocos/renderer/pipeline/custom/GraphImpl.h>\n";
+        oss << "#include <cocos/renderer/pipeline/custom/Overload.h>\n";
+        oss << "#include <cocos/renderer/pipeline/custom/PathUtils.h>\n";
+        oss << "#include <cocos/renderer/pipeline/custom/GslUtils.h>\n";
+        oss << "#include <cocos/renderer/pipeline/custom/invoke.hpp>\n";
         oss << "#include <boost/utility/string_view.hpp>\n";
 
         copyString(oss, generateGraphs_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
@@ -1318,7 +1318,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                     OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Jsb.h>\n";
                 }
             }
-            OSS << "#include <cocos/renderer/pipeline/JsbConversion.h>\n";
+            OSS << "#include <cocos/renderer/pipeline/custom/JsbConversion.h>\n";
             copyString(oss, generateJsbConversions_cpp(*this, moduleID));
 
             updateFile(filename1, reorderIncludes(oss.str(), scratch));

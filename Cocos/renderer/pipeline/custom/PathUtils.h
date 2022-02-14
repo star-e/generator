@@ -1,5 +1,5 @@
 #pragma once
-#include <cocos/renderer/pipeline/GslUtils.h>
+#include <cocos/renderer/pipeline/custom/GslUtils.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/utility/string_view.hpp>
 

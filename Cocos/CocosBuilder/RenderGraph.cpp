@@ -32,18 +32,18 @@ namespace Cocos::Meta {
 
 void buildRenderGraph(ModuleBuilder& builder, Features features) {
     MODULE(RenderGraph,
-        .mFolder = "cocos/renderer/pipeline",
+        .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderGraph",
-        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "render-graph",
         .mRequires = { "RenderCommon", "Gfx", "Camera", "PipelineSceneData" },
         .mHeader = R"(#include <cocos/renderer/gfx-base/GFXBuffer.h>
 #include <cocos/renderer/gfx-base/GFXTexture.h>
 #include <cocos/renderer/gfx-base/states/GFXSampler.h>
 )",
-        .mTypescriptInclude = R"(import { Mat4 } from '../math';
-import { legacyCC } from '../global-exports';
-import { RenderScene } from '../renderer/scene';
+        .mTypescriptInclude = R"(import { Mat4 } from '../../math';
+import { legacyCC } from '../../global-exports';
+import { RenderScene } from '../../renderer/scene';
 )") {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);

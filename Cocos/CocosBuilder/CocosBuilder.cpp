@@ -99,13 +99,14 @@ int main() {
     // copy graph interface
     {
         auto content = readFile("graph.ts");
-        updateFile(typescriptFolder / "cocos/core/pipeline/graph.ts", content);
+        updateFile(typescriptFolder / "cocos/core/pipeline/custom/graph.ts", content);
     }
     {
-        std::filesystem::path srcFolder("../renderer/pipeline");
-        std::filesystem::path dstFolder = cppFolder / "cocos/renderer/pipeline";
+        std::filesystem::path srcFolder("../renderer/pipeline/custom");
+        std::filesystem::path dstFolder = cppFolder / "cocos/renderer/pipeline/custom";
         auto copyFile = [&](std::string_view filename) {
             auto content = readFile(srcFolder / filename);
+            Expects(!content.empty());
             updateFile(dstFolder / filename, content);
         };
         copyFile("GraphImpl.h");
