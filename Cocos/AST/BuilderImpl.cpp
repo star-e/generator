@@ -1041,6 +1041,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
     const auto features = moduleInfo.mFeatures;
     const auto& typescriptFolder = mTypescriptFolder;
     const auto& cppFolder = mCppFolder;
+    auto ccFolder = std::string_view(m.mFolder).substr(6);
 
     if (features & Features::Fwd) {
         std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Fwd.h" , scratch);
@@ -1048,6 +1049,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::filesystem::path filename = cppFolder / shortname;
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
+        OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
         const auto included = getIndirectIncludes(moduleID, mg, scratch);
         for (const auto& require : m.mRequires) {
@@ -1055,10 +1057,11 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             if (included.contains(moduleID))
                 continue;
             const auto& dep = get(mg.modules, mg, moduleID);
+            auto ccDepFolder = std::string_view(dep.mFolder).substr(6);
             if (dep.mFilePrefix.ends_with(".h")) {
-                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << ">\n";
+                OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "\"\n";
             } else {
-                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Fwd.h>\n";
+                OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Fwd.h\"\n";
             }
         }
         if (mBoost) {
@@ -1075,16 +1078,18 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::filesystem::path filename = cppFolder / shortname;
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
+        OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
-        OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
+        OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
         const auto included = getIndirectIncludes(moduleID, mg, scratch);
         for (const auto& require : m.mRequires) {
             auto moduleID = locate(mg.null_vertex(), require, mg);
             if (included.contains(moduleID))
                 continue;
             const auto& dep = get(mg.modules, mg, moduleID);
+            auto ccDepFolder = std::string_view(dep.mFolder).substr(6);
             if (!dep.mFilePrefix.ends_with(".h")) {
-                OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Names.h>\n";
+                OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Names.h\"\n";
             }
         }
         copyString(oss, generateNames_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
@@ -1104,6 +1109,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            OSS << "// clang-format off\n";
             OSS << "#pragma once\n";
 
             if (!moduleInfo.mAPI.empty()) {
@@ -1112,7 +1118,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             }
 
             if (features & Features::Fwd) {
-                OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+                OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Fwd.h\"\n";
             }
             const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
@@ -1120,10 +1126,11 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 if (included.contains(moduleID))
                     continue;
                 const auto& dep = get(mg.modules, mg, moduleID);
+                auto ccDepFolder = std::string_view(dep.mFolder).substr(6);
                 if (dep.mFilePrefix.ends_with(".h")) {
-                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << ">\n";
+                    OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "\"\n";
                 } else {
-                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Types.h>\n";
+                    OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Types.h\"\n";
                 }
             }
             if (g.moduleHasGraph(modulePath)) {
@@ -1132,7 +1139,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include <boost/graph/properties.hpp>\n";
                 OSS << "#include <boost/range/irange.hpp>\n";
                 OSS << "#include <boost/container/pmr/vector.hpp>\n";
-                OSS << "#include <cocos/renderer/pipeline/custom/GraphTypes.h>\n";
+                OSS << "#include \"renderer/pipeline/custom/GraphTypes.h\"\n";
             }
             if (g.moduleHasMap(modulePath, "/cc/TransparentMap")
                 || g.moduleHasMap(modulePath, "/cc/TransparentMultiMap")
@@ -1148,7 +1155,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasMap(modulePath, "/cc/UnorderedStringMultiMap")
                 || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMap")
                 || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMultiMap")) {
-                OSS << "#include <cocos/renderer/pipeline/custom/Map.h>\n";
+                OSS << "#include \"renderer/pipeline/custom/Map.h\"\n";
             }
             if (g.moduleHasContainer(modulePath, "/cc/TransparentSet")
                 || g.moduleHasContainer(modulePath, "/cc/TransparentMultiSet")
@@ -1164,10 +1171,10 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasContainer(modulePath, "/cc/UnorderedStringMultiSet")
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringSet")
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringMultiSet")) {
-                OSS << "#include <cocos/renderer/pipeline/custom/Set.h>\n";
+                OSS << "#include \"renderer/pipeline/custom/Set.h\"\n";
             }
             if (g.moduleHasType(modulePath, "/cc/PmrString")) {
-                OSS << "#include <cocos/renderer/pipeline/custom/String.h>\n";
+                OSS << "#include \"renderer/pipeline/custom/String.h\"\n";
             }
             if (g.moduleHasContainer(modulePath, "/boost/container/pmr/list")) {
                 OSS << "#include <boost/container/pmr/list.hpp>\n";
@@ -1189,6 +1196,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            OSS << "// clang-format off\n";
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
             copyString(oss, generateTypes_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
@@ -1205,13 +1213,14 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
+        OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
-        OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
-        oss << "#include <cocos/renderer/pipeline/custom/GraphImpl.h>\n";
-        oss << "#include <cocos/renderer/pipeline/custom/Overload.h>\n";
-        oss << "#include <cocos/renderer/pipeline/custom/PathUtils.h>\n";
-        oss << "#include <cocos/renderer/pipeline/custom/GslUtils.h>\n";
-        oss << "#include <cocos/renderer/pipeline/custom/invoke.hpp>\n";
+        OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
+        oss << "#include \"renderer/pipeline/custom/GraphImpl.h\"\n";
+        oss << "#include \"renderer/pipeline/custom/Overload.h\"\n";
+        oss << "#include \"renderer/pipeline/custom/PathUtils.h\"\n";
+        oss << "#include \"renderer/pipeline/custom/GslUtils.h\"\n";
+        oss << "#include \"renderer/pipeline/custom/invoke.hpp\"\n";
         oss << "#include <boost/utility/string_view.hpp>\n";
 
         copyString(oss, generateGraphs_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
@@ -1228,13 +1237,14 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            OSS << "// clang-format off\n";
             OSS << "#pragma once\n";
 
             if (!moduleInfo.mAPI.empty()) {
                 oss << "#include <" << std::filesystem::path(moduleInfo.mFolder).generic_string()
                     << "/Config.h>\n";
             }
-            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
+            OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Fwd.h\"\n";
             const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
                 auto moduleID = locate(mg.null_vertex(), require, mg);
@@ -1242,9 +1252,10 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                     continue;
                 const auto& moduleInfo = get(mg.modules, mg, moduleID);
                 const auto& dep = get(mg.modules, mg, moduleID);
+                auto ccDepFolder = std::string_view(dep.mFolder).substr(6);
                 if (moduleInfo.mFeatures & Reflection) {
                     if (!dep.mFilePrefix.ends_with(".h")) {
-                        OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Reflection.h>\n";
+                        OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Reflection.h\"\n";
                     }
                 }
             }
@@ -1261,6 +1272,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            OSS << "// clang-format off\n";
             OSS << "#include \"" << m.mFilePrefix << "Reflection.h\"\n";
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
@@ -1280,6 +1292,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            OSS << "// clang-format off\n";
             OSS << "#pragma once\n";
 
             if (!moduleInfo.mAPI.empty()) {
@@ -1287,8 +1300,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                     << "/Config.h>\n";
             }
 
-            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Fwd.h>\n";
-            OSS << "#include <cocos/bindings/manual/jsb_conversions.h>\n";
+            OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Fwd.h\"\n";
+            OSS << "#include \"bindings/manual/jsb_conversions.h\"\n";
 
             copyString(oss, generateJsbConversions_h(*this, moduleID));
 
@@ -1304,21 +1317,21 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
-            OSS << "#pragma once\n";
-
-            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Jsb.h>\n";
-            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Types.h>\n";
+            OSS << "// clang-format off\n";
+            OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Jsb.h\"\n";
+            OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
             const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
                 auto moduleID = locate(mg.null_vertex(), require, mg);
                 if (included.contains(moduleID))
                     continue;
                 const auto& dep = get(mg.modules, mg, moduleID);
+                auto ccDepFolder = std::string_view(dep.mFolder).substr(6);
                 if (!dep.mFilePrefix.ends_with(".h")) {
-                    OSS << "#include <" << dep.mFolder << "/" << dep.mFilePrefix << "Jsb.h>\n";
+                    OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Jsb.h\"\n";
                 }
             }
-            OSS << "#include <cocos/renderer/pipeline/custom/JsbConversion.h>\n";
+            OSS << "#include \"renderer/pipeline/custom/JsbConversion.h\"\n";
             copyString(oss, generateJsbConversions_cpp(*this, moduleID));
 
             updateFile(filename1, reorderIncludes(oss.str(), scratch));

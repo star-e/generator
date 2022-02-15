@@ -289,7 +289,9 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
 
                 STRUCT(SampleDesc) {
                     PUBLIC(
-                        (uint32_t, mCount, 1)(uint32_t, mQuality, 0));
+                        (uint32_t, mCount, 1)
+                        (uint32_t, mQuality, 0)
+                    );
                 }
 
                 ENUM_CLASS(NodeType) {
@@ -298,6 +300,28 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
             } // namespace render
         }
     } // module CoreRender
+}
+
+void buildRenderInterface(ModuleBuilder& builder, Features features) {
+    MODULE(RenderInterface,
+        .mFolder = "cocos/renderer/pipeline/custom",
+        .mFilePrefix = "RenderInterface",
+        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFilePrefix = "interface",
+        .mRequires = { "Gfx", "RenderCommon" },
+    ) {
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
+
+        INTERFACE(Pipeline) {
+            MEMBER_FUNCTIONS(R"(
+virtual uint32_t addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
+)");
+        }
+
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
+    }
 }
 
 }
