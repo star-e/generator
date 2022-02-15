@@ -310,7 +310,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsPrefix = "render",
         .mToJsNamespace = "render",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
-        .mTypescriptFilePrefix = "interface",
+        .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon" },
     ) {
         NAMESPACE_BEG(cc);

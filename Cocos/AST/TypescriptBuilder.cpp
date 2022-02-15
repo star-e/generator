@@ -76,7 +76,11 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         [&](const Struct& s) {
             if (currScope.mCount++)
                 oss << "\n";
-            OSS << "export class " << name;
+            OSS << "export";
+            if (traits.mInterface) {
+                oss << " abstract";
+            }
+            oss << " class " << name;
             const auto& inherits = get(g.inherits, g, vertID);
             for (int count = 0; const auto& conceptPath : inherits.mBases) {
                 auto superID = locate(conceptPath, g);

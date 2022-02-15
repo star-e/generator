@@ -54,22 +54,22 @@ int main() {
 
         // build render pipeline
         buildRenderCommon(builder,
-            Typescripts | Fwd | Types | Names | Reflection | Jsb);
+            Fwd | Types | Names | Reflection | Typescripts | Jsb);
         buildLayoutGraph(builder,
-            Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
+            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
         buildRenderGraph(builder,
-            Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
+            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
 
         // build render compiler (native)
         buildRenderInterface(builder,
-            Fwd | Types | ToJs);
+            Fwd | Types | Typescripts | ToJs);
 
         buildRenderCompiler(builder,
             Fwd | Types | Names | Reflection | Graphs);
 
         // build executor modules
         buildRenderExecutor(builder,
-            Typescripts | Fwd | Types | Names | Reflection | Jsb | Graphs);
+            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
 
         // build render example
         buildRenderExample(builder,
