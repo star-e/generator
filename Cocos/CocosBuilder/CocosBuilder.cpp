@@ -62,7 +62,7 @@ int main() {
 
         // build render compiler (native)
         buildRenderInterface(builder,
-            Fwd | Types);
+            Fwd | Types | ToJs);
 
         buildRenderCompiler(builder,
             Fwd | Types | Names | Reflection | Graphs);

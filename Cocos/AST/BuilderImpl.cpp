@@ -32,6 +32,7 @@ THE SOFTWARE.
 #include "BuilderMacros.h"
 #include "CppBuilder.h"
 #include "JsbBuilder.h"
+#include "ToJsBuilder.h"
 
 namespace Cocos::Meta {
 
@@ -1336,6 +1337,24 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
+    }
+
+    if (features & Features::ToJs) {
+        // we must manually update
+        // 1. CMakeLists
+        // 2. tools/bindings-generator/conversions.yaml
+        Expects(!m.mToJsFilename.empty());
+        Expects(!m.mToJsPrefix.empty());
+        Expects(!m.mToJsNamespace.empty());
+        std::filesystem::path filename = cppFolder / "tools/tojs" / m.mToJsFilename;
+
+        //pmr_ostringstream oss(std::ios_base::out, scratch);
+        std::ostringstream oss;
+        std::pmr::string space(scratch);
+        
+        copyString(oss, generateToJsIni(*this, moduleID));
+
+        updateFile(filename, oss.str());
     }
 
     if (features & Features::Typescripts) {

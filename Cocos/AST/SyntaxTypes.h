@@ -54,6 +54,7 @@ enum GenerationFlags : uint64_t {
     PMR_DEFAULT = 1 << 17,
     IMPL_DETAIL = 1 << 18,
     JSB = 1 << 19,
+    TO_JS = 1 << 20,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -1219,6 +1220,7 @@ enum Features : uint32_t {
     Sender = 1 << 7,
     Typescripts = 1 << 8,
     Jsb = 1 << 9,
+    ToJs = 1 << 10,
 };
 
 constexpr Features operator|(const Features lhs, const Features rhs) noexcept {
@@ -1253,6 +1255,9 @@ struct ModuleInfo {
     Features mFeatures = {};
     std::string mFolder;
     std::string mFilePrefix;
+    std::string mToJsFilename;
+    std::string mToJsPrefix;
+    std::string mToJsNamespace;
     std::string mTypescriptFolder;
     std::string mTypescriptFilePrefix;
     std::string mAPI;
