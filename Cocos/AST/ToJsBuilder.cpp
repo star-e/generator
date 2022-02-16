@@ -51,6 +51,10 @@ extra_arguments = %(android_headers)s %(clang_headers)s %(cxxgenerator_headers)s
 )";
 
     OSS << "headers = %(cocosdir)s/" << m.mFolder << "/" << m.mFilePrefix << "Types.h\n";
+    oss << "\n";
+    OSS << "hpp_headers =" << m.mToJsHppHeaders << "\n";
+    oss << "\n";
+    OSS << "cpp_headers =" << m.mToJsCppHeaders << "\n";
 
     OSS << R"(
 replace_headers =

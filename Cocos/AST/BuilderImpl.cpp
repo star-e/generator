@@ -1798,7 +1798,11 @@ std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p, bool b
         result += ": ";
         result += typeName;
         if (p.mPointer) {
-            result += " | null";
+            if (false) {
+                // currently, reference is not supported
+                // we must use pointer
+                result += " | null";
+            }
         }
     }
 

@@ -342,286 +342,286 @@ bool isWrite() const {
                 ((PmrUnorderedMap<PmrString, uint32_t>), mIndex, _)
             );
         }
-
-        INTERFACE(Setter, .mFlags = NO_DEFAULT_CNTR) {
-            PRIVATE(
-                (RenderData&, mData, _)
-            );
-            CNTR_NO_DEFAULT(mData);
-            TS_FUNCTIONS(R"(setMat4 (name: string, mat: Mat4): void {
-
-}
-setMatrix4x4 (name: string, data: number[]): void {
-
-}
-setMatrix3x4 (name: string, data: number[]): void {
-
-}
-setFloat4 (name: string, data: number[]): void {
-
-}
-setFloat2 (name: string, data: number[]): void {
-
-}
-setFloat (name: string, data: number): void {
-
-}
-setInt4 (name: string, data: number[]): void {
-
-}
-setInt2 (name: string, data: number[]): void {
-
-}
-setInt (name: string, data: number): void {
-
-}
-setUint4 (name: string, data: number[]): void {
-
-}
-setUint2 (name: string, data: number[]): void {
-
-}
-setUint (name: string, data: number): void {
-
-}
-setCBuffer (name: string, buffer: Buffer): void {
-
-}
-setBuffer (name: string, buffer: Buffer): void {
-
-}
-setTexture (name: string, texture: Texture): void {
-
-}
-setRWBuffer (name: string, buffer: Buffer): void {
-
-}
-setRWTexture (name: string, texture: Texture): void {
-
-}
-setSampler (name: string, sampler: Sampler): void {
-
-}
-protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<PipelineSceneData>, scene: Readonly<RenderScene>) {
-    this.setMat4('cc_matView', camera.matView);
-    this.setMat4('cc_matViewInv', camera.node.worldMatrix);
-    this.setMat4('cc_matProj', camera.matProj);
-    this.setMat4('cc_matProjInv', camera.matProjInv);
-    this.setMat4('cc_matViewProj', camera.matViewProj);
-    this.setMat4('cc_matViewProjInv', camera.matViewProjInv);
-    this.setFloat4('cc_cameraPos', [camera.position.x, camera.position.y, camera.position.z, 0.0]);
-    this.setFloat4('cc_screenScale', [cfg.shadingScale, cfg.shadingScale, 1.0 / cfg.shadingScale, 1.0 / cfg.shadingScale]);
-    this.setFloat4('cc_exposure', [camera.exposure, 1.0 / camera.exposure, cfg.isHDR ? 1.0 : 0.0, 0.0]);
-
-    const mainLight = scene.mainLight;
-    if (mainLight) {
-        this.setFloat4('cc_mainLitDir', [mainLight.direction.x, mainLight.direction.y, mainLight.direction.z, 0.0]);
-        let r = mainLight.color.x;
-        let g = mainLight.color.y;
-        let b = mainLight.color.z;
-        if (mainLight.useColorTemperature) {
-            r *= mainLight.colorTemperatureRGB.x;
-            g *= mainLight.colorTemperatureRGB.y;
-            b *= mainLight.colorTemperatureRGB.z;
-        }
-        let w = mainLight.illuminance;
-        if (cfg.isHDR) {
-            w *= camera.exposure;
-        }
-        this.setFloat4('cc_mainLitColor', [r, g, b, w]);
-    } else {
-        this.setFloat4('cc_mainLitDir', [0, 0, 1, 0]);
-        this.setFloat4('cc_mainLitColor', [0, 0, 0, 0]);
-    }
-
-    const ambient = cfg.ambient;
-    const skyColor = ambient.skyColor;
-    if (cfg.isHDR) {
-        skyColor.w = ambient.skyIllum * camera.exposure;
-    } else {
-        skyColor.w = ambient.skyIllum;
-    }
-    this.setFloat4('cc_ambientSky', [skyColor.x, skyColor.y, skyColor.z, skyColor.w]);
-    this.setFloat4('cc_ambientGround', [ambient.groundAlbedo.x, ambient.groundAlbedo.y, ambient.groundAlbedo.z, ambient.groundAlbedo.w]);
-
-    const fog = cfg.fog;
-    const colorTempRGB = fog.colorArray;
-    this.setFloat4('cc_fogColor', [colorTempRGB.x, colorTempRGB.y, colorTempRGB.z, colorTempRGB.w]);
-    this.setFloat4('cc_fogBase', [fog.fogStart, fog.fogEnd, fog.fogDensity, 0.0]);
-    this.setFloat4('cc_fogAdd', [fog.fogTop, fog.fogRange, fog.fogAtten, 0.0]);
-    this.setFloat4('cc_nearFar', [camera.nearClip, camera.farClip, 0.0, 0.0]);
-    this.setFloat4('cc_viewPort', [camera.viewport.x, camera.viewport.y, camera.viewport.z, camera.viewport.w]);
-}
-)");
-        }
-
-        STRUCT(RasterQueue, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(Setter);
-            PRIVATE(
-                (RenderGraph&, mRenderGraph, _)
-                (const uint32_t, mVertID, 0xFFFFFFFF)
-                (RenderQueueData&, mQueue, _)
-                (pipeline::PipelineSceneData&, mPipeline, _)
-            );
-            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mQueue, mPipeline);
-            TS_FUNCTIONS(R"(addSceneOfCamera (camera: Camera, name = 'Camera'): RasterQueue {
-    const sceneData = new SceneData(name);
-    sceneData.camera = camera;
-    this._renderGraph.addVertex<RenderGraphValue.scene>(
-        RenderGraphValue.scene, sceneData, name, '', new RenderData(), this._vertID,
-    );
-    super._setCameraValues(camera, this._pipeline,
-        camera.scene ? camera.scene : legacyCC.director.getScene().renderScene);
-    return this;
-}
-addScene (sceneName: string): RasterQueue {
-    const sceneData = new SceneData(sceneName);
-    this._renderGraph.addVertex<RenderGraphValue.scene>(
-        RenderGraphValue.scene, sceneData, sceneName, '', new RenderData(), this._vertID,
-    );
-    return this;
-}
-addFullscreenQuad (shader: string, name = 'Quad'): RasterQueue {
-    this._renderGraph.addVertex<RenderGraphValue.blit>(
-        RenderGraphValue.blit, new Blit(shader), name, '', new RenderData(), this._vertID,
-    );
-    return this;
-}
-)");
-        }
-                                                
-        STRUCT(RasterPass, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(Setter);
-            PRIVATE(
-                (RenderGraph&, mRenderGraph, _)
-                (const uint32_t, mVertID, 0xFFFFFFFF)
-                (RasterPassData&, mPass, _)
-                (pipeline::PipelineSceneData&, mPipeline, _)
-            );
-            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass, mPipeline);
-            TS_FUNCTIONS(R"(addRasterView (name: string, view: RasterView) {
-    this._pass.rasterViews.set(name, view);
-}
-addComputeView (name: string, view: ComputeView) {
-    if (this._pass.computeViews.has(name)) {
-        this._pass.computeViews.get(name)?.push(view);
-    } else {
-        this._pass.computeViews.set(name, [view]);
-    }
-}
-addQueue (hint: QueueHint = QueueHint.Opaque, layoutName = '', name = 'Queue') {
-    if (layoutName === '') {
-        switch (hint) {
-        case QueueHint.Opaque:
-            layoutName = 'Opaque';
-            break;
-        case QueueHint.Cutout:
-            layoutName = 'Cutout';
-            break;
-        case QueueHint.Transparent:
-            layoutName = 'Transparent';
-            break;
-        default:
-            throw Error('cannot infer layoutName from QueueHint');
-        }
-    }
-    const queue = new RenderQueueData(hint);
-    const data = new RenderData();
-    const queueID = this._renderGraph.addVertex<RenderGraphValue.queue>(
-        RenderGraphValue.queue, queue, name, layoutName, data, this._vertID,
-    );
-    return new RasterQueue(data, this._renderGraph, queueID, queue, this._pipeline);
-}
-addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
-    this._renderGraph.addVertex<RenderGraphValue.blit>(
-        RenderGraphValue.blit,
-        new Blit(shader),
-        name, layoutName, new RenderData(), this._vertID,
-    );
-}
-)");
-        }
-
-        STRUCT(ComputeQueue, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(Setter);
-            PRIVATE(
-                (RenderGraph&, mRenderGraph, _)
-                (const uint32_t, mVertID, 0xFFFFFFFF)
-                (RenderQueueData&, mQueue, _)
-                (pipeline::PipelineSceneData&, mPipeline, _)
-            );
-            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mQueue, mPipeline);
-            TS_FUNCTIONS(R"(addDispatch (shader: string,
-    threadGroupCountX: number,
-    threadGroupCountY: number,
-    threadGroupCountZ: number,
-    layoutName = '',
-    name = 'Dispatch') {
-    this._renderGraph.addVertex<RenderGraphValue.dispatch>(
-        RenderGraphValue.dispatch,
-        new Dispatch(shader, threadGroupCountX, threadGroupCountY, threadGroupCountZ),
-        name, layoutName, new RenderData(), this._vertID,
-    );
-}
-)");
-        }
-
-        STRUCT(ComputePass, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(Setter);
-            PRIVATE(
-                (RenderGraph&, mRenderGraph, _)
-                (const uint32_t, mVertID, 0xFFFFFFFF)
-                (ComputePassData&, mPass, _)
-                (pipeline::PipelineSceneData&, mPipeline, _)
-            );
-            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass, mPipeline);
-            TS_FUNCTIONS(R"(addComputeView (name: string, view: ComputeView) {
-    if (this._pass.computeViews.has(name)) {
-        this._pass.computeViews.get(name)?.push(view);
-    } else {
-        this._pass.computeViews.set(name, [view]);
-    }
-}
-addDispatch (shader: string,
-    threadGroupCountX: number,
-    threadGroupCountY: number,
-    threadGroupCountZ: number,
-    layoutName = '',
-    name = 'Dispatch') {
-    this._renderGraph.addVertex<RenderGraphValue.dispatch>(
-        RenderGraphValue.dispatch,
-        new Dispatch(shader, threadGroupCountX, threadGroupCountY, threadGroupCountZ),
-        name, layoutName, new RenderData(), this._vertID,
-    );
-}
-)");
-        }
-
-        STRUCT(MovePass, .mFlags = NO_DEFAULT_CNTR) {
-            PRIVATE(
-                (RenderGraph&, mRenderGraph, _)
-                (const uint32_t, mVertID, 0xFFFFFFFF)
-                (MovePassData&, mPass, _)
-            );
-            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass);
-            TS_FUNCTIONS(R"(addMove (pair: MovePair) {
-    this._pass.movePairs.push(pair);
-}
-)");
-        }
-                
-        STRUCT(CopyPass, .mFlags = NO_DEFAULT_CNTR) {
-            PRIVATE(
-                (RenderGraph&, mRenderGraph, _)
-                (const uint32_t, mVertID, 0xFFFFFFFF)
-                (CopyPassData&, mPass, _)
-            );
-            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass);
-            TS_FUNCTIONS(R"(addCopy (pair: CopyPair) {
-    this._pass.copyPairs.push(pair);
-}
-)");
-        }
+//
+//        INTERFACE(Setter, .mFlags = NO_DEFAULT_CNTR) {
+//            PRIVATE(
+//                (RenderData&, mData, _)
+//            );
+//            CNTR_NO_DEFAULT(mData);
+//            TS_FUNCTIONS(R"(setMat4 (name: string, mat: Mat4): void {
+//
+//}
+//setMatrix4x4 (name: string, data: number[]): void {
+//
+//}
+//setMatrix3x4 (name: string, data: number[]): void {
+//
+//}
+//setFloat4 (name: string, data: number[]): void {
+//
+//}
+//setFloat2 (name: string, data: number[]): void {
+//
+//}
+//setFloat (name: string, data: number): void {
+//
+//}
+//setInt4 (name: string, data: number[]): void {
+//
+//}
+//setInt2 (name: string, data: number[]): void {
+//
+//}
+//setInt (name: string, data: number): void {
+//
+//}
+//setUint4 (name: string, data: number[]): void {
+//
+//}
+//setUint2 (name: string, data: number[]): void {
+//
+//}
+//setUint (name: string, data: number): void {
+//
+//}
+//setCBuffer (name: string, buffer: Buffer): void {
+//
+//}
+//setBuffer (name: string, buffer: Buffer): void {
+//
+//}
+//setTexture (name: string, texture: Texture): void {
+//
+//}
+//setRWBuffer (name: string, buffer: Buffer): void {
+//
+//}
+//setRWTexture (name: string, texture: Texture): void {
+//
+//}
+//setSampler (name: string, sampler: Sampler): void {
+//
+//}
+//protected _setCameraValues (camera: Readonly<Camera>, cfg: Readonly<PipelineSceneData>, scene: Readonly<RenderScene>) {
+//    this.setMat4('cc_matView', camera.matView);
+//    this.setMat4('cc_matViewInv', camera.node.worldMatrix);
+//    this.setMat4('cc_matProj', camera.matProj);
+//    this.setMat4('cc_matProjInv', camera.matProjInv);
+//    this.setMat4('cc_matViewProj', camera.matViewProj);
+//    this.setMat4('cc_matViewProjInv', camera.matViewProjInv);
+//    this.setFloat4('cc_cameraPos', [camera.position.x, camera.position.y, camera.position.z, 0.0]);
+//    this.setFloat4('cc_screenScale', [cfg.shadingScale, cfg.shadingScale, 1.0 / cfg.shadingScale, 1.0 / cfg.shadingScale]);
+//    this.setFloat4('cc_exposure', [camera.exposure, 1.0 / camera.exposure, cfg.isHDR ? 1.0 : 0.0, 0.0]);
+//
+//    const mainLight = scene.mainLight;
+//    if (mainLight) {
+//        this.setFloat4('cc_mainLitDir', [mainLight.direction.x, mainLight.direction.y, mainLight.direction.z, 0.0]);
+//        let r = mainLight.color.x;
+//        let g = mainLight.color.y;
+//        let b = mainLight.color.z;
+//        if (mainLight.useColorTemperature) {
+//            r *= mainLight.colorTemperatureRGB.x;
+//            g *= mainLight.colorTemperatureRGB.y;
+//            b *= mainLight.colorTemperatureRGB.z;
+//        }
+//        let w = mainLight.illuminance;
+//        if (cfg.isHDR) {
+//            w *= camera.exposure;
+//        }
+//        this.setFloat4('cc_mainLitColor', [r, g, b, w]);
+//    } else {
+//        this.setFloat4('cc_mainLitDir', [0, 0, 1, 0]);
+//        this.setFloat4('cc_mainLitColor', [0, 0, 0, 0]);
+//    }
+//
+//    const ambient = cfg.ambient;
+//    const skyColor = ambient.skyColor;
+//    if (cfg.isHDR) {
+//        skyColor.w = ambient.skyIllum * camera.exposure;
+//    } else {
+//        skyColor.w = ambient.skyIllum;
+//    }
+//    this.setFloat4('cc_ambientSky', [skyColor.x, skyColor.y, skyColor.z, skyColor.w]);
+//    this.setFloat4('cc_ambientGround', [ambient.groundAlbedo.x, ambient.groundAlbedo.y, ambient.groundAlbedo.z, ambient.groundAlbedo.w]);
+//
+//    const fog = cfg.fog;
+//    const colorTempRGB = fog.colorArray;
+//    this.setFloat4('cc_fogColor', [colorTempRGB.x, colorTempRGB.y, colorTempRGB.z, colorTempRGB.w]);
+//    this.setFloat4('cc_fogBase', [fog.fogStart, fog.fogEnd, fog.fogDensity, 0.0]);
+//    this.setFloat4('cc_fogAdd', [fog.fogTop, fog.fogRange, fog.fogAtten, 0.0]);
+//    this.setFloat4('cc_nearFar', [camera.nearClip, camera.farClip, 0.0, 0.0]);
+//    this.setFloat4('cc_viewPort', [camera.viewport.x, camera.viewport.y, camera.viewport.z, camera.viewport.w]);
+//}
+//)");
+//        }
+//
+//        STRUCT(RasterQueue, .mFlags = NO_DEFAULT_CNTR) {
+//            INHERITS(Setter);
+//            PRIVATE(
+//                (RenderGraph&, mRenderGraph, _)
+//                (const uint32_t, mVertID, 0xFFFFFFFF)
+//                (RenderQueueData&, mQueue, _)
+//                (pipeline::PipelineSceneData&, mPipeline, _)
+//            );
+//            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mQueue, mPipeline);
+//            TS_FUNCTIONS(R"(addSceneOfCamera (camera: Camera, name = 'Camera'): RasterQueue {
+//    const sceneData = new SceneData(name);
+//    sceneData.camera = camera;
+//    this._renderGraph.addVertex<RenderGraphValue.scene>(
+//        RenderGraphValue.scene, sceneData, name, '', new RenderData(), this._vertID,
+//    );
+//    super._setCameraValues(camera, this._pipeline,
+//        camera.scene ? camera.scene : legacyCC.director.getScene().renderScene);
+//    return this;
+//}
+//addScene (sceneName: string): RasterQueue {
+//    const sceneData = new SceneData(sceneName);
+//    this._renderGraph.addVertex<RenderGraphValue.scene>(
+//        RenderGraphValue.scene, sceneData, sceneName, '', new RenderData(), this._vertID,
+//    );
+//    return this;
+//}
+//addFullscreenQuad (shader: string, name = 'Quad'): RasterQueue {
+//    this._renderGraph.addVertex<RenderGraphValue.blit>(
+//        RenderGraphValue.blit, new Blit(shader), name, '', new RenderData(), this._vertID,
+//    );
+//    return this;
+//}
+//)");
+//        }
+//                                                
+//        STRUCT(RasterPass, .mFlags = NO_DEFAULT_CNTR) {
+//            INHERITS(Setter);
+//            PRIVATE(
+//                (RenderGraph&, mRenderGraph, _)
+//                (const uint32_t, mVertID, 0xFFFFFFFF)
+//                (RasterPassData&, mPass, _)
+//                (pipeline::PipelineSceneData&, mPipeline, _)
+//            );
+//            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass, mPipeline);
+//            TS_FUNCTIONS(R"(addRasterView (name: string, view: RasterView) {
+//    this._pass.rasterViews.set(name, view);
+//}
+//addComputeView (name: string, view: ComputeView) {
+//    if (this._pass.computeViews.has(name)) {
+//        this._pass.computeViews.get(name)?.push(view);
+//    } else {
+//        this._pass.computeViews.set(name, [view]);
+//    }
+//}
+//addQueue (hint: QueueHint = QueueHint.Opaque, layoutName = '', name = 'Queue') {
+//    if (layoutName === '') {
+//        switch (hint) {
+//        case QueueHint.Opaque:
+//            layoutName = 'Opaque';
+//            break;
+//        case QueueHint.Cutout:
+//            layoutName = 'Cutout';
+//            break;
+//        case QueueHint.Transparent:
+//            layoutName = 'Transparent';
+//            break;
+//        default:
+//            throw Error('cannot infer layoutName from QueueHint');
+//        }
+//    }
+//    const queue = new RenderQueueData(hint);
+//    const data = new RenderData();
+//    const queueID = this._renderGraph.addVertex<RenderGraphValue.queue>(
+//        RenderGraphValue.queue, queue, name, layoutName, data, this._vertID,
+//    );
+//    return new RasterQueue(data, this._renderGraph, queueID, queue, this._pipeline);
+//}
+//addFullscreenQuad (shader: string, layoutName = '', name = 'Quad') {
+//    this._renderGraph.addVertex<RenderGraphValue.blit>(
+//        RenderGraphValue.blit,
+//        new Blit(shader),
+//        name, layoutName, new RenderData(), this._vertID,
+//    );
+//}
+//)");
+//        }
+//
+//        STRUCT(ComputeQueue, .mFlags = NO_DEFAULT_CNTR) {
+//            INHERITS(Setter);
+//            PRIVATE(
+//                (RenderGraph&, mRenderGraph, _)
+//                (const uint32_t, mVertID, 0xFFFFFFFF)
+//                (RenderQueueData&, mQueue, _)
+//                (pipeline::PipelineSceneData&, mPipeline, _)
+//            );
+//            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mQueue, mPipeline);
+//            TS_FUNCTIONS(R"(addDispatch (shader: string,
+//    threadGroupCountX: number,
+//    threadGroupCountY: number,
+//    threadGroupCountZ: number,
+//    layoutName = '',
+//    name = 'Dispatch') {
+//    this._renderGraph.addVertex<RenderGraphValue.dispatch>(
+//        RenderGraphValue.dispatch,
+//        new Dispatch(shader, threadGroupCountX, threadGroupCountY, threadGroupCountZ),
+//        name, layoutName, new RenderData(), this._vertID,
+//    );
+//}
+//)");
+//        }
+//
+//        STRUCT(ComputePass, .mFlags = NO_DEFAULT_CNTR) {
+//            INHERITS(Setter);
+//            PRIVATE(
+//                (RenderGraph&, mRenderGraph, _)
+//                (const uint32_t, mVertID, 0xFFFFFFFF)
+//                (ComputePassData&, mPass, _)
+//                (pipeline::PipelineSceneData&, mPipeline, _)
+//            );
+//            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass, mPipeline);
+//            TS_FUNCTIONS(R"(addComputeView (name: string, view: ComputeView) {
+//    if (this._pass.computeViews.has(name)) {
+//        this._pass.computeViews.get(name)?.push(view);
+//    } else {
+//        this._pass.computeViews.set(name, [view]);
+//    }
+//}
+//addDispatch (shader: string,
+//    threadGroupCountX: number,
+//    threadGroupCountY: number,
+//    threadGroupCountZ: number,
+//    layoutName = '',
+//    name = 'Dispatch') {
+//    this._renderGraph.addVertex<RenderGraphValue.dispatch>(
+//        RenderGraphValue.dispatch,
+//        new Dispatch(shader, threadGroupCountX, threadGroupCountY, threadGroupCountZ),
+//        name, layoutName, new RenderData(), this._vertID,
+//    );
+//}
+//)");
+//        }
+//
+//        STRUCT(MovePass, .mFlags = NO_DEFAULT_CNTR) {
+//            PRIVATE(
+//                (RenderGraph&, mRenderGraph, _)
+//                (const uint32_t, mVertID, 0xFFFFFFFF)
+//                (MovePassData&, mPass, _)
+//            );
+//            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass);
+//            TS_FUNCTIONS(R"(addMove (pair: MovePair) {
+//    this._pass.movePairs.push(pair);
+//}
+//)");
+//        }
+//                
+//        STRUCT(CopyPass, .mFlags = NO_DEFAULT_CNTR) {
+//            PRIVATE(
+//                (RenderGraph&, mRenderGraph, _)
+//                (const uint32_t, mVertID, 0xFFFFFFFF)
+//                (CopyPassData&, mPass, _)
+//            );
+//            CNTR_NO_DEFAULT(mRenderGraph, mVertID, mPass);
+//            TS_FUNCTIONS(R"(addCopy (pair: CopyPair) {
+//    this._pass.copyPairs.push(pair);
+//}
+//)");
+//        }
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     }

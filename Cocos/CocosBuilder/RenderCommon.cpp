@@ -309,12 +309,21 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsFilename = "render.ini",
         .mToJsPrefix = "render",
         .mToJsNamespace = "render",
+        .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon" },
+        .mHeader = R"(#include "renderer/gfx-base/GFXDef-common.h"
+)",
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
+
+        INTERFACE(Setter) {
+            MEMBER_FUNCTIONS(R"(
+virtual void setCBuffer(const std::string& name, gfx::Buffer* buffer) = 0;
+)");
+        }
 
         INTERFACE(Pipeline) {
             MEMBER_FUNCTIONS(R"(
