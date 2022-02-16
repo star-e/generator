@@ -144,6 +144,7 @@ virtual void setSampler(const std::string& name, gfx::Sampler* sampler) = 0;
         }
 
         INTERFACE(RasterQueue) {
+            INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
 virtual void addSceneOfCamera(scene::Camera* camera, const std::string& name) = 0;
 virtual void addSceneOfCamera(scene::Camera* camera) = 0;
@@ -155,6 +156,7 @@ virtual void addFullscreenQuad(const std::string& shader) = 0;
         }
 
         INTERFACE(RasterPass) {
+            INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
 virtual void addRasterView(const std::string& name, const RasterView& view) = 0;
 virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
@@ -168,6 +170,7 @@ virtual void addFullscreenQuad(const std::string& shader) = 0;
         }
 
         INTERFACE(ComputeQueue) {
+            INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName, const std::string& name) = 0;
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName) = 0;
@@ -176,6 +179,7 @@ virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, 
         }
 
         INTERFACE(ComputePass) {
+            INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
 virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
 

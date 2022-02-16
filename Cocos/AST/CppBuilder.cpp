@@ -946,8 +946,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 if (auto needDtor = g.needDtor(vertID, mDLL);
                     needDtor == ImplEnum::Separated || needDtor == ImplEnum::Inline) {
                     if (traits.mInterface) {
-                        bool bDerived = !get(g.inherits, g, vertID).mBases.empty();
-                        if (!bDerived && !mDLL) {
+                        if (!mDLL) {
                             oss << "\n";
                             OSS << "inline " << name << "::~" << name << "() noexcept = default;\n";
                         }
