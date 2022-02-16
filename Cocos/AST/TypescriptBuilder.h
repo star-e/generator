@@ -36,4 +36,14 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     SyntaxGraph::vertex_descriptor vertID,
     std::pmr::memory_resource* scratch);
 
+void outputMembers(std::ostream& oss, std::pmr::string& space,
+    const ModuleBuilder& builder,
+    const SyntaxGraph& g,
+    const std::pmr::vector<std::pmr::string>& inherits,
+    const std::pmr::vector<Member>& members,
+    const std::pmr::vector<std::pmr::string>& functions,
+    const std::pmr::vector<Constructor>& cntrs,
+    const std::pmr::vector<Method>& methods,
+    std::pmr::memory_resource* scratch);
+
 }

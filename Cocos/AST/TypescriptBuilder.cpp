@@ -97,7 +97,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 INDENT();
                 outputMembers(oss, space, builder, g,
                     inherits.mBases, s.mMembers,
-                    s.mTypescriptFunctions, s.mConstructors, scratch);
+                    s.mTypescriptFunctions, s.mConstructors, s.mMethods, scratch);
             }
             OSS << "}\n";
         },

@@ -1785,6 +1785,26 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
     return name;
 }
 
+std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p, bool bPublic, bool bFull) const {
+    const auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+
+    auto memberID = locate(p.mTypePath, g);
+    auto typeName = g.getTypescriptTypename(memberID, scratch, scratch);
+
+    std::pmr::string result(scratch);
+
+    if (bFull || !g.isTypescriptData(typeName)) {
+        result += ": ";
+        result += typeName;
+        if (p.mPointer) {
+            result += " | null";
+        }
+    }
+
+    return result;
+}
+
 std::pmr::string ModuleBuilder::getTypescriptVertexName(SyntaxGraph::vertex_descriptor vertID,
     std::string_view descName) const {
     auto scratch = get_allocator().resource();

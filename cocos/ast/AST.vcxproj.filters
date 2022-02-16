@@ -163,6 +163,9 @@
     <ClCompile Include="CppMethod.cpp">
       <Filter>2.Builder</Filter>
     </ClCompile>
+    <ClCompile Include="TypescriptStructBuilder.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="1.Syntax">
