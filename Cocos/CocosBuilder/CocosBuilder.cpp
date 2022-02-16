@@ -52,6 +52,10 @@ int main() {
         // relate c++ to ts
         projectTypescriptDefaultValues(builder);
 
+        // build cocos common
+        buildCocosCommon(builder,
+            Fwd | Types | Names | Reflection | Typescripts);
+
         // build render pipeline
         buildRenderCommon(builder,
             Fwd | Types | Names | Reflection | Typescripts | Jsb);

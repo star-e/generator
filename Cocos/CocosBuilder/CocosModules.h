@@ -3,6 +3,8 @@
 
 namespace Cocos::Meta {
 
+void buildCocosCommon(ModuleBuilder& builder, Features features);
+
 void buildLayoutGraph(ModuleBuilder& builder, Features features);
 void buildRenderCommon(ModuleBuilder& builder, Features features);
 void buildRenderGraph(ModuleBuilder& builder, Features features);

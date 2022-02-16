@@ -45,7 +45,7 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
             [&](const Struct& s) {
                 oss << "\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
-                    << " &from, se::Value &to, se::Object *ctx);\n";
+                    << " &from, se::Value &to, se::Object *ctx); // NOLINT\n";
             },
             [&](const Variant& s) {
                 if (!g.isTag(vertID))
@@ -53,7 +53,7 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
 
                 oss << "\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
-                    << " &from, se::Value &to, se::Object *ctx);\n";
+                    << " &from, se::Value &to, se::Object *ctx); // NOLINT\n";
             },
             [&](const auto&) {
             });
@@ -103,7 +103,7 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
             [&](const Struct& s) {
                 oss << "\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
-                    << " &from, se::Value &to, se::Object *ctx) {\n";
+                    << " &from, se::Value &to, se::Object *ctx) { // NOLINT\n";
                 {
                     INDENT();
                     OSS << "se::HandleObject obj(se::Object::createPlainObject());\n";
@@ -113,6 +113,8 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
                     }
 
                     for (const auto& member : s.mMembers) {
+                        auto memberID = locate(member.mTypePath, g);
+                        Expects(g.isJsb(memberID, mg));
                         oss << "\n";
                         OSS << "nativevalue_to_se(from." << member.mMemberName << ", tmp, ctx);\n";
                         OSS << "obj->setProperty(\""
@@ -131,7 +133,7 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
 
                 oss << "\n";
                 OSS << "bool nativevalue_to_se(const " << cppName
-                    << " &from, se::Value &to, se::Object *ctx) {\n";
+                    << " &from, se::Value &to, se::Object *ctx) { // NOLINT\n";
                 {
                     INDENT();
                     OSS << "to.setInt32(static_cast<int32_t>(from.index()));\n";

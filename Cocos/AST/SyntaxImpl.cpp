@@ -247,6 +247,40 @@ bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const n
     return !m.mAPI.empty();
 }
 
+bool SyntaxGraph::isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept {
+    const auto& g = *this;
+
+    if (g.isValueType(vertID))
+        return true;
+
+    const auto& modulePath = get(g.modulePaths, g, vertID);
+    const auto& moduleID = locate(modulePath, mg);
+
+    if (moduleID == mg.null_vertex()) {
+        const auto& traits = get(g.traits, g, vertID);
+        if (traits.mFlags & JSB) {
+            return true;
+        }
+    } else {
+        const auto& m = get(mg.modules, mg, moduleID);
+
+        if (m.mFeatures & ToJs) {
+            return true;
+        }
+
+        if (!(m.mFeatures & Jsb)) {
+            return false;
+        }
+
+        const auto& traits = get(g.traits, g, vertID);
+        if (traits.mFlags & JSB) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool SyntaxGraph::isDerived(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     return !get(g.inherits, g, vertID).mBases.empty();
@@ -1508,17 +1542,19 @@ void addImported(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g,
     visit_vertex(
         vertID, g,
         [&](const Composition_ auto& s) {
-            for (const Member& m : s.mMembers) {
-                auto memberID = locate(m.mTypePath, g);
-                addImported(memberID, g, modulePath, imported);
-            }
-            for (const Method& m : s.mMethods) {
-                for (const auto& param : m.mParameters) {
-                    auto paramID = locate(param.mTypePath, g);
+            if (false) { // non-recursive
+                for (const Member& m : s.mMembers) {
+                    auto memberID = locate(m.mTypePath, g);
+                    addImported(memberID, g, modulePath, imported);
+                }
+                for (const Method& m : s.mMethods) {
+                    for (const auto& param : m.mParameters) {
+                        auto paramID = locate(param.mTypePath, g);
+                        addImported(paramID, g, modulePath, imported);
+                    }
+                    auto paramID = locate(m.mReturnType.mTypePath, g);
                     addImported(paramID, g, modulePath, imported);
                 }
-                auto paramID = locate(m.mReturnType.mTypePath, g);
-                addImported(paramID, g, modulePath, imported);
             }
         },
         [&](const Instance& s) {

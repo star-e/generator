@@ -35,6 +35,9 @@ THE SOFTWARE.
     if (auto m = builder.openModule(BOOST_PP_STRINGIZE(NAME), \
         ModuleInfo{ .mFeatures = features, __VA_ARGS__ }); true)
 
+#define ADD_FEATURES(...) \
+    get(ModuleGraph::modules, builder.mModuleGraph, m.mVertexDescriptor).mFeatures |= __VA_ARGS__
+
 #define NAMESPACE(NAME) \
     if (auto ns = builder.openNamespace(BOOST_PP_STRINGIZE(NAME)); true)
 
@@ -88,21 +91,21 @@ builder.addEnumElement(vertID, \
     if (auto vertID = builder.addFlag(BOOST_PP_STRINGIZE(NAME), \
         Traits{ .mImport = true }); true)
 
-#define IMPORT_CLASS(NAME) \
+#define IMPORT_CLASS(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = true }); true)
+        Traits{ .mImport = true, .mClass = true, __VA_ARGS__ }); true)
 
-#define IMPORT_PMR_CLASS(NAME) \
+#define IMPORT_PMR_CLASS(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = true, .mPmr = true }); true)
+        Traits{ .mImport = true, .mClass = true, .mPmr = true, __VA_ARGS__ }); true)
 
-#define IMPORT_STRUCT(NAME) \
+#define IMPORT_STRUCT(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = false }); true)
+        Traits{ .mImport = true, .mClass = false, __VA_ARGS__ }); true)
 
-#define IMPORT_PMR_STRUCT(NAME) \
+#define IMPORT_PMR_STRUCT(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = false, .mPmr = true }); true)
+        Traits{ .mImport = true, .mClass = false, .mPmr = true, __VA_ARGS__ }); true)
 
 #define STRUCT(NAME, ...) \
     for (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); \

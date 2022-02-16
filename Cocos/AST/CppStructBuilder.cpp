@@ -769,7 +769,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
             oss << "\n";
             OSS << api << name << "(const allocator_type& alloc";
             if (traits.mFlags & GenerationFlags::PMR_DEFAULT) {
-                oss << " = std::pmr::get_default_resource()";
+                oss << " = boost::container::pmr::get_default_resource()";
             }
             oss << ")";
             if (bNoexcept) {
@@ -1291,7 +1291,7 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
                     oss << ", ";
                 oss << "const allocator_type& alloc";
                 if (bInline && (traits.mFlags & GenerationFlags::PMR_DEFAULT)) {
-                    oss << " = std::pmr::get_default_resource()";
+                    oss << " = boost::container::pmr::get_default_resource()";
                 }
             }
         },

@@ -1310,7 +1310,17 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Fwd.h\"\n";
             OSS << "#include \"bindings/manual/jsb_conversions.h\"\n";
-
+            const auto included = getIndirectIncludes(moduleID, mg, scratch);
+            for (const auto& require : m.mRequires) {
+                auto moduleID = locate(mg.null_vertex(), require, mg);
+                if (included.contains(moduleID))
+                    continue;
+                const auto& dep = get(mg.modules, mg, moduleID);
+                auto ccDepFolder = std::string_view(dep.mFolder).substr(6);
+                if (!dep.mFilePrefix.ends_with(".h")) {
+                    OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Jsb.h\"\n";
+                }
+            }
             copyString(oss, generateJsbConversions_h(*this, moduleID));
 
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
@@ -1328,17 +1338,6 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             OSS << "// clang-format off\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Jsb.h\"\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
-            const auto included = getIndirectIncludes(moduleID, mg, scratch);
-            for (const auto& require : m.mRequires) {
-                auto moduleID = locate(mg.null_vertex(), require, mg);
-                if (included.contains(moduleID))
-                    continue;
-                const auto& dep = get(mg.modules, mg, moduleID);
-                auto ccDepFolder = std::string_view(dep.mFolder).substr(6);
-                if (!dep.mFilePrefix.ends_with(".h")) {
-                    OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Jsb.h\"\n";
-                }
-            }
             OSS << "#include \"renderer/pipeline/custom/JsbConversion.h\"\n";
             copyString(oss, generateJsbConversions_cpp(*this, moduleID));
 

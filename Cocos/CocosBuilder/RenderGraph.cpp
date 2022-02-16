@@ -142,7 +142,7 @@ bool hasSideEffects() const noexcept {
             ENUMS(Read, ReadWrite, Write);
         }
 
-        STRUCT(RasterView) {
+        STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT) {
             PUBLIC(
                 (PmrString, mSlotName, _)
                 (AccessType, mAccessType, AccessType::Write)

@@ -38,7 +38,7 @@ android_flags = -target armv7-none-linux-androideabi -D_LIBCPP_DISABLE_VISIBILIT
 clang_headers =
 clang_flags = -nostdinc -x c++ -std=c++17 -fsigned-char -mfloat-abi=soft -U__SSE__
 
-cocos_headers = -I%(cocosdir)s/cocos -I%(cocosdir)s/cocos/platform/android -I%(cocosdir)s/external/sources
+cocos_headers = -I%(cocosdir)s -I%(cocosdir)s/cocos -I%(cocosdir)s/cocos/renderer -I%(cocosdir)s/cocos/platform/android -I%(cocosdir)s/external/sources
 cocos_flags = -DANDROID -DCC_PLATFORM=3 -DCC_PLATFORM_MAC_IOS=1 -DCC_PLATFORM_MAC_OSX=4 -DCC_PLATFORM_WINDOWS=2 -DCC_PLATFORM_ANDROID=3
 
 
@@ -54,7 +54,29 @@ extra_arguments = %(android_headers)s %(clang_headers)s %(cxxgenerator_headers)s
     oss << "\n";
     OSS << "hpp_headers =" << m.mToJsHppHeaders << "\n";
     oss << "\n";
-    OSS << "cpp_headers =" << m.mToJsCppHeaders << "\n";
+    OSS << "cpp_headers =" << m.mToJsCppHeaders;
+    {
+        auto modulePath = get_path(moduleID, mg, scratch);
+        auto imported = g.getImportedTypes(modulePath, scratch);
+        for (const auto& [depPath, types] : imported) {
+            auto depID = locate(depPath, mg);
+            const auto& dep = get(mg.modules, mg, depID);
+
+            for (const auto& type : types) {
+                auto typeID = locate(type, g);
+                Expects(g.isJsb(typeID, mg));
+            }
+
+            const auto& depTraits = get(mg.modules, mg, depID);
+            if (depTraits.mFeatures & Jsb) {
+                Expects(!dep.mFolder.empty());
+                Expects(!dep.mFilePrefix.empty());
+                Expects(!dep.mFilePrefix.ends_with(".h"));
+                oss << " " << dep.mFolder << "/" << dep.mFilePrefix << "Jsb.h";
+            }
+        }
+    }
+    oss << "\n";
 
     OSS << R"(
 replace_headers =

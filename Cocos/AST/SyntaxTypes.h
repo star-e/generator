@@ -1088,6 +1088,7 @@ struct SyntaxGraph {
     bool isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept;
     bool isOptional(vertex_descriptor vertID) const noexcept;
     bool isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
+    bool isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
 
     // struct
     bool isDerived(vertex_descriptor vertID) const noexcept;
