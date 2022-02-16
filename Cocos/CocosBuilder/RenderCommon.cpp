@@ -106,7 +106,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon", "RenderGraph" },
-        .mHeader = R"(#include "renderer/gfx-base/GFXDef-common.h"
+        .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {
 

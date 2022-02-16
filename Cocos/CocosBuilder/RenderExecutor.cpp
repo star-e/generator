@@ -37,8 +37,8 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "executor",
         .mRequires = { "RenderCommon", /*"RenderGraph", */"Gfx" },
-        .mHeader = R"(#include "renderer/gfx-base/GFXBuffer.h"
-#include "renderer/gfx-base/GFXTexture.h"
+        .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"
+#include "cocos/renderer/gfx-base/GFXTexture.h"
 )") {
         NAMESPACE(cc) {
             NAMESPACE(render) {
