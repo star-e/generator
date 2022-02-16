@@ -47,9 +47,9 @@ auto visit_vertex(typename GraphT::vertex_descriptor v, GraphT &g, Ts... args) {
 }
 
 template <typename V>
-auto variant_from_index(size_t index) -> V {
+auto variant_from_index(size_t index) -> V { // NOLINT
     return boost::mp11::mp_with_index<boost::mp11::mp_size<V>>(index,
-        [](auto I) { return V(boost::variant2::in_place_index<I>); });
+        [](auto i) { return V(boost::variant2::in_place_index<i>); });
 }
 
 } // namespace cc

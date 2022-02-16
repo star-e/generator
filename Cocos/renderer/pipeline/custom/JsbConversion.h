@@ -27,7 +27,6 @@ inline bool nativevalue_to_se( // NOLINT(readability-identifier-naming)
 
 template <typename T, typename allocator>
 bool sevalue_to_native(const se::Value& from, boost::container::vector<T, allocator>* to, se::Object* ctx) { // NOLINT(readability-identifier-naming)
-
     if (from.isNullOrUndefined()) {
         to->clear();
         return true;
@@ -66,7 +65,7 @@ bool sevalue_to_native(const se::Value& from, boost::container::vector<T, alloca
 inline bool sevalue_to_native(const se::Value& from, cc::PmrString* to, se::Object* /*ctx*/) { // NOLINT(readability-identifier-naming)
     if (!from.isNullOrUndefined()) {
         const auto& str = from.toString();
-        (*to).assign(str.begin(), str.end());
+        to->assign(str.begin(), str.end());
     } else {
         to->clear();
     }
