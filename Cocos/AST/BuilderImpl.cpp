@@ -1414,7 +1414,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             outputTypescript(oss, space, codegen, * this, "", vertID, scratch);
         }
 
-        if (true) {
+        if (false) {
             OSS << "/*\n";
             OSS << "import {";
             for (int count = 0; const auto& vertID : make_range(vertices(g))) {

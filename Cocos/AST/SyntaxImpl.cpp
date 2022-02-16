@@ -1512,6 +1512,14 @@ void addImported(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g,
                 auto memberID = locate(m.mTypePath, g);
                 addImported(memberID, g, modulePath, imported);
             }
+            for (const Method& m : s.mMethods) {
+                for (const auto& param : m.mParameters) {
+                    auto paramID = locate(param.mTypePath, g);
+                    addImported(paramID, g, modulePath, imported);
+                }
+                auto paramID = locate(m.mReturnType.mTypePath, g);
+                addImported(paramID, g, modulePath, imported);
+            }
         },
         [&](const Instance& s) {
             for (const auto& p : s.mParameters) {
@@ -1539,6 +1547,14 @@ PmrMap<std::pmr::string, PmrSet<std::pmr::string>> SyntaxGraph::getImportedTypes
                 for (const Member& m : s.mMembers) {
                     auto memberID = locate(m.mTypePath, g);
                     addImported(memberID, g, modulePath, imported);
+                }
+                for (const Method& m : s.mMethods) {
+                    for (const auto& param : m.mParameters) {
+                        auto paramID = locate(param.mTypePath, g);
+                        addImported(paramID, g, modulePath, imported);
+                    }
+                    auto paramID = locate(m.mReturnType.mTypePath, g);
+                    addImported(paramID, g, modulePath, imported);
                 }
             },
             [](const auto&) {});
