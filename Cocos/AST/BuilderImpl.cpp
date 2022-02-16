@@ -1339,6 +1339,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Jsb.h\"\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
             OSS << "#include \"cocos/renderer/pipeline/custom/JsbConversion.h\"\n";
+            copyString(oss, space, m.mJsbHeaders);
             copyString(oss, generateJsbConversions_cpp(*this, moduleID));
 
             updateFile(filename1, reorderIncludes(oss.str(), scratch));

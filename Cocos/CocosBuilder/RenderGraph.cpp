@@ -34,6 +34,8 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
     MODULE(RenderGraph,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderGraph",
+        .mJsbHeaders = R"(#include "cocos/bindings/auto/jsb_gfx_auto.h"
+)",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "render-graph",
         .mRequires = { "RenderCommon", "Gfx", "Camera", "PipelineSceneData" },

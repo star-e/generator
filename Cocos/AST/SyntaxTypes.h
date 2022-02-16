@@ -1305,6 +1305,7 @@ struct ModuleInfo {
     Features mFeatures = {};
     std::string mFolder;
     std::string mFilePrefix;
+    std::string mJsbHeaders;
     std::string mToJsFilename;
     std::string mToJsPrefix;
     std::string mToJsNamespace;
