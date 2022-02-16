@@ -31,6 +31,23 @@ THE SOFTWARE.
 namespace Cocos::Meta {
 
 void buildRenderCommon(ModuleBuilder& builder, Features features) {
+    MODULE(Math,
+        .mTypescriptFolder = "cocos/core",
+        .mTypescriptFilePrefix = "math", ) {
+        NAMESPACE(cc) {
+            IMPORT_CLASS(Mat4);
+            IMPORT_CLASS(Mat3);
+            IMPORT_CLASS(Quaternion);
+            PROJECT_TS(Quaternion, Quat);
+            IMPORT_CLASS(Color);
+            IMPORT_CLASS(Vec4);
+            IMPORT_CLASS(Vec3);
+            IMPORT_CLASS(Vec2);
+            IMPORT_CLASS(Size);
+            IMPORT_CLASS(Rect);
+        }
+    }
+
     MODULE(Camera,
         .mFolder = "cocos/scene",
         .mFilePrefix = "Camera.h",
@@ -314,6 +331,19 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon" },
         .mHeader = R"(#include "renderer/gfx-base/GFXDef-common.h"
+namespace cc {
+
+class Mat4;
+class Mat4;
+class Quaternion;
+class Color;
+class Vec4;
+class Vec3;
+class Vec2;
+class Size;
+class Rect;
+
+} // namespace cc
 )",
     ) {
         NAMESPACE_BEG(cc);
@@ -321,6 +351,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
 
         INTERFACE(Setter) {
             MEMBER_FUNCTIONS(R"(
+virtual void setMat4(const std::string& name, const cc::Mat4& mat) = 0;
 virtual void setCBuffer(const std::string& name, gfx::Buffer* buffer) = 0;
 )");
         }

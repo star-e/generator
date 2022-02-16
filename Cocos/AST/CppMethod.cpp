@@ -17,7 +17,7 @@ std::pmr::vector<std::pmr::string> splitFunctions(
         std::pmr::string func(functions.substr(funcBeg, funcEnd - funcBeg), scratch);
         convertTypename(func);
         results.emplace_back(std::move(func));
-        funcBeg = pos;
+        funcBeg = pos + 1;
     }
     return results;
 }

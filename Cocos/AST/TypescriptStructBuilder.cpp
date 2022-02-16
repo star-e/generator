@@ -151,8 +151,10 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         OSS << "}\n";
     }
 
+    if (false && !methods.empty()) {
+        OSS << "// API\n";
+    }
     for (const auto& method : methods) {
-        OSS << "// APIs\n";
         OSS << "public ";
         if (method.mPure)
             oss << "abstract ";
