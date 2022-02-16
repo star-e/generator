@@ -151,9 +151,13 @@ Method parseFunction(const ModuleBuilder& builder, std::string_view function) {
 
     // function name
     {
-        auto funcBeg = function.rfind(' ');
+        auto funcBeg = function.find_last_of(" *&>");
         method.mFunctionName = function.substr(funcBeg + 1);
-        function = function.substr(0, funcBeg);
+        if (function[funcBeg] == ' ') {
+            function = function.substr(0, funcBeg);
+        } else {
+            function = function.substr(0, funcBeg + 1);
+        }
     }
 
     // return type

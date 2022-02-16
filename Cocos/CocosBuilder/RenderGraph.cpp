@@ -165,7 +165,7 @@ bool hasSideEffects() const noexcept {
             ENUMS(Float, Int);
         }
 
-        STRUCT(ComputeView) {
+        STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT) {
             PUBLIC(
                 (PmrString, mName, _)
                 (AccessType, mAccessType, AccessType::Read)
@@ -214,7 +214,7 @@ bool isWrite() const {
             );
         }
 
-        STRUCT(CopyPair) {
+        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB) {
             PUBLIC(
                 (PmrString, mSource, _)
                 (PmrString, mTarget, _)
@@ -238,7 +238,7 @@ bool isWrite() const {
             );
         }
 
-        STRUCT(MovePair) {
+        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB) {
             PUBLIC(
                 (PmrString, mSource, _)
                 (PmrString, mTarget, _)

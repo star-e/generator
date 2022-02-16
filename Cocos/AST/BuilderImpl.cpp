@@ -1374,6 +1374,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         codegen.mScopes.emplace_back("Struct");
 
         {
+            OSS << "/* eslint-disable max-len */\n";
             int count = 0;
             if (g.moduleHasGraph(modulePath)) {
                 ++count;
@@ -1387,7 +1388,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 for (const auto& type : m.second) {
                     if (count++)
                         oss << ", ";
-                    oss << extractName(type);
+                    oss << g.getTypescriptTypename(type, scratch, scratch);
                 }
                 oss << " } from '";
 

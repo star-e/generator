@@ -56,6 +56,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/core/renderer/scene",
         .mTypescriptFilePrefix = "camera",
     ) {
+        ADD_FEATURES(ToJs);
+
         NAMESPACE(cc) {
             NAMESPACE(scene) {
                 IMPORT_STRUCT(Camera);

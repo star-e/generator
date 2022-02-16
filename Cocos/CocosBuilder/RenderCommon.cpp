@@ -102,7 +102,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsFilename = "render.ini",
         .mToJsPrefix = "render",
         .mToJsNamespace = "render",
-        .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h",
+        .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon", "RenderGraph" },
@@ -129,19 +129,91 @@ class Rect;
         INTERFACE(Setter) {
             MEMBER_FUNCTIONS(R"(
 virtual void setMat4(const std::string& name, const cc::Mat4& mat) = 0;
-virtual void setCBuffer(const std::string& name, gfx::Buffer* buffer) = 0;
+virtual void setQuaternion(const std::string& name, const cc::Quaternion& quat) = 0;
+virtual void setColor(const std::string& name, const cc::Color& color) = 0;
+virtual void setVec4(const std::string& name, const cc::Vec4& vec) = 0;
+virtual void setVec2(const std::string& name, const cc::Vec2& vec) = 0;
+virtual void setFloat(const std::string& name, float v) = 0;
+
+virtual void setBuffer(const std::string& name, gfx::Buffer* buffer) = 0;
+virtual void setTexture(const std::string& name, gfx::Texture* texture) = 0;
+virtual void setReadWriteBuffer(const std::string& name, gfx::Buffer* buffer) = 0;
+virtual void setReadWriteTexture(const std::string& name, gfx::Texture* texture) = 0;
+virtual void setSampler(const std::string& name, gfx::Sampler* sampler) = 0;
+)");
+        }
+
+        INTERFACE(RasterQueue) {
+            MEMBER_FUNCTIONS(R"(
+virtual void addSceneOfCamera(scene::Camera* camera, const std::string& name) = 0;
+virtual void addSceneOfCamera(scene::Camera* camera) = 0;
+virtual void addScene(const std::string& name) = 0;
+virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName, const std::string& name) = 0;
+virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName) = 0;
+virtual void addFullscreenQuad(const std::string& shader) = 0;
 )");
         }
 
         INTERFACE(RasterPass) {
             MEMBER_FUNCTIONS(R"(
 virtual void addRasterView(const std::string& name, const RasterView& view) = 0;
+virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
+virtual RasterQueue* addQueue(QueueHint hint, const std::string& layoutName, const std::string& name) = 0;
+virtual RasterQueue* addQueue(QueueHint hint, const std::string& layoutName) = 0;
+virtual RasterQueue* addQueue(QueueHint hint) = 0;
+virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName, const std::string& name) = 0;
+virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName) = 0;
+virtual void addFullscreenQuad(const std::string& shader) = 0;
+)");
+        }
+
+        INTERFACE(ComputeQueue) {
+            MEMBER_FUNCTIONS(R"(
+virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName, const std::string& name) = 0;
+virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName) = 0;
+virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
+)");
+        }
+
+        INTERFACE(ComputePass) {
+            MEMBER_FUNCTIONS(R"(
+virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
+
+virtual ComputeQueue* addQueue(const std::string& layoutName, const std::string& name) = 0;
+virtual ComputeQueue* addQueue(const std::string& layoutName) = 0;
+virtual ComputeQueue* addQueue() = 0;
+
+virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName, const std::string& name) = 0;
+virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName) = 0;
+virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
+)");
+        }
+
+        INTERFACE(MovePass) {
+            MEMBER_FUNCTIONS(R"(
+virtual void addPair(const MovePair& pair) = 0;
+)");
+        }
+
+        INTERFACE(CopyPass) {
+            MEMBER_FUNCTIONS(R"(
+virtual void addPair(const CopyPair& pair) = 0;
 )");
         }
 
         INTERFACE(Pipeline) {
             MEMBER_FUNCTIONS(R"(
 virtual uint32_t addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
+virtual uint32_t addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
+virtual uint32_t addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
+virtual void beginFrame() = 0;
+virtual void endFrame() = 0;
+virtual RasterPass* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
+virtual RasterPass* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;
+virtual ComputePass* addComputePass(const std::string& layoutName, const std::string& name) = 0;
+virtual ComputePass* addComputePass(const std::string& layoutName) = 0;
+virtual MovePass* addMovePass(const std::string& name) = 0;
+virtual CopyPass* addCopyPass(const std::string& name) = 0;
 )");
         }
 
