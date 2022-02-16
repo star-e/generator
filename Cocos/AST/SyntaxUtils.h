@@ -28,6 +28,10 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+// Basics
+size_t findEndMatch(std::string_view str, const char left, const char right, size_t pos);
+size_t findBegMatch(std::string_view str, const char left, const char right, size_t pos);
+
 // Typename
 void removeParenthesis(std::pmr::string& name);
 void convertTypename(std::pmr::string& name);

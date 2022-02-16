@@ -183,6 +183,51 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
 
 Member::~Member() noexcept = default;
 
+Parameter::Parameter(const allocator_type& alloc) noexcept
+    : mTypePath(alloc)
+    , mName(alloc) {}
+
+Parameter::Parameter(Parameter&& rhs, const allocator_type& alloc)
+    : mTypePath(std::move(rhs.mTypePath), alloc)
+    , mName(std::move(rhs.mName), alloc)
+    , mConst(std::move(rhs.mConst))
+    , mPointer(std::move(rhs.mPointer))
+    , mReference(std::move(rhs.mReference)) {}
+
+Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
+    : mTypePath(rhs.mTypePath, alloc)
+    , mName(rhs.mName, alloc)
+    , mConst(rhs.mConst)
+    , mPointer(rhs.mPointer)
+    , mReference(rhs.mReference) {}
+
+Parameter::~Parameter() noexcept = default;
+
+Method::Method(const allocator_type& alloc) noexcept
+    : mReturnType(alloc)
+    , mFunctionName(alloc)
+    , mParameters(alloc) {}
+
+Method::Method(Method&& rhs, const allocator_type& alloc)
+    : mReturnType(std::move(rhs.mReturnType), alloc)
+    , mFunctionName(std::move(rhs.mFunctionName), alloc)
+    , mParameters(std::move(rhs.mParameters), alloc)
+    , mVirtual(std::move(rhs.mVirtual))
+    , mConst(std::move(rhs.mConst))
+    , mNoexcept(std::move(rhs.mNoexcept))
+    , mPure(std::move(rhs.mPure)) {}
+
+Method::Method(Method const& rhs, const allocator_type& alloc)
+    : mReturnType(rhs.mReturnType, alloc)
+    , mFunctionName(rhs.mFunctionName, alloc)
+    , mParameters(rhs.mParameters, alloc)
+    , mVirtual(rhs.mVirtual)
+    , mConst(rhs.mConst)
+    , mNoexcept(rhs.mNoexcept)
+    , mPure(rhs.mPure) {}
+
+Method::~Method() noexcept = default;
+
 Constructor::Constructor(const allocator_type& alloc) noexcept
     : mIndices(alloc) {}
 
@@ -201,21 +246,24 @@ Struct::Struct(const allocator_type& alloc) noexcept
     , mConstructors(alloc)
     , mMemberFunctions(alloc)
     , mTypescriptMembers(alloc)
-    , mTypescriptFunctions(alloc) {}
+    , mTypescriptFunctions(alloc)
+    , mMethods(alloc) {}
 
 Struct::Struct(Struct&& rhs, const allocator_type& alloc)
     : mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
     , mMemberFunctions(std::move(rhs.mMemberFunctions), alloc)
     , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
-    , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc) {}
+    , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc)
+    , mMethods(std::move(rhs.mMethods), alloc) {}
 
 Struct::Struct(Struct const& rhs, const allocator_type& alloc)
     : mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
     , mMemberFunctions(rhs.mMemberFunctions, alloc)
     , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
-    , mTypescriptFunctions(rhs.mTypescriptFunctions, alloc) {}
+    , mTypescriptFunctions(rhs.mTypescriptFunctions, alloc)
+    , mMethods(rhs.mMethods, alloc) {}
 
 Struct::~Struct() noexcept = default;
 
@@ -421,6 +469,7 @@ Graph::Graph(const allocator_type& alloc) noexcept
     : mMembers(alloc)
     , mConstructors(alloc)
     , mMemberFunctions(alloc)
+    , mMethods(alloc)
     , mVertexProperty(alloc)
     , mEdgeProperty(alloc)
     , mComponents(alloc)
@@ -435,6 +484,7 @@ Graph::Graph(Graph&& rhs, const allocator_type& alloc)
     : mMembers(std::move(rhs.mMembers), alloc)
     , mConstructors(std::move(rhs.mConstructors), alloc)
     , mMemberFunctions(std::move(rhs.mMemberFunctions), alloc)
+    , mMethods(std::move(rhs.mMethods), alloc)
     , mVertexProperty(std::move(rhs.mVertexProperty), alloc)
     , mEdgeProperty(std::move(rhs.mEdgeProperty), alloc)
     , mComponents(std::move(rhs.mComponents), alloc)
@@ -476,6 +526,7 @@ Graph::Graph(Graph const& rhs, const allocator_type& alloc)
     : mMembers(rhs.mMembers, alloc)
     , mConstructors(rhs.mConstructors, alloc)
     , mMemberFunctions(rhs.mMemberFunctions, alloc)
+    , mMethods(rhs.mMethods, alloc)
     , mVertexProperty(rhs.mVertexProperty, alloc)
     , mEdgeProperty(rhs.mEdgeProperty, alloc)
     , mComponents(rhs.mComponents, alloc)

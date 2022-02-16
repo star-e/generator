@@ -104,6 +104,9 @@
     <ClInclude Include="ToJsBuilder.h">
       <Filter>2.Builder</Filter>
     </ClInclude>
+    <ClInclude Include="CppMethod.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SyntaxReflection.cpp">
@@ -155,6 +158,9 @@
       <Filter>2.Builder</Filter>
     </ClCompile>
     <ClCompile Include="ToJsBuilder.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="CppMethod.cpp">
       <Filter>2.Builder</Filter>
     </ClCompile>
   </ItemGroup>

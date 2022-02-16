@@ -54,7 +54,6 @@ enum GenerationFlags : uint64_t {
     PMR_DEFAULT = 1 << 17,
     IMPL_DETAIL = 1 << 18,
     JSB = 1 << 19,
-    TO_JS = 1 << 20,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -296,6 +295,54 @@ struct Member {
     bool mTypescriptArray = false;
 };
 
+struct Parameter {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mTypePath.get_allocator().resource());
+    }
+
+    Parameter(const allocator_type& alloc) noexcept;
+    Parameter(Parameter&& rhs, const allocator_type& alloc);
+    Parameter(Parameter const& rhs, const allocator_type& alloc);
+
+    Parameter(Parameter&& rhs) = default;
+    Parameter(Parameter const& rhs) = delete;
+    Parameter& operator=(Parameter&& rhs) = default;
+    Parameter& operator=(Parameter const& rhs) = default;
+    ~Parameter() noexcept;
+
+    std::pmr::string mTypePath;
+    std::pmr::string mName;
+    bool mConst = false;
+    bool mPointer = false;
+    bool mReference = false;
+};
+
+struct Method {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mReturnType.get_allocator().resource());
+    }
+
+    Method(const allocator_type& alloc) noexcept;
+    Method(Method&& rhs, const allocator_type& alloc);
+    Method(Method const& rhs, const allocator_type& alloc);
+
+    Method(Method&& rhs) = default;
+    Method(Method const& rhs) = delete;
+    Method& operator=(Method&& rhs) = default;
+    Method& operator=(Method const& rhs) = default;
+    ~Method() noexcept;
+
+    Parameter mReturnType;
+    std::pmr::string mFunctionName;
+    std::pmr::vector<Parameter> mParameters;
+    bool mVirtual = false;
+    bool mConst = false;
+    bool mNoexcept = false;
+    bool mPure = false;
+};
+
 struct Constructor {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
@@ -337,6 +384,7 @@ struct Struct {
     std::pmr::vector<std::pmr::string> mMemberFunctions;
     std::pmr::vector<Member> mTypescriptMembers;
     std::pmr::vector<std::pmr::string> mTypescriptFunctions;
+    std::pmr::vector<Method> mMethods;
 };
 
 struct Variant {
@@ -825,6 +873,7 @@ struct Graph {
     std::pmr::vector<Member> mMembers;
     std::pmr::vector<Constructor> mConstructors;
     std::pmr::vector<std::pmr::string> mMemberFunctions;
+    std::pmr::vector<Method> mMethods;
     std::pmr::string mVertexProperty;
     std::pmr::string mEdgeProperty;
     std::pmr::vector<Component> mComponents;

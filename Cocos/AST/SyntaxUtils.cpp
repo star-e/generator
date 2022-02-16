@@ -28,6 +28,48 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+size_t findEndMatch(std::string_view str, const char left, const char right, size_t pos) {
+    int count = 0;
+    Expects(pos < str.size());
+    Expects(left == str[pos]);
+
+    for (; pos != str.size(); ++pos) {
+        if (left == str[pos]) {
+            ++count;
+        }
+        if (right == str[pos]) {
+            --count;
+        }
+        if (count == 0) {
+            return pos;
+        }
+    }
+    Expects(false); // not matched
+    return std::string_view::npos;
+}
+
+size_t findBegMatch(std::string_view str, const char left, const char right, size_t pos) {
+    int count = 0;
+    Expects(pos < str.size());
+    Expects(right == str[pos]);
+
+    if (right == str[pos])
+        ++count;
+
+    while (pos-- > 0) {
+        if (right == str[pos]) {
+            ++count;
+        }
+        if (left == str[pos])
+            --count;
+        if (count == 0) {
+            return pos;
+        }
+    }
+    Expects(false); // not matched
+    return std::string_view::npos;
+}
+
 // Typename
 void removeParenthesis(std::pmr::string& name) {
     boost::algorithm::trim(name);
@@ -80,6 +122,46 @@ void convertTypename(std::pmr::string& path) {
 
     while (boost::algorithm::contains(path, " /")) {
         boost::algorithm::replace_all(path, " /", "/");
+    }
+
+    while (boost::algorithm::contains(path, "= ")) {
+        boost::algorithm::replace_all(path, "= ", "=");
+    }
+
+    while (boost::algorithm::contains(path, " =")) {
+        boost::algorithm::replace_all(path, " =", "=");
+    }
+
+    while (boost::algorithm::contains(path, "& ")) {
+        boost::algorithm::replace_all(path, "& ", "&");
+    }
+
+    while (boost::algorithm::contains(path, " &")) {
+        boost::algorithm::replace_all(path, " &", "&");
+    }
+
+    while (boost::algorithm::contains(path, "* ")) {
+        boost::algorithm::replace_all(path, "* ", "*");
+    }
+
+    while (boost::algorithm::contains(path, " *")) {
+        boost::algorithm::replace_all(path, " *", "*");
+    }
+
+    while (boost::algorithm::contains(path, "[[ ")) {
+        boost::algorithm::replace_all(path, "[[ ", "[[");
+    }
+
+    while (boost::algorithm::contains(path, " [[")) {
+        boost::algorithm::replace_all(path, " [[", "[[");
+    }
+
+    while (boost::algorithm::contains(path, "]] ")) {
+        boost::algorithm::replace_all(path, "]] ", "]]");
+    }
+
+    while (boost::algorithm::contains(path, " ]]")) {
+        boost::algorithm::replace_all(path, " ]]", "]]");
     }
 
     while (boost::algorithm::contains(path, "  ")) {

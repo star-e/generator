@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "CppBuilder.h"
 #include "JsbBuilder.h"
 #include "ToJsBuilder.h"
+#include "CppMethod.h"
 
 namespace Cocos::Meta {
 
@@ -640,6 +641,12 @@ void ModuleBuilder::addMemberFunctions(SyntaxGraph::vertex_descriptor vertID,
         vertID, g,
         [&](Composition_ auto& s) {
             s.mMemberFunctions.emplace_back(content);
+            auto modulePath = get(g.modulePaths, g, vertID);
+            auto moduleID = locate(modulePath, mModuleGraph);
+            const auto& m = get(mModuleGraph.modules, mModuleGraph, moduleID);
+            if (m.mFeatures & ToJs) {
+                s.mMethods = parseFunctions(*this, content);
+            }
         },
         [&](const auto&) {
         });

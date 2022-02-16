@@ -46,6 +46,8 @@ inline const char* getName(const EnumValue& v) noexcept { return "EnumValue"; }
 inline const char* getName(const Enum& v) noexcept { return "Enum"; }
 inline const char* getName(const Tag& v) noexcept { return "Tag"; }
 inline const char* getName(const Member& v) noexcept { return "Member"; }
+inline const char* getName(const Parameter& v) noexcept { return "Parameter"; }
+inline const char* getName(const Method& v) noexcept { return "Method"; }
 inline const char* getName(const Constructor& v) noexcept { return "Constructor"; }
 inline const char* getName(const Struct& v) noexcept { return "Struct"; }
 inline const char* getName(const Variant& v) noexcept { return "Variant"; }

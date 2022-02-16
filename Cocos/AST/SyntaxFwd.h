@@ -65,6 +65,8 @@ struct EnumValue;
 struct Enum;
 struct Tag;
 struct Member;
+struct Parameter;
+struct Method;
 struct Constructor;
 struct Struct;
 struct Variant;
