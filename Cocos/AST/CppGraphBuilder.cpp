@@ -624,7 +624,7 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapName(bool bConst) const {
     auto cn = mStruct.mCurrentNamespace;
 
     if (cn.empty() || !cn.starts_with("/" + mStruct.mProjectName)) {
-        OSS << mStruct.mProjectName << "::";
+        OSS << mStruct.mProjectName << "::render::";
     }
     if (s.isVector()) {
         oss << "impl::VectorVertexBundlePropertyMap<\n";
@@ -675,7 +675,7 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapMemberName(bool bConst) const
     auto cn = mStruct.mCurrentNamespace;
 
     if (cn.empty() || !cn.starts_with(mStruct.mProjectName + "::")) {
-        OSS << mStruct.mProjectName << "::";
+        OSS << mStruct.mProjectName << "::render::";
     }
 
     if (s.isVector()) {
@@ -744,7 +744,7 @@ std::pmr::string CppGraphBuilder::edgePropertyMapName(bool bConst) const {
     auto name = cpp.getDependentName(cpp.mCurrentPath);
 
     if (cn.empty() || cn.substr(0, 6) != mStruct.mProjectName + "::") {
-        OSS << mStruct.mProjectName << "::";
+        OSS << mStruct.mProjectName << "::render::";
     }
     oss << "impl::EdgeBundlePropertyMap<\n";
     {
@@ -785,7 +785,7 @@ std::pmr::string CppGraphBuilder::edgePropertyMapMemberName(bool bConst, std::st
     auto name = cpp.getDependentName(cpp.mCurrentPath);
 
     if (cn.empty() || cn.substr(0, 6) != mStruct.mProjectName + "::") {
-        OSS << mStruct.mProjectName << "::";
+        OSS << mStruct.mProjectName << "::render::";
     }
     oss << "impl::EdgeBundleMemberPropertyMap<\n";
     {
@@ -847,7 +847,7 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
     auto name = cpp.getDependentName(cpp.mCurrentPath);
 
     if (cn.empty() || cn.substr(0, 6) != cpp.mProjectName + "::") {
-        OSS << cpp.mProjectName << "::";
+        OSS << cpp.mProjectName << "::render::";
     }
     if (s.isVector()) {
         if (c.isVector()) {
@@ -932,7 +932,7 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
     auto name = cpp.getDependentName(cpp.mCurrentPath);
 
     if (cn.empty() || cn.substr(0, 6) != cpp.mProjectName + "::") {
-        OSS << cpp.mProjectName << "::";
+        OSS << cpp.mProjectName << "::render::";
     }
     if (s.isVector()) {
         if (c.isVector()) {
