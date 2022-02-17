@@ -281,6 +281,8 @@ struct Member {
     Member& operator=(Member const& rhs) = default;
     ~Member() noexcept;
 
+    std::pmr::string getMemberName() const;
+
     std::pmr::string mTypePath;
     std::pmr::string mMemberName;
     std::pmr::string mDefaultValue;

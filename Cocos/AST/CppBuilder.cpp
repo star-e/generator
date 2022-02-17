@@ -1116,7 +1116,7 @@ std::pmr::string generateTypes_h(std::string_view projectName,
                             INDENT();
                             OSS << "size_t seed = 0;\n";
                             for (const auto& m : s.mMembers) {
-                                OSS << "boost::hash_combine(seed, v." << m.mMemberName << ");\n";
+                                OSS << "boost::hash_combine(seed, v." << m.getMemberName() << ");\n";
                             }
                             OSS << "return seed;\n";
                         }

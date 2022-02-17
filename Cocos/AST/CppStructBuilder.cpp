@@ -128,7 +128,7 @@ std::pmr::string CppStructBuilder::generateGetAllocatorBody() const {
                 }
                 if (g.isPmr(vertID)) {
                     found = true;
-                    OSS << "return {" << m.mMemberName << ".get_allocator().resource()};\n";
+                    OSS << "return {" << m.getMemberName() << ".get_allocator().resource()};\n";
                     break;
                 }
             }
@@ -207,7 +207,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         INDENT();
                         outputMembers(oss, space, g, ns, memberID, s, scratch);
                     }
-                    OSS << "} " << m.mMemberName << ";\n";
+                    OSS << "} " << m.getMemberName() << ";\n";
                 },
                 [&](const auto&) {
                     Expects(false);
@@ -255,7 +255,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             content.mType = oss.str();
             f.mTypeLength = std::max(uint32_t(content.mType.size()), f.mTypeLength);
             // member
-            content.mMember = m.mMemberName;
+            content.mMember = m.getMemberName();
             // default value
             if (!m.mDefaultValue.empty()) {
                 content.mDefaultValue = m.mDefaultValue;
@@ -423,7 +423,7 @@ std::pmr::string CppStructBuilder::generateOperatorBody(OperatorType type) const
             for (const Member& m : s.mMembers) {
                 if (count++)
                     oss << ", ";
-                oss << v << m.mMemberName;
+                oss << v << m.getMemberName();
             }
             oss << ") " << op << "\n";
             oss << "       std::forward_as_tuple(";
@@ -432,7 +432,7 @@ std::pmr::string CppStructBuilder::generateOperatorBody(OperatorType type) const
             for (const Member& m : s.mMembers) {
                 if (count++)
                     oss << ", ";
-                oss << v << m.mMemberName;
+                oss << v << m.getMemberName();
             }
             oss << ");\n";
         },
@@ -519,18 +519,18 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
             }
             if (g.isOptional(memberID)) {
                 if (bPmr) {
-                    oss << m.mMemberName << "(" << paramName
+                    oss << m.getMemberName() << "(" << paramName
                         << " ? " << cpp.getDependentName(memberID)
                         << "(std::in_place, std::move(*" << paramName
                         << "), alloc) : std::nullopt)";
                 } else {
-                    oss << m.mMemberName << "(std::move(" << paramName << "))";
+                    oss << m.getMemberName() << "(std::move(" << paramName << "))";
                 }
             } else {
                 if (bCopyParam) {
-                    oss << m.mMemberName << "(" << paramName << "";
+                    oss << m.getMemberName() << "(" << paramName << "";
                 } else {
-                    oss << m.mMemberName << "(std::move(" << paramName << ")";
+                    oss << m.getMemberName() << "(std::move(" << paramName << ")";
                 }
                 if (bPmr) {
                     oss << ", alloc)";
@@ -547,7 +547,7 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
                     } else {
                         OSS << ": ";
                     }
-                    oss << m.mMemberName << "(alloc)";
+                    oss << m.getMemberName() << "(alloc)";
                 }
             }
         }
@@ -574,9 +574,9 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
             OSS << ": ";
         }
 
-        std::string_view lhs = m.mMemberName;
+        const auto& lhs = m.getMemberName();
         std::pmr::string rhs("rhs.", scratch);
-        rhs.append(m.mMemberName);
+        rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
             auto templateID = g.getTemplate(memberID, scratch);
             if (templateID == optionalID) {
@@ -605,9 +605,9 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
 
         if (bCopyParam) {
             Expects(!bPmr);
-            oss << m.mMemberName << "(rhs." << m.mMemberName;
+            oss << m.getMemberName() << "(rhs." << m.getMemberName();
         } else {
-            oss << m.mMemberName << "(std::move(rhs." << m.mMemberName << ")";
+            oss << m.getMemberName() << "(std::move(rhs." << m.getMemberName() << ")";
         }
 
         if (bPmr) {
@@ -637,9 +637,9 @@ void generateCopy(std::ostream& oss, std::pmr::string& space,
             OSS << ": ";
         }
 
-        std::string_view lhs = m.mMemberName;
+        const auto& lhs = m.getMemberName();
         std::pmr::string rhs("rhs.", scratch);
-        rhs.append(m.mMemberName);
+        rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
             auto templateID = g.getTemplate(memberID, scratch);
             if (templateID == optionalID) {
@@ -657,7 +657,7 @@ void generateCopy(std::ostream& oss, std::pmr::string& space,
             }
         }
 
-        oss << m.mMemberName << "(rhs." << m.mMemberName;
+        oss << m.getMemberName() << "(rhs." << m.getMemberName();
         if (bPmr) {
             oss << ", alloc)";
         } else {
@@ -679,9 +679,9 @@ void generateMoveAssign(std::ostream& oss, std::pmr::string& space,
         if (m.mReference || m.mPointer)
             bPmr = false;
 
-        std::string_view lhs = m.mMemberName;
+        const auto& lhs = m.getMemberName();
         std::pmr::string rhs("rhs.", scratch);
-        rhs.append(m.mMemberName);
+        rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
             auto templateID = g.getTemplate(memberID, scratch);
             if (templateID == optionalID) {
@@ -715,9 +715,9 @@ void generateCopyAssign(std::ostream& oss, std::pmr::string& space,
         if (m.mReference || m.mPointer)
             bPmr = false;
 
-        std::string_view lhs = m.mMemberName;
+        const auto& lhs = m.getMemberName();
         std::pmr::string rhs("rhs.", scratch);
-        rhs.append(m.mMemberName);
+        rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
             auto templateID = g.getTemplate(memberID, scratch);
             if (templateID == optionalID) {

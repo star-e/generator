@@ -59,6 +59,8 @@ std::string_view extractName(std::string_view typePath);
 std::pmr::string camelToVariable(std::string_view name,
     std::pmr::memory_resource* scratch);
 
+std::pmr::string getMemberName(std::string_view memberName);
+
 std::pmr::string getParameterName(std::string_view member,
     std::pmr::memory_resource* scratch);
 
@@ -76,8 +78,10 @@ std::pmr::string getVariableName(std::string_view typeName,
     std::pmr::memory_resource* mr);
 
 std::string_view convertTag(std::string_view tagName);
+std::string_view getTagType(std::string_view tagName,
+    std::pmr::memory_resource* scratch = std::pmr::get_default_resource());
 
-std::pmr::string getTagName(std::string_view typeName,
+std::pmr::string getTagVariableName(std::string_view typeName,
     std::pmr::memory_resource* mr);
 
 std::pmr::string getRelativePath(std::string_view current, std::string_view target,

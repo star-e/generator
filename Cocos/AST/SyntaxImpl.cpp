@@ -30,6 +30,17 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+std::pmr::string Member::getMemberName() const {
+    Expects(mMemberName.size() > 1);
+    if (mPublic) {
+        return camelToVariable(mMemberName.substr(1), get_allocator().resource());
+    } else {
+        auto name = camelToVariable(mMemberName.substr(1), get_allocator().resource());
+        name.insert(name.begin(), '_');
+        return name;
+    }
+}
+
 bool SyntaxGraph::isNamespace(std::string_view typePath) const noexcept {
     const auto& g = *this;
     if (typePath.empty()) {

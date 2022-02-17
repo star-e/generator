@@ -90,8 +90,8 @@ import { RenderScene } from '../../renderer/scene';
             CNTR(mResidency);
             MEMBER_FUNCTIONS(R"(
 bool hasSideEffects() const noexcept {
-    return boost::variant2::holds_alternative<Persistent_>(mResidency) ||
-           boost::variant2::holds_alternative<Backbuffer_>(mResidency);
+    return boost::variant2::holds_alternative<Persistent_>(residency) ||
+           boost::variant2::holds_alternative<Backbuffer_>(residency);
 }
 )");
         }
@@ -175,10 +175,10 @@ bool hasSideEffects() const noexcept {
             );
             MEMBER_FUNCTIONS(R"(
 bool isRead() const {
-    return mAccessType != AccessType::WRITE;
+    return accessType != AccessType::WRITE;
 }
 bool isWrite() const {
-    return mAccessType != AccessType::READ;
+    return accessType != AccessType::READ;
 }
 )");
             TS_INIT(mAccessType, AccessType.READ);

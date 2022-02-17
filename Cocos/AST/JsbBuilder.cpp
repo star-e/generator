@@ -163,9 +163,9 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
                         auto memberID = locate(member.mTypePath, g);
                         Expects(g.isJsb(memberID, mg));
                         oss << "\n";
-                        OSS << "nativevalue_to_se(from." << member.mMemberName << ", tmp, ctx);\n";
+                        OSS << "nativevalue_to_se(from." << member.getMemberName() << ", tmp, ctx);\n";
                         OSS << "obj->setProperty(\""
-                            << builder.getMemberName(member.mMemberName, member.mPublic)
+                            << member.getMemberName()
                             << "\", tmp);\n";
                     }
                     oss << "\n";
@@ -242,12 +242,11 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
                     for (const auto& member : s.mMembers) {
                         auto memberID = locate(member.mTypePath, g);
                         Expects(g.isJsb(memberID, mg));
-                        OSS << "obj->getProperty(\""
-                            << builder.getMemberName(member.mMemberName, member.mPublic) << "\", &field, true);\n";
+                        OSS << "obj->getProperty(\"" << member.getMemberName() << "\", &field, true);\n";
                         OSS << "if(!field.isNullOrUndefined()) {\n";
                         {
                             INDENT();
-                            OSS << "ok &= sevalue_to_native(field, &(to->" << member.mMemberName
+                            OSS << "ok &= sevalue_to_native(field, &(to->" << member.getMemberName()
                                 << "), ctx);\n";
                         }
                         OSS << "}\n";

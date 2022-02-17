@@ -136,7 +136,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     ADDRESSABLE_GRAPH(mPathIndex);
 
                     COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
+                        (Name_, std::string, mNames)
                         (Update_, UpdateFrequency, mUpdateFrequencies)
                         (Layout_, LayoutData, mLayouts)
                     );

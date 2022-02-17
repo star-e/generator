@@ -45,7 +45,7 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
                 PMR_GRAPH(DeviceResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
                     NAMED_GRAPH(Name_);
                     COMPONENT_GRAPH(
-                        (Name_, std::string, mName)
+                        (Name_, std::string, mNames)
                         (RefCount_, int32_t, mRefCounts)
                     );
                     POLYMORPHIC_GRAPH(

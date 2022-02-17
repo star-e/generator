@@ -389,6 +389,11 @@ std::pmr::string camelToVariable(std::string_view camelName,
     return name;
 }
 
+std::pmr::string getMemberName(std::string_view memberName) {
+    Expects(memberName.size() > 1);
+    return camelToVariable(memberName.substr(1), std::pmr::get_default_resource());
+}
+
 std::pmr::string getParameterName(std::string_view member,
     std::pmr::memory_resource* scratch) {
     if (member.size() < 2)
@@ -451,7 +456,11 @@ std::string_view convertTag(std::string_view tagName) {
     return tagName;
 }
 
-std::pmr::string getTagName(std::string_view typeName,
+std::string_view getTagType(std::string_view tagName, std::pmr::memory_resource* scratch) {
+    return convertTag(tagName);
+}
+
+std::pmr::string getTagVariableName(std::string_view typeName,
     std::pmr::memory_resource* mr) {
     auto name = convertTag(typeName);
     return getVariableName(name, mr);
