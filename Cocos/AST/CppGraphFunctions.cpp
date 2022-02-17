@@ -3720,7 +3720,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             } else {
                                 OSS << "auto key = get_path(u, relative, g);\n";
                             }
-                            OSS << "cleanPath(key);\n";
+                            OSS << "impl::cleanPath(key);\n";
                             OSS << "return locate(key, g);\n";
                         }),
                     s.mAddressableConcept.mType);
