@@ -34,12 +34,6 @@
     <ClInclude Include="..\renderer\pipeline\custom\GraphTypes.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\GraphUtils.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\GraphView.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\renderer\pipeline\custom\GslUtils.h">
       <Filter>Headers</Filter>
     </ClInclude>

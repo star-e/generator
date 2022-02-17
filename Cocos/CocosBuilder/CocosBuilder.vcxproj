@@ -251,8 +251,6 @@
   <ItemGroup>
     <ClInclude Include="..\renderer\pipeline\custom\GraphImpl.h" />
     <ClInclude Include="..\renderer\pipeline\custom\GraphTypes.h" />
-    <ClInclude Include="..\renderer\pipeline\custom\GraphUtils.h" />
-    <ClInclude Include="..\renderer\pipeline\custom\GraphView.h" />
     <ClInclude Include="..\renderer\pipeline\custom\GslUtils.h" />
     <ClInclude Include="..\renderer\pipeline\custom\invoke.hpp" />
     <ClInclude Include="..\renderer\pipeline\custom\JsbConversion.h" />
