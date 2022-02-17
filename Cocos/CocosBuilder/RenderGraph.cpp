@@ -51,19 +51,19 @@ import { RenderScene } from '../../renderer/scene';
         NAMESPACE_BEG(render);
         FLAG_CLASS(ResourceFlags) {
             FLAGS(
-                (None, 0)
-                (AllowRenderTarget, 0x1)
-                (AllowDepthStencil, 0x2)
-                (AllowUnorderedAccess, 0x4)
-                (DenyShaderResource, 0x8)
-                (AllowCrossAdapter, 0x10)
-                (AllowSimultaneousAccess, 0x20)
-                (VideoDecodeReferenceOnly, 0x40)
+                (NONE, 0)
+                (ALLOW_RENDER_TARGET, 0x1)
+                (ALLOW_DEPTH_STENCIL, 0x2)
+                (ALLOW_UNORDERED_ACCESS, 0x4)
+                (DENY_SHADER_RESOURCE, 0x8)
+                (ALLOW_CROSS_ADAPTER, 0x10)
+                (ALLOW_SIMULTANEOUS_ACCESS, 0x20)
+                (VIDEO_DECODE_REFERENCE_ONLY, 0x40)
             );
         }
 
         ENUM_CLASS(TextureLayout) {
-            ENUMS(Unknown, RowMajor, UndefinedSwizzle, StandardSwizzle);
+            ENUMS(UNKNOWN, ROW_MAJOR, UNDEFINED_SWIZZLE, STANDARD_SWIZZLE);
         }
 
         STRUCT(ResourceDesc) {
@@ -138,23 +138,23 @@ bool hasSideEffects() const noexcept {
         //}
 
         ENUM_CLASS(AttachmentType) {
-            ENUMS(RenderTarget, DepthStencil);
+            ENUMS(RENDER_TARGET, DEPTH_STENCIL);
         }
         ENUM_CLASS(AccessType) {
-            ENUMS(Read, ReadWrite, Write);
+            ENUMS(READ, READ_WRITE, WRITE);
         }
 
         STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT) {
             PUBLIC(
                 (PmrString, mSlotName, _)
-                (AccessType, mAccessType, AccessType::Write)
+                (AccessType, mAccessType, AccessType::WRITE)
                 (AttachmentType, mAttachmentType, _)
                 (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
                 (gfx::StoreOp, mStoreOp, gfx::StoreOp::STORE)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
                 (gfx::Color, mClearColor, _)
             );
-            TS_INIT(mAccessType, AccessType.Write);
+            TS_INIT(mAccessType, AccessType.WRITE);
             TS_INIT(mLoadOp, LoadOp.LOAD);
             TS_INIT(mStoreOp, StoreOp.STORE);
             TS_INIT(mClearFlags, ClearFlagBit.ALL);
@@ -162,26 +162,26 @@ bool hasSideEffects() const noexcept {
         }
 
         ENUM_CLASS(ClearValueType) {
-            ENUMS(Float, Int);
+            ENUMS(FLOAT_TYPE, INT_TYPE);
         }
 
         STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT) {
             PUBLIC(
                 (PmrString, mName, _)
-                (AccessType, mAccessType, AccessType::Read)
+                (AccessType, mAccessType, AccessType::READ)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
                 (gfx::Color, mClearColor, _)
                 (ClearValueType, mClearValueType, _)
             );
             MEMBER_FUNCTIONS(R"(
 bool isRead() const {
-    return mAccessType != AccessType::Write;
+    return mAccessType != AccessType::WRITE;
 }
 bool isWrite() const {
-    return mAccessType != AccessType::Read;
+    return mAccessType != AccessType::READ;
 }
 )");
-            TS_INIT(mAccessType, AccessType.Read);
+            TS_INIT(mAccessType, AccessType.READ);
             TS_INIT(mClearFlags, ClearFlagBit.NONE);
         }
 

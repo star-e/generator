@@ -690,7 +690,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                             oss << "    " << v.mName << " = "
                                 << v.mValue << ",";
                         }
-                        if (sFormat) {
+                        if (false && sFormat) {
                             oss << std::pmr::string(maxLength - v.mName.size(), ' ') << " // NOLINT\n";
                         } else {
                             oss << "\n";
@@ -707,7 +707,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                     }
                     for (const auto& v : e.mValues) {
                         oss << "    " << v.mName;
-                        if (sFormat) {
+                        if (false && sFormat) {
                             oss << std::pmr::string(maxLength - v.mName.size(), ' ');
                             oss << " = " << v.mValue << ",";
                             oss << std::pmr::string(maxLength2 - v.mValue.size(), ' ');

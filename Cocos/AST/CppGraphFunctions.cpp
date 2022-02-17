@@ -239,7 +239,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
                     Expects(s.mIncidence);
                     OSS << "// AddressableGraph (Alias)\n";
                     OSS << "remove_path_impl(u, g);\n";
-                    OSS << "Expects(out_degree(u, g) == 0);\n";
+                    OSS << "CC_EXPECTS(out_degree(u, g) == 0);\n";
                     oss << "\n";
                 }
             }
@@ -272,7 +272,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
                         OSS << "// AddressableGraph (Alias)\n";
                         OSS << "// only leaf node can be cleared.\n";
                         OSS << "// clear internal node will broke tree structure.\n";
-                        OSS << "Expects(out_degree(u, g) == 0);\n";
+                        OSS << "CC_EXPECTS(out_degree(u, g) == 0);\n";
                         oss << "\n";
                     }
                 }
@@ -309,7 +309,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
                     if (s.isAliasGraph()) {
                         Expects(s.mIncidence);
                         OSS << "// AddressableGraph (Alias)\n";
-                        OSS << "Expects(out_degree(u, g) == 0);\n";
+                        OSS << "CC_EXPECTS(out_degree(u, g) == 0);\n";
                         OSS << "remove_path_impl(u, g);\n";
                         oss << "\n";
                     }
@@ -417,7 +417,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                     if (s.hasAddressIndex()) {
                         OSS << "remove_path_impl(u, g);\n";
                     }
-                    OSS << "Expects(num_children(u, g) == 0);\n";
+                    OSS << "CC_EXPECTS(num_children(u, g) == 0);\n";
 
                     oss << "\n";
                     copyString(oss, space, clearInEdges(s, name, true, scratch));
@@ -482,7 +482,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                                 const auto& member = c.mMemberName;
                                 OSS << "const auto& key = g." << member << "[u];\n";
                                 OSS << "auto num = g." << map.mMemberName << ".erase(key);\n";
-                                OSS << "Ensures(num == 1);\n";
+                                OSS << "CC_ENSURES(num == 1);\n";
                                 OSS << "for (auto&& pair : g." << map.mMemberName << ") {\n";
                                 {
                                     INDENT();
@@ -595,7 +595,7 @@ std::pmr::string CppGraphBuilder::generateAddEdge(bool property,
                         }
                     }
                     oss << ");\n";
-                    OSS << "Ensures(edgeInserted);\n";
+                    OSS << "CC_ENSURES(edgeInserted);\n";
                 }),
             s.mEdgeListType);
     }
@@ -1120,7 +1120,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                                         OSS << "    auto res = g." << map.mMemberName << ".emplace(std::piecewise_construct, std::forward_as_tuple(args...), std::forward_as_tuple(&(*iter)));\n";
                                     }),
                                 s.mVertexListType);
-                            OSS << "    Ensures(res.second);\n";
+                            OSS << "    CC_ENSURES(res.second);\n";
                             OSS << "},\n";
                             OSS << "c" << componentID << ");\n";
                         }
@@ -1153,7 +1153,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                                 OSS << "auto res = g." << map.mMemberName << ".emplace(uuid, &(*iter));\n";
                             }),
                         s.mVertexListType);
-                    OSS << "Ensures(res.second);\n";
+                    OSS << "CC_ENSURES(res.second);\n";
                 }
             }
             UNINDENT();
@@ -1442,7 +1442,7 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
         << "::vertex_descriptor v, const " << name << "& g) noexcept {\n";
     {
         INDENT();
-        copyString(oss, space, std::string(R"(Expects(u != v);
+        copyString(oss, space, std::string(R"(CC_EXPECTS(u != v);
 bool isAncestor = false;
 auto r          = parents(v, g);
 while (r.first != r.second) {
@@ -1800,7 +1800,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                 }),
                             s.mOutEdgeListType);
                         OSS << "range.first = std::find(range.first, range.second, e);\n";
-                        OSS << "Ensures(range.first != range.second);\n";
+                        OSS << "CC_ENSURES(range.first != range.second);\n";
                         OSS << "remove_edge(range.first, g);\n";
                     }
                 }
@@ -3569,10 +3569,10 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
                     oss << "\n";
                     OSS << "impl::pathComposite(output, sz, u" << 0 << ", " << graphName << ", parent);\n";
-                    OSS << "Ensures(sz >= sz0);\n";
+                    OSS << "CC_ENSURES(sz >= sz0);\n";
 
                     oss << "\n";
-                    OSS << "Ensures(sz == sz0);\n";
+                    OSS << "CC_ENSURES(sz == sz0);\n";
                     OSS << "std::copy(prefix.begin(), prefix.end(), output.begin());\n";
                     oss << "\n";
                     OSS << "return output;\n";
@@ -3648,7 +3648,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     OSS << "output[sz] = '/';\n";
                     OSS << "std::copy(name.begin(), name.end(), output.begin() + sz + 1);\n";
                     OSS << "path_composite(output, sz, parent, g);\n";
-                    OSS << "Ensures(sz == 0);\n";
+                    OSS << "CC_ENSURES(sz == 0);\n";
                     OSS << "return output;\n";
                 } else {
                     OSS << "get_path(output, parent, name, g);\n";
@@ -3713,8 +3713,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             Expects(false);
                         },
                         [&](Map_) {
-                            OSS << "Expects(!relative.starts_with('/'));\n";
-                            OSS << "Expects(!relative.ends_with('/'));\n";
+                            OSS << "CC_EXPECTS(!relative.starts_with('/'));\n";
+                            OSS << "CC_EXPECTS(!relative.ends_with('/'));\n";
                             if (pmr) {
                                 OSS << "auto key = get_path(u, relative, g, mr);\n";
                             } else {
@@ -3837,7 +3837,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             }
                             OSS << "auto res      = g." << s.mAddressableConcept.mMemberName
                                 << ".emplace(std::move(pathName), v);\n";
-                            OSS << "Ensures(res.second);\n";
+                            OSS << "CC_ENSURES(res.second);\n";
                             if (s.mAddressableConcept.mPathPropertyMap) {
                                 if (s.isAliasGraph()) {
                                     OSS << "g.mVertices[u].mPathIterator = res.first;\n";
@@ -3892,7 +3892,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     } else {
                         OSS << "auto iter     = g." << member << ".find(boost::string_view(pathName));\n";
                     }
-                    OSS << "Expects(iter != g." << member << ".end());\n";
+                    OSS << "CC_EXPECTS(iter != g." << member << ".end());\n";
                     OSS << "g." << member << ".erase(iter);\n";
                 }
                 if (s.isVector()) {

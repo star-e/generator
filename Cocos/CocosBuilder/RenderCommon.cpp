@@ -40,7 +40,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 ENUM_CLASS(UpdateFrequency) {
-                    ENUMS(PerInstance, PerBatch, PerQueue, PerPass, Count);
+                    ENUMS(PER_INSTANCE, PER_BATCH, PER_QUEUE, PER_PASS, COUNT);
                 }
 
                 TAGS((_), CBV_, UAV_, SRV_, SSV_, RTV_, DSV_, IBV_, VBV_, SOV_, Constants_, Table_);
@@ -74,10 +74,10 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 VARIANT(ResourceResidency, (Managed_, Persistent_, Backbuffer_, Memoryless_));
 
                 ENUM_CLASS(QueueHint) {
-                    ENUMS(Opaque, Cutout, Transparent, Count);
+                    ENUMS(RENDER_OPAQUE, RENDER_CUTOUT, RENDER_TRANSPARENT, COUNT);
                 }
                 ENUM_CLASS(ResourceDimension) {
-                    ENUMS(Buffer, Texture1D, Texture2D, Texture3D);
+                    ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
                 }
 
                 STRUCT(SampleDesc) {
@@ -88,7 +88,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 }
 
                 ENUM_CLASS(NodeType) {
-                    ENUMS(Internal, Leaf);
+                    ENUMS(INTERNAL, LEAF);
                 }
             } // namespace render
         }
@@ -117,8 +117,6 @@ class Color;
 class Vec4;
 class Vec3;
 class Vec2;
-class Size;
-class Rect;
 
 } // namespace cc
 )",
