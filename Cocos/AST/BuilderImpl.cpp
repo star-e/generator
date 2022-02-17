@@ -1076,6 +1076,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             OSS << "#include <boost/variant2/variant.hpp>\n";
         }
         copyString(oss, generateFwd_h(mSyntaxGraph, modulePath, scratch, scratch));
+        oss << "\n";
+        OSS << "// clang-format on\n";
 
         updateFile(filename, reorderIncludes(oss.str(), scratch));
     }
@@ -1101,7 +1103,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             }
         }
         copyString(oss, generateNames_h(mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
-
+        oss << "\n";
+        OSS << "// clang-format on\n";
         updateFile(filename, reorderIncludes(oss.str(), scratch));
     }
 
@@ -1191,7 +1194,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 copyCppString(oss, space, moduleInfo.mHeader);
             }
             copyString(oss, generateTypes_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
-
+            oss << "\n";
+            OSS << "// clang-format on\n";
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
 
@@ -1208,7 +1212,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
             copyString(oss, generateTypes_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
-
+            oss << "\n";
+            OSS << "// clang-format on\n";
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
     }
@@ -1232,7 +1237,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         oss << "#include <boost/utility/string_view.hpp>\n";
 
         copyString(oss, generateGraphs_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
-
+        oss << "\n";
+        OSS << "// clang-format on\n";
         updateFile(filename, reorderIncludes(oss.str(), scratch));
     }
     if (features & Features::Reflection) {
@@ -1268,7 +1274,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 }
             }
             copyString(oss, generateReflection_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
-
+            oss << "\n";
+            OSS << "// clang-format on\n";
             updateFile(filename, reorderIncludes(oss.str(), scratch));
         }
         {
@@ -1285,7 +1292,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
             copyString(oss, generateReflection_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
-
+            oss << "\n";
+            OSS << "// clang-format on\n";
             updateFile(filename, reorderIncludes(oss.str(), scratch));
         }
     }
@@ -1322,7 +1330,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 }
             }
             copyString(oss, generateJsbConversions_h(*this, moduleID));
-
+            oss << "\n";
+            OSS << "// clang-format on\n";
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
 
@@ -1341,7 +1350,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             OSS << "#include \"cocos/renderer/pipeline/custom/JsbConversion.h\"\n";
             copyString(oss, space, m.mJsbHeaders);
             copyString(oss, generateJsbConversions_cpp(*this, moduleID));
-
+            oss << "\n";
+            OSS << "// clang-format on\n";
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
     }
