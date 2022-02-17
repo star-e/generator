@@ -145,13 +145,13 @@ std::pmr::string clearOutEdges(const Graph& s, std::string_view name,
     std::pmr::string inEdgeList(scratch);
 
     if (referenceGraph) {
-        out_edge_list = "children_list";
-        in_edge_list = "parents_list";
+        out_edge_list = "getChildrenList";
+        in_edge_list = "getParentsList";
         outEdgeList = "childrenList";
         inEdgeList = "parentsList";
     } else {
-        out_edge_list = "out_edge_list";
-        in_edge_list = "in_edge_list";
+        out_edge_list = "getOutEdgeList";
+        in_edge_list = "getInEdgeList";
         outEdgeList = "outEdgeList";
         inEdgeList = "inEdgeList";
     }
@@ -189,13 +189,13 @@ std::pmr::string clearInEdges(const Graph& s, std::string_view name,
     std::pmr::string inEdgeList(scratch);
 
     if (referenceGraph) {
-        out_edge_list = "children_list";
-        in_edge_list = "parents_list";
+        out_edge_list = "getChildrenList";
+        in_edge_list = "getParentsList";
         outEdgeList = "childrenList";
         inEdgeList = "parentsList";
     } else {
-        out_edge_list = "out_edge_list";
-        in_edge_list = "in_edge_list";
+        out_edge_list = "getOutEdgeList";
+        in_edge_list = "getInEdgeList";
         outEdgeList = "outEdgeList";
         inEdgeList = "inEdgeList";
     }
@@ -284,7 +284,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
                     OSS << "for (auto [vi, viend] = vertices(g); vi != viend; ++vi) {\n";
                     {
                         INDENT();
-                        OSS << "auto& outEdgeList = g.out_edge_list(*vi);\n";
+                        OSS << "auto& outEdgeList = g.getOutEdgeList(*vi);\n";
                         copyString(oss, space, eraseFromIncidenceList(
                             s, name, "outEdgeList", "u", R"([u](const auto& e) {
     return e.get_target() == u;
@@ -642,12 +642,12 @@ std::pmr::string CppGraphBuilder::generateAddEdge(bool property,
     std::pmr::string edge_descriptor(scratch);
 
     if (reference) {
-        out_edge_list = "children_list";
-        in_edge_list = "parents_list";
+        out_edge_list = "getChildrenList";
+        in_edge_list = "getParentsList";
         edge_descriptor = "ownership_descriptor";
     } else {
-        out_edge_list = "out_edge_list";
-        in_edge_list = "in_edge_list";
+        out_edge_list = "getOutEdgeList";
+        in_edge_list = "getInEdgeList";
         edge_descriptor = "edge_descriptor";
     }
 
@@ -1380,14 +1380,14 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
     OSS << "inline std::pair<" << name << "::children_iterator, " << name << "::children_iterator>\n";
     OSS << "children(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
     OSS << "    return std::make_pair(\n";
-    OSS << "        " << name << "::children_iterator(const_cast<" << name << "&>(g).children_list(u).begin(), u),\n";
-    OSS << "        " << name << "::children_iterator(const_cast<" << name << "&>(g).children_list(u).end(), u));\n";
+    OSS << "        " << name << "::children_iterator(const_cast<" << name << "&>(g).getChildrenList(u).begin(), u),\n";
+    OSS << "        " << name << "::children_iterator(const_cast<" << name << "&>(g).getChildrenList(u).end(), u));\n";
     OSS << "}\n";
 
     oss << "\n";
     OSS << "inline " << name << "::children_size_type\n";
     OSS << "num_children(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
-    OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.children_list(u).size());\n";
+    OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.getChildrenList(u).size());\n";
     OSS << "}\n";
 
     oss << "\n";
@@ -1395,7 +1395,7 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
     OSS << "ownership(" << name << "::vertex_descriptor u, " << name << "::vertex_descriptor v, " << name << "& g) noexcept {\n";
     {
         INDENT();
-        OSS << "auto& outEdgeList = g.children_list(u);\n";
+        OSS << "auto& outEdgeList = g.getChildrenList(u);\n";
         visit(
             overload(
                 [&]<BackInsertionSequence_ T>(T) {
@@ -1417,14 +1417,14 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
     OSS << "inline std::pair<" << name << "::parent_iterator, " << name << "::parent_iterator>\n";
     OSS << "parents(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
     OSS << "    return std::make_pair(\n";
-    OSS << "        " << name << "::parent_iterator(const_cast<" << name << "&>(g).parents_list(u).begin(), u),\n";
-    oss << "        " << name << "::parent_iterator(const_cast<" << name << "&>(g).parents_list(u).end(), u));\n";
+    OSS << "        " << name << "::parent_iterator(const_cast<" << name << "&>(g).getParentsList(u).begin(), u),\n";
+    oss << "        " << name << "::parent_iterator(const_cast<" << name << "&>(g).getParentsList(u).end(), u));\n";
     OSS << "}\n";
 
     oss << "\n";
     OSS << "inline " << name << "::children_size_type\n";
     OSS << "num_parents(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
-    OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.parents_list(u).size());\n";
+    OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.getParentsList(u).size());\n";
     OSS << "}\n";
 
     oss << "\n";
@@ -1465,8 +1465,8 @@ return isAncestor;
     OSS << "ownerships(const " << name << "& g0) noexcept {\n";
     OSS << "    auto& g = const_cast<" << name << "&>(g0);\n";
     OSS << "    return std::make_pair(\n";
-    OSS << "        " << name << "::ownership_iterator(g.vertex_set().begin(), g.vertex_set().begin(), g.vertex_set().end(), g),\n";
-    OSS << "        " << name << "::ownership_iterator(g.vertex_set().begin(), g.vertex_set().end(), g.vertex_set().end(), g));\n";
+    OSS << "        " << name << "::ownership_iterator(g.getVertexList().begin(), g.getVertexList().begin(), g.getVertexList().end(), g),\n";
+    OSS << "        " << name << "::ownership_iterator(g.getVertexList().begin(), g.getVertexList().end(), g.getVertexList().end(), g));\n";
     OSS << "}\n";
 
     oss << "\n";
@@ -1518,14 +1518,14 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         OSS << "inline std::pair<" << name << "::out_edge_iterator, " << name << "::out_edge_iterator>\n";
         OSS << "out_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
         OSS << "    return std::make_pair(\n";
-        OSS << "        " << name << "::out_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).begin(), u),\n";
-        OSS << "        " << name << "::out_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).end(), u));\n";
+        OSS << "        " << name << "::out_edge_iterator(const_cast<" << name << "&>(g).getOutEdgeList(u).begin(), u),\n";
+        OSS << "        " << name << "::out_edge_iterator(const_cast<" << name << "&>(g).getOutEdgeList(u).end(), u));\n";
         OSS << "}\n";
 
         oss << "\n";
         OSS << "inline " << name << "::degree_size_type\n";
         OSS << "out_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
-        OSS << "    return gsl::narrow_cast<" << name << "::degree_size_type>(g.out_edge_list(u).size());\n";
+        OSS << "    return gsl::narrow_cast<" << name << "::degree_size_type>(g.getOutEdgeList(u).size());\n";
         OSS << "}\n";
 
         oss << "\n";
@@ -1533,7 +1533,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         OSS << "edge(" << name << "::vertex_descriptor u, " << name << "::vertex_descriptor v, const " << name << "& g) noexcept {\n";
         {
             INDENT();
-            OSS << "const auto& outEdgeList = g.out_edge_list(u);\n";
+            OSS << "const auto& outEdgeList = g.getOutEdgeList(u);\n";
             visit(
                 overload(
                     [&]<BackInsertionSequence_ T>(T) {
@@ -1560,8 +1560,8 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             OSS << "inline std::pair<" << name << "::in_edge_iterator, " << name << "::in_edge_iterator>\n";
             OSS << "in_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
             OSS << "    return std::make_pair(\n";
-            OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).begin(), u),\n";
-            OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).out_edge_list(u).end(), u));\n";
+            OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).getOutEdgeList(u).begin(), u),\n";
+            OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).getOutEdgeList(u).end(), u));\n";
             OSS << "}\n";
 
             oss << "\n";
@@ -1581,14 +1581,14 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             OSS << "inline std::pair<" << name << "::in_edge_iterator, " << name << "::in_edge_iterator>\n";
             OSS << "in_edges(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
             OSS << "    return std::make_pair(\n";
-            OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).in_edge_list(u).begin(), u),\n";
-            oss << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).in_edge_list(u).end(), u));\n";
+            OSS << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).getInEdgeList(u).begin(), u),\n";
+            oss << "        " << name << "::in_edge_iterator(const_cast<" << name << "&>(g).getInEdgeList(u).end(), u));\n";
             OSS << "}\n";
 
             oss << "\n";
             OSS << "inline " << name << "::degree_size_type\n";
             OSS << "in_degree(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
-            OSS << "    return gsl::narrow_cast<" << name << "::degree_size_type>(g.in_edge_list(u).size());\n";
+            OSS << "    return gsl::narrow_cast<" << name << "::degree_size_type>(g.getInEdgeList(u).size());\n";
             OSS << "}\n";
             oss << "\n";
             OSS << "inline " << name << "::degree_size_type\n";
@@ -1617,13 +1617,13 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
         OSS << "// VertexListGraph\n";
         OSS << "inline std::pair<" << name << "::vertex_iterator, " << name << "::vertex_iterator>\n";
         OSS << "vertices(const " << name << "& g) noexcept {\n";
-        OSS << "    return std::make_pair(const_cast<" << name << "&>(g).vertex_set().begin(), const_cast<" << name << "&>(g).vertex_set().end());\n";
+        OSS << "    return std::make_pair(const_cast<" << name << "&>(g).getVertexList().begin(), const_cast<" << name << "&>(g).getVertexList().end());\n";
         OSS << "}\n";
 
         oss << "\n";
         OSS << "inline " << name << "::vertices_size_type\n";
         OSS << "num_vertices(const " << name << "& g) noexcept { // NOLINT\n";
-        OSS << "    return gsl::narrow_cast<" << name << "::vertices_size_type>(g.vertex_set().size());\n";
+        OSS << "    return gsl::narrow_cast<" << name << "::vertices_size_type>(g.getVertexList().size());\n";
         OSS << "}\n";
     }
 
@@ -1635,8 +1635,8 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             OSS << "edges(const " << name << "& g0) noexcept {\n";
             OSS << "    auto& g = const_cast<" << name << "&>(g0);\n";
             OSS << "    return std::make_pair(\n";
-            OSS << "        " << name << "::edge_iterator(g.vertex_set().begin(), g.vertex_set().begin(), g.vertex_set().end(), g),\n";
-            OSS << "        " << name << "::edge_iterator(g.vertex_set().begin(), g.vertex_set().end(), g.vertex_set().end(), g));\n";
+            OSS << "        " << name << "::edge_iterator(g.getVertexList().begin(), g.getVertexList().begin(), g.getVertexList().end(), g),\n";
+            OSS << "        " << name << "::edge_iterator(g.getVertexList().begin(), g.getVertexList().end(), g.getVertexList().end(), g));\n";
             OSS << "}\n";
         } else {
             OSS << "inline std::pair<" << name << "::edge_iterator, " << name << "::edge_iterator>\n";
@@ -1705,13 +1705,13 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
 
                 if (!s.needEdgeList()) {
                     OSS << "// remove out-edges\n";
-                    OSS << "auto& outEdgeList = g.out_edge_list(u);\n";
+                    OSS << "auto& outEdgeList = g.getOutEdgeList(u);\n";
                     copyString(oss, space, eraseFromIncidenceList(
                         s, name, "outEdgeList", "v", R"([v](const auto& e) {
     return e.get_target() == v;
 })", true, scratch));
                 } else {
-                    OSS << "auto& outEdgeList = g.out_edge_list(u);\n";
+                    OSS << "auto& outEdgeList = g.getOutEdgeList(u);\n";
                     visit(
                         overload(
                             [&]<UniqueAssociative_ T>(T) {
@@ -1739,7 +1739,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 if (s.mUndirected) {
                     oss << "\n";
                     OSS << "// remove reciprocal (undirected) out-edges\n";
-                    OSS << "auto& outEdgeListV = g.out_edge_list(v);\n";
+                    OSS << "auto& outEdgeListV = g.getOutEdgeList(v);\n";
                     copyString(oss, space, eraseFromIncidenceList(
                         s, name, "outEdgeListV", "u", R"([u](const auto& e) {
     return e.get_target() == u;
@@ -1748,7 +1748,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                     Expects(s.mBidirectional);
                     oss << "\n";
                     OSS << "// remove reciprocal (bidirectional) in-edges\n";
-                    OSS << "auto& inEdgeList = g.in_edge_list(v);\n";
+                    OSS << "auto& inEdgeList = g.getInEdgeList(v);\n";
                     copyString(oss, space, eraseFromIncidenceList(
                         s, name, "inEdgeList", "u", R"([u](const auto& e) {
     return e.get_target() == u;
@@ -1769,10 +1769,10 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 INDENT();
                 OSS << "// remove_edge need rewrite\n";
                 if (!s.needEdgeList()) {
-                    OSS << "auto& outEdgeList = g.out_edge_list(source(e, g));\n";
+                    OSS << "auto& outEdgeList = g.getOutEdgeList(source(e, g));\n";
                     OSS << "impl::removeIncidenceEdge(e, outEdgeList);\n";
                     if (s.isBidirectionalOnly()) {
-                        OSS << "auto& inEdgeList = g.in_edge_list(target(e, g));\n";
+                        OSS << "auto& inEdgeList = g.getInEdgeList(target(e, g));\n";
                         OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                     }
                 } else {
@@ -1791,7 +1791,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                 [&]<Associative_ T>(T) {
                                     OSS << "using out_edge_iterator = " << name << "::out_edge_iterator;\n";
                                     OSS << "auto u = source(e, g);\n";
-                                    OSS << "auto& outEdgeList = g.out_edge_list(u);\n";
+                                    OSS << "auto& outEdgeList = g.getOutEdgeList(u);\n";
                                     OSS << "auto key = " << name << "::out_edge_type(target(e, g));\n";
                                     OSS << "auto [first, last] = outEdgeList.equal_range(key);\n";
                                     OSS << "auto range = std::make_pair(out_edge_iterator(first, u), out_edge_iterator(last, u));\n";
@@ -1816,7 +1816,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                     INDENT();
                     if (s.isDirectedOnly()) {
                         OSS << "auto  e           = *iter;\n";
-                        OSS << "auto& outEdgeList = g.out_edge_list(source(e, g));\n";
+                        OSS << "auto& outEdgeList = g.getOutEdgeList(source(e, g));\n";
                         OSS << "outEdgeList.erase(iter.base());\n";
                     } else {
                         if (s.mUndirected) {
@@ -1824,8 +1824,8 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                         } else {
                             Expects(s.mBidirectional);
                             OSS << "auto  e           = *iter;\n";
-                            OSS << "auto& outEdgeList = g.out_edge_list(source(e, g));\n";
-                            OSS << "auto& inEdgeList  = g.in_edge_list(target(e, g));\n";
+                            OSS << "auto& outEdgeList = g.getOutEdgeList(source(e, g));\n";
+                            OSS << "auto& inEdgeList  = g.getInEdgeList(target(e, g));\n";
                             OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                             if (s.hasEdgeProperty()) {
                                 OSS << "g.edges.erase(iter.base()->get_iter());\n";
@@ -1849,13 +1849,13 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                         OSS << "auto pair = out_edges(u, g);\n";
                         OSS << "auto& first = pair.first;\n";
                         OSS << "auto& last = pair.second;\n";
-                        OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
+                        OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
                         copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
                     } else if (s.mUndirected) {
                         OSS << "auto pair = out_edges(u, g);\n";
                         OSS << "auto& first = pair.first;\n";
                         OSS << "auto& last = pair.second;\n";
-                        OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
+                        OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
                         visit(
                             overload(
                                 [&]<Sequence_ T>(T) {
@@ -1879,7 +1879,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "if (pred(*outIter)) {\n";
                             {
                                 INDENT();
-                                OSS << "auto& inEdgeList = g.in_edge_list(target(*outIter, g));\n";
+                                OSS << "auto& inEdgeList = g.getInEdgeList(target(*outIter, g));\n";
                                 OSS << "auto  e          = *outIter;\n";
                                 OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                                 if (s.hasEdgeProperty()) {
@@ -1893,7 +1893,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                         OSS << "auto pair = out_edges(u, g);\n";
                         OSS << "auto& first = pair.first;\n";
                         OSS << "auto& last = pair.second;\n";
-                        OSS << "auto& outEdgeList  = g.out_edge_list(u);\n";
+                        OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
                         copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
 
                         if (s.hasEdgeProperty()) {
@@ -1931,7 +1931,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                 OSS << "if (pred(*inIter)) {\n";
                                 {
                                     INDENT();
-                                    OSS << "auto& outEdgeList = g.out_edge_list(source(*inIter, g));\n";
+                                    OSS << "auto& outEdgeList = g.getOutEdgeList(source(*inIter, g));\n";
                                     OSS << "auto  e           = *inIter;\n";
                                     OSS << "impl::removeIncidenceEdge(e, outEdgeList);\n";
                                     if (s.hasEdgeProperty()) {
@@ -1945,7 +1945,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "auto pair = in_edges(v, g);\n";
                             OSS << "auto& first = pair.first;\n";
                             OSS << "auto& last = pair.second;\n";
-                            OSS << "auto& inEdgeList   = g.in_edge_list(v);\n";
+                            OSS << "auto& inEdgeList   = g.getInEdgeList(v);\n";
                             copyString(oss, space, removeDirectedEdgeIf(s, "inEdgeList", scratch));
                             if (s.hasEdgeProperty()) {
                                 OSS << "for (const auto& v : garbage) {\n";
