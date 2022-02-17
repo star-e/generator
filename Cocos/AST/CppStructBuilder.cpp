@@ -508,7 +508,7 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
         bool isParam = false;
         isParam = std::find(cntr.mIndices.begin(), cntr.mIndices.end(), i) != cntr.mIndices.end();
 
-        const auto paramName = getMemberName(m.mMemberName, scratch);
+        const auto paramName = getParameterName(m.mMemberName, scratch);
 
         if (isParam) {
             if (count++) {
@@ -1242,10 +1242,10 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
             auto memberID = locate(m.mTypePath, g);
             if (m.mTypePath == "/std/pmr/string") {
                 bNoexcept = false;
-                oss << "std::string_view " << getMemberName(m.mMemberName, scratch);
+                oss << "std::string_view " << getParameterName(m.mMemberName, scratch);
             } else if (m.mTypePath == "/std/pmr/u8string") {
                 bNoexcept = false;
-                oss << "std::u8string_view " << getMemberName(m.mMemberName, scratch);
+                oss << "std::u8string_view " << getParameterName(m.mMemberName, scratch);
             } else {
                 auto name = g.getDependentName(mCurrentNamespace, memberID, scratch, scratch);
                 oss << getCppPath(name, scratch);
@@ -1255,7 +1255,7 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
                 if (m.mReference) {
                     oss << "&";
                 }
-                oss << " " << getMemberName(m.mMemberName, scratch);
+                oss << " " << getParameterName(m.mMemberName, scratch);
             }
         }
     };
@@ -1341,14 +1341,14 @@ std::pmr::string CppStructBuilder::generateConstructorCall(
                 const auto& m = s.mMembers.at(k);
                 auto memberID = locate(m.mTypePath, g);
                 if (m.mTypePath == "/std/pmr/string") {
-                    oss << "std::move(" << getMemberName(m.mMemberName, scratch) << ")";
+                    oss << "std::move(" << getParameterName(m.mMemberName, scratch) << ")";
                 } else if (m.mTypePath == "/std/pmr/u8string") {
-                    oss << "std::move(" << getMemberName(m.mMemberName, scratch) << ")";
+                    oss << "std::move(" << getParameterName(m.mMemberName, scratch) << ")";
                 } else {
                     if (m.mPointer || m.mReference) {
-                        oss << getMemberName(m.mMemberName, scratch);
+                        oss << getParameterName(m.mMemberName, scratch);
                     } else {
-                        oss << "std::move(" << getMemberName(m.mMemberName, scratch) << ")";
+                        oss << "std::move(" << getParameterName(m.mMemberName, scratch) << ")";
                     }
                 }
             }

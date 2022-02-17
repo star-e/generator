@@ -389,9 +389,18 @@ std::pmr::string camelToVariable(std::string_view camelName,
     return name;
 }
 
-std::pmr::string getMemberName(std::string_view member,
+std::pmr::string getParameterName(std::string_view member,
     std::pmr::memory_resource* scratch) {
+    if (member.size() < 2)
+        throw std::runtime_error("member format incorrect");
 
+    auto name = camelToVariable(member.substr(1), scratch);
+    name.append("In");
+    return name;
+}
+
+std::pmr::string getParameterPrefix(std::string_view member,
+    std::pmr::memory_resource* scratch) {
     if (member.size() < 2)
         throw std::runtime_error("member format incorrect");
 

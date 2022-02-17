@@ -463,7 +463,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                     for (const auto& c : s.mComponents) {
                         const auto& member = c.mMemberName;
                         if (!s.isVector()) {
-                            auto iterName = getMemberName(member, scratch) + "Iter";
+                            auto iterName = getParameterName(member, scratch) + "Iter";
                             OSS << "auto " << iterName << " = vert." << member << "Iter;\n";
                         }
                     }
@@ -509,7 +509,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                             if (s.isVector()) {
                                 OSS << "g." << member << ".erase(g." << member << ".begin() + std::ptrdiff_t(u));\n";
                             } else {
-                                auto iterName = getMemberName(member, scratch) + "Iter";
+                                auto iterName = getParameterPrefix(member, scratch) + "Iter";
                                 OSS << "g." << member << ".erase(" << iterName << ");\n";
                             }
                         }
