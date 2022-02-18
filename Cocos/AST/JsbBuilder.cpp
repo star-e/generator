@@ -59,7 +59,8 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
             });
     }
 
-    for (const auto& vertID : make_range(vertices(g))) {
+    
+    for (int count = 0; const auto& vertID : make_range(vertices(g))) {
         const auto& modulePath = get(g.modulePaths, g, vertID);
         auto moduleID1 = locate(modulePath, mg);
         if (moduleID1 != moduleID)
@@ -89,6 +90,10 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
             vertID, g,
             [&](const Struct& s) {
                 oss << "\n";
+                if (count++ == 0) {
+                    OSS << "// if function overload is used, android build fails\n";
+                }
+                OSS << "template <>\n";
                 OSS << "bool sevalue_to_native(const se::Value &from, "
                     << cppName << " *to, se::Object *ctx); // NOLINT\n";
             },
@@ -97,6 +102,10 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
                     return;
 
                 oss << "\n";
+                if (count++ == 0) {
+                    OSS << "// if overload is used, android build fails\n";
+                }
+                OSS << "template <>\n";
                 OSS << "bool sevalue_to_native(const se::Value &from, "
                     << cppName << " *to, se::Object *ctx); // NOLINT\n";
             },
@@ -227,7 +236,8 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
             vertID, g,
             [&](const Struct& s) {
                 oss << "\n";
-                OSS << "bool sevalue_to_native(const se::Value &from, "
+                OSS << "template <>\n";
+                OSS << "bool sevalue_to_native<" << cppName << ">(const se::Value &from, "
                     << cppName << " *to, se::Object *ctx) { // NOLINT\n";
                 {
                     INDENT();
@@ -262,7 +272,8 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
                 }
 
                 oss << "\n";
-                OSS << "bool sevalue_to_native(const se::Value &from, "
+                OSS << "template <>\n";
+                OSS << "bool sevalue_to_native<" << cppName << ">(const se::Value &from, "
                     << cppName << " *to, se::Object *ctx) { // NOLINT\n";
                 {
                     INDENT();
