@@ -74,7 +74,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 VARIANT(ResourceResidency, (Managed_, Persistent_, Backbuffer_, Memoryless_));
 
                 ENUM_CLASS(QueueHint) {
-                    ENUMS(RENDER_OPAQUE, RENDER_CUTOUT, RENDER_TRANSPARENT, COUNT);
+                    ENUMS(NONE, RENDER_OPAQUE, RENDER_CUTOUT, RENDER_TRANSPARENT, COUNT);
                 }
                 ENUM_CLASS(ResourceDimension) {
                     ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
@@ -118,6 +118,12 @@ class Vec4;
 class Vec3;
 class Vec2;
 
+namespace pipeline {
+
+class PipelineSceneData;
+
+} // namespace pipeline
+
 } // namespace cc
 )",
     ) {
@@ -146,8 +152,7 @@ virtual void setSampler(const std::string& name, gfx::Sampler* sampler) = 0;
 virtual void addSceneOfCamera(scene::Camera* camera, const std::string& name) = 0;
 virtual void addSceneOfCamera(scene::Camera* camera) = 0;
 virtual void addScene(const std::string& name) = 0;
-virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName, const std::string& name) = 0;
-virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName) = 0;
+virtual void addFullscreenQuad(const std::string& shader, const std::string& name) = 0;
 virtual void addFullscreenQuad(const std::string& shader) = 0;
 )");
         }
@@ -204,7 +209,7 @@ virtual void addPair(const CopyPair& pair) = 0;
 virtual uint32_t addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
 virtual uint32_t addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
 virtual uint32_t addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
-virtual void beginFrame() = 0;
+virtual void beginFrame(pipeline::PipelineSceneData* pplScene) = 0;
 virtual void endFrame() = 0;
 virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
 virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;

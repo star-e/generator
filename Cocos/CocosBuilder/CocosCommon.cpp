@@ -94,6 +94,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/core/pipeline",
         .mTypescriptFilePrefix = "pipeline-scene-data",
     ) {
+        ADD_FEATURES(ToJs);
+
         NAMESPACE(cc) {
             NAMESPACE(pipeline) {
                 IMPORT_CLASS(PipelineSceneData);
