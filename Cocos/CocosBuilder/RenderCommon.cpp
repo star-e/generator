@@ -141,7 +141,7 @@ virtual void setSampler(const std::string& name, gfx::Sampler* sampler) = 0;
 )");
         }
 
-        INTERFACE(RasterQueue) {
+        INTERFACE(RasterQueueBuilder) {
             MEMBER_FUNCTIONS(R"(
 virtual void addSceneOfCamera(scene::Camera* camera, const std::string& name) = 0;
 virtual void addSceneOfCamera(scene::Camera* camera) = 0;
@@ -152,20 +152,20 @@ virtual void addFullscreenQuad(const std::string& shader) = 0;
 )");
         }
 
-        INTERFACE(RasterPass) {
+        INTERFACE(RasterPassBuilder) {
             MEMBER_FUNCTIONS(R"(
 virtual void addRasterView(const std::string& name, const RasterView& view) = 0;
 virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
-virtual RasterQueue* addQueue(QueueHint hint, const std::string& layoutName, const std::string& name) = 0;
-virtual RasterQueue* addQueue(QueueHint hint, const std::string& layoutName) = 0;
-virtual RasterQueue* addQueue(QueueHint hint) = 0;
+virtual RasterQueueBuilder* addQueue(QueueHint hint, const std::string& layoutName, const std::string& name) = 0;
+virtual RasterQueueBuilder* addQueue(QueueHint hint, const std::string& layoutName) = 0;
+virtual RasterQueueBuilder* addQueue(QueueHint hint) = 0;
 virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName, const std::string& name) = 0;
 virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName) = 0;
 virtual void addFullscreenQuad(const std::string& shader) = 0;
 )");
         }
 
-        INTERFACE(ComputeQueue) {
+        INTERFACE(ComputeQueueBuilder) {
             MEMBER_FUNCTIONS(R"(
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName, const std::string& name) = 0;
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName) = 0;
@@ -173,13 +173,13 @@ virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, 
 )");
         }
 
-        INTERFACE(ComputePass) {
+        INTERFACE(ComputePassBuilder) {
             MEMBER_FUNCTIONS(R"(
 virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueue* addQueue(const std::string& layoutName, const std::string& name) = 0;
-virtual ComputeQueue* addQueue(const std::string& layoutName) = 0;
-virtual ComputeQueue* addQueue() = 0;
+virtual ComputeQueueBuilder* addQueue(const std::string& layoutName, const std::string& name) = 0;
+virtual ComputeQueueBuilder* addQueue(const std::string& layoutName) = 0;
+virtual ComputeQueueBuilder* addQueue() = 0;
 
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName, const std::string& name) = 0;
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName) = 0;
@@ -187,13 +187,13 @@ virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, 
 )");
         }
 
-        INTERFACE(MovePass) {
+        INTERFACE(MovePassBuilder) {
             MEMBER_FUNCTIONS(R"(
 virtual void addPair(const MovePair& pair) = 0;
 )");
         }
 
-        INTERFACE(CopyPass) {
+        INTERFACE(CopyPassBuilder) {
             MEMBER_FUNCTIONS(R"(
 virtual void addPair(const CopyPair& pair) = 0;
 )");
@@ -206,12 +206,12 @@ virtual uint32_t addRenderTarget(const std::string& name, gfx::Format format, ui
 virtual uint32_t addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height) = 0;
 virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
-virtual RasterPass* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
-virtual RasterPass* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;
-virtual ComputePass* addComputePass(const std::string& layoutName, const std::string& name) = 0;
-virtual ComputePass* addComputePass(const std::string& layoutName) = 0;
-virtual MovePass* addMovePass(const std::string& name) = 0;
-virtual CopyPass* addCopyPass(const std::string& name) = 0;
+virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
+virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;
+virtual ComputePassBuilder* addComputePass(const std::string& layoutName, const std::string& name) = 0;
+virtual ComputePassBuilder* addComputePass(const std::string& layoutName) = 0;
+virtual MovePassBuilder* addMovePass(const std::string& name) = 0;
+virtual CopyPassBuilder* addCopyPass(const std::string& name) = 0;
 )");
         }
 

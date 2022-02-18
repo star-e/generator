@@ -252,7 +252,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     {
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
-            auto name = getVariableName(convertTag(extractName(c.mTag)), scratch);
+            auto name = getTagType(extractName(c.mTag), scratch);
             OSS << name << ",\n";
         }
     }
@@ -263,7 +263,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     {
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
-            auto enumName = getVariableName(convertTag(extractName(c.mTag)), scratch);
+            auto enumName = getTagType(extractName(c.mTag), scratch);
             auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
             OSS << "[" << name << "Value." << enumName << "]: " << typeName << "\n";
         }
@@ -275,7 +275,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     {
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
-            auto name = getVariableName(convertTag(extractName(c.mTag)), scratch);
+            auto name = getTagType(extractName(c.mTag), scratch);
             auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
 
             OSS << getVariableName(name, scratch) << "(value: "
@@ -1545,9 +1545,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
-                    std::pmr::string tagName(convertTag(extractName(c.mTag)), scratch);
+                    const auto& tagName = getTagType(extractName(c.mTag), scratch);
 
-                    OSS << "case " << name << "Value." << getVariableName(convertTag(extractName(c.mTag)), scratch) << ":\n";
+                    OSS << "case " << name << "Value." << getTagType(extractName(c.mTag), scratch) << ":\n";
                     INDENT();
                     OSS << "return visitor." << getVariableName(tagName, scratch);
                     oss << "(vert._object as " << typeName << ");\n";
@@ -1565,13 +1565,13 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             auto generatePolymorphicGetters = [&](bool bTry) {
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
-                    auto tagName = getVariableName(convertTag(extractName(c.mTag)), scratch);
+                    auto tagName = getTagType(extractName(c.mTag), scratch);
                     if (bTry) {
                         OSS << "tryGet";
                     } else {
                         OSS << "get";
                     }
-                    oss << convertTag(extractName(c.mTag)) << " (v: " << vertexDescType << "): " << typeName;
+                    oss << getTagType(extractName(c.mTag)) << " (v: " << vertexDescType << "): " << typeName;
                     if (bTry) {
                         oss << " | null";
                     }
