@@ -43,10 +43,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXTexture.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 )",
-        .mTypescriptInclude = R"(import { Mat4 } from '../../math';
-import { legacyCC } from '../../global-exports';
-import { RenderScene } from '../../renderer/scene';
-)") {
+    ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
         FLAG_CLASS(ResourceFlags) {

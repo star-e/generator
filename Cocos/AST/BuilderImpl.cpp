@@ -1027,6 +1027,16 @@ std::pmr::string reorderIncludes(std::pmr::string content,
     return oss.str();
 }
 
+void outputComment(std::ostream& oss) {
+    oss << R"(/**
+ * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
+ * The following section is auto-generated.
+ * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
+ */
+)";
+
+}
+
 }
 
 void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::string>& files) const {
@@ -1057,6 +1067,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::filesystem::path filename = cppFolder / shortname;
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
+        outputComment(oss);
         OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
         const auto included = getIndirectIncludes(moduleID, mg, scratch);
@@ -1088,6 +1099,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::filesystem::path filename = cppFolder / shortname;
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
+        outputComment(oss);
         OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
         OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
@@ -1120,6 +1132,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            outputComment(oss);
             OSS << "// clang-format off\n";
             OSS << "#pragma once\n";
 
@@ -1208,6 +1221,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            outputComment(oss);
             OSS << "// clang-format off\n";
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
@@ -1226,6 +1240,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
+        outputComment(oss);
         OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
         OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
@@ -1251,6 +1266,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            outputComment(oss);
             OSS << "// clang-format off\n";
             OSS << "#pragma once\n";
 
@@ -1287,6 +1303,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            outputComment(oss);
             OSS << "// clang-format off\n";
             OSS << "#include \"" << m.mFilePrefix << "Reflection.h\"\n";
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
@@ -1308,6 +1325,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            outputComment(oss);
             OSS << "// clang-format off\n";
             OSS << "#pragma once\n";
 
@@ -1344,6 +1362,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
+            outputComment(oss);
             OSS << "// clang-format off\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Jsb.h\"\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
@@ -1384,6 +1403,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         codegen.mScopes.emplace_back("Struct");
 
         {
+            outputComment(oss);
+
             OSS << "/* eslint-disable max-len */\n";
             int count = 0;
             if (g.moduleHasGraph(modulePath)) {
