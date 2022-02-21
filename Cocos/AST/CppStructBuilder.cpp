@@ -183,10 +183,10 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             }
             oss << member.mMember;
             if (!member.mDefaultValue.empty()) {
-                if (sFormat) {
+                if (false) {
                     oss << std::pmr::string(member.mDefaultValueOffset, ' ');
                 }
-                oss << " = " << member.mDefaultValue;
+                oss << "{" << member.mDefaultValue << "}";
             }
             oss << ";\n";
         }
