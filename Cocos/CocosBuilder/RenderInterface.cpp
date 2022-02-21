@@ -39,6 +39,25 @@ class PipelineSceneData;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+        INTERFACE(ShaderGroupBuilder) {
+            MEMBER_FUNCTIONS(R"(
+virtual void addShader() = 0;
+)");
+        }
+
+        INTERFACE(DescriptorGroupBuilder) {
+            MEMBER_FUNCTIONS(R"(
+virtual DescriptorGroupBuilder* addDescriptorGroup(UpdateFrequency update) = 0;
+virtual ShaderGroupBuilder* addShaderGroup(UpdateFrequency update) = 0;
+)");
+        }
+        
+        INTERFACE(DescriptorLayout) {
+            MEMBER_FUNCTIONS(R"(
+virtual DescriptorGroupBuilder* addDescriptorGroup(UpdateFrequency update) = 0;
+)");
+        }
+
         INTERFACE(Setter) {
             MEMBER_FUNCTIONS(R"(
 virtual void setMat4(const std::string& name, const cc::Mat4& mat) = 0;
