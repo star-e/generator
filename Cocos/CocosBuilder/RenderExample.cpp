@@ -91,7 +91,7 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (ResourceGraph&, mResourceGraph, _)
                 (RenderGraph&, mGraph, _)
-                (LayoutGraph&, mLayoutGraph, _)
+                (LayoutGraphData&, mLayoutGraph, _)
                 (boost::container::pmr::memory_resource*, mScratch, nullptr)
             );
             CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);

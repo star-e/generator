@@ -14,7 +14,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",
-        .mRequires = { "Gfx", "RenderCommon", "RenderGraph" },
+        .mRequires = { "Gfx", "RenderCommon", "RenderGraph", "Assets" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {
@@ -26,6 +26,8 @@ class Color;
 class Vec4;
 class Vec3;
 class Vec2;
+
+class EffectAsset;
 
 namespace pipeline {
 
@@ -39,22 +41,9 @@ class PipelineSceneData;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        INTERFACE(ShaderGroupBuilder) {
+        INTERFACE(DescriptorHierarchy) {
             MEMBER_FUNCTIONS(R"(
-virtual void addShader() = 0;
-)");
-        }
-
-        INTERFACE(DescriptorGroupBuilder) {
-            MEMBER_FUNCTIONS(R"(
-virtual DescriptorGroupBuilder* addDescriptorGroup(UpdateFrequency update) = 0;
-virtual ShaderGroupBuilder* addShaderGroup(UpdateFrequency update) = 0;
-)");
-        }
-        
-        INTERFACE(DescriptorLayout) {
-            MEMBER_FUNCTIONS(R"(
-virtual DescriptorGroupBuilder* addDescriptorGroup(UpdateFrequency update) = 0;
+virtual void addEffect(EffectAsset* asset) = 0;
 )");
         }
 

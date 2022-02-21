@@ -263,6 +263,18 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         PROJECT_TS(std::unique_ptr<cc::gfx::Sampler>, Sampler);
     }
 
+    MODULE(Assets,
+        .mFolder = "cocos/core/assets",
+        .mFilePrefix = "EffectAsset.h",
+        .mTypescriptFolder = "cocos/core",
+        .mTypescriptFilePrefix = "assets",
+        ) {
+        ADD_FEATURES(ToJs);
+        NAMESPACE(cc) {
+            IMPORT_CLASS(EffectAsset) {
+            }
+        }
+    }
 }
 
 }
