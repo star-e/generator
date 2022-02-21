@@ -24,6 +24,9 @@
     <ClCompile Include="CocosCommon.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="RenderInterface.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
