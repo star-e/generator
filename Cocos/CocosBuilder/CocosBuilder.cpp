@@ -110,11 +110,11 @@ int main() {
     }
 
     // copy graph interface
-    {
+    if (false) {
         auto content = readFile("graph.ts");
         updateFile(typescriptFolder / "cocos/core/pipeline/custom/graph.ts", content);
     }
-    {
+    if (false) {
         std::filesystem::path srcFolder("../renderer/pipeline/custom");
         std::filesystem::path dstFolder = cppFolder / "cocos/renderer/pipeline/custom";
         auto copyFile = [&](std::string_view filename) {
