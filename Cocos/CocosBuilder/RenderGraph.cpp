@@ -87,8 +87,8 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
             CNTR(mResidency);
             MEMBER_FUNCTIONS(R"(
 bool hasSideEffects() const noexcept {
-    return boost::variant2::holds_alternative<Persistent_>(residency) ||
-           boost::variant2::holds_alternative<Backbuffer_>(residency);
+    return boost::variant2::holds_alternative<PersistentTag>(residency) ||
+           boost::variant2::holds_alternative<BackbufferTag>(residency);
 }
 )");
         }

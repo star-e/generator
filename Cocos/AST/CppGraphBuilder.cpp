@@ -481,6 +481,7 @@ std::pmr::string CppGraphBuilder::adjIterType() const {
 }
 
 std::pmr::string CppGraphBuilder::tagType(std::string_view ns) const {
+    const auto& cpp = mStruct;
     prepareNamespace(ns);
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& g = *mStruct.mSyntaxGraph;
@@ -497,7 +498,7 @@ std::pmr::string CppGraphBuilder::tagType(std::string_view ns) const {
         if (count++)
             oss << ", ";
         auto conceptID = locate(c.mTag, g);
-        oss << getCppPath(g.getDependentName(ns, conceptID, scratch, scratch), scratch);
+        oss << cpp.getDependentName(conceptID);
     }
     oss << ">";
     return oss.str();
@@ -554,6 +555,7 @@ std::pmr::string CppGraphBuilder::constValueType(std::string_view ns) const {
 
 std::pmr::string CppGraphBuilder::handleElemType(const PolymorphicPair& pair,
     std::string_view ns, bool bSkipName) const {
+    const auto& cpp = mStruct;
     prepareNamespace(ns);
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& g = *mStruct.mSyntaxGraph;
@@ -563,7 +565,7 @@ std::pmr::string CppGraphBuilder::handleElemType(const PolymorphicPair& pair,
     auto tagID = locate(pair.mTag, g);
     auto valueID = locate(pair.mValue, g);
     
-    auto tagName = getCppPath(g.getDependentName(ns, tagID, scratch, scratch), scratch);
+    auto tagName = cpp.getDependentName(tagID);
     auto valueName = getCppPath(g.getDependentName(ns, valueID, scratch, scratch), scratch);
 
     oss << "impl::ValueHandle<" << tagName << ", ";
@@ -1638,9 +1640,8 @@ std::pmr::string CppGraphBuilder::generateTags_h() const {
     oss << "\n";
     int count = 0;
     for (const auto& c : s.mComponents) {
-        auto tagName = getTagType(c.mName);
-        OSS << "struct " << tagName << "_ { // NOLINT\n";
-        OSS << "} static constexpr " << tagName << " = {}; // NOLINT\n";
+        OSS << "struct " << getTagType(c.mName) << " {\n";
+        OSS << "} static constexpr " << convertTag(c.mName) << " = {}; // NOLINT\n";
         ++count;
     }
     oss << "\n";

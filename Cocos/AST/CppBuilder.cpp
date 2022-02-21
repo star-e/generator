@@ -86,9 +86,12 @@ bool outputNamespaces(std::ostream& oss, std::pmr::string& space,
 
 }
 
-std::pmr::string generateFwd_h(const SyntaxGraph& g,
+std::pmr::string generateFwd_h(std::string_view projectName,
+    const SyntaxGraph& g,
+    const ModuleGraph& mg,
     std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) {
+    const auto moduleID = locate(moduleName0, mg);
     pmr_ostringstream oss(std::ios_base::out, mr);
     std::pmr::string space(scratch);
     CodegenContext context(scratch);
@@ -238,6 +241,7 @@ std::pmr::string generateFwd_h(const SyntaxGraph& g,
 
         const auto& name = get(g.names, g, vertID);
         const auto& constraints = get(g.constraints, g, vertID);
+        CppStructBuilder cpp(&g, &mg, vertID, moduleID, ns, projectName, scratch);
 
         auto outputConstraints = [&]() {
             pmr_ostringstream oss(std::ios_base::out, mr);
@@ -314,7 +318,7 @@ std::pmr::string generateFwd_h(const SyntaxGraph& g,
             [&](const Tag& t) {
                 outputNs();
                 lineBreak(BreakType::Struct);
-                OSS << "struct " << name << ";\n";
+                OSS << "struct " << getTagType(name) << ";\n";
                 constraintsContent = outputConstraints();
             },
             [&](const Variant& v) {
@@ -328,7 +332,7 @@ std::pmr::string generateFwd_h(const SyntaxGraph& g,
                 for (auto count = 0; const auto& e : v.mVariants) {
                     if (count++)
                         oss << ", ";
-                    OSS << getCppPath(getDependentPath(ns, e), scratch);
+                    OSS << cpp.getDependentName(e);
                 }
                 oss << ">;\n";
             },
@@ -472,7 +476,7 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
                 Expects(name2.size());
                 name2.resize(name2.size() - 1);
                 outputNs();
-                OSS << "inline const char* getName(const " << name << "& /*v*/) noexcept { "
+                OSS << "inline const char* getName(const " << getTagType(name) << "& /*v*/) noexcept { "
                     << "return \"" << name2 << "\"; }\n";
             },
             [&](const Composition_ auto&) {
@@ -723,10 +727,10 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 lineBreak(BreakType::Tag);
 
                 if (t.mEntity) {
-                    OSS << "struct " << name << " {\n";
+                    OSS << "struct " << getTagType(name) << " {\n";
                     OSS << "} static constexpr " << convertTag(name) << ";\n";
                 } else {
-                    OSS << "struct " << name << " {};\n";
+                    OSS << "struct " << getTagType(name) << " {};\n";
                 }
             },
             [&](const Variant& v) {
@@ -739,7 +743,8 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 for (auto count = 0; const auto& e : v.mVariants) {
                     if (count++)
                         oss << ", ";
-                    OSS << getCppPath(getDependentPath(ns, e), scratch);
+                    auto tagName = cpp.getDependentName(e);
+                    OSS << getCppPath(tagName, scratch);
                 }
                 oss << ">;\n";
             },

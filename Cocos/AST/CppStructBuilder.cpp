@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (c) 2013-2016 Chukong Technologies Inc.
 Copyright (c) 2017-2022 Xiamen Yaji Software Co., Ltd.
 
@@ -69,7 +69,16 @@ const Traits& CppStructBuilder::getTraits() const {
 std::pmr::string CppStructBuilder::getDependentName(SyntaxGraph::vertex_descriptor vertID) const {
     const auto& g = *mSyntaxGraph;
     auto* scratch = get_allocator().resource();
-    return getCppPath(mSyntaxGraph->getDependentName(mCurrentNamespace, vertID, scratch, scratch), scratch);
+
+    auto name = mSyntaxGraph->getDependentName(mCurrentNamespace, vertID, scratch, scratch);
+    if (holds_tag<Tag_>(vertID, g)) {
+        Expects(!name.empty());
+        Expects(name.back() == '_');
+        name.pop_back();
+        name.append("Tag");
+    }
+
+    return getCppPath(name, scratch);
 }
 
 std::pmr::string CppStructBuilder::getDependentName(std::string_view typePath) const {
@@ -95,7 +104,15 @@ std::pmr::string CppStructBuilder::getImplName(std::string_view ns) const {
     } else {
         cn = g.getNamespace(mCurrentVertex, scratch);
     }
-    return getCppPath(g.getDependentName(cn, mCurrentVertex, scratch, scratch), scratch);
+    auto name = g.getDependentName(cn, mCurrentVertex, scratch, scratch);
+    if (holds_tag<Tag_>(mCurrentVertex, g)) {
+        Expects(!name.empty());
+        Expects(name.back() == '_');
+        name.pop_back();
+        name.append("Tag");
+    }
+
+    return getCppPath(name, scratch);
 }
 
 std::pmr::string CppStructBuilder::generateGetAllocatorSignature(bool bInline) const {

@@ -1086,7 +1086,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         if (mBoost) {
             OSS << "#include <boost/variant2/variant.hpp>\n";
         }
-        copyString(oss, generateFwd_h(mSyntaxGraph, modulePath, scratch, scratch));
+        copyString(oss, generateFwd_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
         oss << "\n";
         OSS << "// clang-format on\n";
 

@@ -2162,7 +2162,7 @@ std::pmr::string CppGraphBuilder::generateGraphBoostFunctions_h() const {
             oss << "\n";
             OSS << "// Vertex Component\n";
             {
-                const auto& tagType = c.mName;
+                const auto& tagType = getTagType(c.mName, scratch);
                 OSS << "template <>\n";
                 OSS << "struct property_map<" << name << ", " << name << "::" << tagType << "> {\n";
                 {
@@ -2528,7 +2528,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             auto componentID = locate(c.mValuePath, g);
 
             { // component tag getter
-                const auto& tagType = c.mName;
+                const auto& tagType = getTagType(c.mName, scratch);
 
                 auto outputGetContent = [&]() {
                     INDENT();

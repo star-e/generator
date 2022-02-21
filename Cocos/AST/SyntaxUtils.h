@@ -78,7 +78,10 @@ std::pmr::string getVariableName(std::string_view typeName,
     std::pmr::memory_resource* mr);
 
 std::string_view convertTag(std::string_view tagName);
-std::string_view getTagType(std::string_view tagName,
+std::pmr::string getTagType(std::string_view tagName,
+    std::pmr::memory_resource* scratch = std::pmr::get_default_resource());
+
+std::pmr::string getTypescriptTagType(std::string_view tagName,
     std::pmr::memory_resource* scratch = std::pmr::get_default_resource());
 
 std::pmr::string getTagVariableName(std::string_view typeName,

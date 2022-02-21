@@ -456,8 +456,14 @@ std::string_view convertTag(std::string_view tagName) {
     return tagName;
 }
 
-std::string_view getTagType(std::string_view tagName, std::pmr::memory_resource* scratch) {
-    return convertTag(tagName);
+std::pmr::string getTagType(std::string_view tagName, std::pmr::memory_resource* scratch) {
+    std::pmr::string typeName(convertTag(tagName));
+    typeName.append("Tag");
+    return typeName;
+}
+
+std::pmr::string getTypescriptTagType(std::string_view tagName, std::pmr::memory_resource* scratch) {
+    return std::pmr::string(convertTag(tagName), scratch);
 }
 
 std::pmr::string getTagVariableName(std::string_view typeName,

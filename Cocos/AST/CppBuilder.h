@@ -29,7 +29,10 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-std::pmr::string generateFwd_h(const SyntaxGraph& g, std::string_view moduleName,
+std::pmr::string generateFwd_h(std::string_view projectName,
+    const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName0,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
 std::pmr::string generateNames_h(const SyntaxGraph& g,

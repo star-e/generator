@@ -252,7 +252,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     {
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
-            auto name = getTagType(extractName(c.mTag), scratch);
+            auto name = getTypescriptTagType(extractName(c.mTag), scratch);
             OSS << name << ",\n";
         }
     }
@@ -263,7 +263,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     {
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
-            auto enumName = getTagType(extractName(c.mTag), scratch);
+            auto enumName = getTypescriptTagType(extractName(c.mTag), scratch);
             auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
             OSS << "[" << name << "Value." << enumName << "]: " << typeName << "\n";
         }
@@ -275,7 +275,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     {
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
-            auto name = getTagType(extractName(c.mTag), scratch);
+            auto name = getTypescriptTagType(extractName(c.mTag), scratch);
             auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
 
             OSS << getVariableName(name, scratch) << "(value: "
@@ -317,7 +317,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
     {
         INDENT();
         for (const auto& c : s.mComponents) {
-            OSS << getTagType(c.mName, scratch) << ",\n";
+            OSS << getTypescriptTagType(c.mName, scratch) << ",\n";
         }
     }
     OSS << "}\n";
@@ -328,7 +328,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
         INDENT();
         for (const auto& c : s.mComponents) {
             auto typeName = g.getTypescriptTypename(c.mValuePath, scratch, scratch);
-            OSS << "[" << name << "Component." << getTagType(c.mName, scratch) << "]: " << typeName << ";\n";
+            OSS << "[" << name << "Component." << getTypescriptTagType(c.mName, scratch) << "]: " << typeName << ";\n";
         }
     }
     OSS << "}\n";
@@ -339,7 +339,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
         INDENT();
         for (const auto& c : s.mComponents) {
             auto typeName = g.getTypescriptTypename(c.mValuePath, scratch, scratch);
-            OSS << "[" << name << "Component." << getTagType(c.mName, scratch) << "]: " << name << convertTag(c.mName) << "Map;\n";
+            OSS << "[" << name << "Component." << getTypescriptTagType(c.mName, scratch) << "]: " << name << convertTag(c.mName) << "Map;\n";
         }
     }
     OSS << "}\n";
@@ -1338,7 +1338,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 for (const auto& c : s.mComponents) {
                     auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
                     auto member = builder.getMemberName(c.mMemberName, false);
-                    OSS << "case '" << getTagType(c.mName, scratch) << "':\n";
+                    OSS << "case '" << getTypescriptTagType(c.mName, scratch) << "':\n";
                     Expects(c.isValid());
                     if (s.isVector()) {
                         OSS << "    return new " << name << convertTag(c.mName) << "Map("
@@ -1369,7 +1369,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 for (const auto& c : s.mComponents) {
                     auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
                     OSS << "case " << name << "Component."
-                        << getTagType(c.mName, scratch) << ":\n";
+                        << getTypescriptTagType(c.mName, scratch) << ":\n";
                     INDENT();
                     if (s.isVector()) {
                         OSS << "return this."
@@ -1400,7 +1400,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     auto member = builder.getMemberName(c.mMemberName, false);
 
                     OSS << "case " << name << "Component."
-                        << getTagType(c.mName, scratch) << ":\n";
+                        << getTypescriptTagType(c.mName, scratch) << ":\n";
                     INDENT();
                     if (s.isVector()) {
                         OSS << "return new " << name << convertTag(c.mName) << "Map("
@@ -1545,9 +1545,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
-                    const auto& tagName = getTagType(extractName(c.mTag), scratch);
+                    const auto& tagName = getTypescriptTagType(extractName(c.mTag), scratch);
 
-                    OSS << "case " << name << "Value." << getTagType(extractName(c.mTag), scratch) << ":\n";
+                    OSS << "case " << name << "Value." << getTypescriptTagType(extractName(c.mTag), scratch) << ":\n";
                     INDENT();
                     OSS << "return visitor." << getVariableName(tagName, scratch);
                     oss << "(vert._object as " << typeName << ");\n";
@@ -1565,13 +1565,13 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             auto generatePolymorphicGetters = [&](bool bTry) {
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
-                    auto tagName = getTagType(extractName(c.mTag), scratch);
+                    auto tagName = getTypescriptTagType(extractName(c.mTag), scratch);
                     if (bTry) {
                         OSS << "tryGet";
                     } else {
                         OSS << "get";
                     }
-                    oss << getTagType(extractName(c.mTag)) << " (v: " << vertexDescType << "): " << typeName;
+                    oss << getTypescriptTagType(extractName(c.mTag)) << " (v: " << vertexDescType << "): " << typeName;
                     if (bTry) {
                         oss << " | null";
                     }
@@ -1968,7 +1968,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             for (const auto& c : s.mComponents) {
                 if (count++)
                     oss << ", ";
-                oss << "'" << getTagType(c.mName, scratch) << "'";
+                oss << "'" << getTypescriptTagType(c.mName, scratch) << "'";
             }
             oss << "];\n";
         }
