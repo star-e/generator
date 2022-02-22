@@ -65,7 +65,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (uint32_t, mCount, 1)
             );
             TS_INIT(mType, Type.UNKNOWN);
-            CNTR(mType, mCount);
+            CNTR(mType);
         }
 
         STRUCT(DescriptorBlock) {
@@ -91,7 +91,12 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            CNTR(mUpdateFrequency, mParameterType, mVisibility);
         }
+        PROJECT_TS(
+            (PmrMap<DescriptorTableIndex, DescriptorTable>),
+            (Map<string, DescriptorTable>)
+        );
 
         STRUCT(DescriptorDB) {
             PUBLIC(
@@ -133,6 +138,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (uint32_t, mValueID, 0xFFFFFFFF)
             );
             TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mType, mValueID);
         }
 
         STRUCT(UniformBlockData) {
@@ -148,9 +154,10 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (uint32_t, mID, 0xFFFFFFFF)
                 (gfx::Type, mType, gfx::Type::UNKNOWN)
-                (uint32_t, mCount, 0)
+                (uint32_t, mCount, 1)
             );
             TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mID, mType);
         }
 
         STRUCT(DescriptorBlockData) {
@@ -159,6 +166,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (uint32_t, mCapacity, 0)
                 (boost::container::pmr::vector<DescriptorData>, mDescriptors, _)
             );
+            CNTR(mType, mCapacity);
         }
 
         STRUCT(DescriptorTableData) {
@@ -169,6 +177,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 ((PmrFlatMap<uint32_t, UniformBlockData>), mUniformBlocks, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            CNTR(mSlot, mCapacity);
         }
 
         STRUCT(DescriptorSetData) {
