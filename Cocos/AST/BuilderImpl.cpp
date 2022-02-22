@@ -1628,17 +1628,17 @@ int ModuleBuilder::compile() {
         mCurrentModule = get(g.modulePaths, g, vertID);
         { // add alias
             if (s.mIncidence) {
-                addAlias("out_edge_type", "");
+                addAlias("OutEdge", "");
                 if (s.mBidirectional) {
-                    addAlias("in_edge_type", "");
+                    addAlias("InEdge", "");
                 }
             }
             if (s.mReferenceGraph && !s.mAliasGraph) {
-                addAlias("children_edge_type", "");
-                addAlias("parent_edge_type", "");
+                addAlias("ChildEdge", "");
+                addAlias("ParentEdge", "");
             }
             if (s.isPolymorphic()) {
-                addAlias("vertex_handle_type", "");
+                addAlias("VertexHandle", "");
             }
         }
 
@@ -1682,7 +1682,7 @@ int ModuleBuilder::compile() {
                 addConstructor(vertexID, { "mProperty" }, false);
             }
             if (s.isPolymorphic()) {
-                addMember(vertexID, true, "vertex_handle_type", "mHandle");
+                addMember(vertexID, true, "VertexHandle", "mHandle");
             }
         }
 

@@ -96,15 +96,15 @@ std::pmr::string eraseFromIncidenceList(const Graph& s,
             [&]<UniqueAssociative_ T>(T) {
                 if (!s.needEdgeList()) {
                     if (bOut) {
-                        OSS << el << ".erase(" << name << "::out_edge_type(" << v << "));\n";
+                        OSS << el << ".erase(" << name << "::OutEdge(" << v << "));\n";
                     } else {
-                        OSS << el << ".erase(" << name << "::in_edge_type(" << v << "));\n";
+                        OSS << el << ".erase(" << name << "::InEdge(" << v << "));\n";
                     }
                 } else {
                     if (bOut) {
-                        OSS << el << ".erase(" << name << "::out_edge_type(" << v << ", {}));\n";
+                        OSS << el << ".erase(" << name << "::OutEdge(" << v << ", {}));\n";
                     } else {
-                        OSS << el << ".erase(" << name << "::in_edge_type(" << v << ", {}));\n";
+                        OSS << el << ".erase(" << name << "::InEdge(" << v << ", {}));\n";
                     }
                 }
             },
@@ -354,7 +354,7 @@ std::pmr::string removePolymorphicType(const CppGraphBuilder& builder,
     auto ns = builder.mStruct.mCurrentNamespace;
 
     OSS << "inline void remove_vertex_value_impl(const "
-        << name << "::vertex_handle_type& h, " << name << "& g) noexcept { // NOLINT\n";
+        << name << "::VertexHandle& h, " << name << "& g) noexcept { // NOLINT\n";
     {
         INDENT();
         OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
@@ -978,7 +978,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
         if (s.isPolymorphic()) {
             oss << "Tag tag, ";
         } else {
-            oss << "std::piecewise_construct_t, ";
+            oss << "std::piecewise_construct_t /*tag*/, ";
         }
     } else {
         if (s.isPolymorphic() && !propertyParam) {
@@ -1402,11 +1402,11 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
             overload(
                 [&]<BackInsertionSequence_ T>(T) {
                     OSS << "auto  iter        = std::find(outEdgeList.begin(), outEdgeList.end(), "
-                        << name << "::out_edge_type(v));\n";
+                        << name << "::OutEdge(v));\n";
                 },
                 [&]<Associative_ U>(U) {
                     OSS << "auto  iter        = outEdgeList.find("
-                        << name << "::out_edge_type(v));\n";
+                        << name << "::OutEdge(v));\n";
                 }),
             s.mOutEdgeListType);
         OSS << "bool  hasEdge     = (iter != outEdgeList.end());\n";
@@ -1540,11 +1540,11 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 overload(
                     [&]<BackInsertionSequence_ T>(T) {
                         OSS << "auto  iter        = std::find(outEdgeList.begin(), outEdgeList.end(), "
-                            << name << "::out_edge_type(v));\n";
+                            << name << "::OutEdge(v));\n";
                     },
                     [&]<Associative_ U>(U) {
                         OSS << "auto  iter        = outEdgeList.find("
-                            << name << "::out_edge_type(v));\n";
+                            << name << "::OutEdge(v));\n";
                     }),
                 s.mOutEdgeListType);
             OSS << "bool  hasEdge     = (iter != outEdgeList.end());\n";
@@ -1719,7 +1719,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             [&]<UniqueAssociative_ T>(T) {
                                 oss << "\n";
                                 OSS << "// remove out-edges and properties\n";
-                                OSS << "auto iter = outEdgeList.find(" << name << "::out_edge_type(v, {}));\n";
+                                OSS << "auto iter = outEdgeList.find(" << name << "::OutEdge(v, {}));\n";
                                 OSS << "if (iter != outEdgeList.end()) {\n";
                                 OSS << "    g.edges.erase((*iter).get_iter());\n";
                                 OSS << "    outEdgeList.erase(iter);\n";
@@ -1794,7 +1794,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                     OSS << "using out_edge_iterator = " << name << "::out_edge_iterator;\n";
                                     OSS << "auto u = source(e, g);\n";
                                     OSS << "auto& outEdgeList = g.getOutEdgeList(u);\n";
-                                    OSS << "auto key = " << name << "::out_edge_type(target(e, g));\n";
+                                    OSS << "auto key = " << name << "::OutEdge(target(e, g));\n";
                                     OSS << "auto [first, last] = outEdgeList.equal_range(key);\n";
                                     OSS << "auto range = std::make_pair(out_edge_iterator(first, u), out_edge_iterator(last, u));\n";
                                 },
@@ -2722,7 +2722,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << "\n";
         }
 
-        OSS << gNoDiscard << "inline " << name << "::vertex_tag_type\n";
+        OSS << gNoDiscard << "inline " << name << "::VertexTag\n";
         OSS << "tag(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
         {
             INDENT();
@@ -2739,7 +2739,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             oss << ",\n";
                         }
                         OSS << "[](const " << handleElemType(c, cn, true) << "&) {\n";
-                        OSS << "    return " << name << "::vertex_tag_type{"
+                        OSS << "    return " << name << "::VertexTag{"
                             << cpp.getDependentName(c.mTag) << "{}};\n";
                         OSS << "}";
                     }
@@ -2756,7 +2756,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         OSS << "}\n";
 
         auto generateGetValue = [&](bool bConst) {
-            std::string valueType = bConst ? "vertex_const_value_type" : "vertex_value_type";
+            std::string valueType = bConst ? "VertexConstValue" : "VertexValue";
             oss << "\n";
             OSS << gNoDiscard << "inline " << name << "::" << valueType << "\n";
             OSS << "value(" << name << "::vertex_descriptor u, ";

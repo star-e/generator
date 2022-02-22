@@ -260,7 +260,7 @@ std::pmr::string CppGraphBuilder::outEdgeListType(std::string_view ns) const {
 
     auto listID = locate(s.mOutEdgeListPath, g);
     oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
-    oss << "<out_edge_type>";
+    oss << "<OutEdge>";
     return oss.str();
 }
 
@@ -332,7 +332,7 @@ std::pmr::string CppGraphBuilder::inEdgeListType(std::string_view ns) const {
 
     auto listID = locate(s.mOutEdgeListPath, g);
     oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
-    oss << "<in_edge_type>";
+    oss << "<InEdge>";
     return oss.str();
 }
 
@@ -373,9 +373,9 @@ std::pmr::string CppGraphBuilder::childListType(std::string_view ns) const {
     auto listID = locate(s.mOutEdgeListPath, g);
     oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
     if (s.mAliasGraph) {
-        oss << "<out_edge_type>";
+        oss << "<OutEdge>";
     } else {
-        oss << "<children_edge_type>";
+        oss << "<ChildEdge>";
     }
     return oss.str();
 }
@@ -385,7 +385,7 @@ std::pmr::string CppGraphBuilder::childEdgeType(std::string_view ns) const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& s = *mGraph;
     if (s.mAliasGraph) {
-        oss << "out_edge_type";
+        oss << "OutEdge";
     } else {
         oss << "impl::StoredEdge<vertex_descriptor>";
     }
@@ -408,7 +408,7 @@ std::pmr::string CppGraphBuilder::parentEdgeType(std::string_view ns) const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& s = *mGraph;
     if (s.mAliasGraph) {
-        oss << "in_edge_type";
+        oss << "InEdge";
     } else {
         oss << "impl::StoredEdge<vertex_descriptor>";
     }
@@ -425,9 +425,9 @@ std::pmr::string CppGraphBuilder::parentListType(std::string_view ns) const {
     auto listID = locate(s.mOutEdgeListPath, g);
     oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
     if (s.mAliasGraph) {
-        oss << "<in_edge_type>";
+        oss << "<InEdge>";
     } else {
-        oss << "<parent_edge_type>";
+        oss << "<ParentEdge>";
     }
     return oss.str();
 }
@@ -1197,9 +1197,9 @@ std::pmr::string CppGraphBuilder::generateIncidenceGraph_h() const {
     {
         auto content = outEdgeType();
         if (content.find_first_of('\n') != content.npos) {
-            OSS << "using out_edge_type = ";
+            OSS << "using OutEdge = ";
         } else {
-            OSS << "using out_edge_type     = ";
+            OSS << "using OutEdge     = ";
         }
         copyString(oss, space, content, true);
         oss << ";\n";
@@ -1221,9 +1221,9 @@ std::pmr::string CppGraphBuilder::generateBidirectionalGraph_h() const {
     {
         auto content = inEdgeType();
         if (content.find_first_of('\n') != content.npos) {
-            OSS << "using in_edge_type = ";
+            OSS << "using InEdge = ";
         } else {
-            OSS << "using in_edge_type     = ";
+            OSS << "using InEdge     = ";
         }
         copyString(oss, space, content, true);
         oss << ";\n";
@@ -1442,14 +1442,14 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
     OSS << "using ownership_descriptor = impl::EdgeDescriptor<boost::bidirectional_tag, vertex_descriptor>;\n";
 
     oss << "\n";
-    OSS << "using children_edge_type = ";
+    OSS << "using ChildEdge = ";
     copyString(oss, space, childEdgeType(), true);
     oss << ";\n";
     OSS << "using children_iterator  = " << childIterType() << ";\n";
     OSS << "using children_size_type = " << s.mDegreeSizeType << ";\n";
 
     oss << "\n";
-    OSS << "using parent_edge_type = ";
+    OSS << "using ParentEdge = ";
     copyString(oss, space, parentEdgeType(), true);
     oss << ";\n";
     OSS << "using parent_iterator  = " << parentIterType() << ";\n";
@@ -1570,10 +1570,10 @@ std::pmr::string CppGraphBuilder::generatePolymorphicGraph_h() const {
 
     oss << "\n";
     OSS << "// PolymorphicGraph\n";
-    OSS << "using vertex_tag_type         = " << tagType() << ";\n";
-    OSS << "using vertex_value_type       = " << valueType() << ";\n";
-    OSS << "using vertex_const_value_type = " << constValueType() << ";\n";
-    OSS << "using vertex_handle_type      = ";
+    OSS << "using VertexTag         = " << tagType() << ";\n";
+    OSS << "using VertexValue       = " << valueType() << ";\n";
+    OSS << "using VertexConstValue = " << constValueType() << ";\n";
+    OSS << "using VertexHandle      = ";
     {
         INDENT();
         copyString(oss, space, handleType(), true);
