@@ -137,9 +137,9 @@ std::pmr::string CppGraphBuilder::vertexType(std::string_view ns) const {
     auto name = getCppPath(g.getDependentName(
         ns, mStruct.mCurrentVertex, scratch, scratch), scratch);
     if (name.empty()) {
-        oss << "vertex_type";
+        oss << "Vertex";
     } else {
-        oss << name << "::vertex_type";
+        oss << name << "::Vertex";
     }
     return oss.str();
 }
@@ -192,7 +192,7 @@ std::pmr::string CppGraphBuilder::objectListType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     auto vecID = locate(s.mVertexListPath, g);
-    oss << getCppPath(g.getDependentName(ns, vecID, scratch, scratch), scratch) << "<object_type>";
+    oss << getCppPath(g.getDependentName(ns, vecID, scratch, scratch), scratch) << "<Object>";
     return oss.str();
 }
 
@@ -203,7 +203,7 @@ std::pmr::string CppGraphBuilder::vertexListType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     auto vecID = locate(s.mVertexListPath, g);
-    oss << getCppPath(g.getDependentName(ns, vecID, scratch, scratch), scratch) << "<vertex_type>";
+    oss << getCppPath(g.getDependentName(ns, vecID, scratch, scratch), scratch) << "<Vertex>";
     return oss.str();
 }
 
@@ -899,7 +899,7 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
             if (c.isVector()) {
                 OSS << (bConst ? "const " : "") << container << "<" << component << ">,\n";
             } else {
-                OSS << container << "<" << component << ">::iterator " << name << "::vertex_type::*,\n";
+                OSS << container << "<" << component << ">::iterator " << name << "::Vertex::*,\n";
             }
         }
 
@@ -981,7 +981,7 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
             if (c.isVector()) {
                 OSS << (bConst ? "const " : "") << container << "<" << component << ">,\n";
             } else {
-                OSS << container << "<" << component << ">::iterator " << name << "::vertex_type::*,\n";
+                OSS << container << "<" << component << ">::iterator " << name << "::Vertex::*,\n";
             }
         }
 
@@ -1174,7 +1174,7 @@ std::pmr::string CppGraphBuilder::generateGraph_h() {
 
     if (s.mVertexList) {
         if (!s.isVector()) {
-            OSS << "struct vertex_type;\n";
+            OSS << "struct Vertex;\n";
         }
     }
     if (s.needEdgeList()) {
@@ -1312,22 +1312,22 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
         } else {
             if (s.mIncidence) {
                 OSS << "inline " << outEdgeListType() << "& getOutEdgeList(vertex_descriptor v) noexcept {\n";
-                OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+                OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
                 OSS << "    return pVertex->outEdges;\n";
                 OSS << "}\n";
                 OSS << "inline const " << outEdgeListType() << "& getOutEdgeList(vertex_descriptor v) const noexcept {\n";
-                OSS << "    auto pVertex = static_cast<const vertex_type*>(v);\n";
+                OSS << "    auto pVertex = static_cast<const Vertex*>(v);\n";
                 OSS << "    return pVertex->outEdges;\n";
                 OSS << "}\n";
 
                 if (s.mBidirectional) {
                     oss << "\n";
                     OSS << "inline " << inEdgeListType() << "& getInEdgeList(vertex_descriptor v) noexcept {\n";
-                    OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+                    OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
                     OSS << "    return pVertex->inEdges;\n";
                     OSS << "}\n";
                     OSS << "inline const " << inEdgeListType() << "& getInEdgeList(vertex_descriptor v) const noexcept {\n";
-                    OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+                    OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
                     OSS << "    return pVertex->inEdges;\n";
                     OSS << "}\n";
                 }
@@ -1385,7 +1385,7 @@ std::pmr::string CppGraphBuilder::generateMutableGraph_h() const {
                 OSS << "return vertices[v].property;\n";
             } else {
                 OSS << "Expects(v);\n";
-                OSS << "auto* sv = static_cast<const vertex_type*>(v);\n";
+                OSS << "auto* sv = static_cast<const Vertex*>(v);\n";
                 OSS << "return sv->property;\n";
             }
         }
@@ -1397,7 +1397,7 @@ std::pmr::string CppGraphBuilder::generateMutableGraph_h() const {
                 OSS << "return vertices[v].property;\n";
             } else {
                 OSS << "Expects(v);\n";
-                OSS << "auto* sv = static_cast<vertex_type*>(v);\n";
+                OSS << "auto* sv = static_cast<Vertex*>(v);\n";
                 OSS << "return sv->property;\n";
             }
         }
@@ -1480,22 +1480,22 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
             }
         } else {
             OSS << "inline " << childListType() << "& getChildrenList(vertex_descriptor v) noexcept {\n";
-            OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+            OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
             OSS << "    return pVertex->outEdges;\n";
             OSS << "}\n";
             OSS << "inline const " << childListType() << "& getChildrenList(vertex_descriptor v) const noexcept {\n";
-            OSS << "    auto pVertex = static_cast<const vertex_type*>(v);\n";
+            OSS << "    auto pVertex = static_cast<const Vertex*>(v);\n";
             OSS << "    return pVertex->outEdges;\n";
             OSS << "}\n";
 
             if (s.mBidirectional) {
                 oss << "\n";
                 OSS << "inline " << parentListType() << "& getParentsList(vertex_descriptor v) noexcept {\n";
-                OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+                OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
                 OSS << "    return pVertex->inEdges;\n";
                 OSS << "}\n";
                 OSS << "inline const " << parentListType() << "& getParentsList(vertex_descriptor v) const noexcept {\n";
-                OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+                OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
                 OSS << "    return pVertex->inEdges;\n";
                 OSS << "}\n";
             }
@@ -1520,22 +1520,22 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
             }
         } else {
             OSS << "inline " << childListType() << "& getChildrenList(vertex_descriptor v) noexcept {\n";
-            OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+            OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
             OSS << "    return pVertex->children;\n";
             OSS << "}\n";
             OSS << "inline const " << childListType() << "& getChildrenList(vertex_descriptor v) const noexcept {\n";
-            OSS << "    auto pVertex = static_cast<const vertex_type*>(v);\n";
+            OSS << "    auto pVertex = static_cast<const Vertex*>(v);\n";
             OSS << "    return pVertex->children;\n";
             OSS << "}\n";
 
             if (s.mBidirectional) {
                 oss << "\n";
                 OSS << "inline " << parentListType() << "& getParentsList(vertex_descriptor v) noexcept {\n";
-                OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+                OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
                 OSS << "    return pVertex->parents;\n";
                 OSS << "}\n";
                 OSS << "inline const " << parentListType() << "& getParentsList(vertex_descriptor v) const noexcept {\n";
-                OSS << "    auto pVertex = static_cast<vertex_type*>(v);\n";
+                OSS << "    auto pVertex = static_cast<Vertex*>(v);\n";
                 OSS << "    return pVertex->parents;\n";
                 OSS << "}\n";
             }

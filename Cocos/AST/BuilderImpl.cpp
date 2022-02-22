@@ -1653,7 +1653,7 @@ int ModuleBuilder::compile() {
         auto bPmr = g.isPmr(vertID);
         if (s.mReferenceGraph && !s.mAliasGraph) {
             auto scope = addStruct(
-                "object_type",
+                "Object",
                 Traits{
                     .mPmr = bPmr,
                     .mFlags = NO_SERIALIZATION | IMPL_DETAIL,
@@ -1664,7 +1664,7 @@ int ModuleBuilder::compile() {
         }
         {
             auto scope = addStruct(
-                "vertex_type",
+                "Vertex",
                 Traits{
                     .mPmr = bPmr && s.mIncidence,
                     .mFlags = NO_SERIALIZATION | IMPL_DETAIL,

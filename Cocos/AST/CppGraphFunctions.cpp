@@ -240,7 +240,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
                 if (s.isAliasGraph()) {
                     Expects(s.mIncidence);
                     OSS << "// AddressableGraph (Alias)\n";
-                    OSS << "remove_path_impl(u, g);\n";
+                    OSS << "removePathImpl(u, g);\n";
                     OSS << "CC_EXPECTS(out_degree(u, g) == 0);\n";
                     oss << "\n";
                 }
@@ -312,7 +312,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
                         Expects(s.mIncidence);
                         OSS << "// AddressableGraph (Alias)\n";
                         OSS << "CC_EXPECTS(out_degree(u, g) == 0);\n";
-                        OSS << "remove_path_impl(u, g);\n";
+                        OSS << "removePathImpl(u, g);\n";
                         oss << "\n";
                     }
                 }
@@ -417,9 +417,9 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                 {
                     INDENT();
                     if (s.hasAddressIndex()) {
-                        OSS << "remove_path_impl(u, g);\n";
+                        OSS << "removePathImpl(u, g);\n";
                     }
-                    OSS << "CC_EXPECTS(num_children(u, g) == 0);\n";
+                    OSS << "CC_EXPECTS(numChildren(u, g) == 0);\n";
 
                     oss << "\n";
                     copyString(oss, space, clearInEdges(s, name, true, scratch));
@@ -449,7 +449,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                     }
                 },
                 [&](auto) {
-                    OSS << "auto& vert = *static_cast<" << name << "::vertex_type*>(u);\n";
+                    OSS << "auto& vert = *static_cast<" << name << "::Vertex*>(u);\n";
                 }),
             s.mVertexListType);
 
@@ -863,9 +863,9 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
 
             if (piecewise) {
                 OSS << "template <class Tuple>\n";
-                OSS << "void add_vertex_impl("
+                OSS << "void addVertexImpl("
                     << tagType << " /*tag*/, Tuple &&val, "
-                    << name << " &g, " << name << "::vertex_type &vert) { // NOLINT\n";
+                    << name << " &g, " << name << "::Vertex &vert) {\n";
 
                 {
                     INDENT();
@@ -903,8 +903,8 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                 OSS << "}\n";
             } else {
                 OSS << "template <class ValueT>\n";
-                OSS << "void add_vertex_impl( // NOLINT\n";
-                OSS << "    ValueT &&val, " << name << " &g, " << name << "::vertex_type &vert, // NOLINT\n";
+                OSS << "void addVertexImpl( // NOLINT\n";
+                OSS << "    ValueT &&val, " << name << " &g, " << name << "::Vertex &vert, // NOLINT\n";
                 OSS << "    std::enable_if_t<std::is_same<std::decay_t<ValueT>, " << valueType << ">::value>* dummy = nullptr) { // NOLINT\n";
                 {
                     INDENT();
@@ -973,7 +973,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
     }
 
     OSS << "inline " << name << "::vertex_descriptor\n";
-    OSS << "add_vertex(";
+    OSS << "addVertex(";
     if (piecewise) {
         if (s.isPolymorphic()) {
             oss << "Tag tag, ";
@@ -1013,7 +1013,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
             oss << ", " << name << "::vertex_descriptor u = " << name << "::null_vertex()";
         }
     }
-    oss << ") { // NOLINT\n";
+    oss << ") {\n";
     {
         INDENT();
         if (s.isVector()) {
@@ -1206,9 +1206,9 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                 OSS << "// PolymorphicGraph\n";
                 OSS << "// if no matching overloaded function is found, Type is not supported by PolymorphicGraph\n";
                 if (propertyParam && piecewise) {
-                    OSS << "add_vertex_impl(tag, std::forward<ValueT>(val), g, vert);\n";
+                    OSS << "addVertexImpl(tag, std::forward<ValueT>(val), g, vert);\n";
                 } else {
-                    OSS << "add_vertex_impl(std::forward<ValueT>(val), g, vert);\n";
+                    OSS << "addVertexImpl(std::forward<ValueT>(val), g, vert);\n";
                 }
             } else {
                 oss << "\n";
@@ -1327,7 +1327,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
         if (s.mAddressable) {
             oss << "\n";
             OSS << "// AddressableGraph\n";
-            OSS << "add_path_impl(u, v, g);\n";
+            OSS << "addPathImpl(u, v, g);\n";
         }
 
         visit(
@@ -1388,13 +1388,13 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
 
     oss << "\n";
     OSS << "inline " << name << "::children_size_type\n";
-    OSS << "num_children(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
+    OSS << "numChildren(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
     OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.getChildrenList(u).size());\n";
     OSS << "}\n";
 
     oss << "\n";
     OSS << "inline std::pair<" << name << "::ownership_descriptor, bool>\n";
-    OSS << "ownership(" << name << "::vertex_descriptor u, " << name << "::vertex_descriptor v, " << name << "& g) noexcept {\n";
+    OSS << "reference(" << name << "::vertex_descriptor u, " << name << "::vertex_descriptor v, " << name << "& g) noexcept {\n";
     {
         INDENT();
         OSS << "auto& outEdgeList = g.getChildrenList(u);\n";
@@ -1425,7 +1425,7 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph(bool bInline) const {
 
     oss << "\n";
     OSS << "inline " << name << "::children_size_type\n";
-    OSS << "num_parents(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
+    OSS << "numParents(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
     OSS << "    return gsl::narrow_cast<" << name << "::children_size_type>(g.getParentsList(u).size());\n";
     OSS << "}\n";
 
@@ -1464,7 +1464,7 @@ return isAncestor;
     // EdgeListGraph
     oss << "\n";
     OSS << "inline std::pair<" << name << "::ownership_iterator, " << name << "::ownership_iterator>\n";
-    OSS << "ownerships(const " << name << "& g0) noexcept {\n";
+    OSS << "references(const " << name << "& g0) noexcept {\n";
     OSS << "    auto& g = const_cast<" << name << "&>(g0);\n";
     OSS << "    return std::make_pair(\n";
     OSS << "        " << name << "::ownership_iterator(g.getVertexList().begin(), g.getVertexList().begin(), g.getVertexList().end(), g),\n";
@@ -1473,13 +1473,13 @@ return isAncestor;
 
     oss << "\n";
     OSS << "inline " << name << "::ownerships_size_type\n";
-    OSS << "num_ownerships(const " << name << "& g) noexcept { // NOLINT\n";
+    OSS << "numReferences(const " << name << "& g) noexcept {\n";
     {
         INDENT();
         OSS << name << "::ownerships_size_type numEdges = 0;\n";
         OSS << "auto" << std::string(std::max(0, int(name.size() + 22) - 4), ' ') << " range    = vertices(g);\n";
         OSS << "for (auto iter = range.first; iter != range.second; ++iter) {\n";
-        OSS << "    numEdges += num_children(*iter, g);\n";
+        OSS << "    numEdges += numChildren(*iter, g);\n";
         OSS << "}\n";
         OSS << "return numEdges;\n";
     }
@@ -2535,7 +2535,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     if (c.isVector()) {
                         OSS << "return {g." << member << "};\n";
                     } else {
-                        OSS << "return {g, &" << name << "::vertex_type::" << member << "Iter};\n";
+                        OSS << "return {g, &" << name << "::Vertex::" << member << "Iter};\n";
                     }
                 };
 
@@ -2573,7 +2573,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     if (c.isVector()) {
                         OSS << "return {g." << member << ", memberPointer};\n";
                     } else {
-                        OSS << "return {g, &" << name << "::vertex_type::" << member << "Iter, memberPointer};\n";
+                        OSS << "return {g, &" << name << "::Vertex::" << member << "Iter, memberPointer};\n";
                     }
                 }
                 OSS << "}\n";
@@ -2589,7 +2589,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     if (c.isVector()) {
                         OSS << "return {g." << member << ", memberPointer};\n";
                     } else {
-                        OSS << "return {g, &" << name << "::vertex_type::" << member << "Iter, memberPointer};\n";
+                        OSS << "return {g, &" << name << "::Vertex::" << member << "Iter, memberPointer};\n";
                     }
                 }
                 OSS << "}\n";
@@ -2607,7 +2607,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         if (c.isVector()) {
                             OSS << "return {g." << member << "};\n";
                         } else {
-                            OSS << "return {g, &" << name << "::vertex_type::" << member << "Iter};\n";
+                            OSS << "return {g, &" << name << "::Vertex::" << member << "Iter};\n";
                         }
                     } else {
                         if (c.isVector()) {
@@ -2615,7 +2615,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                                 << vertexComponent << "::"
                                 << s.mNamedConcept.mComponentMemberName << "};\n";
                         } else {
-                            OSS << "return {g, &" << name << "::vertex_type::" << member << "Iter, &"
+                            OSS << "return {g, &" << name << "::Vertex::" << member << "Iter, &"
                                 << vertexComponent << "::"
                                 << s.mNamedConcept.mComponentMemberName << "};\n";
                         }
@@ -2634,7 +2634,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             if (c.isVector()) {
                                 OSS << "return {g." << member << "};\n";
                             } else {
-                                OSS << "return {g, &" << name << "::vertex_type::" << member << "Iter};\n";
+                                OSS << "return {g, &" << name << "::Vertex::" << member << "Iter};\n";
                             }
                         } else {
                             if (c.isVector()) {
@@ -2642,7 +2642,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                                     << vertexComponent << "::"
                                     << s.mNamedConcept.mComponentMemberName << "};\n";
                             } else {
-                                OSS << "return {g, &" << name << "::vertex_type::" << member << "Iter, &"
+                                OSS << "return {g, &" << name << "::Vertex::" << member << "Iter, &"
                                     << vertexComponent << "::"
                                     << s.mNamedConcept.mComponentMemberName << "};\n";
                             }
@@ -2677,7 +2677,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         OSS << "// PolymorphicGraph\n";
         if (holds_alternative<Vector_>(s.mVertexListType)) {
             OSS << gNoDiscard << "inline " << name << "::vertices_size_type\n";
-            OSS << "value_id(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
+            OSS << "id(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept {\n";
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
@@ -2714,7 +2714,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS << "g." << getMemberName("mVertices") << "[u].handle);\n";
                     } else {
                         oss << "),\n";
-                        OSS << "static_cast<" << name << "::vertex_type*>(u)->handle);\n";
+                        OSS << "static_cast<" << name << "::Vertex*>(u)->handle);\n";
                     }
                 }
             }
@@ -2749,7 +2749,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     OSS << "g.vertices[u].handle);\n";
                 } else {
                     oss << "),\n";
-                    OSS << "static_cast<" << name << "::vertex_type*>(u)->handle);\n";
+                    OSS << "static_cast<" << name << "::Vertex*>(u)->handle);\n";
                 }
             }
         }
@@ -2810,7 +2810,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS << "g.vertices[u].handle);\n";
                     } else {
                         oss << "),\n";
-                        OSS << "static_cast<" << name << "::vertex_type*>(u)->handle);\n";
+                        OSS << "static_cast<" << name << "::Vertex*>(u)->handle);\n";
                     }
                 }
             }
@@ -2828,11 +2828,12 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             }
             OSS << gNoDiscard << "inline bool\n";
             if (bTag) {
-                OSS << "holds_tag(" << name << "::vertex_descriptor v, ";
+                OSS << "holds(" << name << "::vertex_descriptor v, ";
+                oss << "const " << name << "& g) noexcept {\n";
             } else {
                 OSS << "holds_alternative(" << name << "::vertex_descriptor v, ";
+                oss << "const " << name << "& g) noexcept { // NOLINT\n";
             }
-            oss << "const " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
@@ -2879,13 +2880,13 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             }
             OSS << gNoDiscard << "inline bool\n";
             if (bTag) {
-                OSS << "holds_tag(" << name << "::vertex_descriptor v, ";
+                OSS << "holds(" << name << "::vertex_descriptor v, ";
+                oss << "const " << name << "& g) noexcept;\n";
             } else {
                 OSS << "holds_alternative(" << name << "::vertex_descriptor v, ";
-            }
-            if (true) {
                 oss << "const " << name << "& g) noexcept; // NOLINT\n";
-            } else {
+            }
+            if (false) {
                 oss << "const " << name << "& g) noexcept { // NOLINT\n";
                 {
                     INDENT();
@@ -2903,13 +2904,14 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 OSS << "template <>\n";
                 OSS << gNoDiscard << "inline bool\n";
                 if (bTag) {
-                    OSS << "holds_tag<" << cpp.getDependentName(c.mTag) << ">("
+                    OSS << "holds<" << cpp.getDependentName(c.mTag) << ">("
                         << name << "::vertex_descriptor v, ";
+                    oss << "const " << name << "& g) noexcept {\n";
                 } else {
                     OSS << "holds_alternative<" << cpp.getDependentName(c.mValue) << ">("
                         << name << "::vertex_descriptor v, ";
+                    oss << "const " << name << "& g) noexcept { // NOLINT\n";
                 }
-                oss << "const " << name << "& g) noexcept { // NOLINT\n";
                 {
                     INDENT();
                     OSS << "return boost::variant2::holds_alternative<\n";
@@ -2983,7 +2985,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             if (bConst)
                                 oss << "const ";
                             oss << "auto& handle = std::get<" << handleElemType(c, cn, true)
-                                << ">(static_cast<" << name << "::vertex_type*>(v)->handle);\n";
+                                << ">(static_cast<" << name << "::Vertex*>(v)->handle);\n";
                         }
 
                         if (c.mMemberName.empty()) {
@@ -3079,7 +3081,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             oss << "const ";
                         oss << "auto& handle = boost::variant2::get<\n";
                         OSS << "    " << handleElemType(c, cn, false) << ">(\n";
-                        OSS << "    static_cast<" << name << "::vertex_type*>(v)->handle);\n";
+                        OSS << "    static_cast<" << name << "::Vertex*>(v)->handle);\n";
                     }
                     if (c.mMemberName.empty()) {
                         OSS << "return handle.value;\n";
@@ -3136,7 +3138,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                                 << ">(&g.vertices[v].handle);\n";
                         } else {
                             OSS << "auto* pHandle = std::get_if<" << handleElemType(c, cn, true)
-                                << ">(&(static_cast<" << name << "::vertex_type*>(v)->handle));\n";
+                                << ">(&(static_cast<" << name << "::Vertex*>(v)->handle));\n";
                         }
 
                         OSS << "if (pHandle) {\n";
@@ -3224,7 +3226,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             oss << "const ";
                         oss << "auto* pHandle = boost::variant2::get_if<\n";
                         OSS << "    " << handleElemType(c, cn, false) << ">(\n";
-                        OSS << "    &(static_cast<" << name << "::vertex_type*>(v)->handle));\n";
+                        OSS << "    &(static_cast<" << name << "::Vertex*>(v)->handle));\n";
                     }
                     OSS << "if (pHandle) {\n";
                     if (c.mMemberName.empty()) {
@@ -3430,7 +3432,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << "\n";
             OSS << "template <class KeyLike>\n";
             OSS << gNoDiscard << "inline " << name << "::vertex_descriptor\n";
-            OSS << "find_vertex(const KeyLike& key, const " << name << "& g) noexcept { // NOLINT\n";
+            OSS << "findVertex(const KeyLike& key, const " << name << "& g) noexcept {\n";
             {
                 INDENT();
                 OSS << "const auto& index = g." << mapMemberName << ";\n";
@@ -3484,27 +3486,29 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         // AddressableGraph
         oss << "\n";
         OSS << "// AddressableGraph\n";
-        OSS << gNoDiscard << "inline std::ptrdiff_t\n";
-        OSS << "path_length(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
-        {
-            INDENT();
-            OSS << "return impl::pathLength(u, g);\n";
-        }
-        OSS << "}\n";
+        if (false) {
+            OSS << gNoDiscard << "inline std::ptrdiff_t\n";
+            OSS << "path_length(" << name << "::vertex_descriptor u, const " << name << "& g) noexcept { // NOLINT\n";
+            {
+                INDENT();
+                OSS << "return impl::pathLength(u, g);\n";
+            }
+            OSS << "}\n";
 
-        oss << "\n";
-        OSS << "template <class Allocator>\n";
-        OSS << "inline void\n";
-        OSS << "path_composite( // NOLINT\n";
-        OSS << "    std::basic_string<" << charName
-            << ", std::char_traits<" << charName << ">, Allocator>& str,\n";
-        OSS << "    std::ptrdiff_t& sz, " << name << "::vertex_descriptor u,\n";
-        OSS << "    const " << name << "& g) noexcept {\n";
-        {
-            INDENT();
-            OSS << "impl::pathComposite(str, sz, u, g);\n";
+            oss << "\n";
+            OSS << "template <class Allocator>\n";
+            OSS << "inline void\n";
+            OSS << "path_composite( // NOLINT\n";
+            OSS << "    std::basic_string<" << charName
+                << ", std::char_traits<" << charName << ">, Allocator>& str,\n";
+            OSS << "    std::ptrdiff_t& sz, " << name << "::vertex_descriptor u,\n";
+            OSS << "    const " << name << "& g) noexcept {\n";
+            {
+                INDENT();
+                OSS << "impl::pathComposite(str, sz, u, g);\n";
+            }
+            OSS << "}\n";
         }
-        OSS << "}\n";
     }
 
     if (s.mAddressable) {
@@ -3531,11 +3535,11 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (general) {
                 OSS << "template <class Allocator>\n";
                 OSS << "inline const std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>&\n";
-                OSS << "get_path( // NOLINT\n";
+                OSS << "getPath(\n";
                 OSS << "    std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
             } else {
                 OSS << gNoDiscard << "inline " << stringName << "\n";
-                OSS << "get_path( // NOLINT\n";
+                OSS << "getPath(\n";
             }
             OSS << "    " << name << "::vertex_descriptor u" << 0;
 
@@ -3579,7 +3583,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     oss << "\n";
                     OSS << "return output;\n";
                 } else {
-                    OSS << "get_path(output, u0, g, prefix, parent);\n";
+                    OSS << "getPath(output, u0, g, prefix, parent);\n";
                     OSS << "return output;\n";
                 }
             }
@@ -3615,12 +3619,12 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (general) {
                 OSS << "template <class Allocator>\n";
                 OSS << "inline const std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>&\n";
-                OSS << "get_path( // NOLINT\n";
+                OSS << "getPath(\n";
                 OSS << "    std::basic_string<" << charName << ", std::char_traits<" << charName << ">, Allocator>& output,\n";
                 OSS << "    ";
             } else {
                 OSS << gNoDiscard << "inline " << stringName << "\n";
-                OSS << "get_path(";
+                OSS << "getPath(";
             }
             oss << name << "::vertex_descriptor parent, ";
             oss << viewName << " name, const " << name << "& g";
@@ -3631,7 +3635,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 }
             }
 
-            oss << ") { // NOLINT\n";
+            oss << ") {\n";
             {
                 INDENT();
                 if (general) {
@@ -3645,15 +3649,15 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 }
 
                 if (general) {
-                    OSS << "auto sz = path_length(parent, g);\n";
+                    OSS << "auto sz = impl::pathLength(parent, g);\n";
                     OSS << "output.resize(sz + name.size() + 1);\n";
                     OSS << "output[sz] = '/';\n";
                     OSS << "std::copy(name.begin(), name.end(), output.begin() + sz + 1);\n";
-                    OSS << "path_composite(output, sz, parent, g);\n";
+                    OSS << "impl::pathComposite(output, sz, parent, g);\n";
                     OSS << "CC_ENSURES(sz == 0);\n";
                     OSS << "return output;\n";
                 } else {
-                    OSS << "get_path(output, parent, name, g);\n";
+                    OSS << "getPath(output, parent, name, g);\n";
                     OSS << "return output;\n";
                 }
             }
@@ -3718,9 +3722,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             OSS << "CC_EXPECTS(!relative.starts_with('/'));\n";
                             OSS << "CC_EXPECTS(!relative.ends_with('/'));\n";
                             if (pmr) {
-                                OSS << "auto key = get_path(u, relative, g, mr);\n";
+                                OSS << "auto key = getPath(u, relative, g, mr);\n";
                             } else {
-                                OSS << "auto key = get_path(u, relative, g);\n";
+                                OSS << "auto key = getPath(u, relative, g);\n";
                             }
                             OSS << "impl::cleanPath(key);\n";
                             OSS << "return locate(key, g);\n";
@@ -3811,7 +3815,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
     if (s.mVertexList && s.mMutableGraphVertex && s.mAddressable) {
         oss << "\n";
         OSS << "// MutableGraph(Vertex)\n";
-        OSS << "inline void add_path_impl(" << name << "::vertex_descriptor u, "
+        OSS << "inline void addPathImpl(" << name << "::vertex_descriptor u, "
             << name << "::vertex_descriptor v, " << name << "& g) { // NOLINT\n";
         {
             INDENT();
@@ -3831,11 +3835,11 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             oss << "\n";
                             OSS << "// add to external path index\n";
                             if (g.isPathPmr(s)) {
-                                OSS << "auto pathName = get_path(v, g, g."
+                                OSS << "auto pathName = getPath(v, g, g."
                                     << getMemberName(s.mAddressableConcept.mMemberName)
                                     << ".get_allocator().resource());\n";
                             } else {
-                                OSS << "auto pathName = get_path(v, g);\n";
+                                OSS << "auto pathName = getPath(v, g);\n";
                             }
                             OSS << "auto res      = g." << getMemberName(s.mAddressableConcept.mMemberName)
                                 << ".emplace(std::move(pathName), v);\n";
@@ -3855,7 +3859,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         if (holds_alternative<Map_>(s.mAddressableConcept.mType)) {
             oss << "\n";
-            OSS << "inline void remove_path_impl(" << name << "::vertex_descriptor u, " << name << "& g) noexcept { // NOLINT\n";
+            OSS << "inline void removePathImpl(" << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
             {
                 INDENT();
                 const auto& member = getMemberName(s.mAddressableConcept.mMemberName);
@@ -3874,7 +3878,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                                     }
                                 } else {
                                     if (s.isAliasGraph()) {
-                                        OSS << "g.pathIndex.erase(static_cast<const " << name << "::vertex_type*>(u)->mPathIterator);\n";
+                                        OSS << "g.pathIndex.erase(static_cast<const " << name << "::Vertex*>(u)->mPathIterator);\n";
                                     } else {
                                         OSS << "g.pathIndex.erase(static_cast<const " << name << "::object_type*>(u)->mPathIterator);\n";
                                     }
@@ -3885,9 +3889,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     if (bPmr) {
                         OSS << "// notice: here we use std::string, not std::pmr::string\n";
                         OSS << "// we do not want to increase the memory of g\n";
-                        OSS << "auto pathName = get_path(u, g);\n";
+                        OSS << "auto pathName = getPath(u, g);\n";
                     } else {
-                        OSS << "auto pathName = get_path(u, g);\n";
+                        OSS << "auto pathName = getPath(u, g);\n";
                     }
                     if (s.mAddressableConcept.mUtf8) {
                         OSS << "auto iter     = g." << member << ".find(std::u8string_view(pathName));\n";
@@ -4039,7 +4043,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             {
                 INDENT();
                 int numSpaces = 0;
-                OSS << "return add_vertex(\n";
+                OSS << "return addVertex(\n";
                 {
                     INDENT();
                     if (s.isPolymorphic()) {
