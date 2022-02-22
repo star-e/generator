@@ -3528,7 +3528,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 charName = "char";
                 viewName = "boost::string_view";
                 if (pmr)
-                    stringName = "std::pmr::string";
+                    stringName = "PmrString";
                 else
                     stringName = "std::string";
             }
@@ -3545,7 +3545,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
             oss << ", const " << name << "& g,\n";
             if (!general && pmr) {
-                OSS << "    std::pmr::memory_resource* mr, ";
+                OSS << "    boost::container::pmr::memory_resource* mr, ";
             } else {
                 OSS << "    ";
             }
@@ -3592,7 +3592,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         generatePath(true, false, s.mAddressableConcept.mUtf8);
         generatePath(false, false, s.mAddressableConcept.mUtf8);
-        if (false) {
+        if (true) {
             generatePath(false, true, s.mAddressableConcept.mUtf8);
         }
 
@@ -3612,7 +3612,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 charName = "char";
                 viewName = "boost::string_view";
                 if (pmr)
-                    stringName = "std::pmr::string";
+                    stringName = "PmrString";
                 else
                     stringName = "std::string";
             }
@@ -3631,7 +3631,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
             if (!general) {
                 if (pmr) {
-                    oss << ", std::pmr::memory_resource* mr";
+                    oss << ", boost::container::pmr::memory_resource* mr";
                 }
             }
 
@@ -3666,7 +3666,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         generateParentPath(true, false, s.mAddressableConcept.mUtf8);
         generateParentPath(false, false, s.mAddressableConcept.mUtf8);
-        if (false) {
+        if (true) {
             generateParentPath(false, true, s.mAddressableConcept.mUtf8);
         }
     }

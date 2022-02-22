@@ -163,6 +163,9 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         MAP(FlatMultiMap);
         MAP(UnorderedStringMap);
         MAP(UnorderedStringMultiMap);
+
+        PMR_MAP(PmrMap);
+        PMR_MAP(PmrMultiMap);
         PMR_MAP(PmrTransparentMap);
         PMR_MAP(PmrTransparentMultiMap);
         PMR_MAP(PmrFlatMap);
@@ -178,6 +181,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         CONTAINER(FlatMultiSet);
         CONTAINER(UnorderedStringSet);
         CONTAINER(UnorderedStringMultiSet);
+
         PMR_CONTAINER(PmrTransparentSet);
         PMR_CONTAINER(PmrTransparentMultiSet);
         PMR_CONTAINER(PmrFlatSet);

@@ -1775,13 +1775,13 @@ int ModuleBuilder::compile() {
                         std::pmr::string indexName(scratch);
                         if (bPmr) {
                             if (s.mAddressableConcept.mUtf8) {
-                                indexName = "PmrTransparentMap<std::string, vertex_descriptor>";
+                                indexName = "PmrTransparentMap<std::pmr::u8string, vertex_descriptor>";
                             } else {
-                                indexName = "PmrTransparentMap<std::string, vertex_descriptor>";
+                                indexName = "PmrTransparentMap<PmrString, vertex_descriptor>";
                             }
                         } else {
                             if (s.mAddressableConcept.mUtf8) {
-                                indexName = "TransparentMap<std::string, vertex_descriptor>";
+                                indexName = "TransparentMap<std::u8string, vertex_descriptor>";
                             } else {
                                 indexName = "TransparentMap<std::string, vertex_descriptor>";
                             }

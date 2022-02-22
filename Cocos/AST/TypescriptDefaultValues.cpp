@@ -107,6 +107,8 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
 
     PROJECT_TS(cc::PmrString, string);
 
+    PROJECT_TS(cc::PmrMap, Map);
+    PROJECT_TS(cc::PmrMultiMap, Map);
     PROJECT_TS(cc::TransparentMap, Map);
     PROJECT_TS(cc::TransparentMultiMap, Map);
     PROJECT_TS(cc::PmrTransparentMap, Map);

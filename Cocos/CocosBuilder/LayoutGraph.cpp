@@ -36,118 +36,189 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "LayoutGraph",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "layout-graph",
-        .mRequires = { "RenderCommon" },
+        .mRequires = { "Gfx", "RenderCommon" },
     ) {
-        NAMESPACE(cc) {
-            NAMESPACE(render) {
-                //-----------------------------------------------------------
-                // Constant
-                STRUCT(Constant) {
-                    PUBLIC(
-                        (ValueType, mType, _)
-                        (uint32_t, mValueID, 0xFFFFFFFF)
-                    );
-                }
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
 
-                STRUCT(ConstantBuffer) {
-                    PUBLIC(
-                        (uint32_t, mSize, 0)
-                        (boost::container::pmr::vector<Constant>, mConstants, _)
-                    );
-                }
-
-                //-----------------------------------------------------------
-                // Descriptor
-                VARIANT(DescriptorType, (CBuffer_, RWBuffer_, RWTexture_, Buffer_, Texture_, Sampler_), LESS | EQUAL);
-
-                STRUCT(DescriptorBlock) {
-                    PUBLIC(
-                        (DescriptorType, mType, _)
-                        (uint32_t, mCapacity, 0)
-                        (boost::container::pmr::vector<uint32_t>, mAttributeIDs, _)
-                    );
-                }
-
-                STRUCT(DescriptorArray) {
-                    PUBLIC(
-                        (uint32_t, mCapacity, 0)
-                        (uint32_t, mAttributeID, 0xFFFFFFFF)
-                    );
-                }
-
-                STRUCT(UnboundedDescriptor) {
-                    PUBLIC(
-                        (DescriptorType, mType, _)
-                        (boost::container::pmr::vector<DescriptorArray>, mDescriptors, _)
-                    );
-                }
-
-                STRUCT(DescriptorTable) {
-                    PUBLIC(
-                        (uint32_t, mSlot, 0)
-                        (uint32_t, mCapacity, 0)
-                        (boost::container::pmr::vector<DescriptorBlock>, mBlocks, _)
-                    );
-                }
-
-                STRUCT(DescriptorSet){
-                    PUBLIC(
-                        (boost::container::pmr::vector<DescriptorTable>, mTables, _)
-                        (UnboundedDescriptor, mUnbounded, _)
-                    );
-                }
-
-                STRUCT(LayoutData) {
-                    PUBLIC(
-                        ((PmrTransparentMap<ParameterType, ConstantBuffer>), mConstantBuffers, _)
-                        ((PmrTransparentMap<ParameterType, DescriptorSet>), mDescriptorSets, _)
-                    );
-                }
-                //-----------------------------------------------------------
-                // Shader Program
-                STRUCT(ShaderProgramData) {
-                    PUBLIC(
-                        ((PmrTransparentMap<UpdateFrequency, LayoutData>), mLayouts, _)
-                    );
-                }
-
-                //-----------------------------------------------------------
-                // Descriptor Layout Graph
-                STRUCT(GroupNodeData) {
-                    PUBLIC(
-                        (NodeType, mNodeType, _)
-                    );
-                    CNTR(mNodeType);
-                }
-
-                STRUCT(ShaderNodeData) {
-                    PUBLIC(
-                        (std::string, mRootSignature, _)
-                        (boost::container::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
-                        ((PmrTransparentMap<std::string, uint32_t>), mShaderIndex, _)
-                    );
-                }
-
-                TAGS((_), Group_, Shader_);
-
-                PMR_GRAPH(LayoutGraphData, _, _) {
-                    NAMED_GRAPH(Name_);
-                    ALIAS_REFERENCE_GRAPH();
-                    ADDRESSABLE_GRAPH(mPathIndex);
-
-                    COMPONENT_GRAPH(
-                        (Name_, std::string, mNames)
-                        (Update_, UpdateFrequency, mUpdateFrequencies)
-                        (Layout_, LayoutData, mLayouts)
-                    );
-
-                    POLYMORPHIC_GRAPH(
-                        (Group_, GroupNodeData, mGroupNodes)
-                        (Shader_, ShaderNodeData, mShaderNodes)
-                    );
-                }
-            }
+        ENUM_CLASS(DescriptorIndex) {
+            ENUMS(
+                UNIFORM_BLOCK,
+                SAMPLER_TEXTURE,
+                SAMPLER,
+                TEXTURE,
+                STORAGE_BUFFER,
+                STORAGE_TEXTURE,
+                SUBPASS_INPUT
+            );
         }
+
+        STRUCT(UniformBlockDB) {
+            PUBLIC(
+                ((PmrTransparentMap<PmrString, gfx::Uniform>), mValues, _)
+            );
+        }
+
+        STRUCT(Descriptor) {
+            PUBLIC(
+                (gfx::Type, mType, gfx::Type::UNKNOWN)
+                (uint32_t, mCount, 1)
+            );
+            TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mType, mCount);
+        }
+
+        STRUCT(DescriptorBlock) {
+            PUBLIC(
+                ((PmrTransparentMap<PmrString, Descriptor>), mUniforms, _)
+                //(uint32_t, mCapacity, 0)
+                //(uint32_t, mStart, 0)
+                //(uint32_t, mCount, 0)
+            );
+        }
+
+        STRUCT(DescriptorTable) {
+            PUBLIC(
+                ((PmrMap<DescriptorIndex, DescriptorBlock>), mDescriptorBlocks, _)
+                ((PmrTransparentMap<PmrString, UniformBlockDB>), mUniformBlocks, _)
+            );
+        }
+
+        STRUCT(DescriptorTableIndex, .mFlags = LESS) {
+            PUBLIC(
+                (UpdateFrequency, mUpdateFrequency, _)
+                (ParameterType, mParameterType, _)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+            );
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+        }
+
+        STRUCT(DescriptorDB) {
+            PUBLIC(
+                ((PmrMap<DescriptorTableIndex, DescriptorTable>), mTables, _)
+            );
+        }
+
+        //-----------------------------------------------------------
+        // LayoutGraph
+        TAGS((_), RenderStage_, RenderPhase_);
+
+        STRUCT(RenderPhase) {
+            PUBLIC(
+                (PmrTransparentSet<PmrString>, mShaders, _)
+            );
+        }
+
+        PMR_GRAPH(LayoutGraph, _, _) {
+            NAMED_GRAPH(Name_);
+            ALIAS_REFERENCE_GRAPH();
+            ADDRESSABLE_GRAPH(mPathIndex);
+
+            COMPONENT_GRAPH(
+                (Name_, PmrString, mNames)
+                (Descriptors_, DescriptorDB, mDescriptors)
+            );
+
+            POLYMORPHIC_GRAPH(
+                (RenderStage_, uint32_t, mStages)
+                (RenderPhase_, RenderPhase, mPhases)
+            );
+        }
+
+        //-----------------------------------------------------------
+        // Constant
+        STRUCT(UniformData) {
+            PUBLIC(
+                (gfx::Type, mType, gfx::Type::UNKNOWN)
+                (uint32_t, mValueID, 0xFFFFFFFF)
+            );
+            TS_INIT(mType, Type.UNKNOWN);
+        }
+
+        STRUCT(UniformBlockData) {
+            PUBLIC(
+                (uint32_t, mSize, 0)
+                (boost::container::pmr::vector<UniformData>, mValues, _)
+            );
+        }
+
+        //-----------------------------------------------------------
+        // Descriptor
+        STRUCT(DescriptorData) {
+            PUBLIC(
+                (uint32_t, mID, 0xFFFFFFFF)
+                (gfx::Type, mType, gfx::Type::UNKNOWN)
+                (uint32_t, mCount, 0)
+            );
+            TS_INIT(mType, Type.UNKNOWN);
+        }
+
+        STRUCT(DescriptorBlockData) {
+            PUBLIC(
+                (DescriptorIndex, mType, _)
+                (uint32_t, mCapacity, 0)
+                (boost::container::pmr::vector<DescriptorData>, mDescriptors, _)
+            );
+        }
+
+        STRUCT(DescriptorTableData) {
+            PUBLIC(
+                (uint32_t, mSlot, 0xFFFFFFFF)
+                (uint32_t, mCapacity, 0)
+                (boost::container::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
+                ((PmrFlatMap<uint32_t, UniformBlockData>), mUniformBlocks, _)
+            );
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+        }
+
+        STRUCT(DescriptorSetData) {
+            PUBLIC(
+                ((PmrFlatMap<gfx::ShaderStageFlagBit, DescriptorTableData>), mTables, _)
+            );
+        }
+
+        STRUCT(PipelineLayoutData) {
+            PUBLIC(
+                ((PmrFlatMap<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
+            );
+        }
+
+        //-----------------------------------------------------------
+        // Shader Program
+        STRUCT(ShaderProgramData) {
+            PUBLIC(
+                (PipelineLayoutData, mLayout, _)
+            );
+        }
+
+        //-----------------------------------------------------------
+        // Descriptor Layout Graph
+        STRUCT(RenderPhaseData) {
+            PUBLIC(
+                (PmrString, mRootSignature, _)
+                (boost::container::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
+                ((PmrTransparentMap<PmrString, uint32_t>), mShaderIndex, _)
+            );
+        }
+
+        PMR_GRAPH(LayoutGraphData, _, _) {
+            NAMED_GRAPH(Name_);
+            ALIAS_REFERENCE_GRAPH();
+            ADDRESSABLE_GRAPH(mPathIndex);
+
+            COMPONENT_GRAPH(
+                (Name_, PmrString, mNames)
+                (Update_, UpdateFrequency, mUpdateFrequencies)
+                (Layout_, PipelineLayoutData, mLayouts)
+            );
+
+            POLYMORPHIC_GRAPH(
+                (RenderStage_, uint32_t, mStages)
+                (RenderPhase_, RenderPhaseData, mPhases)
+            );
+        }
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
     }
 }
 

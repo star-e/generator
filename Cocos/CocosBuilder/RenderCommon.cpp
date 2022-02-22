@@ -44,8 +44,13 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
             ENUMS(PER_INSTANCE, PER_BATCH, PER_QUEUE, PER_PASS, COUNT);
         }
 
-        TAGS((_), CBV_, UAV_, SRV_, SSV_, RTV_, DSV_, IBV_, VBV_, SOV_, Constants_, Table_);
-        VARIANT(ParameterType, (Constants_, CBV_, UAV_, SRV_, Table_, SSV_), EQUAL | LESS);
+        ENUM_CLASS(ParameterType) {
+            ENUMS(CONSTANTS, CBV, UAV, SRV, TABLE, SSV);
+        }
+
+        TAGS((_), Constants_);
+        //TAGS((_), CBV_, UAV_, SRV_, SSV_, RTV_, DSV_, IBV_, VBV_, SOV_, Constants_, Table_);
+        //VARIANT(ParameterType, (Constants_, CBV_, UAV_, SRV_, Table_, SSV_), EQUAL | LESS);
 
         TAGS((_), Bounded_, Unbounded_);
         VARIANT(Boundedness, (Bounded_, Unbounded_), EQUAL | LESS);
