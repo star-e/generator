@@ -70,37 +70,51 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         STRUCT(DescriptorBlock) {
             PUBLIC(
-                ((PmrTransparentMap<PmrString, Descriptor>), mUniforms, _)
+                ((PmrTransparentMap<PmrString, Descriptor>), mDescriptors, _)
+                ((PmrTransparentMap<PmrString, UniformBlockDB>), mUniformBlocks, _)
                 //(uint32_t, mCapacity, 0)
                 //(uint32_t, mStart, 0)
                 //(uint32_t, mCount, 0)
             );
         }
-
-        STRUCT(DescriptorTable) {
+        
+        STRUCT(DescriptorBlockIndex, .mFlags = LESS) {
             PUBLIC(
-                ((PmrMap<DescriptorIndex, DescriptorBlock>), mDescriptorBlocks, _)
-                ((PmrTransparentMap<PmrString, UniformBlockDB>), mUniformBlocks, _)
+                (UpdateFrequency, mUpdateFrequency, _)
+                (ParameterType, mParameterType, _)
+                (DescriptorIndex, mDescriptorType, DescriptorIndex::UNIFORM_BLOCK)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
             );
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            TS_INIT(mDescriptorType, DescriptorIndex.UNIFORM_BLOCK);
+            CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
         }
+        
+        PROJECT_TS(
+            (PmrMap<DescriptorBlockIndex, DescriptorBlock>),
+            (Map<string, DescriptorBlock>)
+        );
 
-        STRUCT(DescriptorTableIndex, .mFlags = LESS) {
+        STRUCT(DescriptorBlockIndexDx, .mFlags = LESS) {
             PUBLIC(
                 (UpdateFrequency, mUpdateFrequency, _)
                 (ParameterType, mParameterType, _)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+                (DescriptorIndex, mDescriptorType, DescriptorIndex::UNIFORM_BLOCK)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            CNTR(mUpdateFrequency, mParameterType, mVisibility);
+            TS_INIT(mDescriptorType, DescriptorIndex.UNIFORM_BLOCK);
+            CNTR(mUpdateFrequency, mParameterType, mVisibility, mDescriptorType);
         }
+
         PROJECT_TS(
-            (PmrMap<DescriptorTableIndex, DescriptorTable>),
-            (Map<string, DescriptorTable>)
+            (PmrMap<DescriptorBlockIndexDx, DescriptorBlock>),
+            (Map<string, DescriptorBlock>)
         );
 
         STRUCT(DescriptorDB) {
             PUBLIC(
-                ((PmrMap<DescriptorTableIndex, DescriptorTable>), mTables, _)
+                ((PmrMap<DescriptorBlockIndex, DescriptorBlock>), mBlocks, _)
             );
         }
 
