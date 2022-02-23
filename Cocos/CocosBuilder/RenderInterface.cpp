@@ -134,6 +134,7 @@ virtual ComputePassBuilder* addComputePass(const std::string& layoutName, const 
 virtual ComputePassBuilder* addComputePass(const std::string& layoutName) = 0;
 virtual MovePassBuilder* addMovePass(const std::string& name) = 0;
 virtual CopyPassBuilder* addCopyPass(const std::string& name) = 0;
+virtual void addPresentPass(const std::string& name, const std::string& swapchainName) = 0;
 )");
         }
 
