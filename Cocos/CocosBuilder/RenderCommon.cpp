@@ -76,8 +76,8 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
 
         TAGS((_), Raster_, Compute_, Copy_, Move_, Raytrace_);
 
-        TAGS((_), Managed_, Persistent_, Backbuffer_, Memoryless_);
-        VARIANT(ResourceResidency, (Managed_, Persistent_, Backbuffer_, Memoryless_));
+        TAGS((_), Managed_, Memoryless_, Persistent_, External_, Backbuffer_);
+        VARIANT(ResourceResidency, (Managed_, Memoryless_, Persistent_, External_, Backbuffer_));
 
         ENUM_CLASS(QueueHint) {
             ENUMS(NONE, RENDER_OPAQUE, RENDER_CUTOUT, RENDER_TRANSPARENT, COUNT);
