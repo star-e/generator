@@ -115,6 +115,12 @@ Method parseFunction(const ModuleBuilder& builder, std::string_view function) {
         function = function.substr(0, function.size() - 2);
     }
 
+    // check static
+    if (function.starts_with("static ")) {
+        method.mStatic = true;
+        function = function.substr(7);
+    }
+
     // check virtual
     if (function.starts_with("virtual ")) {
         method.mVirtual = true;
@@ -172,7 +178,11 @@ std::pmr::vector<Method> parseFunctions(const ModuleBuilder& builder, std::strin
     auto cleaned = splitFunctions(functions, scratch);
 
     for (const auto& func : cleaned) {
-        methods.emplace_back(parseFunction(builder, func));
+        auto method = parseFunction(builder, func);
+        if (method.mVirtual) {
+            Expects(!method.mStatic);
+            methods.emplace_back(std::move(method));
+        }
     }
 
     return methods;

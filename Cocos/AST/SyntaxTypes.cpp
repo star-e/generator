@@ -215,7 +215,8 @@ Method::Method(Method&& rhs, const allocator_type& alloc)
     , mVirtual(std::move(rhs.mVirtual))
     , mConst(std::move(rhs.mConst))
     , mNoexcept(std::move(rhs.mNoexcept))
-    , mPure(std::move(rhs.mPure)) {}
+    , mPure(std::move(rhs.mPure))
+    , mStatic(std::move(rhs.mStatic)) {}
 
 Method::Method(Method const& rhs, const allocator_type& alloc)
     : mReturnType(rhs.mReturnType, alloc)
@@ -224,7 +225,8 @@ Method::Method(Method const& rhs, const allocator_type& alloc)
     , mVirtual(rhs.mVirtual)
     , mConst(rhs.mConst)
     , mNoexcept(rhs.mNoexcept)
-    , mPure(rhs.mPure) {}
+    , mPure(rhs.mPure)
+    , mStatic(rhs.mStatic) {}
 
 Method::~Method() noexcept = default;
 

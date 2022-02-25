@@ -343,6 +343,7 @@ struct Method {
     bool mConst = false;
     bool mNoexcept = false;
     bool mPure = false;
+    bool mStatic = false;
 };
 
 struct Constructor {

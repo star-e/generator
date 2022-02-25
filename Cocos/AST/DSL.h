@@ -113,6 +113,8 @@ builder.addEnumElement(vertID, \
         builder.syntax().propagate(s.mVertexDescriptor), \
         s.mVertexDescriptor = SyntaxGraph::null_vertex())
 
+#define CLASS(NAME, ...) STRUCT(NAME, .mClass = true, __VA_ARGS__)
+
 #define CNTR_MEMBER(r, _, i, MEMBER) BOOST_PP_STRINGIZE(MEMBER),
 
 #define CNTR(...) \

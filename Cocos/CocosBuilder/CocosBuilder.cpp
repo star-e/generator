@@ -136,6 +136,10 @@ int main() {
         copyFile("Utility.h");
     }
 
+    if (true) {
+        files.emplace("cocos/renderer/pipeline/custom/RenderInterfaceImpl.cpp");
+    }
+
     // update cmakelists
     if (true) {
         auto cmake = readFile(cppFolder / "CMakeLists.txt", true);

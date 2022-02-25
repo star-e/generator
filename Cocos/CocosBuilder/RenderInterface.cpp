@@ -142,6 +142,13 @@ virtual void addPresentPass(const std::string& name, const std::string& swapchai
 )");
         }
 
+        CLASS(Factory) {
+            MEMBER_FUNCTIONS(R"(
+static Pipeline* createPipeline();
+static DescriptorHierarchy* createDescriptorHierarchy();
+)");
+        }
+
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     }
