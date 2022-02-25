@@ -39,7 +39,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        STRUCT(NativePipeline) {
+        STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
         }
 

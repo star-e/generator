@@ -831,7 +831,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
             } else {
                 OSS << api << name << "()";
             }
-            if (!bDLL && traits.mInterface) {
+            if (!bDLL && traits.mInterface && !(traits.mFlags & CUSTOM_CNTR)) {
                 oss << " = default";
             }
             oss << ";\n";

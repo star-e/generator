@@ -313,6 +313,10 @@ ImplEnum SyntaxGraph::needDefaultCntr(vertex_descriptor vertID) const noexcept {
     if (hasDtor)
         bNeedDefault = true;
 
+    if (traits.mFlags & CUSTOM_CNTR) {
+        bNeedDefault = true;
+    }
+
     visit_vertex(
         vertID, g,
         [&](const Composition_ auto& s) {
@@ -332,7 +336,7 @@ ImplEnum SyntaxGraph::needDefaultCntr(vertex_descriptor vertID) const noexcept {
         bNeedDefault = false;
 
     if (bNeedDefault) {
-        if (bPmr || traits.mInterface) {
+        if (bPmr || traits.mInterface || (traits.mFlags & CUSTOM_CNTR)) {
             return ImplEnum::Separated;
         } else {
             return ImplEnum::Inline;
@@ -520,6 +524,10 @@ bool SyntaxGraph::hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept {
             bool bNeedDefault = g.needDefaultCntr(vertID) == ImplEnum::Separated;
             bool bNeedDtor = g.needDtor(vertID, bDLL) == ImplEnum::Separated;
             bool bPmr = g.isPmr(vertID);
+
+            if (traits.mFlags & CUSTOM_CNTR) {
+                bNeedDefault = false;
+            }
 
             return (bPmr && !s.mConstructors.empty())
                 || bNeedDefault
