@@ -24,14 +24,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#pragma once
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <string>
+#include "CocosModules.h"
+#include <Cocos/AST/DSL.h>
+#include <Cocos/AST/SyntaxGraphs.h>
 
-namespace cc {
+namespace Cocos::Meta {
 
-using PmrString = std::basic_string<
-    char, std::char_traits<char>,
-    boost::container::pmr::polymorphic_allocator<char>>;
+void buildWebPipeline(ModuleBuilder& builder, Features features) {
+    MODULE(WebPipeline,
+        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFilePrefix = "web-pipeline-impl",
+        .mRequires = { "RenderInterface" },
+    ) {
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
+        // Web implementations:
+
+        STRUCT(WebImplExample) {
+            PUBLIC(
+                (std::pmr::string, mName, _)
+            );
+        }
+
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
+    }
+}
 
 }

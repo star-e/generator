@@ -68,8 +68,12 @@ int main() {
         buildRenderInterface(builder,
             Fwd | Types | Typescripts | ToJs);
 
-        buildRenderCompiler(builder,
-            Fwd | Types | Names | Reflection | Graphs);
+        // web
+        buildWebPipeline(builder, Typescripts);
+
+        // native
+        buildRenderCompiler(builder, Fwd | Types | Names | Reflection | Graphs);
+        buildNativePipeline(builder, Fwd | Types | Names | Reflection | Graphs);
 
         // build executor modules
         buildRenderExecutor(builder,
@@ -84,11 +88,13 @@ int main() {
 
     std::pmr::set<std::pmr::string> files(scratch);
     // output files
-    { // manually added
+    {
+        // manually added
         files.emplace("cocos/renderer/pipeline/custom/RenderCompilerImpl.cpp");
         files.emplace("cocos/renderer/pipeline/custom/RenderExampleImpl.cpp");
-    }
-    {
+        files.emplace("cocos/renderer/pipeline/custom/RenderInterfaceImpl.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativePipelineImpl.cpp");
+
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);
 
@@ -97,47 +103,20 @@ int main() {
 
         // render graph
         builder.outputModule("RenderGraph", files);
-
-        // render compiler
         builder.outputModule("RenderInterface", files);
+
+        // web
+        builder.outputModule("WebPipeline", files);
+
+        // native
         builder.outputModule("RenderCompiler", files);
+        builder.outputModule("NativePipeline", files);
 
         // executor
         builder.outputModule("RenderExecutor", files);
 
         // render example
         builder.outputModule("RenderExample", files);
-    }
-
-    // copy graph interface
-    if (false) {
-        auto content = readFile("graph.ts");
-        updateFile(typescriptFolder / "cocos/core/pipeline/custom/graph.ts", content);
-    }
-    if (false) {
-        std::filesystem::path srcFolder("../renderer/pipeline/custom");
-        std::filesystem::path dstFolder = cppFolder / "cocos/renderer/pipeline/custom";
-        auto copyFile = [&](std::string_view filename) {
-            auto content = readFile(srcFolder / filename);
-            Expects(!content.empty());
-            updateFile(dstFolder / filename, content);
-        };
-        copyFile("GraphImpl.h");
-        copyFile("GraphTypes.h");
-        copyFile("GslUtils.h");
-        copyFile("invoke.hpp");
-        copyFile("JsbConversion.h");
-        copyFile("Map.h");
-        copyFile("Overload.h");
-        copyFile("PathUtils.h");
-        copyFile("Range.h");
-        copyFile("Set.h");
-        copyFile("String.h");
-        copyFile("Utility.h");
-    }
-
-    if (true) {
-        files.emplace("cocos/renderer/pipeline/custom/RenderInterfaceImpl.cpp");
     }
 
     // update cmakelists

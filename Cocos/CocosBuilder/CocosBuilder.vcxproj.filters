@@ -27,56 +27,20 @@
     <ClCompile Include="RenderInterface.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="WebPipeline.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="NativePipeline.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="CocosModules.h" />
-    <ClInclude Include="..\renderer\pipeline\custom\GraphImpl.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\GraphTypes.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\GslUtils.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\invoke.hpp">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\JsbConversion.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\Map.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\Overload.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\PathUtils.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\Range.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\Set.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\String.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer\pipeline\custom\Utility.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="graph.ts" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Modules">
       <UniqueIdentifier>{0644d922-5b41-457c-bbc6-88ba625679f2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Headers">
-      <UniqueIdentifier>{dc9aa706-6699-48bb-9d16-794ae993a920}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

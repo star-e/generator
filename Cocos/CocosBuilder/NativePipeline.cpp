@@ -24,30 +24,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#pragma once
-#include <boost/container_hash/hash.hpp>
-#include <boost/utility/string_view.hpp>
+#include "CocosModules.h"
+#include <Cocos/AST/DSL.h>
+#include <Cocos/AST/SyntaxGraphs.h>
 
-// transparent hash
-// see https://stackoverflow.com/questions/20317413/what-are-transparent-comparators
+namespace Cocos::Meta {
 
-namespace cc {
+void buildNativePipeline(ModuleBuilder& builder, Features features) {
+    MODULE(NativePipeline,
+        .mFolder = "cocos/renderer/pipeline/custom",
+        .mFilePrefix = "NativePipeline",
+        .mRequires = { "RenderInterface", "RenderCompiler" },
+    ) {
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
 
-template <class Char>
-struct TransparentStringHash {
-    using is_transparent = void;
-    using string_view_type = boost::basic_string_view<Char>;
+        STRUCT(NativePipeline) {
+            INHERITS(Pipeline);
+        }
 
-    size_t operator()(string_view_type str) const noexcept {
-        return boost::hash<string_view_type>{}(str);
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
     }
-    size_t operator()(const Char* str) const noexcept {
-        return boost::hash<string_view_type>{}(str);
-    }
-    template <class Alloc>
-    size_t operator()(const std::basic_string<Char, std::char_traits<Char>, Alloc>& str) const noexcept {
-        return boost::hash<string_view_type>{}(str);
-    }
-};
+}
 
-} // namespace cc
+}
