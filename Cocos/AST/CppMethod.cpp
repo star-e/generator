@@ -101,6 +101,15 @@ Parameter findLastParameter(const ModuleBuilder& builder, std::string_view& para
 Method parseFunction(const ModuleBuilder& builder, std::string_view function) {
     auto scratch = builder.mScratch;
     Method method(scratch);
+    
+    if (boost::algorithm::contains(function, "[[skip]]")) {
+        method.mSkip = true;
+    }
+
+    if (boost::algorithm::contains(function, "[[getter]]")) {
+        method.mGetter = true;
+    }
+
     // skip attributes
     {
         auto pos = function.rfind("]]");

@@ -1,6 +1,7 @@
 #include "ToJsBuilder.h"
 #include "BuilderTypes.h"
 #include "SyntaxGraphs.h"
+#include "SyntaxUtils.h"
 
 namespace Cocos::Meta {
 
@@ -117,6 +118,46 @@ replace_headers =
                 });
         }
     };
+
+    auto outputMethods = [&](SyntaxGraph::vertex_descriptor vertID, bool convert, auto comp) -> std::pmr::string {
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+
+        const auto& name = get(g.names, g, vertID);
+        visit_vertex(
+            vertID, g,
+            [&](const Struct& s) {
+                bool bOutput = false;
+                for (const auto& method : s.mMethods) {
+                    if (comp(method)) {
+                        bOutput = true;
+                        break;
+                    }
+                }
+                if (bOutput) {
+                    oss << name << "::[";
+                    int count = 0;
+                    for (const auto& method : s.mMethods) {
+                        if (comp(method)) {
+                            if (count++)
+                                oss << " ";
+                            if (convert) {
+                                auto methodName = method.mFunctionName.substr(3);
+                                methodName = camelToVariable(methodName, scratch);
+                                oss << methodName;
+                            } else {
+                                oss << method.mFunctionName;
+                            }
+                        }
+                    }
+                    oss << "]";
+                }
+            },
+            [&](const auto&) {
+
+            });
+        return oss.str();
+    };
+
     outputNames(false);
     oss << "\n";
 
@@ -130,12 +171,75 @@ classes_need_extend =
 # will apply to all class names. This is a convenience wildcard to be able to skip similar named
 # functions from all classes.
 
-skip = 
+)";
+    {
+        OSS << "skip =";
+        int count = 0;
+        for (const auto& vertID : make_range(vertices(g))) {
+            const auto& modulePath = get(g.modulePaths, g, vertID);
+            auto moduleID1 = locate(modulePath, mg);
+            if (moduleID1 != moduleID)
+                continue;
 
+            const auto& traits = get(g.traits, g, vertID);
+
+            if (traits.mImport)
+                continue;
+
+            if (traits.mFlags & IMPL_DETAIL)
+                continue;
+
+            auto line = outputMethods(vertID, false, [](const Method& method) {
+                return method.mSkip;
+            });
+            if (!line.empty()) {
+                if (count++) {
+                    oss << ",\n";
+                    oss << "      ";
+                }
+                oss << " " << line;
+            }
+        }
+        oss << "\n";
+    }
+
+    OSS << R"(
 skip_public_fields =
 
-getter_setter =
+)";
 
+    OSS << "getter_setter =";
+    {
+        int count = 0;
+        for (const auto& vertID : make_range(vertices(g))) {
+            const auto& modulePath = get(g.modulePaths, g, vertID);
+            auto moduleID1 = locate(modulePath, mg);
+            if (moduleID1 != moduleID)
+                continue;
+
+            const auto& traits = get(g.traits, g, vertID);
+
+            if (traits.mImport)
+                continue;
+
+            if (traits.mFlags & IMPL_DETAIL)
+                continue;
+
+            auto line = outputMethods(vertID, true, [](const Method& method) {
+                return method.mGetter;
+            });
+            if (!line.empty()) {
+                if (count++) {
+                    oss << ",\n";
+                    oss << "              ";
+                }
+                oss << " " << line;
+            }
+        }
+    }
+    oss << "\n";
+
+    OSS << R"(
 rename_functions =
 
 rename_classes =

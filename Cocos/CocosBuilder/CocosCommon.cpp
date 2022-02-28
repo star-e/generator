@@ -31,6 +31,16 @@ THE SOFTWARE.
 namespace Cocos::Meta {
 
 void buildCocosCommon(ModuleBuilder& builder, Features features) {
+    MODULE(PassUtils,
+        .mTypescriptFolder = "cocos/core/renderer/core",
+        .mTypescriptFilePrefix = "pass-utils",
+    ) {
+        ADD_FEATURES(ToJs);
+        NAMESPACE(cc) {
+            IMPORT_CLASS(MacroRecord);
+        }
+    }
+
 	MODULE(Math,
         .mTypescriptFolder = "cocos/core",
         .mTypescriptFilePrefix = "math", ) {

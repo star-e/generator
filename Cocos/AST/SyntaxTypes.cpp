@@ -216,7 +216,9 @@ Method::Method(Method&& rhs, const allocator_type& alloc)
     , mConst(std::move(rhs.mConst))
     , mNoexcept(std::move(rhs.mNoexcept))
     , mPure(std::move(rhs.mPure))
-    , mStatic(std::move(rhs.mStatic)) {}
+    , mStatic(std::move(rhs.mStatic))
+    , mGetter(std::move(rhs.mGetter))
+    , mSkip(std::move(rhs.mSkip)) {}
 
 Method::Method(Method const& rhs, const allocator_type& alloc)
     : mReturnType(rhs.mReturnType, alloc)
@@ -226,7 +228,9 @@ Method::Method(Method const& rhs, const allocator_type& alloc)
     , mConst(rhs.mConst)
     , mNoexcept(rhs.mNoexcept)
     , mPure(rhs.mPure)
-    , mStatic(rhs.mStatic) {}
+    , mStatic(rhs.mStatic)
+    , mGetter(rhs.mGetter)
+    , mSkip(rhs.mSkip) {}
 
 Method::~Method() noexcept = default;
 

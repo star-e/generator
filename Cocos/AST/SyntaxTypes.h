@@ -344,6 +344,8 @@ struct Method {
     bool mNoexcept = false;
     bool mPure = false;
     bool mStatic = false;
+    bool mGetter = false;
+    bool mSkip = false;
 };
 
 struct Constructor {

@@ -41,6 +41,12 @@ class PipelineSceneData;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+        INTERFACE(PipelineRuntime) {
+            MEMBER_FUNCTIONS(R"(
+[[getter]] virtual const MacroRecord& getMacros() const = 0;
+)");
+        }
+
         INTERFACE(DescriptorHierarchy) {
             MEMBER_FUNCTIONS(R"(
 virtual void addEffect(EffectAsset* asset) = 0;

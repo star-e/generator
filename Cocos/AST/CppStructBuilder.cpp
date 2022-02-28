@@ -1406,6 +1406,10 @@ std::pmr::string CppStructBuilder::generateMemberFunctions(std::pmr::string& spa
                     functions, "[[sender]] ", api);
                 functions = boost::algorithm::replace_all_copy(
                     functions, "[[dll]] ", api);
+                functions = boost::algorithm::replace_all_copy(
+                    functions, "[[getter]] ", api);
+                functions = boost::algorithm::replace_all_copy(
+                    functions, "[[skip]] ", api);
                 copyCppString(oss, space, functions);
             }
         },

@@ -155,10 +155,18 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         OSS << "// API\n";
     }
     for (const auto& method : methods) {
+        if (method.mSkip)
+            continue;
         OSS << "public ";
         if (method.mPure)
             oss << "abstract ";
-        oss << method.mFunctionName << "(";
+        if (method.mGetter) {
+            auto methodName = method.mFunctionName.substr(3);
+            methodName = camelToVariable(methodName, scratch);
+            oss << "get " << methodName << "(";
+        } else {
+            oss << method.mFunctionName << "(";
+        }
         for (uint32_t count = 0; const auto& param : method.mParameters) {
             if (count++)
                 oss << ", ";
