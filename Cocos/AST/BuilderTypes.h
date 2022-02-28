@@ -382,7 +382,7 @@ struct ModuleBuilder {
         return allocator_type(mSyntaxGraph.get_allocator().resource());
     }
 
-    ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, const allocator_type& alloc);
+    ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, std::pmr::memory_resource* scratch, const allocator_type& alloc);
     ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc);
 
     ModuleBuilder(ModuleBuilder&& rhs) = default;
@@ -390,6 +390,7 @@ struct ModuleBuilder {
     ModuleBuilder& operator=(ModuleBuilder&& rhs) = default;
     ModuleBuilder& operator=(ModuleBuilder const& rhs) = delete;
     ~ModuleBuilder() noexcept;
+    void init();
     const SyntaxGraph& syntax() const noexcept {
         return mSyntaxGraph;
     }
@@ -471,7 +472,6 @@ struct ModuleBuilder {
 
     // Generation
     int compile();
-    std::pmr::string getMemberName(std::string_view memberName, bool bPublic) const;
     std::pmr::string getTypedMemberName(const Member& m, bool bPublic, bool bFull = false) const;
     std::pmr::string getTypedParameterName(const Parameter& m, bool bPublic, bool bFull = false) const;
 
@@ -485,7 +485,7 @@ struct ModuleBuilder {
     std::pmr::string mCurrentModule;
     std::pmr::string mCurrentScope;
     std::pmr::string mProjectName;
-    std::pmr::memory_resource* mScratch = std::pmr::get_default_resource();
+    std::pmr::memory_resource* mScratch = nullptr;
     bool mUnderscoreMemberName = true;
     bool mCompiled = false;
     bool mBoost = true;

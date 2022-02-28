@@ -41,6 +41,18 @@ std::pmr::string Member::getMemberName() const {
     }
 }
 
+std::pmr::string SyntaxGraph::getMemberName(std::string_view memberName, bool bPublic) const {
+    Expects(memberName.size() >= 2);
+    std::pmr::string name(mScratch);
+    if (bPublic) {
+        name = camelToVariable(memberName.substr(1), mScratch);
+    } else {
+        name = camelToVariable(memberName.substr(1), mScratch);
+        name.insert(name.begin(), '_');
+    }
+    return name;
+}
+
 bool SyntaxGraph::isNamespace(std::string_view typePath) const noexcept {
     const auto& g = *this;
     if (typePath.empty()) {
@@ -1219,6 +1231,19 @@ bool SyntaxGraph::moduleHasImpl(std::string_view modulePath, bool bDLL) const {
             return true;
     }
     return false;
+}
+
+bool SyntaxGraph::isTypescriptValueType(vertex_descriptor vertID) const {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    if (holds_tag<Enum_>(vertID, g))
+        return true;
+
+    if (isTag(vertID))
+        return true;
+
+    auto tsType = getTypescriptTypename(vertID, scratch, scratch);
+    return isTypescriptData(tsType);
 }
 
 bool SyntaxGraph::isTypescriptData(std::string_view name) const {

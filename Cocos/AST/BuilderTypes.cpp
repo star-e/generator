@@ -101,14 +101,15 @@ CodegenContext::CodegenContext(CodegenContext const& rhs, const allocator_type& 
 
 CodegenContext::~CodegenContext() noexcept = default;
 
-ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, const allocator_type& alloc)
+ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, std::pmr::memory_resource* scratch, const allocator_type& alloc)
     : mCppFolder(std::move(cppFolder))
     , mTypescriptFolder(std::move(typescriptFolder))
     , mSyntaxGraph(alloc)
     , mModuleGraph(alloc)
     , mCurrentModule(alloc)
     , mCurrentScope(alloc)
-    , mProjectName(std::move(projectName), alloc) {}
+    , mProjectName(std::move(projectName), alloc)
+    , mScratch(std::move(scratch)) {}
 
 ModuleBuilder::ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc)
     : mCppFolder(std::move(rhs.mCppFolder))

@@ -42,7 +42,8 @@ int main() {
     std::filesystem::path typescriptFolder = "../../../engine";
     std::filesystem::path cppFolder = "../../../engine/native";
 
-    ModuleBuilder builder("cc", cppFolder, typescriptFolder, scratch);
+    ModuleBuilder builder("cc", cppFolder, typescriptFolder, scratch, scratch);
+    builder.init();
 
     // type registration
     {

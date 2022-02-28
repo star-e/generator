@@ -59,8 +59,6 @@ std::string_view extractName(std::string_view typePath);
 std::pmr::string camelToVariable(std::string_view name,
     std::pmr::memory_resource* scratch);
 
-std::pmr::string getMemberName(std::string_view memberName);
-
 std::pmr::string getParameterName(std::string_view member,
     std::pmr::memory_resource* scratch);
 

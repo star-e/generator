@@ -342,7 +342,7 @@ std::pmr::string clearVertex(const Graph& s, std::string_view name, std::pmr::me
     return oss.str();
 }
 
-std::pmr::string removePolymorphicType(const CppGraphBuilder& builder,
+std::pmr::string removePolymorphicType(const SyntaxGraph& g, const CppGraphBuilder& builder,
     const Graph& s, std::string_view name,
     std::pmr::memory_resource* scratch) {
     Expects(s.isPolymorphic());
@@ -374,15 +374,16 @@ std::pmr::string removePolymorphicType(const CppGraphBuilder& builder,
                         INDENT();
                         oss << "\n";
                         if (c.isVector()) {
-                            OSS << "g." << getMemberName(c.mMemberName) << ".erase(g." << getMemberName(c.mMemberName) << ".begin() + std::ptrdiff_t(h.value));\n";
-                            OSS << "if (h.value == g." << getMemberName(c.mMemberName) << ".size()) {\n";
+                            OSS << "g." << g.getMemberName(c.mMemberName, true) << ".erase(g."
+                                << g.getMemberName(c.mMemberName, true) << ".begin() + std::ptrdiff_t(h.value));\n";
+                            OSS << "if (h.value == g." << g.getMemberName(c.mMemberName, true) << ".size()) {\n";
                             OSS << "    return;\n";
                             OSS << "}\n";
                             OSS << "impl::reindexVectorHandle<"
                                 << cpp.getDependentName(c.mTag)
                                 << ">(g.vertices, h.value);\n";
                         } else {
-                            OSS << "g." << getMemberName(c.mMemberName) << ".erase(h.value);\n";
+                            OSS << "g." << g.getMemberName(c.mMemberName, true) << ".erase(h.value);\n";
                         }
                         UNINDENT();
                         OSS;
@@ -463,7 +464,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
             overload(
                 [&](Vector_) {
                     for (const auto& c : s.mComponents) {
-                        const auto& member = getMemberName(c.mMemberName);
+                        const auto& member = g.getMemberName(c.mMemberName, true);
                         if (!s.isVector()) {
                             auto iterName = getParameterName(c.mMemberName, scratch) + "Iter";
                             OSS << "auto " << iterName << " = vert." << member << "Iter;\n";
@@ -481,11 +482,11 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                                 if (c.mName != map.mComponentName)
                                     continue;
 
-                                const auto& member = getMemberName(c.mMemberName);
-                                OSS << "const auto& key = g." << member << "[u];\n";
-                                OSS << "auto num = g." << getMemberName(map.mMemberName) << ".erase(key);\n";
+                                const auto& component = g.getMemberName(c.mMemberName, true);
+                                OSS << "const auto& key = g." << component << "[u];\n";
+                                OSS << "auto num = g." << g.getMemberName(map.mMemberName, true) << ".erase(key);\n";
                                 OSS << "CC_ENSURES(num == 1);\n";
-                                OSS << "for (auto&& pair : g." << getMemberName(map.mMemberName) << ") {\n";
+                                OSS << "for (auto&& pair : g." << g.getMemberName(map.mMemberName, true) << ") {\n";
                                 {
                                     INDENT();
                                     OSS << "auto& v = pair.second;\n";
@@ -507,7 +508,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                         oss << "\n";
                         OSS << "// remove components\n";
                         for (const auto& c : s.mComponents) {
-                            const auto& member = getMemberName(c.mMemberName);
+                            const auto& member = g.getMemberName(c.mMemberName, true);
                             if (s.isVector()) {
                                 OSS << "g." << member << ".erase(g." << member << ".begin() + std::ptrdiff_t(u));\n";
                             } else {
@@ -882,17 +883,17 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                                 } else {
                                     oss << "\n";
                                     OSS << "    gsl::narrow_cast<"
-                                        << name << "::vertex_descriptor>(g." << getMemberName(c.mMemberName) << ".size())";
+                                        << name << "::vertex_descriptor>(g." << g.getMemberName(c.mMemberName, true) << ".size())";
                                 }
                                 oss << "};\n";
 
                                 if (!c.isIntrusive()) {
-                                    OSS << "g." << getMemberName(c.mMemberName) << ".emplace_back(std::forward<decltype(args)>(args)...);\n";
+                                    OSS << "g." << g.getMemberName(c.mMemberName, true) << ".emplace_back(std::forward<decltype(args)>(args)...);\n";
                                 }
                             } else {
                                 if (!c.isIntrusive()) {
-                                    OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << getMemberName(c.mMemberName)
-                                        << ".emplace(g." << getMemberName(c.mMemberName) << ".end(), std::forward<decltype(args)>(args)...) };\n";
+                                    OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << g.getMemberName(c.mMemberName, true)
+                                        << ".emplace(g." << g.getMemberName(c.mMemberName, true) << ".end(), std::forward<decltype(args)>(args)...) };\n";
                                 }
                             }
                         }
@@ -917,12 +918,12 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                         } else {
                             oss << "\n";
                             OSS << "    gsl::narrow_cast<"
-                                << name << "::vertex_descriptor>(g." << getMemberName(c.mMemberName) << ".size())";
+                                << name << "::vertex_descriptor>(g." << g.getMemberName(c.mMemberName, true) << ".size())";
                         }
                         oss << "};\n";
 
                         if (!c.isIntrusive()) {
-                            OSS << "g." << getMemberName(c.mMemberName) << ".emplace_back(";
+                            OSS << "g." << g.getMemberName(c.mMemberName, true) << ".emplace_back(";
                             if (propertyParam) {
                                 oss << "std::forward<ValueT>(val)";
                             }
@@ -930,8 +931,8 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                         }
                     } else {
                         if (!c.isIntrusive()) {
-                            OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << getMemberName(c.mMemberName)
-                                << ".emplace(g." << getMemberName(c.mMemberName) << ".end(), ";
+                            OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << g.getMemberName(c.mMemberName, true)
+                                << ".emplace(g." << g.getMemberName(c.mMemberName, true) << ".end(), ";
                             if (propertyParam) {
                                 oss << "std::forward<ValueT>(val)";
                             }
@@ -1104,7 +1105,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                 }
                 Expects(componentID != -1);
 
-                const auto& mapMemberName = getMemberName(map.mMemberName);
+                const auto& mapMemberName = g.getMemberName(map.mMemberName, true);
                 if (piecewise) {
                     if (true) {
                         OSS << "invoke_hpp::apply(\n";
@@ -1167,7 +1168,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
             overload(
                 [&](Vector_) {
                     for (int id = 0; const auto& c : s.mComponents) {
-                        const auto& member = getMemberName(c.mMemberName);
+                        const auto& member = g.getMemberName(c.mMemberName, true);
                         if (piecewise) {
                             oss << "\n";
                             OSS << "invoke_hpp::apply(\n";
@@ -1238,17 +1239,17 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                                         } else {
                                             oss << "\n";
                                             OSS << "    gsl::narrow_cast<"
-                                                << name << "::vertex_descriptor>(g." << getMemberName(c.mMemberName) << ".size())";
+                                                << name << "::vertex_descriptor>(g." << g.getMemberName(c.mMemberName, true) << ".size())";
                                         }
                                         oss << "};\n";
 
                                         if (!c.isIntrusive()) {
-                                            OSS << "g." << getMemberName(c.mMemberName) << ".emplace_back(std::forward<decltype(args)>(args)...);\n";
+                                            OSS << "g." << g.getMemberName(c.mMemberName, true) << ".emplace_back(std::forward<decltype(args)>(args)...);\n";
                                         }
                                     } else {
                                         if (!c.isIntrusive()) {
-                                            OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << getMemberName(c.mMemberName)
-                                                << ".emplace(g." << getMemberName(c.mMemberName) << ".end(), std::forward<decltype(args)>(args)...) };\n";
+                                            OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << g.getMemberName(c.mMemberName, true)
+                                                << ".emplace(g." << g.getMemberName(c.mMemberName, true) << ".end(), std::forward<decltype(args)>(args)...) };\n";
                                         }
                                     }
                                 }
@@ -1290,12 +1291,12 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                                 } else {
                                     oss << "\n";
                                     OSS << "    gsl::narrow_cast<"
-                                        << name << "::vertex_descriptor>(g." << getMemberName(c.mMemberName) << ".size())";
+                                        << name << "::vertex_descriptor>(g." << g.getMemberName(c.mMemberName, true) << ".size())";
                                 }
                                 oss << "};\n";
 
                                 if (!c.isIntrusive()) {
-                                    OSS << "g." << getMemberName(c.mMemberName) << ".emplace_back(";
+                                    OSS << "g." << g.getMemberName(c.mMemberName, true) << ".emplace_back(";
                                     if (propertyParam) {
                                         oss << "std::forward<ValueT>(val)";
                                     }
@@ -1303,8 +1304,8 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                                 }
                             } else {
                                 if (!c.isIntrusive()) {
-                                    OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << getMemberName(c.mMemberName)
-                                        << ".emplace(g." << getMemberName(c.mMemberName) << ".end(), ";
+                                    OSS << "vert.handle = " << handleElemType(c, ns) << "{ g." << g.getMemberName(c.mMemberName, true)
+                                        << ".emplace(g." << g.getMemberName(c.mMemberName, true) << ".end(), ";
                                     if (propertyParam) {
                                         oss << "std::forward<ValueT>(val)";
                                     }
@@ -2001,7 +2002,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
 
         if (s.isPolymorphic()) {
             oss << "\n";
-            copyString(oss, space, removePolymorphicType(*this, s, name, scratch));
+            copyString(oss, space, removePolymorphicType(g, *this, s, name, scratch));
         }
 
         oss << "\n";
@@ -2524,7 +2525,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             oss << "\n";
             oss << "// Vertex Component\n";
 
-            const auto& member = getMemberName(c.mMemberName);
+            const auto& member = g.getMemberName(c.mMemberName, true);
             auto componentID = locate(c.mValuePath, g);
 
             { // component tag getter
@@ -2711,7 +2712,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     }
                     if (s.isVector()) {
                         oss << "),\n";
-                        OSS << "g." << getMemberName("mVertices") << "[u].handle);\n";
+                        OSS << "g." << g.getMemberName("mVertices", true) << "[u].handle);\n";
                     } else {
                         oss << "),\n";
                         OSS << "static_cast<" << name << "::Vertex*>(u)->handle);\n";
@@ -2795,7 +2796,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                                 } else {
                                     if (c.isVector()) {
                                         OSS << "return " << name << "::" << valueType << "{&g."
-                                            << getMemberName(c.mMemberName) << "[h.value]};\n";
+                                            << g.getMemberName(c.mMemberName, true) << "[h.value]};\n";
                                     } else {
                                         OSS << "return " << name << "::" << valueType << "{&*h.value};\n";
                                     }
@@ -2992,7 +2993,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             OSS << "return handle.value;\n";
                         } else {
                             if (c.isVector()) {
-                                OSS << "return g." << getMemberName(c.mMemberName) << "[handle.value];\n";
+                                OSS << "return g." << g.getMemberName(c.mMemberName, true) << "[handle.value];\n";
                             } else {
                                 OSS << "return *handle.value;\n";
                             }
@@ -3087,7 +3088,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS << "return handle.value;\n";
                     } else {
                         if (c.isVector()) {
-                            OSS << "return g." << getMemberName(c.mMemberName) << "[handle.value];\n";
+                            OSS << "return g." << g.getMemberName(c.mMemberName, true) << "[handle.value];\n";
                         } else {
                             OSS << "return *handle.value;\n";
                         }
@@ -3146,7 +3147,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             OSS << "    ptr = &pHandle->value;\n";
                         } else {
                             if (c.isVector()) {
-                                OSS << "    ptr = &g." << getMemberName(c.mMemberName) << "[pHandle->value];\n";
+                                OSS << "    ptr = &g." << g.getMemberName(c.mMemberName, true) << "[pHandle->value];\n";
                             } else {
                                 OSS << "    ptr = &(*(pHandle->value));\n";
                             }
@@ -3233,7 +3234,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS << "    ptr = &pHandle->value;\n";
                     } else {
                         if (c.isVector()) {
-                            OSS << "    ptr = &g." << getMemberName(c.mMemberName) << "[pHandle->value];\n";
+                            OSS << "    ptr = &g." << g.getMemberName(c.mMemberName, true) << "[pHandle->value];\n";
                         } else {
                             OSS << "    ptr = &(*(pHandle->value));\n";
                         }
@@ -3405,7 +3406,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
     if (!s.mVertexMaps.empty()) {
 
         for (const auto& map : s.mVertexMaps) {
-            const auto& mapMemberName = getMemberName(map.mMemberName);
+            const auto& mapMemberName = g.getMemberName(map.mMemberName, true);
             oss << "\n";
             OSS << "// UuidGraph\n";
             OSS << gNoDiscard << "inline " << name << "::vertex_descriptor\n";
@@ -3692,8 +3693,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         Expects(false);
                     },
                     [&](Map_) {
-                        OSS << "auto iter = g." << getMemberName(s.mAddressableConcept.mMemberName) << ".find(absolute);\n";
-                        OSS << "if (iter != g." << getMemberName(s.mAddressableConcept.mMemberName) << ".end()) {\n";
+                        OSS << "auto iter = g." << g.getMemberName(s.mAddressableConcept.mMemberName, true) << ".find(absolute);\n";
+                        OSS << "if (iter != g." << g.getMemberName(s.mAddressableConcept.mMemberName, true) << ".end()) {\n";
                         OSS << "    return iter->second;\n";
                         OSS << "}\n";
                         OSS << "return " << name << "::null_vertex();\n";
@@ -3836,12 +3837,12 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             OSS << "// add to external path index\n";
                             if (g.isPathPmr(s)) {
                                 OSS << "auto pathName = getPath(v, g, g."
-                                    << getMemberName(s.mAddressableConcept.mMemberName)
+                                    << g.getMemberName(s.mAddressableConcept.mMemberName, true)
                                     << ".get_allocator().resource());\n";
                             } else {
                                 OSS << "auto pathName = getPath(v, g);\n";
                             }
-                            OSS << "auto res      = g." << getMemberName(s.mAddressableConcept.mMemberName)
+                            OSS << "auto res      = g." << g.getMemberName(s.mAddressableConcept.mMemberName, true)
                                 << ".emplace(std::move(pathName), v);\n";
                             OSS << "CC_ENSURES(res.second);\n";
                             if (s.mAddressableConcept.mPathPropertyMap) {
@@ -3862,7 +3863,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             OSS << "inline void removePathImpl(" << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
             {
                 INDENT();
-                const auto& member = getMemberName(s.mAddressableConcept.mMemberName);
+                const auto& member = g.getMemberName(s.mAddressableConcept.mMemberName, true);
                 if (s.mAddressableConcept.mPathPropertyMap) {
                     visit(
                         overload(
@@ -3921,7 +3922,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
 
         if (s.isPolymorphic()) {
             oss << "\n";
-            copyString(oss, space, removePolymorphicType(*this, s, name, scratch));
+            copyString(oss, space, removePolymorphicType(g, *this, s, name, scratch));
         }
 
         oss << "\n";
@@ -4057,23 +4058,23 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     for (const auto& c : s.mComponents) {
                         if (s.mNamed && s.mNamedConcept.mComponentName == c.mName) {
                             if (cstr || !str) {
-                                OSS << "std::forward_as_tuple(name), // " << getMemberName(c.mMemberName) << "\n";
+                                OSS << "std::forward_as_tuple(name), // " << g.getMemberName(c.mMemberName, true) << "\n";
                                 numSpaces = 4;
                             } else {
-                                OSS << "std::forward_as_tuple(std::move(name)), // " << getMemberName(c.mMemberName) << "\n";
+                                OSS << "std::forward_as_tuple(std::move(name)), // " << g.getMemberName(c.mMemberName, true) << "\n";
                                 numSpaces = 15;
                             }
                         } else {
                             bool isKey = false;
                             for (const auto& map : s.mVertexMaps) {
                                 if (map.mComponentName == c.mName) {
-                                    OSS << "std::forward_as_tuple(key)," << std::string(numSpaces, ' ') << " // " << getMemberName(c.mMemberName) << "\n";
+                                    OSS << "std::forward_as_tuple(key)," << std::string(numSpaces, ' ') << " // " << g.getMemberName(c.mMemberName, true) << "\n";
                                     isKey = true;
                                     break;
                                 }
                             }
                             if (!isKey) {
-                                OSS << "std::forward_as_tuple()," << std::string(numSpaces, ' ') << " // " << getMemberName(c.mMemberName) << "\n";
+                                OSS << "std::forward_as_tuple()," << std::string(numSpaces, ' ') << " // " << g.getMemberName(c.mMemberName, true) << "\n";
                             }
                         }
                     }

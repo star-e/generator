@@ -623,6 +623,7 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph&& rhs, const allocator_type& alloc)
     , mGraphs(std::move(rhs.mGraphs), alloc)
     , mVariants(std::move(rhs.mVariants), alloc)
     , mInstances(std::move(rhs.mInstances), alloc)
+    , mScratch(std::move(rhs.mScratch))
     , mPathIndex(std::move(rhs.mPathIndex), alloc) {}
 
 SyntaxGraph::SyntaxGraph(SyntaxGraph const& rhs, const allocator_type& alloc)
@@ -643,6 +644,7 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph const& rhs, const allocator_type& alloc)
     , mGraphs(rhs.mGraphs, alloc)
     , mVariants(rhs.mVariants, alloc)
     , mInstances(rhs.mInstances, alloc)
+    , mScratch(rhs.mScratch)
     , mPathIndex(rhs.mPathIndex, alloc) {}
 
 SyntaxGraph::SyntaxGraph(SyntaxGraph&& rhs) = default;

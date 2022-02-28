@@ -403,7 +403,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                         } else {
                             oss << "\n";
                         }
-                        OSS << "readonly " << builder.getMemberName(c.mMemberName, true);
+                        OSS << "readonly " << g.getMemberName(c.mMemberName, true);
                         oss << ": " << c.getTypescriptComponentType(g, scratch, scratch);
                     }
                 }
@@ -428,8 +428,8 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                 }
                 if (s.isComponentInVertex()) {
                     for (const auto& c : s.mComponents) {
-                        OSS << "this." << builder.getMemberName(c.mMemberName, false)
-                            << " = " << builder.getMemberName(c.mMemberName, true) << ";\n";
+                        OSS << "this." << g.getMemberName(c.mMemberName, false)
+                            << " = " << g.getMemberName(c.mMemberName, true) << ";\n";
                     }
                 }
             }
@@ -456,7 +456,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
             }
             if (s.isComponentInVertex()) {
                 for (const auto& c : s.mComponents) {
-                    OSS << "readonly " << builder.getMemberName(c.mMemberName, false);
+                    OSS << "readonly " << g.getMemberName(c.mMemberName, false);
                     oss << ": " << c.getTypescriptComponentType(g, scratch, scratch) << ";\n";
                 }
             }
@@ -668,9 +668,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 auto vertID = locate(c.mValuePath, g);
                 auto componentType = g.getTypescriptTypename(vertID, scratch, scratch);
                 Expects(!c.mMemberName.empty());
-                auto member = builder.getMemberName(c.mMemberName, true);
+                auto member = g.getMemberName(c.mMemberName, true);
                 outputPropertyMap(convertTag(c.mName), false, member, componentType,
-                    builder.getMemberName(c.mMemberName, false), componentType);
+                    g.getMemberName(c.mMemberName, false), componentType);
             }
         }
         if (!s.mComponents.empty()) {
@@ -739,6 +739,14 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (s.isAddressable()) {
             oss << "\n";
             OSS << ", impl.AddressableGraph";
+        }
+        if (!s.mVertexMaps.empty()) {
+            Expects(s.mVertexMaps.size() == 1);
+            const auto& map = s.mVertexMaps.front();
+            const auto keyID = locate(map.mKeyType, g);
+            const auto keyType = g.getTypescriptTypename(keyID, scratch, scratch);
+            oss << "\n";
+            OSS << ", impl.UuidGraph<" << keyType << ">";
         }
         if (!constraints.mConcepts.empty()) {
             space.resize(space.size() - 4);
@@ -1020,7 +1028,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     OSS << "const v = this._vertices.length;\n";
                     OSS << "this._vertices.push(vert);\n";
                     for (const auto& c : s.mComponents) {
-                        OSS << "this." << builder.getMemberName(c.mMemberName, false)
+                        OSS << "this." << g.getMemberName(c.mMemberName, false)
                             << ".push(" << getTagVariableName(c.mName, scratch) << ");\n";
                     }
                 } else {
@@ -1156,7 +1164,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
                     for (const auto& c : s.mComponents) {
                         Expects(!c.mMemberName.empty());
-                        OSS << "this." << builder.getMemberName(c.mMemberName, false)
+                        OSS << "this." << g.getMemberName(c.mMemberName, false)
                             << ".splice(u, 1);\n";
                     }
 
@@ -1251,7 +1259,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             continue;
 
                         OSS << "return new " << name << "NameMap(this."
-                            << builder.getMemberName(c.mMemberName, false) << ");\n";
+                            << g.getMemberName(c.mMemberName, false) << ");\n";
                     }
                 } else {
                     OSS << "return new " << name << "NameMap();\n";
@@ -1337,7 +1345,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
                 for (const auto& c : s.mComponents) {
                     auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
-                    auto member = builder.getMemberName(c.mMemberName, false);
+                    auto member = g.getMemberName(c.mMemberName, false);
                     OSS << "case '" << getTypescriptTagType(c.mName, scratch) << "':\n";
                     Expects(c.isValid());
                     if (s.isVector()) {
@@ -1373,11 +1381,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     INDENT();
                     if (s.isVector()) {
                         OSS << "return this."
-                            << builder.getMemberName(c.mMemberName, false)
+                            << g.getMemberName(c.mMemberName, false)
                             << "[v] as " << name << "ComponentType[T];\n";
                     } else {
                         OSS << "return v."
-                            << builder.getMemberName(c.mMemberName, false)
+                            << g.getMemberName(c.mMemberName, false)
                             << " as " << name << "ComponentType[T];\n";
                     }
                 }
@@ -1397,7 +1405,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 OSS << "switch (id) {\n";
                 for (const auto& c : s.mComponents) {
                     auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
-                    auto member = builder.getMemberName(c.mMemberName, false);
+                    auto member = g.getMemberName(c.mMemberName, false);
 
                     OSS << "case " << name << "Component."
                         << getTypescriptTagType(c.mName, scratch) << ":\n";
@@ -1424,7 +1432,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             if (true) {
                 for (const auto& c : s.mComponents) {
                     auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
-                    auto member = builder.getMemberName(c.mMemberName, false);
+                    auto member = g.getMemberName(c.mMemberName, false);
 
                     OSS << "get" << convertTag(c.mName) << " (v: " << vertexDescType << "): "
                         << componentType << " {\n";
@@ -1960,6 +1968,27 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "}\n";
         }
 
+        if (!s.mVertexMaps.empty()) {
+            Expects(s.mVertexMaps.size() == 1);
+            const auto& map = s.mVertexMaps.front();
+            const auto keyID = locate(map.mKeyType, g);
+            const auto keyType = g.getTypescriptTypename(keyID, scratch, scratch);
+
+            OSS << "//-----------------------------------------------------------------\n";
+            OSS << "// UuidGraph\n";
+            OSS << "vertex (key: " << keyType << "): " << vertexDescType << " {\n";
+            {
+                INDENT();
+                OSS << "return " << s.getTypescriptNullVertex() << ";\n";
+            }
+            OSS << "}\n";
+            OSS << "find (key: " << keyType << "): " << nullableVertexDescType << " {\n";
+            {
+                INDENT();
+                OSS << "return " << s.getTypescriptNullVertex() << ";\n";
+            }
+            OSS << "}\n";
+        }
         // Members
         oss << "\n";
         if (!s.mComponents.empty()) {
@@ -1990,12 +2019,33 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 for (const auto& c : s.mComponents) {
                     Expects(!c.mMemberName.empty());
                     auto vertID = locate(c.mValuePath, g);
-                    OSS << "readonly " << builder.getMemberName(c.mMemberName, false)
+                    OSS << "readonly " << g.getMemberName(c.mMemberName, false)
                         << ": " << c.getTypescriptComponentType(g, scratch, scratch)
                         << "[] = [];\n";
                 }
             }
         }
+
+        if (!s.mVertexMaps.empty()) {
+            Expects(s.mVertexMaps.size() == 1);
+            const auto& map = s.mVertexMaps.front();
+            const auto keyID = locate(map.mKeyType, g);
+            const auto keyType = g.getTypescriptTypename(keyID, scratch, scratch);
+            auto componentID = locate(map.mComponentName, g);
+            const auto member = g.getMemberName(map.mMemberName, false);
+            std::pmr::string mapType(scratch);
+            {
+                const auto& keyName = map.mKeyType.substr(1);
+                const auto& mapName = map.mMapType.substr(1);
+                mapType.append(mapName).append("<").append(keyName).append(",vertex_descriptor>");
+            }
+            auto ns = g.getScope(vertID, scratch);
+            auto mapID = g.lookupType(ns, mapType, scratch);
+            Expects(mapID != g.null_vertex());
+            OSS << "readonly " << member << ": " << g.getTypescriptTypename(mapID, scratch, scratch)
+                << " = new " << g.getTypescriptTypename(mapID, scratch, scratch) << "();\n";
+        }
+
         // GraphMembers
         const auto& constraints = get(g.constraints, g, vertID);
         outputMembers(oss, space, builder, g, constraints.mConcepts,

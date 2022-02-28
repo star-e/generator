@@ -100,6 +100,10 @@ ModuleHandle::~ModuleHandle() {
     mModuleBuilder->mCurrentModule.clear();
 }
 
+void ModuleBuilder::init() {
+    mSyntaxGraph.mScratch = mScratch;
+}
+
 ModuleGraph::vertex_descriptor ModuleBuilder::registerType(
     std::string_view name, SyntaxGraph::vertex_tag_type tag) {
     auto& g = mSyntaxGraph;
@@ -772,6 +776,12 @@ TypeHandle ModuleBuilder::addGraph(std::string_view name,
     addAlias("vertex_descriptor", "");
     addAlias("edge_type", "");
 
+    if (s.isVector()) {
+        projectTypescript("vertex_descriptor", "number");
+    } else {
+        projectTypescript("vertex_descriptor",  std::string(name) + "Vertex");
+    }
+
     return handle;
 }
 
@@ -986,6 +996,7 @@ std::pmr::string reorderIncludes(std::pmr::string content,
     std::istringstream iss(content);
     std::pmr::set<std::pmr::string> includes(scratch);
     std::pmr::set<std::pmr::string> includesHpp(scratch);
+    std::pmr::set<std::pmr::string> includesStd(scratch);
     std::pmr::set<std::pmr::string> includesComma(scratch);
     std::pmr::string line(scratch);
 
@@ -996,11 +1007,15 @@ std::pmr::string reorderIncludes(std::pmr::string content,
         for (const auto& line : includesHpp) {
             oss << line << "\n";
         }
+        for (const auto& line : includesStd) {
+            oss << line << "\n";
+        }
         for (const auto& line : includesComma) {
             oss << line << "\n";
         }
         includes.clear();
         includesHpp.clear();
+        includesStd.clear();
         includesComma.clear();
     };
 
@@ -1010,13 +1025,15 @@ std::pmr::string reorderIncludes(std::pmr::string content,
             outputIncludes();
             oss << line << "\n";
         } else {
-            std::string_view content = line.substr(include.size());
-            content = boost::algorithm::trim_copy(content);
+            auto content = line.substr(include.size());
+            boost::algorithm::trim(content);
             if (content.starts_with("<") && content.ends_with(">")) {
                 if (content.ends_with(".hpp>")) {
                     includesHpp.emplace(line);
-                } else {
+                } else if (content.ends_with(".h>")) {
                     includes.emplace(line);
+                } else if (!boost::algorithm::contains(content, ".")) {
+                    includesStd.emplace(line);
                 }
             } else {
                 includesComma.emplace(line);
@@ -1088,8 +1105,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
     if (features & Features::Fwd) {
         std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Fwd.h" , scratch);
-        files.emplace(std::move(shortname));
         std::filesystem::path filename = cppFolder / shortname;
+        files.emplace(std::move(shortname));
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         outputComment(oss);
@@ -1120,8 +1137,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
     if (features & Features::Names) {
         std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Names.h", scratch);
-        files.emplace(std::move(shortname));
         std::filesystem::path filename = cppFolder / shortname;
+        files.emplace(std::move(shortname));
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         outputComment(oss);
@@ -1802,25 +1819,6 @@ int ModuleBuilder::compile() {
     return 0;
 }
 
-std::pmr::string ModuleBuilder::getMemberName(std::string_view memberName, bool bPublic) const {
-    Expects(memberName.size() >= 2);
-
-    std::pmr::string name(mScratch);
-    if (mUnderscoreMemberName) {
-        if (bPublic) {
-            name = memberName.substr(1);
-            name[0] = tolower(name[0]);
-        } else {
-            name = memberName;
-            name[0] = '_';
-            name[1] = tolower(name[1]);
-        }
-    } else {
-        name = memberName;
-    }
-    return name;
-}
-
 std::pmr::string ModuleBuilder::getTypedMemberName(
     const Member& m, bool bPublic, bool bFull) const {
     const auto& g = mSyntaxGraph;
@@ -1829,7 +1827,7 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
     auto memberID = locate(m.mTypePath, g);
     auto typeName = g.getTypescriptTypename(memberID, scratch, scratch);
 
-    auto name = getMemberName(m.mMemberName, bPublic);
+    auto name = g.getMemberName(m.mMemberName, bPublic);
 
     if (bFull || !g.isTypescriptData(typeName)) {
         name += ": ";
@@ -1882,19 +1880,19 @@ std::pmr::string ModuleBuilder::getTypescriptVertexName(SyntaxGraph::vertex_desc
 
         if (s.mNamedConcept.mComponentMemberName.empty()) {
             if (s.isVector()) {
-                oss << "this." << builder.getMemberName(c.mMemberName, false)
+                oss << "this." << g.getMemberName(c.mMemberName, false)
                     << "[" << descName << "]";
             } else {
                 oss << s.getTypescriptVertexDereference(descName, scratch)
-                    << "." << builder.getMemberName(c.mMemberName, false);
+                    << "." << g.getMemberName(c.mMemberName, false);
             }
         } else {
             if (s.isVector()) {
-                oss << "this." << builder.getMemberName(c.mMemberName, false)
+                oss << "this." << g.getMemberName(c.mMemberName, false)
                     << "[" << descName << "]." << s.mNamedConcept.mComponentMemberName;
             } else {
                 oss << s.getTypescriptVertexDereference(descName, scratch)
-                    << "." << builder.getMemberName(c.mMemberName, false)
+                    << "." << g.getMemberName(c.mMemberName, false)
                     << "." << s.mNamedConcept.mComponentMemberName;
             }
         }

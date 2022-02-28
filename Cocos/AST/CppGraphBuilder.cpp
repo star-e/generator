@@ -1657,6 +1657,7 @@ std::pmr::string CppGraphBuilder::generateMembers_h() const {
 
 std::pmr::string CppGraphBuilder::generateReserve_cpp() const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
+    const auto& g = *mStruct.mSyntaxGraph;
     const auto& s = *mGraph;
 
     auto hasReserve = [&]() {
@@ -1681,7 +1682,7 @@ std::pmr::string CppGraphBuilder::generateReserve_cpp() const {
         if (s.isVector()) {
             OSS << "vertices.reserve(sz);\n";
             for (const auto& c : s.mComponents) {
-                OSS << getMemberName(c.mMemberName) << ".reserve(sz);\n";
+                OSS << g.getMemberName(c.mMemberName, true) << ".reserve(sz);\n";
             }
         }
     }

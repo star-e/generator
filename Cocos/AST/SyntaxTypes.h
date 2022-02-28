@@ -1114,6 +1114,8 @@ struct SyntaxGraph {
     bool isPathPmr(const Graph& s) const noexcept;
 
     // general
+    std::pmr::string getMemberName(std::string_view memberName, bool bPublic) const;
+
     std::pmr::string getTypePath(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
 
     vertex_descriptor lookupIdentifier(std::string_view currentScope, std::string_view dependentName,
@@ -1156,6 +1158,8 @@ struct SyntaxGraph {
     bool moduleHasImpl(std::string_view modulePath, bool bDLL) const;
 
     // Typescript
+    bool isTypescriptValueType(vertex_descriptor vertID) const;
+
     bool isTypescriptData(std::string_view name) const;
 
     bool isTypescriptArray(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const;
@@ -1258,6 +1262,8 @@ struct SyntaxGraph {
     std::pmr::vector<Graph> mGraphs;
     std::pmr::vector<Variant> mVariants;
     std::pmr::vector<Instance> mInstances;
+    // Members
+    std::pmr::memory_resource* mScratch = nullptr;
     // Path
     PmrMap<std::pmr::string, uint32_t> mPathIndex;
 };

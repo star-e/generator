@@ -389,11 +389,6 @@ std::pmr::string camelToVariable(std::string_view camelName,
     return name;
 }
 
-std::pmr::string getMemberName(std::string_view memberName) {
-    Expects(memberName.size() > 1);
-    return camelToVariable(memberName.substr(1), std::pmr::get_default_resource());
-}
-
 std::pmr::string getParameterName(std::string_view member,
     std::pmr::memory_resource* scratch) {
     if (member.size() < 2)

@@ -127,7 +127,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                     auto memberID = locate(m.mTypePath, g);
                                     if (count++)
                                         oss << ", ";
-                                    oss << builder.getMemberName(m.mMemberName, true);
+                                    oss << g.getMemberName(m.mMemberName, true);
                                 }
                             }
                         }
@@ -141,8 +141,8 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 for (const auto& id : cntr.mIndices) {
                     if (i == id) {
                         auto memberID = locate(m.mTypePath, g);
-                        OSS << "this." << builder.getMemberName(m.mMemberName, m.mPublic)
-                            << " = " << builder.getMemberName(m.mMemberName, true) << ";\n";
+                        OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
+                            << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
                     }
                 }
                 ++i;
@@ -199,7 +199,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         if (!m.mPublic) {
             oss << "private ";
         }
-        if (m.mReference || m.mConst) {
+        if (!m.mPointer && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         }
         if (bNeedIntial) {
