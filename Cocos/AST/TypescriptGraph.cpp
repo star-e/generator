@@ -1035,6 +1035,22 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     OSS << "this._vertices.add(v);\n";
                 }
 
+                // UuidGraph
+                if (!s.mVertexMaps.empty()) {
+                    Expects(s.mVertexMaps.size() == 1);
+                    OSS << "// UuidGraph\n";
+                    for (const auto& map : s.mVertexMaps) {
+                        for (const auto& c : s.mComponents) {
+                            if (c.mName != map.mComponentName)
+                                continue;
+                            const auto& componentVar = getTagVariableName(c.mName, scratch);
+                            OSS << "this." << g.getMemberName(map.mMemberName, false)
+                                << ".set(" << componentVar << ", v);\n";
+                            break;
+                        }
+                    }
+                }
+
                 // connect references
                 if (s.isReference()) {
                     oss << "\n";
@@ -1160,6 +1176,30 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (s.isVector()) {
+                    Expects(s.mVertexMaps.empty() || s.mVertexMaps.size() == 1);
+                    for (const auto& map : s.mVertexMaps) {
+                        OSS << "{ // UuidGraph\n";
+                        {
+                            INDENT();
+                            for (const auto& c : s.mComponents) {
+                                if (c.mName != map.mComponentName)
+                                    continue;
+
+                                const auto& component = g.getMemberName(c.mMemberName, false);
+                                OSS << "const key = this." << component << "[u];\n";
+                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".delete(key);\n";
+                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".forEach((v) => {\n";
+                                {
+                                    INDENT();
+                                    OSS << "if (v > u) { --v; }\n";
+                                }
+                                OSS << "});\n";
+                                break;
+                            }
+                        }
+                        OSS << "}\n";
+                    }
+
                     OSS << "this._vertices.splice(u, 1);\n";
 
                     for (const auto& c : s.mComponents) {
@@ -1203,6 +1243,22 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         OSS << "}\n";
                     }
                 } else {
+                    for (const auto& map : s.mVertexMaps) {
+                        OSS << "{ // UuidGraph\n";
+                        {
+                            INDENT();
+                            for (const auto& c : s.mComponents) {
+                                if (c.mName != map.mComponentName)
+                                    continue;
+
+                                const auto& component = g.getMemberName(c.mMemberName, false);
+                                OSS << "const key = this." << component << "[u];\n";
+                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".delete(key);\n";
+                                break;
+                            }
+                        }
+                        OSS << "}\n";
+                    }
                     OSS << "this._vertices.delete(u);\n";
                 }
             }
