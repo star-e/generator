@@ -2035,13 +2035,15 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "vertex (key: " << keyType << "): " << vertexDescType << " {\n";
             {
                 INDENT();
-                OSS << "return " << s.getTypescriptNullVertex() << ";\n";
+                OSS << "return this." << g.getMemberName(map.mMemberName, false) << ".get(key)!;\n";
             }
             OSS << "}\n";
             OSS << "find (key: " << keyType << "): " << nullableVertexDescType << " {\n";
             {
                 INDENT();
-                OSS << "return " << s.getTypescriptNullVertex() << ";\n";
+                OSS << "const v = this." << g.getMemberName(map.mMemberName, false) << ".get(key);\n";
+                OSS << "if (v === undefined) return " << s.getTypescriptNullVertex() << ";\n";
+                OSS << "return v;\n";
             }
             OSS << "}\n";
         }
