@@ -1986,7 +1986,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "}\n";
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// AddressableGraph\n";
-            OSS << "contains (absPath: string): boolean {\n";
+            OSS << "addressable (absPath: string): boolean {\n";
             {
                 INDENT();
                 OSS << "return impl.findRelative(this, " << s.getTypescriptNullVertex() << ", absPath) as "
@@ -2032,6 +2032,12 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// UuidGraph\n";
+            OSS << "contains (key: " << keyType << "): boolean {\n";
+            {
+                INDENT();
+                OSS << "return this." << g.getMemberName(map.mMemberName, false) << ".has(key);\n";
+            }
+            OSS << "}\n";
             OSS << "vertex (key: " << keyType << "): " << vertexDescType << " {\n";
             {
                 INDENT();
