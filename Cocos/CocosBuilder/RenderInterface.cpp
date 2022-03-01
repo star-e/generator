@@ -46,6 +46,7 @@ class PipelineSceneData;
 [[getter]] virtual const MacroRecord& getMacros() const = 0;
 )");
         }
+        //[[getter]] virtual const pipeline::PipelineSceneData& getPipelineSceneData() const = 0;
 
         INTERFACE(DescriptorHierarchy) {
             MEMBER_FUNCTIONS(R"(
