@@ -283,6 +283,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             IMPORT_CLASS(EffectAsset) {
             }
+            IMPORT_CLASS(RenderTexture) {
+            }
         }
     }
 }
