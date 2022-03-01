@@ -126,29 +126,25 @@ replace_headers =
         visit_vertex(
             vertID, g,
             [&](const Struct& s) {
-                bool bOutput = false;
+                int count = 0;
                 for (const auto& method : s.mMethods) {
-                    if (comp(method)) {
-                        bOutput = true;
-                        break;
+                    if (!comp(method))
+                        continue;
+                        
+                    if (count++ == 0) {
+                        oss << name << "::[";
+                    } else {
+                        oss << " ";
+                    }
+                    if (convert) {
+                        auto methodName = method.mFunctionName.substr(3);
+                        methodName = camelToVariable(methodName, scratch);
+                        oss << methodName;
+                    } else {
+                        oss << method.mFunctionName;
                     }
                 }
-                if (bOutput) {
-                    oss << name << "::[";
-                    int count = 0;
-                    for (const auto& method : s.mMethods) {
-                        if (comp(method)) {
-                            if (count++)
-                                oss << " ";
-                            if (convert) {
-                                auto methodName = method.mFunctionName.substr(3);
-                                methodName = camelToVariable(methodName, scratch);
-                                oss << methodName;
-                            } else {
-                                oss << method.mFunctionName;
-                            }
-                        }
-                    }
+                if (count) {
                     oss << "]";
                 }
             },
@@ -225,9 +221,18 @@ skip_public_fields =
             if (traits.mFlags & IMPL_DETAIL)
                 continue;
 
-            auto line = outputMethods(vertID, true, [](const Method& method) {
-                return method.mGetter;
+            std::pmr::set<std::pmr::string> functions(scratch);
+            auto line = outputMethods(vertID, true, [&](const Method& method) {
+                if (method.mGetter || method.mSetter) {
+                    if (functions.contains(method.mFunctionName.substr(3))) {
+                        return false;
+                    }
+                    functions.emplace(method.mFunctionName.substr(3));
+                    return true;
+                }
+                return false;
             });
+
             if (!line.empty()) {
                 if (count++) {
                     oss << ",\n";

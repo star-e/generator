@@ -345,6 +345,8 @@ struct Method {
     bool mPure = false;
     bool mStatic = false;
     bool mGetter = false;
+    bool mSetter = false;
+    bool mNullable = false;
     bool mSkip = false;
 };
 

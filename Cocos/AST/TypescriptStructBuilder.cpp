@@ -164,6 +164,10 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             auto methodName = method.mFunctionName.substr(3);
             methodName = camelToVariable(methodName, scratch);
             oss << "get " << methodName << "(";
+        } else if (method.mSetter) {
+            auto methodName = method.mFunctionName.substr(3);
+            methodName = camelToVariable(methodName, scratch);
+            oss << "set " << methodName << "(";
         } else {
             oss << method.mFunctionName << "(";
         }
@@ -172,10 +176,12 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 oss << ", ";
             oss << param.mName;
             auto paramID = locate(param.mTypePath, g);
-            oss << builder.getTypedParameterName(param, true, true);
+            oss << builder.getTypedParameterName(param, true, true, method.mNullable);
         }
         oss << ")";
-        oss << builder.getTypedParameterName(method.mReturnType, true, true);
+        if (!method.mSetter) {
+            oss << builder.getTypedParameterName(method.mReturnType, true, true, method.mNullable);
+        }
         oss << ";\n";
     }
 

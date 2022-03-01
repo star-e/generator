@@ -31,28 +31,42 @@ class EffectAsset;
 
 namespace pipeline {
 
+class GlobalDSManager;
 class PipelineSceneData;
+class RenderPipeline;
 
 } // namespace pipeline
 
 namespace scene {
 
+class Model;
 class RenderWindow;
 
 } // namespace scene
 
 } // namespace cc
 )",
+        .mTypescriptInclude = R"(import { PipelineEventType } from '../pipeline-event';
+)"
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
-[[getter]] virtual const MacroRecord& getMacros() const = 0;
+[[getter]] virtual const MacroRecord &          getMacros() const = 0;
+[[getter]] virtual pipeline::GlobalDSManager &  getGlobalDSManager() const = 0;
+[[getter]] virtual gfx::DescriptorSetLayout &   getDescriptorSetLayout() const = 0;
+[[getter]] virtual pipeline::PipelineSceneData &getPipelineSceneData() const = 0;
+[[getter]] virtual const std::string &          getConstantMacros() const = 0;
+[[nullable]] [[getter]] virtual scene::Model *               getProfiler() const = 0;
+[[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) const = 0;
+)");
+            TS_FUNCTIONS(R"(
+public abstract on (type: PipelineEventType, callback: any, target?: any, once?: boolean): typeof callback;
+public abstract off (type: PipelineEventType, callback?: any, target?: any): void;
 )");
         }
-        //[[getter]] virtual const pipeline::PipelineSceneData& getPipelineSceneData() const = 0;
 
         INTERFACE(DescriptorHierarchy) {
             MEMBER_FUNCTIONS(R"(
@@ -157,6 +171,7 @@ virtual void addPresentPass(const std::string& name, const std::string& swapchai
 
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
+static PipelineRuntime* createPipelineRuntime(pipeline::RenderPipeline* pipeline);
 static Pipeline* createPipeline();
 static DescriptorHierarchy* createDescriptorHierarchy();
 )");

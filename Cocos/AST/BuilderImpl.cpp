@@ -1840,7 +1840,8 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
     return name;
 }
 
-std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p, bool bPublic, bool bFull) const {
+std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p,
+    bool bPublic, bool bFull, bool bOptional) const {
     const auto& g = mSyntaxGraph;
     auto scratch = mScratch;
 
@@ -1853,7 +1854,7 @@ std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p, bool b
         result += ": ";
         result += typeName;
         if (p.mPointer) {
-            if (false) {
+            if (bOptional) {
                 // currently, reference is not supported
                 // we must use pointer
                 result += " | null";

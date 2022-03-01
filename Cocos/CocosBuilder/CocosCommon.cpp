@@ -40,6 +40,18 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             IMPORT_CLASS(MacroRecord);
         }
     }
+
+    MODULE(Scene,
+        .mTypescriptFolder = "cocos/core/renderer",
+        .mTypescriptFilePrefix = "scene", ) {
+        ADD_FEATURES(ToJs);
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(Model);
+            }
+        }
+    }
+
     MODULE(RenderWindow,
         .mTypescriptFolder = "cocos/core/renderer/core",
         .mTypescriptFilePrefix = "render-window", ) {
@@ -107,17 +119,31 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             IMPORT_CLASS(Shadows);
         }
     }
+
     MODULE(PipelineSceneData,
         .mFolder = "cocos/renderer/pipeline",
         .mFilePrefix = "PipelineSceneData.h",
         .mTypescriptFolder = "cocos/core/pipeline",
-        .mTypescriptFilePrefix = "pipeline-scene-data",
-    ) {
+        .mTypescriptFilePrefix = "pipeline-scene-data", ) {
         ADD_FEATURES(ToJs);
 
         NAMESPACE(cc) {
             NAMESPACE(pipeline) {
                 IMPORT_CLASS(PipelineSceneData);
+                IMPORT_CLASS(RenderPipeline);
+            }
+        }
+    }
+
+    MODULE(GlobalDSManager,
+        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFilePrefix = "global-descriptor-set-manager",
+    ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(pipeline) {
+                IMPORT_CLASS(GlobalDSManager);
             }
         }
     }

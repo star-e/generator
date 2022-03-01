@@ -110,6 +110,14 @@ Method parseFunction(const ModuleBuilder& builder, std::string_view function) {
         method.mGetter = true;
     }
 
+    if (boost::algorithm::contains(function, "[[setter]]")) {
+        method.mSetter = true;
+    }
+
+    if (boost::algorithm::contains(function, "[[nullable]]")) {
+        method.mNullable = true;
+    }
+
     // skip attributes
     {
         auto pos = function.rfind("]]");
