@@ -28,13 +28,18 @@ class Vec3;
 class Vec2;
 
 class EffectAsset;
-class RenderTexture;
 
 namespace pipeline {
 
 class PipelineSceneData;
 
 } // namespace pipeline
+
+namespace scene {
+
+class RenderWindow;
+
+} // namespace scene
 
 } // namespace cc
 )",
@@ -135,7 +140,7 @@ virtual void addPair(const CopyPair& pair) = 0;
 
         INTERFACE(Pipeline) {
             MEMBER_FUNCTIONS(R"(
-virtual uint32_t addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, RenderTexture* renderTexture) = 0;
+virtual uint32_t addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 virtual uint32_t addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
 virtual uint32_t addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
 virtual void beginFrame(pipeline::PipelineSceneData* pplScene) = 0;

@@ -40,7 +40,16 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             IMPORT_CLASS(MacroRecord);
         }
     }
-
+    MODULE(RenderWindow,
+        .mTypescriptFolder = "cocos/core/renderer/core",
+        .mTypescriptFilePrefix = "render-window", ) {
+        ADD_FEATURES(ToJs);
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(RenderWindow);
+            }
+        }
+    }
 	MODULE(Math,
         .mTypescriptFolder = "cocos/core",
         .mTypescriptFilePrefix = "math", ) {
