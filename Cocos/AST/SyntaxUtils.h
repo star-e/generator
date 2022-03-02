@@ -55,6 +55,16 @@ void extractTemplate(std::string_view instanceName,
 
 std::string_view extractName(std::string_view typePath);
 
+struct ParameterTraits {
+    bool mConst = false;
+    bool mVolatile = false;
+    bool mPointer = false;
+    bool mReference = false;
+};
+
+ParameterTraits getParameterTraits(std::string_view typePath);
+std::string_view removeCvPointerRef(std::string_view typePath);
+
 // Struct
 std::pmr::string camelToVariable(std::string_view name,
     std::pmr::memory_resource* scratch);

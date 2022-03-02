@@ -367,6 +367,53 @@ std::string_view extractName(std::string_view typePath) {
     return typePath.substr(pos + 1);
 }
 
+ParameterTraits getParameterTraits(std::string_view typePath) {
+    ParameterTraits traits{};
+    if (typePath.starts_with("const ")) {
+        typePath = typePath.substr(6);
+        traits.mConst = true;
+    }
+    if (typePath.starts_with("volatile ")) {
+        typePath = typePath.substr(6);
+        traits.mVolatile = true;
+    }
+    Expects(!(traits.mConst && traits.mVolatile));
+
+    if (typePath.ends_with("&")) {
+        typePath = typePath.substr(0, typePath.size() - 1);
+        traits.mReference = true;
+    }
+    if (typePath.ends_with("*")) {
+        typePath = typePath.substr(0, typePath.size() - 1);
+        traits.mPointer = true;
+    }
+    return traits;
+}
+
+std::string_view removeCvPointerRef(std::string_view typePath) {
+    bool bConst = false;
+    bool bVolatile = false;
+    if (typePath.starts_with("const ")) {
+        typePath = typePath.substr(6);
+        bConst = true;
+    }
+    if (typePath.starts_with("volatile ")) {
+        typePath = typePath.substr(6);
+        bVolatile = true;
+    }
+    Expects(!(bConst && bVolatile));
+
+    if (typePath.ends_with("&")) {
+        typePath = typePath.substr(0, typePath.size() - 1);
+    }
+    if (typePath.ends_with("*")) {
+        typePath = typePath.substr(0, typePath.size() - 1);
+    }
+
+    Expects(!boost::algorithm::contains(typePath, "*"));
+    return typePath;
+}
+
 // Struct
 std::pmr::string camelToVariable(std::string_view camelName,
     std::pmr::memory_resource* scratch) {

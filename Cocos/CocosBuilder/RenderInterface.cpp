@@ -54,6 +54,10 @@ class RenderWindow;
 
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
+virtual bool activate() = 0;
+virtual bool destroy() noexcept = 0;
+virtual void render(const std::vector<const scene::Camera *> &cameras) = 0;
+
 [[getter]] virtual const MacroRecord &          getMacros() const = 0;
 [[getter]] virtual pipeline::GlobalDSManager &  getGlobalDSManager() const = 0;
 [[getter]] virtual gfx::DescriptorSetLayout &   getDescriptorSetLayout() const = 0;
@@ -153,11 +157,12 @@ virtual void addPair(const CopyPair& pair) = 0;
         }
 
         INTERFACE(Pipeline) {
+            INHERITS(PipelineRuntime);
             MEMBER_FUNCTIONS(R"(
 virtual uint32_t addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 virtual uint32_t addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
 virtual uint32_t addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
-virtual void beginFrame(pipeline::PipelineSceneData* pplScene) = 0;
+virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
 virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
 virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;

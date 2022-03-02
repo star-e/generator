@@ -1847,6 +1847,7 @@ std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p,
 
     auto memberID = locate(p.mTypePath, g);
     auto typeName = g.getTypescriptTypename(memberID, scratch, scratch);
+    Expects(!typeName.empty());
 
     std::pmr::string result(scratch);
 

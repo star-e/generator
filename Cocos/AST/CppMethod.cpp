@@ -22,7 +22,7 @@ std::pmr::vector<std::pmr::string> splitFunctions(
     return results;
 }
 
-void parseParameter(const ModuleBuilder& builder, std::string_view& parameters, Parameter& param) {
+void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parameter& param) {
     auto scratch = builder.mScratch;
     Ensures(!parameters.empty());
     Ensures(parameters.back() != ' ');
@@ -67,13 +67,17 @@ void parseParameter(const ModuleBuilder& builder, std::string_view& parameters, 
         typeName = typeName.substr(6);
     }
 
-    const auto& g = builder.mSyntaxGraph;
+    auto& g = builder.mSyntaxGraph;
+    if (isInstance(typeName)) {
+        g.instantiate(builder.mCurrentScope, typeName, scratch);
+    }
+
     param.mTypePath = g.getTypePath(builder.mCurrentScope,
         typeName, scratch, scratch);
     Expects(locate(param.mTypePath, g) != g.null_vertex());
 }
 
-Parameter findLastParameter(const ModuleBuilder& builder, std::string_view& parameters) {
+Parameter findLastParameter(ModuleBuilder& builder, std::string_view& parameters) {
     auto scratch = builder.mScratch;
     Parameter param(scratch);
 
@@ -98,7 +102,7 @@ Parameter findLastParameter(const ModuleBuilder& builder, std::string_view& para
 
 }
 
-Method parseFunction(const ModuleBuilder& builder, std::string_view function) {
+Method parseFunction(ModuleBuilder& builder, std::string_view function) {
     auto scratch = builder.mScratch;
     Method method(scratch);
     
@@ -189,7 +193,7 @@ Method parseFunction(const ModuleBuilder& builder, std::string_view function) {
     return method;
 }
 
-std::pmr::vector<Method> parseFunctions(const ModuleBuilder& builder, std::string_view functions) {
+std::pmr::vector<Method> parseFunctions(ModuleBuilder& builder, std::string_view functions) {
     auto scratch = builder.mScratch;
     std::pmr::vector<Method> methods(scratch);
     auto cleaned = splitFunctions(functions, scratch);

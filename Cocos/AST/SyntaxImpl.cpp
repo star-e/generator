@@ -845,11 +845,46 @@ std::pmr::string SyntaxGraph::getTypePath(
     const auto& g = *this;
 
     if (!isInstance(dependentName)) {
-        auto vertID = lookupIdentifier(currentScope, dependentName, scratch);
+        std::string_view removeCvRefPointer = dependentName;
+        bool bConst = false;
+        if (removeCvRefPointer.starts_with("const ")) {
+            removeCvRefPointer = removeCvRefPointer.substr(6);
+            bConst = true;
+        }
+        bool bVolatile = false;
+        if (removeCvRefPointer.starts_with("volatile ")) {
+            removeCvRefPointer = removeCvRefPointer.substr(6);
+            bVolatile = true;
+        }
+        Expects(!(bConst && bVolatile));
+        bool bReference = false;
+        if (removeCvRefPointer.ends_with("&")) {
+            removeCvRefPointer = removeCvRefPointer.substr(0, removeCvRefPointer.size() - 1);
+            bReference = true;
+        }
+        bool bPointer = false;
+        if (removeCvRefPointer.ends_with("*")) {
+            removeCvRefPointer = removeCvRefPointer.substr(0, removeCvRefPointer.size() - 1);
+            bPointer = true;
+        }
+        auto vertID = lookupIdentifier(currentScope, removeCvRefPointer, scratch);
         if (vertID == g.null_vertex()) {
             throw std::out_of_range("identifier not found");
         }
-        return getTypePath(vertID, mr);
+        auto result = getTypePath(vertID, mr);
+        if (bVolatile) {
+            result.insert(0, "volatile ");
+        }
+        if (bConst) {
+            result.insert(0, "const ");
+        }
+        if (bPointer) {
+            result.append("*");
+        }
+        if (bReference) {
+            result.append("&");
+        }
+        return result;
     }
 
     // is instance
@@ -1311,8 +1346,11 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
             if (g.isTypescriptArray(vertID, scratch)) {
                 Expects(instance.mParameters.size() == 1);
                 const auto& param = instance.mParameters.front();
-                auto paramID = locate(param, g);
+                const auto paramPath = removeCvPointerRef(param);
+                auto paramID = locate(paramPath, g);
+                Expects(paramID != g.null_vertex());
                 auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
+                Expects(!paramName.empty());
                 result.append(paramName);
                 result.append("[]");   
             } else {
@@ -1603,7 +1641,8 @@ void addImported(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g,
         },
         [&](const Instance& s) {
             for (const auto& p : s.mParameters) {
-                auto paramID = locate(p, g);
+                auto typePath = removeCvPointerRef(p);
+                auto paramID = locate(typePath, g);
                 addImported(paramID, g, modulePath, imported);
             }
         },

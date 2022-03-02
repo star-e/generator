@@ -3,8 +3,8 @@
 
 namespace Cocos::Meta {
 
-Method parseFunction(const ModuleBuilder& builder, std::string_view function);
+Method parseFunction(ModuleBuilder& builder, std::string_view function);
 
-std::pmr::vector<Method> parseFunctions(const ModuleBuilder& builder, std::string_view functions);
+std::pmr::vector<Method> parseFunctions(ModuleBuilder& builder, std::string_view functions);
 
 }
