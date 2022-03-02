@@ -586,9 +586,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                             }
                         }
                         boost::algorithm::replace_all(str, "virtual ", apiDLL);
-                        boost::algorithm::replace_all(str, "[[no_sender]] ", apiDLL);
-                        boost::algorithm::replace_all(str, "[[sender]] ", apiDLL);
-                        boost::algorithm::replace_all(str, "[[dll]] ", apiDLL);
+                        removeCustomAttributes(str, apiDLL);
                         copyCppString(oss, space, str);
                     }
                 },

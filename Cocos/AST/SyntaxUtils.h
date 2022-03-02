@@ -98,4 +98,6 @@ std::pmr::string getTagVariableName(std::string_view typeName,
 std::pmr::string getRelativePath(std::string_view current, std::string_view target,
     std::pmr::memory_resource* mr);
 
+void removeCustomAttributes(std::pmr::string& str, std::string_view apiDLL);
+
 }

@@ -33,7 +33,6 @@ namespace pipeline {
 
 class GlobalDSManager;
 class PipelineSceneData;
-class RenderPipeline;
 
 } // namespace pipeline
 
@@ -54,21 +53,22 @@ class RenderWindow;
 
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
-virtual bool activate() = 0;
+virtual bool activate(gfx::Swapchain *swapchain) = 0;
 virtual bool destroy() noexcept = 0;
 virtual void render(const std::vector<const scene::Camera *> &cameras) = 0;
 
-[[getter]] virtual const MacroRecord &          getMacros() const = 0;
-[[getter]] virtual pipeline::GlobalDSManager &  getGlobalDSManager() const = 0;
-[[getter]] virtual gfx::DescriptorSetLayout &   getDescriptorSetLayout() const = 0;
+[[getter]] virtual const MacroRecord           &getMacros() const = 0;
+[[getter]] virtual pipeline::GlobalDSManager   &getGlobalDSManager() const = 0;
+[[getter]] virtual gfx::DescriptorSetLayout    &getDescriptorSetLayout() const = 0;
 [[getter]] virtual pipeline::PipelineSceneData &getPipelineSceneData() const = 0;
-[[getter]] virtual const std::string &          getConstantMacros() const = 0;
-[[nullable]] [[getter]] virtual scene::Model *               getProfiler() const = 0;
+[[getter]] virtual const std::string           &getConstantMacros() const = 0;
+[[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
 [[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) const = 0;
 )");
             TS_FUNCTIONS(R"(
 public abstract on (type: PipelineEventType, callback: any, target?: any, once?: boolean): typeof callback;
 public abstract off (type: PipelineEventType, callback?: any, target?: any): void;
+public abstract emit (type: PipelineEventType, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any);
 )");
         }
 
@@ -109,14 +109,14 @@ virtual void addFullscreenQuad(const std::string& shader) = 0;
         INTERFACE(RasterPassBuilder) {
             INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
-virtual void addRasterView(const std::string& name, const RasterView& view) = 0;
-virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
-virtual RasterQueueBuilder* addQueue(QueueHint hint, const std::string& layoutName, const std::string& name) = 0;
-virtual RasterQueueBuilder* addQueue(QueueHint hint, const std::string& layoutName) = 0;
-virtual RasterQueueBuilder* addQueue(QueueHint hint) = 0;
-virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName, const std::string& name) = 0;
-virtual void addFullscreenQuad(const std::string& shader, const std::string& layoutName) = 0;
-virtual void addFullscreenQuad(const std::string& shader) = 0;
+virtual void                addRasterView(const std::string& name, const RasterView& view) = 0;
+virtual void                addComputeView(const std::string& name, const ComputeView& view) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint, const std::string& layoutName, const std::string& name) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint, const std::string& layoutName) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint) = 0;
+virtual void                addFullscreenQuad(const std::string& shader, const std::string& layoutName, const std::string& name) = 0;
+virtual void                addFullscreenQuad(const std::string& shader, const std::string& layoutName) = 0;
+virtual void                addFullscreenQuad(const std::string& shader) = 0;
 )");
         }
 
@@ -134,9 +134,9 @@ virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, 
             MEMBER_FUNCTIONS(R"(
 virtual void addComputeView(const std::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueueBuilder* addQueue(const std::string& layoutName, const std::string& name) = 0;
-virtual ComputeQueueBuilder* addQueue(const std::string& layoutName) = 0;
-virtual ComputeQueueBuilder* addQueue() = 0;
+virtual ComputeQueueBuilder *addQueue(const std::string& layoutName, const std::string& name) = 0;
+virtual ComputeQueueBuilder *addQueue(const std::string& layoutName) = 0;
+virtual ComputeQueueBuilder *addQueue() = 0;
 
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName, const std::string& name) = 0;
 virtual void addDispatch(const std::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const std::string& layoutName) = 0;
@@ -159,25 +159,25 @@ virtual void addPair(const CopyPair& pair) = 0;
         INTERFACE(Pipeline) {
             INHERITS(PipelineRuntime);
             MEMBER_FUNCTIONS(R"(
-virtual uint32_t addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
-virtual uint32_t addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
-virtual uint32_t addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
-virtual void beginFrame() = 0;
-virtual void endFrame() = 0;
-virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
-virtual RasterPassBuilder* addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;
-virtual ComputePassBuilder* addComputePass(const std::string& layoutName, const std::string& name) = 0;
-virtual ComputePassBuilder* addComputePass(const std::string& layoutName) = 0;
-virtual MovePassBuilder* addMovePass(const std::string& name) = 0;
-virtual CopyPassBuilder* addCopyPass(const std::string& name) = 0;
-virtual void addPresentPass(const std::string& name, const std::string& swapchainName) = 0;
+virtual uint32_t            addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
+virtual uint32_t            addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
+virtual uint32_t            addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
+virtual void                beginFrame() = 0;
+virtual void                endFrame() = 0;
+virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
+virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;
+virtual ComputePassBuilder *addComputePass(const std::string& layoutName, const std::string& name) = 0;
+virtual ComputePassBuilder *addComputePass(const std::string& layoutName) = 0;
+virtual MovePassBuilder    *addMovePass(const std::string& name) = 0;
+virtual CopyPassBuilder    *addCopyPass(const std::string& name) = 0;
+virtual void                addPresentPass(const std::string& name, const std::string& swapchainName) = 0;
 )");
         }
 
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
-static Pipeline* createPipeline();
-static DescriptorHierarchy* createDescriptorHierarchy();
+static Pipeline            *createPipeline();
+static DescriptorHierarchy *createDescriptorHierarchy();
 )");
         }
 

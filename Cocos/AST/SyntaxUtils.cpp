@@ -559,4 +559,16 @@ std::pmr::string getRelativePath(std::string_view current0, std::string_view tar
     return path;
 }
 
+void removeCustomAttributes(std::pmr::string& str, std::string_view apiDLL) {
+    Expects(apiDLL.empty() || apiDLL.back() == ' ');
+    boost::algorithm::replace_all(str, "[[no_sender]] ", apiDLL);
+    boost::algorithm::replace_all(str, "[[sender]] ", apiDLL);
+    boost::algorithm::replace_all(str, "[[dll]] ", apiDLL);
+
+    boost::algorithm::replace_all(str, "[[getter]] ", "");
+    boost::algorithm::replace_all(str, "[[setter]] ", "");
+    boost::algorithm::replace_all(str, "[[skip]] ", "");
+    boost::algorithm::replace_all(str, "[[nullable]] ", "");
+}
+
 }
