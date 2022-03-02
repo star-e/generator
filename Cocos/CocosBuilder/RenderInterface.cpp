@@ -171,7 +171,6 @@ virtual void addPresentPass(const std::string& name, const std::string& swapchai
 
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
-static PipelineRuntime* createPipelineRuntime(pipeline::RenderPipeline* pipeline);
 static Pipeline* createPipeline();
 static DescriptorHierarchy* createDescriptorHierarchy();
 )");
