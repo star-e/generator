@@ -51,12 +51,12 @@ class RenderWindow;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+        //virtual bool activate(gfx::Swapchain * swapchain) = 0;
+        //virtual bool destroy() noexcept = 0;
+        //virtual void render(const std::vector<const scene::Camera*>& cameras) = 0;
+
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
-virtual bool activate(gfx::Swapchain *swapchain) = 0;
-virtual bool destroy() noexcept = 0;
-virtual void render(const std::vector<const scene::Camera *> &cameras) = 0;
-
 [[getter]] virtual const MacroRecord           &getMacros() const = 0;
 [[getter]] virtual pipeline::GlobalDSManager   &getGlobalDSManager() const = 0;
 [[getter]] virtual gfx::DescriptorSetLayout    &getDescriptorSetLayout() const = 0;
@@ -64,13 +64,14 @@ virtual void render(const std::vector<const scene::Camera *> &cameras) = 0;
 [[getter]] virtual const std::string           &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
 [[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) const = 0;
+virtual void                         onGlobalPipelineStateChanged() = 0;
 )");
             TS_FUNCTIONS(R"(
 public abstract on (type: PipelineEventType, callback: any, target?: any, once?: boolean): typeof callback;
 public abstract off (type: PipelineEventType, callback?: any, target?: any): void;
-public abstract emit (type: PipelineEventType, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any);
 )");
         }
+// public abstract emit (type: PipelineEventType, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any);
 
         INTERFACE(DescriptorHierarchy) {
             MEMBER_FUNCTIONS(R"(
@@ -157,12 +158,12 @@ virtual void addPair(const CopyPair& pair) = 0;
         }
 
         INTERFACE(Pipeline) {
-            INHERITS(PipelineRuntime);
+            //INHERITS(PipelineRuntime);
             MEMBER_FUNCTIONS(R"(
 virtual uint32_t            addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 virtual uint32_t            addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
 virtual uint32_t            addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
-virtual void                beginFrame() = 0;
+virtual void                beginFrame(pipeline::PipelineSceneData* pplScene) = 0;
 virtual void                endFrame() = 0;
 virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
 virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;

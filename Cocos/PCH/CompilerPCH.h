@@ -122,8 +122,9 @@ THE SOFTWARE.
 // gsl
 //------------------------------------------------------------
 #include <gsl/pointers>
-#include <gsl/gsl_util>
-#include <gsl/gsl_assert>
+#include <gsl/util>
+#include <gsl/assert>
+#include <gsl/narrow>
 
 //------------------------------------------------------------
 // Cocos

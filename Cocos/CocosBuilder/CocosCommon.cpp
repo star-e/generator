@@ -31,6 +31,9 @@ THE SOFTWARE.
 namespace Cocos::Meta {
 
 void buildCocosCommon(ModuleBuilder& builder, Features features) {
+    NAMESPACE(cc) {
+        CONTAINER(IntrusivePtr);
+    }
     MODULE(PassUtils,
         .mTypescriptFolder = "cocos/core/renderer/core",
         .mTypescriptFilePrefix = "pass-utils",

@@ -30,6 +30,8 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+// clang-format off
+
 void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
@@ -41,6 +43,14 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
 
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
+            //PUBLIC(
+            //    (gfx::Device*, mDevice, nullptr)
+            //    (MacroRecord, mMacros, _)
+            //    (std::string, mConstantMacros, _)
+            //    (pipeline::GlobalDSManager, mGlobalDSManager, _)
+            //    (scene::Model*, mProfiler, nullptr)
+            //    (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
+            //);
         }
 
         NAMESPACE_END(render);
