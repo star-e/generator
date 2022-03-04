@@ -1199,6 +1199,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                     OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Types.h\"\n";
                 }
             }
+            if (g.moduleHasContainer(modulePath, "/cc/IntrusivePtr")) {
+                OSS << "#include \"cocos/base/Ptr.h\"\n";
+            }
             if (g.moduleHasGraph(modulePath)) {
                 OSS << "#include <boost/graph/graph_traits.hpp>\n";
                 OSS << "#include <boost/graph/adjacency_iterator.hpp>\n";

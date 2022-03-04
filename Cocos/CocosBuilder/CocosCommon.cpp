@@ -196,7 +196,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
                 IMPORT_ENUM(LoadOp);
                 IMPORT_ENUM(StoreOp);
 
-                IMPORT_ENUM(AccessType);
+                IMPORT_ENUM(AccessFlagBit);
                 IMPORT_ENUM(ResolveMode);
 
                 IMPORT_ENUM(PipelineBindPoint);

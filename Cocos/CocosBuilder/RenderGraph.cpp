@@ -28,6 +28,8 @@ THE SOFTWARE.
 #include <Cocos/AST/DSL.h>
 #include <Cocos/AST/SyntaxGraphs.h>
 
+// clang-format off
+
 namespace Cocos::Meta {
 
 void buildRenderGraph(ModuleBuilder& builder, Features features) {
@@ -41,27 +43,12 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         .mRequires = { "RenderCommon", "Gfx", "Camera", "PipelineSceneData" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"
 #include "cocos/renderer/gfx-base/GFXTexture.h"
+#include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 )",
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
-        FLAG_CLASS(ResourceFlags) {
-            FLAGS(
-                (NONE, 0)
-                (ALLOW_RENDER_TARGET, 0x1)
-                (ALLOW_DEPTH_STENCIL, 0x2)
-                (ALLOW_UNORDERED_ACCESS, 0x4)
-                (DENY_SHADER_RESOURCE, 0x8)
-                (ALLOW_CROSS_ADAPTER, 0x10)
-                (ALLOW_SIMULTANEOUS_ACCESS, 0x20)
-                (VIDEO_DECODE_REFERENCE_ONLY, 0x40)
-            );
-        }
-
-        ENUM_CLASS(TextureLayout) {
-            ENUMS(UNKNOWN, ROW_MAJOR, UNDEFINED_SWIZZLE, STANDARD_SWIZZLE);
-        }
 
         STRUCT(ResourceDesc) {
             PUBLIC(
@@ -73,11 +60,13 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
                 (uint16_t, mMipLevels, 0)
                 (gfx::Format, mFormat, gfx::Format::UNKNOWN)
                 (gfx::SampleCount, mSampleCount, gfx::SampleCount::ONE)
-                (TextureLayout, mLayout, _)
-                (ResourceFlags, mFlags, _)
+                (gfx::TextureFlagBit, mTextureFlags, gfx::TextureFlagBit::NONE)
+                (ResourceFlags, mFlags, ResourceFlags::NONE)
             );
             TS_INIT(mFormat, Format.UNKNOWN);
             TS_INIT(mSampleCount, SampleCount.ONE);
+            TS_INIT(mTextureFlags, TextureFlagBit.NONE);
+            TS_INIT(mFlags, ResourceFlags.NONE);
         }
 
         STRUCT(ResourceTraits) {
@@ -94,15 +83,50 @@ bool hasSideEffects() const noexcept {
 )");
         }
 
+        STRUCT(RenderSwapchain) {
+            PUBLIC(
+                (IntrusivePtr<gfx::Swapchain>, mSwapchain, _)
+                (uint32_t, mCurrentID, 0)
+                (uint32_t, mNumBackBuffers, 0)
+            );
+            CNTR_NO_DEFAULT(mSwapchain);
+        }
+
+        STRUCT(ResourceStates) {
+            PUBLIC(
+                (gfx::AccessFlagBit, mStates, gfx::AccessFlagBit::NONE)
+            );
+            TS_INIT(mStates, AccessFlagBit.NONE);
+        }
+
+        STRUCT(ManagedResource) {
+            PUBLIC(
+                (uint32_t, mUnused, 0)
+            );
+        }
+
+        TAGS((_), Managed_, PersistentBuffer_, PersistentTexture_, Swapchain_);
+
         PMR_GRAPH(ResourceGraph, _, _) {
             NAMED_GRAPH(Name_);
             COMPONENT_GRAPH(
                 (Name_, PmrString, mNames)
                 (Desc_, ResourceDesc, mDescs)
                 (Traits_, ResourceTraits, mTraits)
+                (States_, ResourceStates, mStates)
             );
             COMPONENT_BIMAP(PmrUnorderedMap, mValueIndex, Name_);
+            POLYMORPHIC_GRAPH(
+                (Managed_, ManagedResource, mResources)
+                (PersistentBuffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
+                (PersistentTexture_, IntrusivePtr<gfx::Texture>, mTextures)
+                (Swapchain_, RenderSwapchain, mSwapchains)
+            );
         }
+        
+        PROJECT_TS(IntrusivePtr<gfx::Buffer>, Buffer);
+        PROJECT_TS(IntrusivePtr<gfx::Texture>, Texture);
+        PROJECT_TS(IntrusivePtr<gfx::Swapchain>, Swapchain);
 
         //STRUCT(NodeValue) {
         //    PUBLIC(

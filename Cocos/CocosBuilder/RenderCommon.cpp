@@ -48,32 +48,6 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
             ENUMS(CONSTANTS, CBV, UAV, SRV, TABLE, SSV);
         }
 
-        TAGS((_), Constants_);
-        //TAGS((_), CBV_, UAV_, SRV_, SSV_, RTV_, DSV_, IBV_, VBV_, SOV_, Constants_, Table_);
-        //VARIANT(ParameterType, (Constants_, CBV_, UAV_, SRV_, Table_, SSV_), EQUAL | LESS);
-
-        TAGS((_), Bounded_, Unbounded_);
-        VARIANT(Boundedness, (Bounded_, Unbounded_), EQUAL | LESS);
-
-        TAGS((_), CBuffer_, Buffer_, Texture_, RWBuffer_, RWTexture_, Sampler_,
-            Texture1D_, Texture1DArray_,
-            Texture2D_, Texture2DArray_, Texture2DMS_, Texture2DMSArray_,
-            Texture3D_, TextureCube_, TextureCubeArray_,
-            RaytracingAccelerationStructure_,
-            SamplerState_, SamplerComparisonState_);
-
-        VARIANT(ResourceType, (Constants_, Buffer_, Texture1D_, Texture1DArray_, Texture2D_, Texture2DArray_, Texture2DMS_, Texture2DMSArray_, Texture3D_, TextureCube_, TextureCubeArray_, RaytracingAccelerationStructure_, SamplerState_, SamplerComparisonState_));
-
-        TAGS((_), Typeless_,
-            Float4_, Float3_, Float2_, Float1_,
-            Half4_, Half3_, Half2_, Half1_,
-            Fixed4_, Fixed3_, Fixed2_, Fixed1_,
-            Uint4_, Uint3_, Uint2_, Uint1_,
-            Int4_, Int3_, Int2_, Int1_,
-            Bool4_, Bool3_, Bool2_, Bool1_);
-
-        VARIANT(ValueType, (Typeless_, Float4_, Float3_, Float2_, Float1_, Half4_, Half3_, Half2_, Half1_, Fixed4_, Fixed3_, Fixed2_, Fixed1_, Uint4_, Uint3_, Uint2_, Uint1_, Int4_, Int3_, Int2_, Int1_, Bool4_, Bool3_, Bool2_, Bool1_));
-
         TAGS((_), Raster_, Compute_, Copy_, Move_, Raytrace_);
 
         ENUM_CLASS(ResourceResidency) {
@@ -83,20 +57,26 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         ENUM_CLASS(QueueHint) {
             ENUMS(NONE, RENDER_OPAQUE, RENDER_CUTOUT, RENDER_TRANSPARENT);
         }
+
         ENUM_CLASS(ResourceDimension) {
             ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
         }
-
-        STRUCT(SampleDesc) {
-            PUBLIC(
-                (uint32_t, mCount, 1)
-                (uint32_t, mQuality, 0)
+        
+        FLAG_CLASS(ResourceFlags) {
+            FLAGS(
+                (NONE, 0)
+                (UNIFORM, 0x1)
+                (INDIRECT, 0x2)
+                (STORAGE, 0x4)
+                (SAMPLED, 0x8)
+                (COLOR_ATTACHMENT, 0x10)
+                (DEPTH_STENCIL_ATTACHMENT, 0x20)
+                (INPUT_ATTACHMENT, 0x40)
             );
         }
 
-        ENUM_CLASS(NodeType) {
-            ENUMS(INTERNAL, LEAF);
-        }
+        TAGS((_), Buffer_, Texture_);
+
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     } // module CoreRender

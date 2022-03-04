@@ -49,8 +49,8 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
                         (RefCount_, int32_t, mRefCounts)
                     );
                     POLYMORPHIC_GRAPH(
-                        (Buffer_, std::unique_ptr<gfx::Buffer>, mBuffers)
-                        (Texture_, std::unique_ptr<gfx::Texture>, mTextures)
+                        (Buffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
+                        (Texture_, IntrusivePtr<gfx::Texture>, mTextures)
                     );
                 }
             }

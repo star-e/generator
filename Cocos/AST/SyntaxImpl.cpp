@@ -1190,7 +1190,36 @@ bool SyntaxGraph::moduleHasContainer(std::string_view modulePath, std::string_vi
         if (path == modulePath) {
             if (visit_vertex(
                     vertID, g,
-                    [&](const Composition_ auto& s) {
+                    [&](const Struct& s) {
+                        for (const auto& member : s.mMembers) {
+                            const auto& memberID = locate(member.mTypePath, g);
+                            if (holds_tag<Instance_>(memberID, g)) {
+                                const auto& inst = get<Instance>(memberID, g);
+                                if (inst.mTemplate == typePath)
+                                    return true;
+                            }
+                        }
+                        return false;
+                    },
+                    [&](const Graph& s) {
+                        for (const auto& component : s.mComponents) {
+                            const auto& componentID = locate(component.mValuePath, g);
+                            if (holds_tag<Instance_>(componentID, g)) {
+                                const auto& inst = get<Instance>(componentID, g);
+                                if (inst.mTemplate == typePath)
+                                    return true;
+                            }
+                        }
+
+                        for (const auto& c : s.mPolymorphic.mConcepts) {
+                            const auto& objectID = locate(c.mValue, g);
+                            if (holds_tag<Instance_>(objectID, g)) {
+                                const auto& inst = get<Instance>(objectID, g);
+                                if (inst.mTemplate == typePath)
+                                    return true;
+                            }
+                        }
+
                         for (const auto& member : s.mMembers) {
                             const auto& memberID = locate(member.mTypePath, g);
                             if (holds_tag<Instance_>(memberID, g)) {
