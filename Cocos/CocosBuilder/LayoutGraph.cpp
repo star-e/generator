@@ -30,6 +30,8 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+// clang-format off
+    
 void buildLayoutGraph(ModuleBuilder& builder, Features features) {
     MODULE(LayoutGraph,
         .mFolder = "cocos/renderer/pipeline/custom",
@@ -146,32 +148,40 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         //-----------------------------------------------------------
         // Constant
+        ALIAS(UniformID, uint32_t);
+        PROJECT_TS(UniformID, number);
+
         STRUCT(UniformData) {
             PUBLIC(
-                (gfx::Type, mType, gfx::Type::UNKNOWN)
-                (uint32_t, mValueID, 0xFFFFFFFF)
+                (UniformID, mUniformID, 0xFFFFFFFF)
+                (gfx::Type, mUniformType, gfx::Type::UNKNOWN)
+                (uint32_t, mOffset, 0)
+                (uint32_t, mSize, 0)
             );
-            TS_INIT(mType, Type.UNKNOWN);
-            CNTR(mType, mValueID);
+            TS_INIT(mUniformType, Type.UNKNOWN);
+            CNTR(mUniformID, mUniformType, mOffset);
         }
 
         STRUCT(UniformBlockData) {
             PUBLIC(
-                (uint32_t, mSize, 0)
-                (boost::container::pmr::vector<UniformData>, mValues, _)
+                (uint32_t, mBufferSize, 0)
+                (boost::container::pmr::vector<UniformData>, mUniforms, _)
             );
         }
 
         //-----------------------------------------------------------
         // Descriptor
+        ALIAS(DescriptorID, uint32_t);
+        PROJECT_TS(DescriptorID, number);
+
         STRUCT(DescriptorData) {
             PUBLIC(
-                (uint32_t, mID, 0xFFFFFFFF)
+                (DescriptorID, mDescriptorID, 0xFFFFFFFF)
                 (gfx::Type, mType, gfx::Type::UNKNOWN)
                 (uint32_t, mCount, 1)
             );
             TS_INIT(mType, Type.UNKNOWN);
-            CNTR(mID, mType);
+            CNTR(mDescriptorID, mType);
         }
 
         STRUCT(DescriptorBlockData) {
@@ -179,19 +189,19 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (DescriptorIndex, mType, _)
                 (uint32_t, mCapacity, 0)
                 (boost::container::pmr::vector<DescriptorData>, mDescriptors, _)
+                ((PmrFlatMap<uint32_t, UniformBlockData>), mUniformBlocks, _)
             );
             CNTR(mType, mCapacity);
         }
 
         STRUCT(DescriptorTableData) {
             PUBLIC(
-                (uint32_t, mSlot, 0xFFFFFFFF)
+                (uint32_t, mTableID, 0xFFFFFFFF)
                 (uint32_t, mCapacity, 0)
                 (boost::container::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
-                ((PmrFlatMap<uint32_t, UniformBlockData>), mUniformBlocks, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            CNTR(mSlot, mCapacity);
+            CNTR(mTableID, mCapacity);
         }
 
         STRUCT(DescriptorSetData) {
