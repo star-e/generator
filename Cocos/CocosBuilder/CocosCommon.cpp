@@ -65,6 +65,19 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             }
         }
     }
+
+    MODULE(RenderScene,
+        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFilePrefix = "render-scene",
+    ) {
+        ADD_FEATURES(ToJs);
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(RenderScene);
+            }
+        }
+    }
+
 	MODULE(Math,
         .mTypescriptFolder = "cocos/core",
         .mTypescriptFilePrefix = "math", ) {

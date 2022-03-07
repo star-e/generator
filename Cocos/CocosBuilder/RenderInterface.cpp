@@ -39,6 +39,7 @@ class PipelineSceneData;
 namespace scene {
 
 class Model;
+class RenderScene;
 class RenderWindow;
 
 } // namespace scene
@@ -157,6 +158,33 @@ virtual void addPair(const CopyPair& pair) = 0;
 )");
         }
 
+        INTERFACE(SceneVisitor) {
+            MEMBER_FUNCTIONS(R"(
+virtual void bindPipelineState(gfx::PipelineState* pso) = 0;
+virtual void bindDescriptorSet(uint32_t set, gfx::DescriptorSet *descriptorSet, uint32_t dynamicOffsetCount, const uint32_t *dynamicOffsets) = 0;
+virtual void bindInputAssembler(gfx::InputAssembler *ia) = 0;
+[[skip]] virtual void updateBuffer(gfx::Buffer *buff, const void *data, uint32_t size) = 0;
+virtual void draw(const gfx::DrawInfo &info) = 0;
+)");
+            TS_FUNCTIONS(R"(
+public abstract updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number): void;
+)");
+        }
+
+        INTERFACE(SceneTask) {
+            MEMBER_FUNCTIONS(R"(
+[[getter]] virtual TaskType getTaskType() const noexcept = 0;
+virtual void     start() = 0;
+virtual void     join() = 0;
+)");
+        }
+
+        INTERFACE(SceneTransversal) {
+            MEMBER_FUNCTIONS(R"(
+virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
+)");
+        }
+
         INTERFACE(Pipeline) {
             //INHERITS(PipelineRuntime);
             MEMBER_FUNCTIONS(R"(
@@ -172,6 +200,8 @@ virtual ComputePassBuilder *addComputePass(const std::string& layoutName) = 0;
 virtual MovePassBuilder    *addMovePass(const std::string& name) = 0;
 virtual CopyPassBuilder    *addCopyPass(const std::string& name) = 0;
 virtual void                addPresentPass(const std::string& name, const std::string& swapchainName) = 0;
+
+virtual SceneTransversal *createSceneTransversal(const scene::RenderScene *scene) = 0;
 )");
         }
 

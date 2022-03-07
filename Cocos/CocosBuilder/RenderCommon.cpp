@@ -77,6 +77,10 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
 
         TAGS((_), Buffer_, Texture_);
 
+        ENUM_CLASS(TaskType) {
+            ENUMS(SYNC, ASYNC);
+        }
+
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     } // module CoreRender

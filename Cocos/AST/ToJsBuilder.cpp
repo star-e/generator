@@ -236,7 +236,7 @@ skip_public_fields =
             if (!line.empty()) {
                 if (count++) {
                     oss << ",\n";
-                    oss << "              ";
+                    oss << "               ";
                 }
                 oss << " " << line;
             }
