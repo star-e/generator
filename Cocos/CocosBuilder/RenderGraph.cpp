@@ -85,10 +85,11 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(RenderSwapchain) {
             PUBLIC(
-                (IntrusivePtr<gfx::Swapchain>, mSwapchain, _)
+                (gfx::Swapchain*, mSwapchain, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
             );
+            TS_INIT(mSwapchain, null);
             CNTR_NO_DEFAULT(mSwapchain);
         }
 
@@ -126,7 +127,6 @@ bool hasSideEffects() const noexcept {
         
         PROJECT_TS(IntrusivePtr<gfx::Buffer>, Buffer);
         PROJECT_TS(IntrusivePtr<gfx::Texture>, Texture);
-        PROJECT_TS(IntrusivePtr<gfx::Swapchain>, Swapchain);
 
         //STRUCT(NodeValue) {
         //    PUBLIC(
