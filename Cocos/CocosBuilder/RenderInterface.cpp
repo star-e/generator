@@ -45,19 +45,17 @@ class RenderWindow;
 } // namespace scene
 
 } // namespace cc
-)",
-        .mTypescriptInclude = R"(import { PipelineEventType } from '../pipeline-event';
 )"
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        //virtual bool activate(gfx::Swapchain * swapchain) = 0;
-        //virtual bool destroy() noexcept = 0;
-        //virtual void render(const std::vector<const scene::Camera*>& cameras) = 0;
-
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
+virtual bool activate(gfx::Swapchain * swapchain) = 0;
+virtual bool destroy() noexcept = 0;
+virtual void render(const std::vector<const scene::Camera*>& cameras) = 0;
+
 [[getter]] virtual const MacroRecord           &getMacros() const = 0;
 [[getter]] virtual pipeline::GlobalDSManager   &getGlobalDSManager() const = 0;
 [[getter]] virtual gfx::DescriptorSetLayout    &getDescriptorSetLayout() const = 0;
@@ -67,12 +65,7 @@ class RenderWindow;
 [[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) const = 0;
 virtual void                         onGlobalPipelineStateChanged() = 0;
 )");
-            TS_FUNCTIONS(R"(
-public abstract on (type: PipelineEventType, callback: any, target?: any, once?: boolean): typeof callback;
-public abstract off (type: PipelineEventType, callback?: any, target?: any): void;
-)");
         }
-// public abstract emit (type: PipelineEventType, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any);
 
         INTERFACE(DescriptorHierarchy) {
             MEMBER_FUNCTIONS(R"(
