@@ -63,7 +63,11 @@ virtual void render(const std::vector<const scene::Camera*>& cameras) = 0;
 [[getter]] virtual const std::string           &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
 [[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) const = 0;
-virtual void                         onGlobalPipelineStateChanged() = 0;
+
+[[getter]] virtual float getShadingScale() const = 0;
+[[setter]] virtual void  setShadingScale(float scale) = 0;
+
+virtual void onGlobalPipelineStateChanged() = 0;
 )");
         }
 
