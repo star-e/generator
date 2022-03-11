@@ -56,18 +56,21 @@ virtual bool activate(gfx::Swapchain * swapchain) = 0;
 virtual bool destroy() noexcept = 0;
 virtual void render(const std::vector<const scene::Camera*>& cameras) = 0;
 
-[[getter]] virtual const MacroRecord           &getMacros() const = 0;
-[[getter]] virtual pipeline::GlobalDSManager   &getGlobalDSManager() const = 0;
-[[getter]] virtual gfx::DescriptorSetLayout    &getDescriptorSetLayout() const = 0;
-[[getter]] virtual pipeline::PipelineSceneData &getPipelineSceneData() const = 0;
+[[skip]] virtual const MacroRecord           &getMacros() const = 0;
+[[getter]] virtual pipeline::GlobalDSManager   *getGlobalDSManager() const = 0;
+[[getter]] virtual gfx::DescriptorSetLayout    *getDescriptorSetLayout() const = 0;
+[[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
 [[getter]] virtual const std::string           &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
-[[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) const = 0;
+[[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
 [[setter]] virtual void  setShadingScale(float scale) = 0;
 
 virtual void onGlobalPipelineStateChanged() = 0;
+)");
+            TS_FUNCTIONS(R"(
+public abstract get macros(): MacroRecord;
 )");
         }
 
@@ -160,12 +163,13 @@ virtual void addPair(const CopyPair& pair) = 0;
 virtual void setViewport(const gfx::Viewport &vp) = 0;
 virtual void setScissor(const gfx::Rect &rect) = 0;
 virtual void bindPipelineState(gfx::PipelineState* pso) = 0;
-virtual void bindDescriptorSet(uint32_t set, gfx::DescriptorSet *descriptorSet, uint32_t dynamicOffsetCount, const uint32_t *dynamicOffsets) = 0;
+[[skip]] virtual void bindDescriptorSet(uint32_t set, gfx::DescriptorSet *descriptorSet, uint32_t dynamicOffsetCount, const uint32_t *dynamicOffsets) = 0;
 virtual void bindInputAssembler(gfx::InputAssembler *ia) = 0;
 [[skip]] virtual void updateBuffer(gfx::Buffer *buff, const void *data, uint32_t size) = 0;
 virtual void draw(const gfx::DrawInfo &info) = 0;
 )");
             TS_FUNCTIONS(R"(
+public abstract bindDescriptorSet (set: number, descriptorSet: DescriptorSet, dynamicOffsets?: number[]): void;
 public abstract updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number): void;
 )");
         }
@@ -175,6 +179,7 @@ public abstract updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number):
 [[getter]] virtual TaskType getTaskType() const noexcept = 0;
 virtual void     start() = 0;
 virtual void     join() = 0;
+virtual void     submit() = 0;
 )");
         }
 
@@ -185,12 +190,12 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
         }
 
         INTERFACE(Pipeline) {
-            //INHERITS(PipelineRuntime);
+            INHERITS(PipelineRuntime);
             MEMBER_FUNCTIONS(R"(
 virtual uint32_t            addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 virtual uint32_t            addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
 virtual uint32_t            addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
-virtual void                beginFrame(pipeline::PipelineSceneData* pplScene) = 0;
+virtual void                beginFrame() = 0;
 virtual void                endFrame() = 0;
 virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
 virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;
