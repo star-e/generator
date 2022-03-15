@@ -136,6 +136,18 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(GeometryRenderer,
+        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFilePrefix = "geometry-renderer", ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(pipeline) {
+                IMPORT_CLASS(GeometryRenderer);
+            }
+        }
+    }
+
     MODULE(PipelineSceneData,
         .mFolder = "cocos/renderer/pipeline",
         .mFilePrefix = "PipelineSceneData.h",

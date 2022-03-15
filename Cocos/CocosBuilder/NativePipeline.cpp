@@ -49,8 +49,9 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (gfx::Device*, mDevice, nullptr)
                 (MacroRecord, mMacros, _)
                 (std::string, mConstantMacros, _)
-                (pipeline::GlobalDSManager*, mGlobalDSManager, nullptr)
+                (std::unique_ptr<pipeline::GlobalDSManager>, mGlobalDSManager, _)
                 (scene::Model*, mProfiler, nullptr)
+               // (std::unique_ptr<pipeline::GeometryRenderer>, mGeometryRenderer, _)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
             );
         }
