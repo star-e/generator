@@ -10,7 +10,8 @@ using namespace Cocos::Meta;
 
 int main() {
     std::filesystem::path outputFolder("../..");
-    ModuleBuilder builder("cocos", outputFolder, outputFolder, std::pmr::get_default_resource());
+    ModuleBuilder builder("cocos", outputFolder, outputFolder,
+        std::pmr::get_default_resource(), std::pmr::get_default_resource());
     addCppDefaultValues(builder);
     projectTypescriptDefaultValues(builder);
 

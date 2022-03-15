@@ -67,6 +67,9 @@ virtual void render(const std::vector<scene::Camera*>& cameras) = 0;
 [[setter]] virtual void  setShadingScale(float scale) = 0;
 
 virtual void onGlobalPipelineStateChanged() = 0;
+
+[[skip]] virtual void setValue(const std::string& name, int32_t value) = 0;
+[[skip]] virtual void setValue(const std::string& name, bool value) = 0;
 )");
             TS_FUNCTIONS(R"(
 public abstract get macros(): MacroRecord;

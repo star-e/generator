@@ -126,23 +126,33 @@ replace_headers =
         visit_vertex(
             vertID, g,
             [&](const Struct& s) {
+                std::pmr::set<std::pmr::string> methods(scratch);
                 int count = 0;
                 for (const auto& method : s.mMethods) {
                     if (!comp(method))
                         continue;
                         
-                    if (count++ == 0) {
+                    if (count == 0) {
                         oss << name << "::[";
-                    } else {
-                        oss << " ";
                     }
                     if (convert) {
                         auto methodName = method.mFunctionName.substr(3);
                         methodName = camelToVariable(methodName, scratch);
-                        oss << methodName;
+                        if (!methods.contains(methodName)) {
+                            if (count)
+                                oss << " ";
+                            oss << methodName;
+                            methods.emplace(methodName);
+                        }
                     } else {
-                        oss << method.mFunctionName;
+                        if (!methods.contains(method.mFunctionName)) {
+                            if (count)
+                                oss << " ";
+                            oss << method.mFunctionName;
+                            methods.emplace(method.mFunctionName);
+                        }
                     }
+                    ++count;
                 }
                 if (count) {
                     oss << "]";
