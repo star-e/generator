@@ -30,8 +30,8 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildRenderExecutor(ModuleBuilder& builder, Features features) {
-    MODULE(RenderExecutor,
+void buildExecutorExample(ModuleBuilder& builder, Features features) {
+    MODULE(ExecutorExample,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderExecutor",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
@@ -40,21 +40,17 @@ void buildRenderExecutor(ModuleBuilder& builder, Features features) {
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"
 #include "cocos/renderer/gfx-base/GFXTexture.h"
 )") {
-        NAMESPACE(cc) {
-            NAMESPACE(render) {
-                PMR_GRAPH(DeviceResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
-                    NAMED_GRAPH(Name_);
-                    COMPONENT_GRAPH(
-                        (Name_, std::string, mNames)
-                        (RefCount_, int32_t, mRefCounts)
-                    );
-                    POLYMORPHIC_GRAPH(
-                        (Buffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
-                        (Texture_, IntrusivePtr<gfx::Texture>, mTextures)
-                    );
-                }
-            }
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
+
+        STRUCT(Executor) {
+            PUBLIC(
+                (gfx::Device*, mDevice, nullptr)
+            );
         }
+
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
     }
 }
 
