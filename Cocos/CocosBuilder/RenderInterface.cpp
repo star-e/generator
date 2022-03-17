@@ -162,6 +162,8 @@ virtual void addPair(const CopyPair& pair) = 0;
 
         INTERFACE(SceneVisitor) {
             MEMBER_FUNCTIONS(R"(
+[[getter]] virtual const pipeline::PipelineSceneData* getPipelineSceneData() const = 0;
+
 virtual void setViewport(const gfx::Viewport &vp) = 0;
 virtual void setScissor(const gfx::Rect &rect) = 0;
 virtual void bindPipelineState(gfx::PipelineState* pso) = 0;

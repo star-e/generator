@@ -41,6 +41,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mRequires = { "Gfx", "RenderCommon" },
     ) {
         NAMESPACE_BEG(cc);
+
         NAMESPACE_BEG(render);
 
         ENUM_CLASS(DescriptorIndex) {
