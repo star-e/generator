@@ -323,13 +323,18 @@ bool isWrite() const {
             CNTR(mShader);
         }
 
-        STRUCT(PresentPass) {
+        STRUCT(Present) {
             PUBLIC(
-                (PmrString, mResourceName, _)
                 (uint32_t, mSyncInterval, 0)
                 (uint32_t, mFlags, 0)
             );
-            CNTR(mResourceName, mSyncInterval, mFlags);
+            CNTR(mSyncInterval, mFlags);
+        }
+
+        STRUCT(PresentPass) {
+            PUBLIC(
+                ((PmrTransparentMap<PmrString, Present>), mPresents, _)
+            );
         }
 
         STRUCT(RenderData, .mFlags = NO_COPY) {
