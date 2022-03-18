@@ -75,6 +75,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 ((PmrTransparentMap<PmrString, Descriptor>), mDescriptors, _)
                 ((PmrTransparentMap<PmrString, UniformBlockDB>), mUniformBlocks, _)
+                ((PmrTransparentMap<gfx::Type, Descriptor>), mMerged, _)
                 (uint32_t, mCapacity, 0)
                 (uint32_t, mStart, 0)
                 (uint32_t, mCount, 0)

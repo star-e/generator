@@ -49,6 +49,9 @@ class RenderWindow;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+//class GeometryRenderer;
+        // virtual void setGeometryRenderer(pipeline::GeometryRenderer * geometryRenderer) = 0;
+
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
 virtual bool activate(gfx::Swapchain * swapchain) = 0;
