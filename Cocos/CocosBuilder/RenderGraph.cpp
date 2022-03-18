@@ -354,6 +354,7 @@ bool isWrite() const {
                 (Name_, PmrString, mNames)
                 (Layout_, PmrString, mLayoutNodes)
                 (Data_, RenderData, mData)
+                //(Valid_, bool, mValid)
             );
 
             POLYMORPHIC_GRAPH(
