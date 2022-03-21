@@ -233,6 +233,7 @@
   <ItemGroup>
     <ClCompile Include="CocosBuilder.cpp" />
     <ClCompile Include="CocosCommon.cpp" />
+    <ClCompile Include="FGDispatcher.cpp" />
     <ClCompile Include="LayoutGraph.cpp" />
     <ClCompile Include="NativePipeline.cpp" />
     <ClCompile Include="pch.cpp">
