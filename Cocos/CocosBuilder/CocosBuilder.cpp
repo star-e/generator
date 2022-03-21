@@ -64,6 +64,8 @@ int main() {
             Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
         buildRenderGraph(builder,
             Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
+        buildFGDispatcher(builder,
+            Types | Graphs);
 
         // build render compiler (native)
         buildRenderInterface(builder,
@@ -105,6 +107,8 @@ int main() {
         // render graph
         builder.outputModule("RenderGraph", files);
         builder.outputModule("RenderInterface", files);
+
+        builder.outputModule("FGDispatcher", files);
 
         // web
         builder.outputModule("WebPipeline", files);

@@ -18,6 +18,8 @@ void buildWebPipeline(ModuleBuilder& builder, Features features);
 // Native
 void buildNativePipeline(ModuleBuilder& builder, Features features);
 
+void buildFGDispatcher(ModuleBuilder& builder, Features features);
+
 void buildRenderExecutor(ModuleBuilder& builder, Features features);
 void buildRenderExample(ModuleBuilder& builder, Features features);
 
