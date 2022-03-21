@@ -22,7 +22,6 @@ namespace cc {
 class Mat4;
 class Mat4;
 class Quaternion;
-class Color;
 class Vec4;
 class Vec3;
 class Vec2;
@@ -45,34 +44,40 @@ class RenderWindow;
 } // namespace scene
 
 } // namespace cc
-)",
-        .mTypescriptInclude = R"(import { PipelineEventType } from '../pipeline-event';
 )"
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        //virtual bool activate(gfx::Swapchain * swapchain) = 0;
-        //virtual bool destroy() noexcept = 0;
-        //virtual void render(const std::vector<const scene::Camera*>& cameras) = 0;
+//class GeometryRenderer;
+        // virtual void setGeometryRenderer(pipeline::GeometryRenderer * geometryRenderer) = 0;
 
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
-[[getter]] virtual const MacroRecord           &getMacros() const = 0;
-[[getter]] virtual pipeline::GlobalDSManager   &getGlobalDSManager() const = 0;
-[[getter]] virtual gfx::DescriptorSetLayout    &getDescriptorSetLayout() const = 0;
-[[getter]] virtual pipeline::PipelineSceneData &getPipelineSceneData() const = 0;
+virtual bool activate(gfx::Swapchain * swapchain) = 0;
+virtual bool destroy() noexcept = 0;
+virtual void render(const std::vector<scene::Camera*>& cameras) = 0;
+
+[[skip]] virtual const MacroRecord           &getMacros() const = 0;
+[[getter]] virtual pipeline::GlobalDSManager   *getGlobalDSManager() const = 0;
+[[getter]] virtual gfx::DescriptorSetLayout    *getDescriptorSetLayout() const = 0;
+[[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
 [[getter]] virtual const std::string           &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
-[[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) const = 0;
-virtual void                         onGlobalPipelineStateChanged() = 0;
+[[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) = 0;
+
+[[getter]] virtual float getShadingScale() const = 0;
+[[setter]] virtual void  setShadingScale(float scale) = 0;
+
+virtual void onGlobalPipelineStateChanged() = 0;
+
+[[skip]] virtual void setValue(const std::string& name, int32_t value) = 0;
+[[skip]] virtual void setValue(const std::string& name, bool value) = 0;
 )");
             TS_FUNCTIONS(R"(
-public abstract on (type: PipelineEventType, callback: any, target?: any, once?: boolean): typeof callback;
-public abstract off (type: PipelineEventType, callback?: any, target?: any): void;
+public abstract get macros(): MacroRecord;
 )");
         }
-// public abstract emit (type: PipelineEventType, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any);
 
         INTERFACE(DescriptorHierarchy) {
             MEMBER_FUNCTIONS(R"(
@@ -84,7 +89,7 @@ virtual void addEffect(EffectAsset* asset) = 0;
             MEMBER_FUNCTIONS(R"(
 virtual void setMat4(const std::string& name, const cc::Mat4& mat) = 0;
 virtual void setQuaternion(const std::string& name, const cc::Quaternion& quat) = 0;
-virtual void setColor(const std::string& name, const cc::Color& color) = 0;
+virtual void setColor(const std::string& name, const gfx::Color& color) = 0;
 virtual void setVec4(const std::string& name, const cc::Vec4& vec) = 0;
 virtual void setVec2(const std::string& name, const cc::Vec2& vec) = 0;
 virtual void setFloat(const std::string& name, float v) = 0;
@@ -160,13 +165,18 @@ virtual void addPair(const CopyPair& pair) = 0;
 
         INTERFACE(SceneVisitor) {
             MEMBER_FUNCTIONS(R"(
+[[getter]] virtual const pipeline::PipelineSceneData* getPipelineSceneData() const = 0;
+
+virtual void setViewport(const gfx::Viewport &vp) = 0;
+virtual void setScissor(const gfx::Rect &rect) = 0;
 virtual void bindPipelineState(gfx::PipelineState* pso) = 0;
-virtual void bindDescriptorSet(uint32_t set, gfx::DescriptorSet *descriptorSet, uint32_t dynamicOffsetCount, const uint32_t *dynamicOffsets) = 0;
+[[skip]] virtual void bindDescriptorSet(uint32_t set, gfx::DescriptorSet *descriptorSet, uint32_t dynamicOffsetCount, const uint32_t *dynamicOffsets) = 0;
 virtual void bindInputAssembler(gfx::InputAssembler *ia) = 0;
 [[skip]] virtual void updateBuffer(gfx::Buffer *buff, const void *data, uint32_t size) = 0;
 virtual void draw(const gfx::DrawInfo &info) = 0;
 )");
             TS_FUNCTIONS(R"(
+public abstract bindDescriptorSet (set: number, descriptorSet: DescriptorSet, dynamicOffsets?: number[]): void;
 public abstract updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number): void;
 )");
         }
@@ -176,6 +186,7 @@ public abstract updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number):
 [[getter]] virtual TaskType getTaskType() const noexcept = 0;
 virtual void     start() = 0;
 virtual void     join() = 0;
+virtual void     submit() = 0;
 )");
         }
 
@@ -186,12 +197,12 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
         }
 
         INTERFACE(Pipeline) {
-            //INHERITS(PipelineRuntime);
+            INHERITS(PipelineRuntime);
             MEMBER_FUNCTIONS(R"(
 virtual uint32_t            addRenderTexture(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 virtual uint32_t            addRenderTarget(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
 virtual uint32_t            addDepthStencil(const std::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
-virtual void                beginFrame(pipeline::PipelineSceneData* pplScene) = 0;
+virtual void                beginFrame() = 0;
 virtual void                endFrame() = 0;
 virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName, const std::string& name) = 0;
 virtual RasterPassBuilder  *addRasterPass(uint32_t width, uint32_t height, const std::string& layoutName) = 0;
@@ -199,9 +210,9 @@ virtual ComputePassBuilder *addComputePass(const std::string& layoutName, const 
 virtual ComputePassBuilder *addComputePass(const std::string& layoutName) = 0;
 virtual MovePassBuilder    *addMovePass(const std::string& name) = 0;
 virtual CopyPassBuilder    *addCopyPass(const std::string& name) = 0;
-virtual void                addPresentPass(const std::string& name, const std::string& swapchainName) = 0;
+virtual void                presentAll() = 0;
 
-virtual SceneTransversal *createSceneTransversal(const scene::RenderScene *scene) = 0;
+virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 )");
         }
 

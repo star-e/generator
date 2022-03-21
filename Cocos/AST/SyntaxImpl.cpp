@@ -63,12 +63,21 @@ bool SyntaxGraph::isNamespace(std::string_view typePath) const noexcept {
 }
 
 bool SyntaxGraph::isValueType(vertex_descriptor vertID) const noexcept {
-    if (holds_tag<Value_>(vertID, *this)
-        || holds_tag<Enum_>(vertID, *this)
+    const auto& g = *this;
+    if (holds_tag<Value_>(vertID, g)
+        || holds_tag<Enum_>(vertID, g)
         || isTag(vertID)) {
         return true;
     }
-
+    if (holds_tag<Alias_>(vertID, g)) {
+        const auto& alias = get<Alias>(vertID, g);
+        if (!alias.mTypePath.empty()) {
+            auto typeID = locate(alias.mTypePath, g);
+            if (g.isValueType(typeID)) {
+                return true;
+            }
+        }
+    }
     return false;
 }
 

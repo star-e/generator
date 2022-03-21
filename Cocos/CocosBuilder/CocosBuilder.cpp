@@ -78,11 +78,9 @@ int main() {
         buildRenderCompiler(builder, Fwd | Types | Names | Reflection | Graphs);
         buildNativePipeline(builder, Fwd | Types | Names | Reflection | Graphs);
 
-        // build executor modules
-        buildRenderExecutor(builder,
-            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
 
         // build render example
+        buildExecutorExample(builder, Typescripts | Jsb);
         buildRenderExample(builder,
             Fwd | Types | Names | Reflection | Graphs);
     }
@@ -117,10 +115,8 @@ int main() {
         builder.outputModule("RenderCompiler", files);
         builder.outputModule("NativePipeline", files);
 
-        // executor
-        builder.outputModule("RenderExecutor", files);
-
         // render example
+        //builder.outputModule("ExecutorExample", files);
         builder.outputModule("RenderExample", files);
     }
 

@@ -49,6 +49,9 @@ THE SOFTWARE.
 #define VALUE(NAME) \
     builder.addValue(BOOST_PP_STRINGIZE(NAME))
 
+#define ALIAS(NAME, TYPE) \
+    builder.addAlias(BOOST_PP_STRINGIZE(NAME), BOOST_PP_STRINGIZE(TYPE))
+
 #define ENUM_MEMBER(r, _, i, MEMBER)       \
     builder.addEnumElement(vertID, BOOST_PP_STRINGIZE(MEMBER), "");
 

@@ -20,7 +20,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features);
 
 void buildFGDispatcher(ModuleBuilder& builder, Features features);
 
-void buildRenderExecutor(ModuleBuilder& builder, Features features);
+void buildExecutorExample(ModuleBuilder& builder, Features features);
 void buildRenderExample(ModuleBuilder& builder, Features features);
 
 }

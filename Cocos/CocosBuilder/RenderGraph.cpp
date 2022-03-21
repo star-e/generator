@@ -85,10 +85,11 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(RenderSwapchain) {
             PUBLIC(
-                (IntrusivePtr<gfx::Swapchain>, mSwapchain, _)
+                (gfx::Swapchain*, mSwapchain, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
             );
+            TS_INIT(mSwapchain, null);
             CNTR_NO_DEFAULT(mSwapchain);
         }
 
@@ -126,7 +127,6 @@ bool hasSideEffects() const noexcept {
         
         PROJECT_TS(IntrusivePtr<gfx::Buffer>, Buffer);
         PROJECT_TS(IntrusivePtr<gfx::Texture>, Texture);
-        PROJECT_TS(IntrusivePtr<gfx::Swapchain>, Swapchain);
 
         //STRUCT(NodeValue) {
         //    PUBLIC(
@@ -323,13 +323,18 @@ bool isWrite() const {
             CNTR(mShader);
         }
 
-        STRUCT(PresentPass) {
+        STRUCT(Present) {
             PUBLIC(
-                (PmrString, mResourceName, _)
                 (uint32_t, mSyncInterval, 0)
                 (uint32_t, mFlags, 0)
             );
-            CNTR(mResourceName, mSyncInterval, mFlags);
+            CNTR(mSyncInterval, mFlags);
+        }
+
+        STRUCT(PresentPass) {
+            PUBLIC(
+                ((PmrTransparentMap<PmrString, Present>), mPresents, _)
+            );
         }
 
         STRUCT(RenderData, .mFlags = NO_COPY) {
@@ -349,6 +354,7 @@ bool isWrite() const {
                 (Name_, PmrString, mNames)
                 (Layout_, PmrString, mLayoutNodes)
                 (Data_, RenderData, mData)
+                //(Valid_, bool, mValid)
             );
 
             POLYMORPHIC_GRAPH(

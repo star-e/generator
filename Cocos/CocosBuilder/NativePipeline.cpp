@@ -37,20 +37,23 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
         .mRequires = { "RenderInterface", "RenderCompiler" },
+        .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
+)"
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
-            //PUBLIC(
-            //    (gfx::Device*, mDevice, nullptr)
-            //    (MacroRecord, mMacros, _)
-            //    (std::string, mConstantMacros, _)
-            //    (pipeline::GlobalDSManager, mGlobalDSManager, _)
-            //    (scene::Model*, mProfiler, nullptr)
-            //    (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
-            //);
+            PUBLIC(
+                (gfx::Device*, mDevice, nullptr)
+                (MacroRecord, mMacros, _)
+                (std::string, mConstantMacros, _)
+                (std::unique_ptr<pipeline::GlobalDSManager>, mGlobalDSManager, _)
+                (scene::Model*, mProfiler, nullptr)
+               // (std::unique_ptr<pipeline::GeometryRenderer>, mGeometryRenderer, _)
+                (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
+            );
         }
 
         NAMESPACE_END(render);
