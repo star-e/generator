@@ -224,6 +224,7 @@ bool isWrite() const {
                 
         STRUCT(RasterPass) {
             PUBLIC(
+                (bool, mIsValid, false)
                 ((PmrTransparentMap<PmrString, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                 (SubpassGraph, mSubpassGraph, _)
@@ -354,7 +355,7 @@ bool isWrite() const {
                 (Name_, PmrString, mNames)
                 (Layout_, PmrString, mLayoutNodes)
                 (Data_, RenderData, mData)
-                //(Valid_, bool, mValid)
+                (Valid_, bool, mValid)
             );
 
             POLYMORPHIC_GRAPH(
