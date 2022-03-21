@@ -191,6 +191,13 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         PMR_CONTAINER(PmrUnorderedStringSet);
         PMR_CONTAINER(PmrUnorderedStringMultiSet);
     }
+
+    NAMESPACE(ccstd) {
+        CONTAINER(vector);
+        NAMESPACE(pmr) {
+            CONTAINER(vector);
+        }
+    }
 }
 
 }

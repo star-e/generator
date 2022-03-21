@@ -56,7 +56,7 @@ class RenderWindow;
             MEMBER_FUNCTIONS(R"(
 virtual bool activate(gfx::Swapchain * swapchain) = 0;
 virtual bool destroy() noexcept = 0;
-virtual void render(const std::vector<scene::Camera*>& cameras) = 0;
+virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 
 [[skip]] virtual const MacroRecord           &getMacros() const = 0;
 [[getter]] virtual pipeline::GlobalDSManager   *getGlobalDSManager() const = 0;

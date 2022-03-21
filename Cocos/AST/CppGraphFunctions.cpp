@@ -1871,7 +1871,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                     } else {
                         Expects(s.mBidirectional);
                         if (s.hasEdgeProperty()) {
-                            OSS << "std::vector<" << edgeListType(ns) << "::iterator> garbage;\n";
+                            OSS << "ccstd::vector<" << edgeListType(ns) << "::iterator> garbage;\n";
                         }
 
                         OSS << "for (auto pair = out_edges(u, g); pair.first != pair.second; ++pair.first) {\n";
@@ -1922,7 +1922,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "remove_out_edge_if(v, std::forward<Predicate>(pred), g);\n";
                         } else {
                             if (s.hasEdgeProperty()) {
-                                OSS << "std::vector<" << edgeListType(ns)
+                                OSS << "ccstd::vector<" << edgeListType(ns)
                                     << "::iterator> garbage;\n";
                             }
 
