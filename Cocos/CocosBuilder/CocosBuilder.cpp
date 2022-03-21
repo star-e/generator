@@ -64,8 +64,7 @@ int main() {
             Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
         buildRenderGraph(builder,
             Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
-        buildFGDispatcher(builder,
-            Types | Graphs);
+        buildFGDispatcher(builder, Types | Graphs);
 
         // build render compiler (native)
         buildRenderInterface(builder,

@@ -33,6 +33,9 @@
     <ClCompile Include="NativePipeline.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="FGDispatcher.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

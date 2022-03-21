@@ -1216,7 +1216,7 @@ std::pmr::string generateGraphs_h(std::string_view projectName,
 
         const auto& name = get(g.names, g, vertID);
 
-        auto& currScope = context.mScopes.back();
+        //auto& currScope = context.mScopes.back();
 
         visit_vertex(
             vertID, g,

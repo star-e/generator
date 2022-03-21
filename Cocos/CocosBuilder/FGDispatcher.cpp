@@ -84,7 +84,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         PMR_GRAPH(ResourceAccessGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
-                ((std::vector<RenderGraph::vertex_descriptor>) , mNames, _)
+                (boost::container::pmr::vector<PmrString>, mResourceNames, _)
+                (std::vector<RenderGraph::vertex_descriptor>, mPresentPasses, _)
                 ((PmrUnorderedMap<PmrString, uint32_t>), mResourceIndex, _)
             );
             COMPONENT_GRAPH(
@@ -103,6 +104,9 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderStageFlagBit, mEndVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mBeginAccess, gfx::MemoryAccessBit::NONE)
                 (gfx::MemoryAccessBit, mEndAccess, gfx::MemoryAccessBit::NONE)
+                (PassType, mPassType, PassType::Raster)
+                (Range, mFromRange, _)
+                (Range, mToRange, _)
             );
         }
 
@@ -111,6 +115,19 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (std::vector<Barrier>, mFrontBarriers, _)
                 (std::vector<Barrier>, mRearBarriers, _)
             );
+        }
+
+        STRUCT(FrameGraphDispatcher, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
+            PUBLIC(
+                (ResourceGraph&, mResourceGraph, _)
+                (RenderGraph&, mGraph, _)
+                (LayoutGraphData&, mLayoutGraph, _)
+                (boost::container::pmr::memory_resource*, mScratch, nullptr)
+            );
+            CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
+            MEMBER_FUNCTIONS(R"(
+                void buildBarriers();
+                )");
         }
 
         NAMESPACE_END(render);
