@@ -106,7 +106,8 @@ bool hasSideEffects() const noexcept {
             );
         }
 
-        TAGS((_), Managed_, PersistentBuffer_, PersistentTexture_, Swapchain_);
+        TAGS((_), Managed_, PersistentBuffer_, PersistentTexture_,
+            Framebuffer_, Swapchain_);
 
         PMR_GRAPH(ResourceGraph, _, _) {
             NAMED_GRAPH(Name_);
@@ -121,12 +122,14 @@ bool hasSideEffects() const noexcept {
                 (Managed_, ManagedResource, mResources)
                 (PersistentBuffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
                 (PersistentTexture_, IntrusivePtr<gfx::Texture>, mTextures)
+                (Framebuffer_, IntrusivePtr<gfx::Framebuffer>, mFramebuffers)
                 (Swapchain_, RenderSwapchain, mSwapchains)
             );
         }
-        
+
         PROJECT_TS(IntrusivePtr<gfx::Buffer>, Buffer);
         PROJECT_TS(IntrusivePtr<gfx::Texture>, Texture);
+        PROJECT_TS(IntrusivePtr<gfx::Framebuffer>, Framebuffer);
 
         //STRUCT(NodeValue) {
         //    PUBLIC(
