@@ -45,12 +45,12 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         ENUM_CLASS(PassType) {
             ENUMS(    
-                Raster,
-                Compute,
-                Copy,
-                Move,
-                Raytrace,
-                Present);
+                RASTER,
+                COMPUTE,
+                COPY,
+                MOVE,
+                RAYTRACE,
+                PRESENT);
         }
 
         STRUCT(NullTag) {
@@ -78,7 +78,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         //resourceStatus
         STRUCT(ResourceAccessNode) {
             PUBLIC(
-                (PassType, mPassType, PassType::Raster)
+                (PassType, mPassType, PassType::RASTER)
                 (std::vector<ResourceAccessDesc>, mAttachemntStatus, _)
             );
         }
@@ -105,7 +105,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderStageFlagBit, mEndVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mBeginAccess, gfx::MemoryAccessBit::NONE)
                 (gfx::MemoryAccessBit, mEndAccess, gfx::MemoryAccessBit::NONE)
-                (PassType, mPassType, PassType::Raster)
+                (PassType, mPassType, PassType::RASTER)
                 (Range, mFromRange, _)
                 (Range, mToRange, _)
             );
