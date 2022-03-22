@@ -127,8 +127,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
             CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
             MEMBER_FUNCTIONS(R"(
-                void buildBarriers();
-                )");
+void buildBarriers() const;
+)");
         }
 
         NAMESPACE_END(render);

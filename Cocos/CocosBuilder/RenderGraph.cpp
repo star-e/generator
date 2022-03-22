@@ -43,6 +43,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         .mRequires = { "RenderCommon", "Gfx", "Camera", "PipelineSceneData" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"
 #include "cocos/renderer/gfx-base/GFXTexture.h"
+#include "cocos/renderer/gfx-base/GFXFramebuffer.h"
 #include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 )",
