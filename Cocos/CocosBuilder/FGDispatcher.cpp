@@ -68,6 +68,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(ResourceAccessDesc) {
             PUBLIC(
+                (bool, mExternal, false)
                 (uint32_t, mResourceID, 0xFFFFFFFF)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
