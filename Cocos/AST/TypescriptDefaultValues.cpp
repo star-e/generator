@@ -138,6 +138,9 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(cc::UnorderedStringMultiSet, Set);
     PROJECT_TS(cc::PmrUnorderedStringSet, Set);
     PROJECT_TS(cc::PmrUnorderedStringMultiSet, Set);
+
+    PROJECT_TS(ccstd::string, string);
+    PROJECT_TS(ccstd::pmr::string, string);
 }
 
 }

@@ -36,7 +36,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "RenderCompiler" },
+        .mRequires = { "RenderInterface", "RenderCompiler", "FrameGraph" },
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 )"
     ) {
@@ -47,12 +47,14 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             INHERITS(Pipeline);
             PUBLIC(
                 (gfx::Device*, mDevice, nullptr)
+                (gfx::Swapchain*, mSwapchain, nullptr)
                 (MacroRecord, mMacros, _)
-                (std::string, mConstantMacros, _)
+                (ccstd::string, mConstantMacros, _)
                 (std::unique_ptr<pipeline::GlobalDSManager>, mGlobalDSManager, _)
                 (scene::Model*, mProfiler, nullptr)
                // (std::unique_ptr<pipeline::GeometryRenderer>, mGeometryRenderer, _)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
+                (framegraph::FrameGraph, mFrameGraph, _)
             );
         }
 

@@ -194,8 +194,10 @@ void addCppDefaultValues(ModuleBuilder& builder) {
 
     NAMESPACE(ccstd) {
         CONTAINER(vector);
+        CLASS(string);
         NAMESPACE(pmr) {
             CONTAINER(vector);
+            CLASS(string);
         }
     }
 }

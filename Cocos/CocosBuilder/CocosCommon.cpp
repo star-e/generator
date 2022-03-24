@@ -336,6 +336,16 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         PROJECT_TS(std::unique_ptr<cc::gfx::Sampler>, Sampler);
     }
 
+    MODULE(FrameGraph,
+        .mFolder = "cocos/renderer/frame-graph",
+        .mFilePrefix = "FrameGraph.h") {
+        NAMESPACE(cc) {
+            NAMESPACE(framegraph) {
+                IMPORT_CLASS(FrameGraph);
+            }
+        }
+    }
+
     MODULE(Assets,
         .mFolder = "cocos/core/assets",
         .mFilePrefix = "EffectAsset.h",

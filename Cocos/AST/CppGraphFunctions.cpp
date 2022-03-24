@@ -3531,7 +3531,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 if (pmr)
                     stringName = "PmrString";
                 else
-                    stringName = "std::string";
+                    stringName = "ccstd::string";
             }
             if (general) {
                 OSS << "template <class Allocator>\n";
@@ -3615,7 +3615,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 if (pmr)
                     stringName = "PmrString";
                 else
-                    stringName = "std::string";
+                    stringName = "ccstd::string";
             }
             if (general) {
                 OSS << "template <class Allocator>\n";
@@ -3888,7 +3888,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         s.mAddressableConcept.mType);
                 } else {
                     if (bPmr) {
-                        OSS << "// notice: here we use std::string, not std::pmr::string\n";
+                        OSS << "// notice: here we use ccstd::string, not std::pmr::string\n";
                         OSS << "// we do not want to increase the memory of g\n";
                         OSS << "auto pathName = getPath(u, g);\n";
                     } else {
@@ -3967,7 +3967,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         strName = ", PmrString&& name";
                         u8Name = ", std::pmr::u8string&& name";
                     } else {
-                        strName = ", std::string&& name";
+                        strName = ", ccstd::string&& name";
                         u8Name = ", std::u8string&& name";
                     }
                 } else {
