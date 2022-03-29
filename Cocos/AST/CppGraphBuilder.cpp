@@ -864,18 +864,18 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
     bool isString = false;
     bool isU8String = false;
     bool bPmr = false;
-    if (c.mValuePath == "/std/string"
-        || c.mValuePath == "/std/pmr/string") {
+    if (c.mValuePath == "/ccstd/string"
+        || c.mValuePath == "/ccstd/pmr/string") {
         isString = true;
-        if (c.mValuePath == "/std/pmr/string")
+        if (c.mValuePath == "/ccstd/pmr/string")
             bPmr = true;
-    } else if (c.mValuePath == "/std/u8string"
-        || c.mValuePath == "/std/pmr/u8string") {
+    } else if (c.mValuePath == "/ccstd/u8string"
+        || c.mValuePath == "/ccstd/pmr/u8string") {
         isString = true;
         isU8String = true;
-        if (c.mValuePath == "/std/pmr/u8string")
+        if (c.mValuePath == "/ccstd/pmr/u8string")
             bPmr = true;
-    } else if (c.mValuePath == "/cc/PmrString") {
+    } else if (c.mValuePath == "/ccstd/pmr/string") {
         isString = true;
         isU8String = false;
         bPmr = true;

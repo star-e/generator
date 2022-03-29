@@ -196,8 +196,8 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         CONTAINER(vector);
         CLASS(string);
         NAMESPACE(pmr) {
-            CONTAINER(vector);
-            CLASS(string);
+            PMR_CONTAINER(vector);
+            IMPORT_PMR_CLASS(string, .mFlags = JSB);
         }
     }
 }

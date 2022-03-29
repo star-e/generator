@@ -105,8 +105,6 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(boost::container::pmr::vector<uint32_t>, Uint32Array);
     PROJECT_TS(boost::container::pmr::vector<uint64_t>, BigUint64Array);
 
-    PROJECT_TS(cc::PmrString, string);
-
     PROJECT_TS(cc::PmrMap, Map);
     PROJECT_TS(cc::PmrMultiMap, Map);
     PROJECT_TS(cc::TransparentMap, Map);

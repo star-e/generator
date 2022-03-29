@@ -58,7 +58,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         STRUCT(UniformBlockDB) {
             PUBLIC(
-                ((PmrTransparentMap<PmrString, gfx::Uniform>), mValues, _)
+                ((PmrTransparentMap<ccstd::pmr::string, gfx::Uniform>), mValues, _)
             );
         }
 
@@ -73,8 +73,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         STRUCT(DescriptorBlock) {
             PUBLIC(
-                ((PmrTransparentMap<PmrString, Descriptor>), mDescriptors, _)
-                ((PmrTransparentMap<PmrString, UniformBlockDB>), mUniformBlocks, _)
+                ((PmrTransparentMap<ccstd::pmr::string, Descriptor>), mDescriptors, _)
+                ((PmrTransparentMap<ccstd::pmr::string, UniformBlockDB>), mUniformBlocks, _)
                 ((PmrTransparentMap<gfx::Type, Descriptor>), mMerged, _)
                 (uint32_t, mCapacity, 0)
                 (uint32_t, mStart, 0)
@@ -128,7 +128,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         STRUCT(RenderPhase) {
             PUBLIC(
-                (PmrTransparentSet<PmrString>, mShaders, _)
+                (PmrTransparentSet<ccstd::pmr::string>, mShaders, _)
             );
         }
 
@@ -138,7 +138,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             ADDRESSABLE_GRAPH(mPathIndex);
 
             COMPONENT_GRAPH(
-                (Name_, PmrString, mNames)
+                (Name_, ccstd::pmr::string, mNames)
                 (Descriptors_, DescriptorDB, mDescriptors)
             );
 
@@ -230,9 +230,9 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         // Descriptor Layout Graph
         STRUCT(RenderPhaseData) {
             PUBLIC(
-                (PmrString, mRootSignature, _)
+                (ccstd::pmr::string, mRootSignature, _)
                 (boost::container::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
-                ((PmrTransparentMap<PmrString, uint32_t>), mShaderIndex, _)
+                ((PmrTransparentMap<ccstd::pmr::string, uint32_t>), mShaderIndex, _)
             );
         }
 
@@ -242,7 +242,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             ADDRESSABLE_GRAPH(mPathIndex);
 
             COMPONENT_GRAPH(
-                (Name_, PmrString, mNames)
+                (Name_, ccstd::pmr::string, mNames)
                 (Update_, UpdateFrequency, mUpdateFrequencies)
                 (Layout_, PipelineLayoutData, mLayouts)
             );

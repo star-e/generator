@@ -113,7 +113,7 @@ bool hasSideEffects() const noexcept {
         PMR_GRAPH(ResourceGraph, _, _) {
             NAMED_GRAPH(Name_);
             COMPONENT_GRAPH(
-                (Name_, PmrString, mNames)
+                (Name_, ccstd::pmr::string, mNames)
                 (Desc_, ResourceDesc, mDescs)
                 (Traits_, ResourceTraits, mTraits)
                 (States_, ResourceStates, mStates)
@@ -135,7 +135,7 @@ bool hasSideEffects() const noexcept {
         //STRUCT(NodeValue) {
         //    PUBLIC(
         //        (std::pmr::u8string, mNodeName, _)
-        //        (PmrString, mValueName, _)
+        //        (ccstd::pmr::string, mValueName, _)
         //    );
         //}
         //PROJECT_TS((PmrTransparentMap<NodeValue, uint32_t>), (Map<string, number>));
@@ -159,7 +159,7 @@ bool hasSideEffects() const noexcept {
         //        (ResourceType, mResourceType, _)
         //        (ValueType, mValueType, _)
         //        (uint32_t, mNumDescriptors, 1)
-        //        (PmrString, mValue, "")
+        //        (ccstd::pmr::string, mValue, "")
         //    );
         //}
 
@@ -172,7 +172,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT) {
             PUBLIC(
-                (PmrString, mSlotName, _)
+                (ccstd::pmr::string, mSlotName, _)
                 (AccessType, mAccessType, AccessType::WRITE)
                 (AttachmentType, mAttachmentType, _)
                 (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
@@ -193,7 +193,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT) {
             PUBLIC(
-                (PmrString, mName, _)
+                (ccstd::pmr::string, mName, _)
                 (AccessType, mAccessType, AccessType::READ)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
                 (gfx::Color, mClearColor, _)
@@ -213,15 +213,15 @@ bool isWrite() const {
 
         STRUCT(RasterSubpass) {
             PUBLIC(
-                ((PmrTransparentMap<PmrString, RasterView>), mRasterViews, _)
-                ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
         PMR_GRAPH(SubpassGraph, _, _) {
             NAMED_GRAPH(Name_);
             COMPONENT_GRAPH(
-                (Name_, PmrString, mNames)
+                (Name_, ccstd::pmr::string, mNames)
                 (Subpass_, RasterSubpass, mSubpasses)
             );
         }
@@ -229,22 +229,22 @@ bool isWrite() const {
         STRUCT(RasterPass) {
             PUBLIC(
                 (bool, mIsValid, false)
-                ((PmrTransparentMap<PmrString, RasterView>), mRasterViews, _)
-                ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
                 (SubpassGraph, mSubpassGraph, _)
             );
         }
 
         STRUCT(ComputePass) {
             PUBLIC(
-                ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
         STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB) {
             PUBLIC(
-                (PmrString, mSource, _)
-                (PmrString, mTarget, _)
+                (ccstd::pmr::string, mSource, _)
+                (ccstd::pmr::string, mTarget, _)
                 (uint32_t, mMipLevels, 0xFFFFFFFF)
                 (uint32_t, mNumSlices, 0xFFFFFFFF)
                 (uint32_t, mSourceMostDetailedMip, 0)
@@ -267,8 +267,8 @@ bool isWrite() const {
 
         STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB) {
             PUBLIC(
-                (PmrString, mSource, _)
-                (PmrString, mTarget, _)
+                (ccstd::pmr::string, mSource, _)
+                (ccstd::pmr::string, mTarget, _)
                 (uint32_t, mMipLevels, 0xFFFFFFFF)
                 (uint32_t, mNumSlices, 0xFFFFFFFF)
                 (uint32_t, mTargetMostDetailedMip, 0)
@@ -288,7 +288,7 @@ bool isWrite() const {
 
         STRUCT(RaytracePass) {
             PUBLIC(
-                ((PmrTransparentMap<PmrString, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
@@ -304,16 +304,16 @@ bool isWrite() const {
 
         STRUCT(SceneData) {
             PUBLIC(
-                (PmrString, mName, _)
+                (ccstd::pmr::string, mName, _)
                 (scene::Camera*, mCamera, nullptr)
-                (boost::container::pmr::vector<PmrString>, mScenes, _)
+                (boost::container::pmr::vector<ccstd::pmr::string>, mScenes, _)
             );
             CNTR(mName);
         }
 
         STRUCT(Dispatch) {
             PUBLIC(
-                (PmrString, mShader, _)
+                (ccstd::pmr::string, mShader, _)
                 (uint32_t, mThreadGroupCountX, 0)
                 (uint32_t, mThreadGroupCountY, 0)
                 (uint32_t, mThreadGroupCountZ, 0)
@@ -323,7 +323,7 @@ bool isWrite() const {
 
         STRUCT(Blit) {
             PUBLIC(
-                (PmrString, mShader, _)
+                (ccstd::pmr::string, mShader, _)
             );
             CNTR(mShader);
         }
@@ -338,7 +338,7 @@ bool isWrite() const {
 
         STRUCT(PresentPass) {
             PUBLIC(
-                ((PmrTransparentMap<PmrString, Present>), mPresents, _)
+                ((PmrTransparentMap<ccstd::pmr::string, Present>), mPresents, _)
             );
         }
 
@@ -356,8 +356,8 @@ bool isWrite() const {
             REFERENCE_GRAPH();
 
             COMPONENT_GRAPH(
-                (Name_, PmrString, mNames)
-                (Layout_, PmrString, mLayoutNodes)
+                (Name_, ccstd::pmr::string, mNames)
+                (Layout_, ccstd::pmr::string, mLayoutNodes)
                 (Data_, RenderData, mData)
                 (Valid_, bool, mValid)
             );
@@ -375,7 +375,7 @@ bool isWrite() const {
                 (Dispatch_, Dispatch, mDispatches)
             );
             PUBLIC(
-                ((PmrUnorderedMap<PmrString, uint32_t>), mIndex, _)
+                ((PmrUnorderedMap<ccstd::pmr::string, uint32_t>), mIndex, _)
             );
         }
 

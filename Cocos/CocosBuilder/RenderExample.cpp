@@ -66,8 +66,8 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
             COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
 
             PUBLIC(
-                ((PmrUnorderedMap<PmrString, uint32_t>), mValueIndex, _)
-                (boost::container::pmr::vector<PmrString>, mValueNames, _)
+                ((PmrUnorderedMap<ccstd::pmr::string, uint32_t>), mValueIndex, _)
+                (boost::container::pmr::vector<ccstd::pmr::string>, mValueNames, _)
                 (boost::container::pmr::vector<ResourceGraph::vertex_descriptor>, mResourceHandles, _)
             );
         }

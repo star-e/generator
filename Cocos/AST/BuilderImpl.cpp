@@ -1242,8 +1242,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringMultiSet")) {
                 OSS << "#include \"cocos/renderer/pipeline/custom/Set.h\"\n";
             }
-            if (g.moduleHasType(modulePath, "/cc/PmrString")) {
-                OSS << "#include \"cocos/renderer/pipeline/custom/String.h\"\n";
+            if (g.moduleHasType(modulePath, "/ccstd/pmr/string")) {
+                OSS << "#include \"cocos/base/std/container/string.h\"\n";
             }
             if (g.moduleHasContainer(modulePath, "/boost/container/pmr/list")) {
                 OSS << "#include <boost/container/pmr/list.hpp>\n";
@@ -1795,15 +1795,15 @@ int ModuleBuilder::compile() {
                         std::pmr::string indexName(scratch);
                         if (bPmr) {
                             if (s.mAddressableConcept.mUtf8) {
-                                indexName = "PmrTransparentMap<std::pmr::u8string, vertex_descriptor>";
+                                indexName = "PmrTransparentMap<ccstd::pmr::u8string, vertex_descriptor>";
                             } else {
-                                indexName = "PmrTransparentMap<PmrString, vertex_descriptor>";
+                                indexName = "PmrTransparentMap<ccstd::pmr::string, vertex_descriptor>";
                             }
                         } else {
                             if (s.mAddressableConcept.mUtf8) {
-                                indexName = "TransparentMap<std::u8string, vertex_descriptor>";
+                                indexName = "TransparentMap<ccstd::u8string, vertex_descriptor>";
                             } else {
-                                indexName = "TransparentMap<std::string, vertex_descriptor>";
+                                indexName = "TransparentMap<ccstd::string, vertex_descriptor>";
                             }
                         }
                         addMember(vertID, true, indexName,

@@ -3529,7 +3529,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 charName = "char";
                 viewName = "boost::string_view";
                 if (pmr)
-                    stringName = "PmrString";
+                    stringName = "ccstd::pmr::string";
                 else
                     stringName = "ccstd::string";
             }
@@ -3613,7 +3613,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 charName = "char";
                 viewName = "boost::string_view";
                 if (pmr)
-                    stringName = "PmrString";
+                    stringName = "ccstd::pmr::string";
                 else
                     stringName = "ccstd::string";
             }
@@ -3964,7 +3964,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 } else if (str) {
                     if (g.isPathPmr(s)) {
                         // TODO: cocos workaround
-                        strName = ", PmrString&& name";
+                        strName = ", ccstd::pmr::string&& name";
                         u8Name = ", std::pmr::u8string&& name";
                     } else {
                         strName = ", ccstd::string&& name";
