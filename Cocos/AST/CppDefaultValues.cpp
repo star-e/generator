@@ -164,7 +164,6 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         MAP(UnorderedStringMap);
         MAP(UnorderedStringMultiMap);
 
-        PMR_MAP(PmrMap);
         PMR_MAP(PmrMultiMap);
         PMR_MAP(PmrTransparentMap);
         PMR_MAP(PmrTransparentMultiMap);
@@ -196,8 +195,9 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         CONTAINER(vector);
         CLASS(string);
         NAMESPACE(pmr) {
-            PMR_CONTAINER(vector);
             IMPORT_PMR_CLASS(string, .mFlags = JSB);
+            PMR_CONTAINER(vector);
+            PMR_MAP(map);
         }
     }
 }

@@ -1210,6 +1210,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include \"cocos/base/std/container/vector.h\"\n";
                 OSS << "#include \"cocos/renderer/pipeline/custom/GraphTypes.h\"\n";
             }
+            if (g.moduleHasMap(modulePath, "/ccstd/pmr/map")) {
+                OSS << "#include \"base/std/container/map.h\"\n";
+            }
             if (g.moduleHasMap(modulePath, "/cc/TransparentMap")
                 || g.moduleHasMap(modulePath, "/cc/TransparentMultiMap")
                 || g.moduleHasMap(modulePath, "/cc/PmrTransparentMap")

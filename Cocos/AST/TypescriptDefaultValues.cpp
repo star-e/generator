@@ -105,7 +105,6 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(ccstd::pmr::vector<uint32_t>, Uint32Array);
     PROJECT_TS(ccstd::pmr::vector<uint64_t>, BigUint64Array);
 
-    PROJECT_TS(cc::PmrMap, Map);
     PROJECT_TS(cc::PmrMultiMap, Map);
     PROJECT_TS(cc::TransparentMap, Map);
     PROJECT_TS(cc::TransparentMultiMap, Map);
@@ -139,6 +138,7 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
 
     PROJECT_TS(ccstd::string, string);
     PROJECT_TS(ccstd::pmr::string, string);
+    PROJECT_TS(ccstd::pmr::map, Map);
 }
 
 }

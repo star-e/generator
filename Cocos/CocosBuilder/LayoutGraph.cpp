@@ -95,7 +95,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         }
         
         PROJECT_TS(
-            (PmrMap<DescriptorBlockIndex, DescriptorBlock>),
+            (ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>),
             (Map<string, DescriptorBlock>)
         );
 
@@ -112,13 +112,13 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         }
 
         PROJECT_TS(
-            (PmrMap<DescriptorBlockIndexDx, DescriptorBlock>),
+            (ccstd::pmr::map<DescriptorBlockIndexDx, DescriptorBlock>),
             (Map<string, DescriptorBlock>)
         );
 
         STRUCT(DescriptorDB) {
             PUBLIC(
-                ((PmrMap<DescriptorBlockIndex, DescriptorBlock>), mBlocks, _)
+                ((ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>), mBlocks, _)
             );
         }
 
