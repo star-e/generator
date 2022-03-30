@@ -809,7 +809,7 @@ void ModuleBuilder::addGraphComponent(SyntaxGraph::vertex_descriptor vertID,
     c.mVector = true;
     bool bPmr = g.isPmr(valueID) || g.isPmr(vertID);
     if (bPmr) {
-        c.mContainerPath = "/boost/container/pmr/vector";
+        c.mContainerPath = "/ccstd/pmr/vector";
     } else {
         c.mContainerPath = "/boost/container/vector";
     }
@@ -844,7 +844,7 @@ void ModuleBuilder::addGraphPolymorphic(SyntaxGraph::vertex_descriptor vertID,
     c.mMemberName = memberName;
     bool bPmr = g.isPmr(valueID) || g.isPmr(vertID);
     if (bPmr) {
-        c.mContainerPath = "/boost/container/pmr/vector";
+        c.mContainerPath = "/ccstd/pmr/vector";
     } else {
         c.mContainerPath = "/boost/container/vector";
     }
@@ -1207,7 +1207,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include <boost/graph/adjacency_iterator.hpp>\n";
                 OSS << "#include <boost/graph/properties.hpp>\n";
                 OSS << "#include <boost/range/irange.hpp>\n";
-                OSS << "#include <boost/container/pmr/vector.hpp>\n";
+                OSS << "#include \"cocos/base/std/container/vector.h\"\n";
                 OSS << "#include \"cocos/renderer/pipeline/custom/GraphTypes.h\"\n";
             }
             if (g.moduleHasMap(modulePath, "/cc/TransparentMap")
@@ -1621,13 +1621,13 @@ int ModuleBuilder::compile() {
                 auto& traits = get(g.traits, g, vertID);
                 traits.mPmr |= true;
                 if (s.mVertexListPath.empty()) {
-                    s.mVertexListPath = "/boost/container/pmr/vector";
+                    s.mVertexListPath = "/ccstd/pmr/vector";
                 }
                 if (s.mEdgeListPath.empty()) {
                     s.mEdgeListPath = "/cc/PmrList";
                 }
                 if (s.mOutEdgeListPath.empty()) {
-                    s.mOutEdgeListPath = "/boost/container/pmr/vector";
+                    s.mOutEdgeListPath = "/ccstd/pmr/vector";
                 }
             } else {
                 if (s.mVertexListPath.empty()) {
@@ -1752,7 +1752,7 @@ int ModuleBuilder::compile() {
             auto typeName = g.getDependentName(mCurrentScope, conceptID, scratch, scratch);
             auto listID = g.null_vertex();
             if (bPmr) {
-                listID = c.isVector() ? locate("/boost/container/pmr/vector", g)
+                listID = c.isVector() ? locate("/ccstd/pmr/vector", g)
                                       : locate("/cc/PmrList", g);
             } else {
                 listID = c.isVector() ? locate("/boost/container/vector", g)

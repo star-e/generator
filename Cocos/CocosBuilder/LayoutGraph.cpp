@@ -167,7 +167,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         STRUCT(UniformBlockData) {
             PUBLIC(
                 (uint32_t, mBufferSize, 0)
-                (boost::container::pmr::vector<UniformData>, mUniforms, _)
+                (ccstd::pmr::vector<UniformData>, mUniforms, _)
             );
         }
 
@@ -190,7 +190,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (DescriptorIndex, mType, _)
                 (uint32_t, mCapacity, 0)
-                (boost::container::pmr::vector<DescriptorData>, mDescriptors, _)
+                (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
                 ((PmrFlatMap<uint32_t, UniformBlockData>), mUniformBlocks, _)
             );
             CNTR(mType, mCapacity);
@@ -200,7 +200,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (uint32_t, mTableID, 0xFFFFFFFF)
                 (uint32_t, mCapacity, 0)
-                (boost::container::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
+                (ccstd::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
             CNTR(mTableID, mCapacity);
@@ -231,7 +231,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         STRUCT(RenderPhaseData) {
             PUBLIC(
                 (ccstd::pmr::string, mRootSignature, _)
-                (boost::container::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
+                (ccstd::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
                 ((PmrTransparentMap<ccstd::pmr::string, uint32_t>), mShaderIndex, _)
             );
         }

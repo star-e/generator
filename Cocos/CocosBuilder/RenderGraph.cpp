@@ -214,7 +214,7 @@ bool isWrite() const {
         STRUCT(RasterSubpass) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
-                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
@@ -230,14 +230,14 @@ bool isWrite() const {
             PUBLIC(
                 (bool, mIsValid, false)
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
-                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
                 (SubpassGraph, mSubpassGraph, _)
             );
         }
 
         STRUCT(ComputePass) {
             PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
@@ -261,7 +261,7 @@ bool isWrite() const {
 
         STRUCT(CopyPass) {
             PUBLIC(
-                (boost::container::pmr::vector<CopyPair>, mCopyPairs, _)
+                (ccstd::pmr::vector<CopyPair>, mCopyPairs, _)
             );
         }
 
@@ -282,13 +282,13 @@ bool isWrite() const {
 
         STRUCT(MovePass) {
             PUBLIC(
-                (boost::container::pmr::vector<MovePair>, mMovePairs, _)
+                (ccstd::pmr::vector<MovePair>, mMovePairs, _)
             );
         }
 
         STRUCT(RaytracePass) {
             PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, boost::container::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
@@ -306,7 +306,7 @@ bool isWrite() const {
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
                 (scene::Camera*, mCamera, nullptr)
-                (boost::container::pmr::vector<ccstd::pmr::string>, mScenes, _)
+                (ccstd::pmr::vector<ccstd::pmr::string>, mScenes, _)
             );
             CNTR(mName);
         }
@@ -344,7 +344,7 @@ bool isWrite() const {
 
         STRUCT(RenderData, .mFlags = NO_COPY) {
             PUBLIC(
-                ((PmrUnorderedMap<uint32_t, boost::container::pmr::vector<uint8_t>>), mConstants, _)
+                ((PmrUnorderedMap<uint32_t, ccstd::pmr::vector<uint8_t>>), mConstants, _)
                 ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Buffer>>), mBuffers, _)
                 ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Texture>>), mTextures, _)
                 ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Sampler>>), mSamplers, _)

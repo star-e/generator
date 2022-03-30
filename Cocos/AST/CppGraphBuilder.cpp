@@ -237,9 +237,9 @@ std::pmr::string CppGraphBuilder::componentContainerType() const {
     auto bPmr = g.isPmr(mStruct.mCurrentVertex);
     if (s.isVector()) {
         if (bPmr) {
-            oss << "/boost/container/pmr/vector";
+            oss << "/ccstd/pmr/vector";
         } else {
-            oss << "/boost/container/vector";
+            oss << "/ccstd/vector";
         }
     } else {
         if (bPmr) {
@@ -1305,8 +1305,8 @@ std::pmr::string CppGraphBuilder::generateVertexListGraph_h() const {
             OSS << "}\n";
             if (s.mColorMap) {
                 oss << "\n";
-                OSS << "inline boost::container::pmr::vector<boost::default_color_type> colors(boost::container::pmr::memory_resource* mr) const {\n";
-                OSS << "    return boost::container::pmr::vector<boost::default_color_type>(vertices.size(), mr);\n";
+                OSS << "inline ccstd::pmr::vector<boost::default_color_type> colors(boost::container::pmr::memory_resource* mr) const {\n";
+                OSS << "    return ccstd::pmr::vector<boost::default_color_type>(vertices.size(), mr);\n";
                 OSS << "}\n";
             }
         } else {

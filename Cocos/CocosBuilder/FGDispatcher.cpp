@@ -85,7 +85,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         PMR_GRAPH(ResourceAccessGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
-                (boost::container::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
+                (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
                 (std::vector<RenderGraph::vertex_descriptor>, mPresentPasses, _)
                 ((PmrUnorderedMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
             );
