@@ -118,7 +118,7 @@ bool hasSideEffects() const noexcept {
                 (Traits_, ResourceTraits, mTraits)
                 (States_, ResourceStates, mStates)
             );
-            COMPONENT_BIMAP(PmrUnorderedMap, mValueIndex, Name_);
+            COMPONENT_BIMAP(PmrUnorderedStringMap, mValueIndex, Name_);
             POLYMORPHIC_GRAPH(
                 (Managed_, ManagedResource, mResources)
                 (PersistentBuffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
@@ -375,7 +375,7 @@ bool isWrite() const {
                 (Dispatch_, Dispatch, mDispatches)
             );
             PUBLIC(
-                ((PmrUnorderedMap<ccstd::pmr::string, uint32_t>), mIndex, _)
+                ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mIndex, _)
             );
         }
 

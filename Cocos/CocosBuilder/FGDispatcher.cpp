@@ -87,7 +87,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
                 (std::vector<RenderGraph::vertex_descriptor>, mPresentPasses, _)
-                ((PmrUnorderedMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
+                ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)

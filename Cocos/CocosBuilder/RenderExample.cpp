@@ -66,7 +66,7 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
             COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
 
             PUBLIC(
-                ((PmrUnorderedMap<ccstd::pmr::string, uint32_t>), mValueIndex, _)
+                ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mValueIndex, _)
                 (ccstd::pmr::vector<ccstd::pmr::string>, mValueNames, _)
                 (ccstd::pmr::vector<ResourceGraph::vertex_descriptor>, mResourceHandles, _)
             );
