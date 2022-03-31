@@ -68,7 +68,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(AccessStatus) {
             PUBLIC(
-                (RenderGraph::vertex_descriptor, mVertID, 0xFFFFFFFF)
+                (uint32_t, mVertID, 0xFFFFFFFF)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
                 (PassType, mPassType, PassType::RASTER)
