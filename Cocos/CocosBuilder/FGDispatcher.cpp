@@ -66,20 +66,20 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         };
 
-        STRUCT(ResourceAccessDesc) {
+        STRUCT(AccessStatus) {
             PUBLIC(
-                (bool, mExternal, false)
-                (uint32_t, mResourceID, 0xFFFFFFFF)
+                (uint32_t, mVertID, 0xFFFFFFFF)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
+                (PassType, mPassType, PassType::RASTER)
                 (Range, mRange, _)
             );
         }
+
         //resourceStatus
         STRUCT(ResourceAccessNode) {
             PUBLIC(
-                (PassType, mPassType, PassType::RASTER)
-                (std::vector<ResourceAccessDesc>, mAttachemntStatus, _)
+                (std::vector<AccessStatus>, mAttachemntStatus, _)
             );
         }
 
@@ -99,15 +99,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(Barrier) {
             PUBLIC(
                 (RenderGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
-                (RenderGraph::vertex_descriptor, mFrom, 0xFFFFFFFF)
-                (RenderGraph::vertex_descriptor, mTo, 0xFFFFFFFF)
-                (gfx::ShaderStageFlagBit, mBeginVisibility, gfx::ShaderStageFlagBit::NONE)
-                (gfx::ShaderStageFlagBit, mEndVisibility, gfx::ShaderStageFlagBit::NONE)
-                (gfx::MemoryAccessBit, mBeginAccess, gfx::MemoryAccessBit::NONE)
-                (gfx::MemoryAccessBit, mEndAccess, gfx::MemoryAccessBit::NONE)
-                (PassType, mPassType, PassType::RASTER)
-                (Range, mFromRange, _)
-                (Range, mToRange, _)
+                (AccessStatus, mBeginStatus, _)
+                (AccessStatus, mEndStatus, _)
             );
         }
 
