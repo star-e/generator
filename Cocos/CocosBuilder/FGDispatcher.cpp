@@ -76,6 +76,13 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(ResourceTransition) {
+            PUBLIC(
+                (AccessStatus, mLastStatus, _)
+                (AccessStatus, mCurrStatus, _)
+            );
+        }
+
         //resourceStatus
         STRUCT(ResourceAccessNode) {
             PUBLIC(
@@ -118,9 +125,13 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (LayoutGraphData&, mLayoutGraph, _)
                 (boost::container::pmr::memory_resource*, mScratch, nullptr)
             );
+            PRIVATE(
+                ((PmrFlatMap<ccstd::pmr::string, ResourceTransition>), mExternalResMap, _)
+            );
+
             CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
             MEMBER_FUNCTIONS(R"(
-void buildBarriers() const;
+void buildBarriers();
 )");
         }
 
