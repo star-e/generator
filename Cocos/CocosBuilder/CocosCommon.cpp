@@ -67,7 +67,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(RenderScene,
-        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFolder = "cocos/core/renderer/core",
         .mTypescriptFilePrefix = "render-scene",
     ) {
         ADD_FEATURES(ToJs);
