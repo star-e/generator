@@ -3929,7 +3929,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         copyString(oss, space, removeVertex(*this, s, name, scratch));
     }
 
-    if (s.mVertexList && s.mMutableGraphVertex && s.mAddressable
+    if (s.mVertexList && s.mMutableGraphVertex && s.mReferenceGraph
         && (s.hasVertexProperty() || !s.mComponents.empty() || s.isPolymorphic())) {
         oss << "\n";
         OSS << "// MutablePropertyGraph(Vertex)\n";
