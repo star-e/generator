@@ -39,6 +39,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "layout-graph",
         .mRequires = { "Gfx", "RenderCommon" },
+        .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
+)"
     ) {
         NAMESPACE_BEG(cc);
 
@@ -77,7 +79,6 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 ((PmrTransparentMap<ccstd::pmr::string, UniformBlockDB>), mUniformBlocks, _)
                 ((PmrTransparentMap<gfx::Type, Descriptor>), mMerged, _)
                 (uint32_t, mCapacity, 0)
-                (uint32_t, mStart, 0)
                 (uint32_t, mCount, 0)
             );
         }
@@ -173,46 +174,33 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         //-----------------------------------------------------------
         // Descriptor
-        ALIAS(DescriptorID, uint32_t);
-        PROJECT_TS(DescriptorID, number);
-
-        STRUCT(DescriptorData) {
+        STRUCT(NameLocalID, .mFlags = HASH_COMBINE | EQUAL) {
             PUBLIC(
-                (DescriptorID, mDescriptorID, 0xFFFFFFFF)
-                (gfx::Type, mType, gfx::Type::UNKNOWN)
-                (uint32_t, mCount, 1)
+                (uint32_t, mValue, 0xFFFFFFFF)
             );
-            TS_INIT(mType, Type.UNKNOWN);
-            CNTR(mDescriptorID, mType);
         }
+        TS_PROJECT(NameLocalID, number);
 
-        STRUCT(DescriptorBlockData) {
-            PUBLIC(
-                (DescriptorIndex, mType, _)
-                (uint32_t, mCapacity, 0)
-                (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
-                ((PmrFlatMap<uint32_t, UniformBlockData>), mUniformBlocks, _)
-            );
-            CNTR(mType, mCapacity);
-        }
-
-        STRUCT(DescriptorTableData) {
+        STRUCT(DescriptorTableData, .mFlags = NO_COPY) {
             PUBLIC(
                 (uint32_t, mTableID, 0xFFFFFFFF)
                 (uint32_t, mCapacity, 0)
-                (ccstd::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
+                (gfx::DescriptorSetLayoutInfo, mDescriptorSetLayout, _)
+                (IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
+                (ccstd::pmr::vector<NameLocalID>, mDescriptorIDs, _)
+                ((ccstd::pmr::unordered_map<NameLocalID, UniformBlockData>), mUniformBlocks, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
             CNTR(mTableID, mCapacity);
         }
 
-        STRUCT(DescriptorSetData) {
+        STRUCT(DescriptorSetData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrFlatMap<gfx::ShaderStageFlagBit, DescriptorTableData>), mTables, _)
             );
         }
 
-        STRUCT(PipelineLayoutData) {
+        STRUCT(PipelineLayoutData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrFlatMap<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
             );
@@ -220,7 +208,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         //-----------------------------------------------------------
         // Shader Program
-        STRUCT(ShaderProgramData) {
+        STRUCT(ShaderProgramData, .mFlags = NO_COPY) {
             PUBLIC(
                 (PipelineLayoutData, mLayout, _)
             );
@@ -228,7 +216,13 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         //-----------------------------------------------------------
         // Descriptor Layout Graph
-        STRUCT(RenderPhaseData) {
+        STRUCT(RenderStageData, .mFlags = NO_COPY) {
+            PUBLIC(
+                ((ccstd::pmr::unordered_map<NameLocalID, gfx::ShaderStageFlagBit>), mDescriptorVisibility, _)
+            );
+        }
+
+        STRUCT(RenderPhaseData, .mFlags = NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::string, mRootSignature, _)
                 (ccstd::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
@@ -236,7 +230,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             );
         }
 
-        PMR_GRAPH(LayoutGraphData, _, _) {
+        PMR_GRAPH(LayoutGraphData, _, _, .mFlags = NO_COPY) {
             NAMED_GRAPH(Name_);
             ALIAS_REFERENCE_GRAPH();
             ADDRESSABLE_GRAPH(mPathIndex);
@@ -248,8 +242,13 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             );
 
             POLYMORPHIC_GRAPH(
-                (RenderStage_, uint32_t, mStages)
+                (RenderStage_, RenderStageData, mStages)
                 (RenderPhase_, RenderPhaseData, mPhases)
+            );
+            PUBLIC(
+                (ccstd::pmr::vector<ccstd::pmr::string>, mValueNames, _)
+                ((ccstd::pmr::unordered_map<ccstd::pmr::string, NameLocalID>), mAttributeIndex, _)
+                ((ccstd::pmr::unordered_map<ccstd::pmr::string, NameLocalID>), mConstantIndex, _)
             );
         }
         NAMESPACE_END(render);

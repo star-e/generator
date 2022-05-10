@@ -139,6 +139,7 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(ccstd::string, string);
     PROJECT_TS(ccstd::pmr::string, string);
     PROJECT_TS(ccstd::pmr::map, Map);
+    PROJECT_TS(ccstd::pmr::unordered_map, Map);
 }
 
 }

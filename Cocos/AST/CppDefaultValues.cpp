@@ -198,6 +198,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
             IMPORT_PMR_CLASS(string, .mFlags = JSB);
             PMR_CONTAINER(vector);
             PMR_MAP(map);
+            PMR_MAP(unordered_map);
         }
     }
 }

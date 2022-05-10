@@ -46,6 +46,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     if (traits.mFlags & IMPL_DETAIL)
         return;
 
+    if (g.isTypescriptData(name))
+        return;
+
     auto& currScope = codegen.mScopes.back();
 
     visit_vertex(
