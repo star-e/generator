@@ -513,6 +513,7 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
 
     for (uint32_t i = 0; const auto& m : s.mMembers) {
         auto memberID = locate(m.mTypePath, g);
+        const auto& memberTraits = get(g.traits, g, memberID);
         bool bPmr = g.isPmr(memberID);
         bool bCopyParam = false;
         if (m.mReference || m.mPointer) {
@@ -520,6 +521,8 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
             bCopyParam = true;
         } else if (g.isValueType(memberID)) {
             Expects(!bPmr);
+            bCopyParam = true;
+        } else if (memberTraits.mTrivial) {
             bCopyParam = true;
         }
         bool isParam = false;
@@ -581,6 +584,7 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
     const auto optionalID = locate("/std/optional", g);
     for (const auto& m : s.mMembers) {
         auto memberID = locate(m.mTypePath, g);
+        const auto& memberTraits = get(g.traits, g, memberID);
         bool bPmr = g.isPmr(memberID);
         if (m.mReference || m.mPointer)
             bPmr = false;
@@ -617,6 +621,8 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
             bCopyParam = true;
         } else if (g.isValueType(memberID)) {
             Expects(!bPmr);
+            bCopyParam = true;
+        } else if (memberTraits.mTrivial) {
             bCopyParam = true;
         }
 

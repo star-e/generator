@@ -40,6 +40,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mTypescriptFilePrefix = "layout-graph",
         .mRequires = { "Gfx", "RenderCommon" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
+#include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 )"
     ) {
         NAMESPACE_BEG(cc);
@@ -174,29 +175,50 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         //-----------------------------------------------------------
         // Descriptor
-        STRUCT(NameLocalID, .mFlags = HASH_COMBINE | EQUAL) {
+        STRUCT(NameLocalID, .mTrivial = true, .mFlags = HASH_COMBINE | EQUAL) {
             PUBLIC(
                 (uint32_t, mValue, 0xFFFFFFFF)
             );
         }
         TS_PROJECT(NameLocalID, number);
 
-        STRUCT(DescriptorTableData, .mFlags = NO_COPY) {
+        STRUCT(DescriptorData) {
             PUBLIC(
-                (uint32_t, mTableID, 0xFFFFFFFF)
+                (NameLocalID, mDescriptorID, _)
+                (uint32_t, mCount, 1)
+            );
+            CNTR(mDescriptorID);
+        }
+
+        STRUCT(DescriptorBlockData) {
+            PUBLIC(
+                (gfx::Type, mType, gfx::Type::UNKNOWN)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+                (uint32_t, mOffset, 0)
                 (uint32_t, mCapacity, 0)
-                (gfx::DescriptorSetLayoutInfo, mDescriptorSetLayout, _)
-                (IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
-                (ccstd::pmr::vector<NameLocalID>, mDescriptorIDs, _)
+                (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
+            );
+            TS_INIT(mType, Type.UNKNOWN);
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            CNTR(mType, mVisibility, mCapacity);
+        }
+
+        STRUCT(DescriptorSetLayoutData, .mFlags = NO_COPY) {
+            PUBLIC(
+                (uint32_t, mSlot, 0xFFFFFFFF)
+                (uint32_t, mCapacity, 0)
+                (ccstd::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
                 ((ccstd::pmr::unordered_map<NameLocalID, UniformBlockData>), mUniformBlocks, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            CNTR(mTableID, mCapacity);
+            CNTR(mSlot, mCapacity);
         }
 
         STRUCT(DescriptorSetData, .mFlags = NO_COPY) {
             PUBLIC(
-                ((PmrFlatMap<gfx::ShaderStageFlagBit, DescriptorTableData>), mTables, _)
+                (DescriptorSetLayoutData, mDescriptorSetLayoutData, _)
+                (IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
+                (IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
             );
         }
 
