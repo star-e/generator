@@ -47,7 +47,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         NAMESPACE_BEG(render);
 
-        ENUM_CLASS(DescriptorIndex) {
+        // See native/cocos/renderer/gfx-validator/DescriptorSetLayoutValidator.cpp
+        ENUM_CLASS(DescriptorTypeOrder) {
             ENUMS(
                 UNIFORM_BLOCK,
                 SAMPLER_TEXTURE,
@@ -88,11 +89,11 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (UpdateFrequency, mUpdateFrequency, _)
                 (ParameterType, mParameterType, _)
-                (DescriptorIndex, mDescriptorType, DescriptorIndex::UNIFORM_BLOCK)
+                (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BLOCK)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            TS_INIT(mDescriptorType, DescriptorIndex.UNIFORM_BLOCK);
+            TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BLOCK);
             CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
         }
         
@@ -107,10 +108,10 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     (UpdateFrequency, mUpdateFrequency, _)
                     (ParameterType, mParameterType, _)
                     (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                    (DescriptorIndex, mDescriptorType, DescriptorIndex::UNIFORM_BLOCK)
+                    (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BLOCK)
                 );
                 TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-                TS_INIT(mDescriptorType, DescriptorIndex.UNIFORM_BLOCK);
+                TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BLOCK);
                 CNTR(mUpdateFrequency, mParameterType, mVisibility, mDescriptorType);
             }
 
