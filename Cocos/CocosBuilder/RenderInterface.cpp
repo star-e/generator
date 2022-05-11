@@ -197,6 +197,12 @@ virtual void     submit() = 0;
 virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 )");
         }
+//
+//        INTERFACE(LayoutGraphBuilder) {
+//            MEMBER_FUNCTIONS(R"(
+//
+//)");
+//        }
 
         INTERFACE(Pipeline) {
             INHERITS(PipelineRuntime);

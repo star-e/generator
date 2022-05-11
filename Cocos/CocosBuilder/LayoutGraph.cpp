@@ -59,13 +59,13 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(UniformBlockDB) {
+        STRUCT(UniformBlockDB, .mFlags = JSB) {
             PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, gfx::Uniform>), mValues, _)
+                ((PmrTransparentMap<ccstd::string, gfx::Uniform>), mValues, _)
             );
         }
 
-        STRUCT(Descriptor) {
+        STRUCT(Descriptor, .mFlags = JSB) {
             PUBLIC(
                 (gfx::Type, mType, gfx::Type::UNKNOWN)
                 (uint32_t, mCount, 1)
@@ -74,17 +74,17 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             CNTR(mType);
         }
 
-        STRUCT(DescriptorBlock) {
+        STRUCT(DescriptorBlock, .mFlags = JSB) {
             PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, Descriptor>), mDescriptors, _)
-                ((PmrTransparentMap<ccstd::pmr::string, UniformBlockDB>), mUniformBlocks, _)
-                ((PmrTransparentMap<gfx::Type, Descriptor>), mMerged, _)
+                ((PmrTransparentMap<ccstd::string, Descriptor>), mDescriptors, _)
+                ((PmrTransparentMap<ccstd::string, UniformBlockDB>), mUniformBlocks, _)
+                //((PmrTransparentMap<gfx::Type, Descriptor>), mMerged, _)
                 (uint32_t, mCapacity, 0)
                 (uint32_t, mCount, 0)
             );
         }
         
-        STRUCT(DescriptorBlockIndex, .mFlags = LESS) {
+        STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB) {
             PUBLIC(
                 (UpdateFrequency, mUpdateFrequency, _)
                 (ParameterType, mParameterType, _)
@@ -101,22 +101,24 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             (Map<string, DescriptorBlock>)
         );
 
-        STRUCT(DescriptorBlockIndexDx, .mFlags = LESS) {
-            PUBLIC(
-                (UpdateFrequency, mUpdateFrequency, _)
-                (ParameterType, mParameterType, _)
-                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                (DescriptorIndex, mDescriptorType, DescriptorIndex::UNIFORM_BLOCK)
-            );
-            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            TS_INIT(mDescriptorType, DescriptorIndex.UNIFORM_BLOCK);
-            CNTR(mUpdateFrequency, mParameterType, mVisibility, mDescriptorType);
-        }
+        if (false) {
+            STRUCT(DescriptorBlockIndexDx, .mFlags = LESS) {
+                PUBLIC(
+                    (UpdateFrequency, mUpdateFrequency, _)
+                    (ParameterType, mParameterType, _)
+                    (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+                    (DescriptorIndex, mDescriptorType, DescriptorIndex::UNIFORM_BLOCK)
+                );
+                TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+                TS_INIT(mDescriptorType, DescriptorIndex.UNIFORM_BLOCK);
+                CNTR(mUpdateFrequency, mParameterType, mVisibility, mDescriptorType);
+            }
 
-        PROJECT_TS(
-            (ccstd::pmr::map<DescriptorBlockIndexDx, DescriptorBlock>),
-            (Map<string, DescriptorBlock>)
-        );
+            PROJECT_TS(
+                (ccstd::pmr::map<DescriptorBlockIndexDx, DescriptorBlock>),
+                (Map<string, DescriptorBlock>)
+            );
+        }
 
         STRUCT(DescriptorDB) {
             PUBLIC(

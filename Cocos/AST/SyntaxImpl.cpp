@@ -281,6 +281,7 @@ bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const n
 
 bool SyntaxGraph::isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept {
     const auto& g = *this;
+    auto* scratch = g.mScratch;
 
     if (g.isValueType(vertID))
         return true;
@@ -292,6 +293,20 @@ bool SyntaxGraph::isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const n
         const auto& traits = get(g.traits, g, vertID);
         if (traits.mFlags & JSB) {
             return true;
+        }
+        if (g.isInstantiation(vertID)) {
+            auto& inst = get<Instance>(vertID, g);
+            auto templateID = locate(inst.mTemplate, g);
+            auto type = g.getTypescriptTypename(templateID, scratch, scratch);
+            if (type == "Map" || type == "Array" || type == "Set") {
+                for (const auto& param : inst.mParameters) {
+                    auto paramID = locate(param, g);
+                    if (!g.isJsb(paramID, mg)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
     } else {
         const auto& m = get(mg.modules, mg, moduleID);
