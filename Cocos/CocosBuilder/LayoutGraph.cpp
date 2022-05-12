@@ -48,15 +48,28 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(render);
 
         // See native/cocos/renderer/gfx-validator/DescriptorSetLayoutValidator.cpp
+        //ENUM_CLASS(DescriptorTypeOrder) {
+        //    ENUMS(
+        //        UNIFORM_BLOCK,
+        //        SAMPLER_TEXTURE,
+        //        SAMPLER,
+        //        TEXTURE,
+        //        STORAGE_BUFFER,
+        //        STORAGE_TEXTURE,
+        //        SUBPASS_INPUT
+        //    );
+        //}
         ENUM_CLASS(DescriptorTypeOrder) {
             ENUMS(
-                UNIFORM_BLOCK,
+                UNIFORM_BUFFER,
+                DYNAMIC_UNIFORM_BUFFER,
                 SAMPLER_TEXTURE,
                 SAMPLER,
                 TEXTURE,
                 STORAGE_BUFFER,
-                STORAGE_TEXTURE,
-                SUBPASS_INPUT
+                DYNAMIC_STORAGE_BUFFER,
+                STORAGE_IMAGE,
+                INPUT_ATTACHMENT
             );
         }
 
