@@ -14,7 +14,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",
-        .mRequires = { "Gfx", "RenderCommon", "RenderGraph", "Assets" },
+        .mRequires = { "Gfx", "RenderCommon", "LayoutGraph", "RenderGraph", "Assets" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {
@@ -197,12 +197,13 @@ virtual void     submit() = 0;
 virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 )");
         }
-//
-//        INTERFACE(LayoutGraphBuilder) {
-//            MEMBER_FUNCTIONS(R"(
-//
-//)");
-//        }
+
+        INTERFACE(LayoutGraphBuilder) {
+            MEMBER_FUNCTIONS(R"(
+virtual uint32_t addNode(const std::string& name, UpdateFrequency frequency, uint32_t parentID) = 0;
+virtual void addDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlock& block) = 0;
+)");
+        }
 
         INTERFACE(Pipeline) {
             INHERITS(PipelineRuntime);

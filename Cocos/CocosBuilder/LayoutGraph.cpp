@@ -102,11 +102,11 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (UpdateFrequency, mUpdateFrequency, _)
                 (ParameterType, mParameterType, _)
-                (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BLOCK)
+                (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BLOCK);
+            TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
             CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
         }
         
@@ -121,10 +121,10 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                     (UpdateFrequency, mUpdateFrequency, _)
                     (ParameterType, mParameterType, _)
                     (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                    (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BLOCK)
+                    (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
                 );
                 TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-                TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BLOCK);
+                TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
                 CNTR(mUpdateFrequency, mParameterType, mVisibility, mDescriptorType);
             }
 
