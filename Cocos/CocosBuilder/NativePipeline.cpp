@@ -43,6 +43,13 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+        STRUCT(NativeLayoutGraphBuilder) {
+            INHERITS(LayoutGraphBuilder);
+            PUBLIC(
+                (LayoutGraphData, mData, _)
+            );
+        }
+
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
             PUBLIC(
