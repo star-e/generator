@@ -204,6 +204,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (uint32_t, mCount, 1)
             );
             CNTR(mDescriptorID);
+            CNTR(mDescriptorID, mCount);
         }
 
         STRUCT(DescriptorBlockData) {
@@ -212,7 +213,6 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (uint32_t, mOffset, 0)
                 (uint32_t, mCapacity, 0)
-                (uint32_t, mRegisterSlot, 0)
                 (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
             );
             TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);

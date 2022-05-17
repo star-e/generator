@@ -46,9 +46,10 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         STRUCT(NativeLayoutGraphBuilder) {
             INHERITS(LayoutGraphBuilder);
             PUBLIC(
+                (gfx::Device*, mDevice, nullptr)
                 (LayoutGraphData, mData, _)
-                (ccstd::pmr::vector<uint32_t>, mRegisters, _)
             );
+            CNTR(mDevice);
         }
 
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
