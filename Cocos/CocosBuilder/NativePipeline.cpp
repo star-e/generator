@@ -47,9 +47,9 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             INHERITS(LayoutGraphBuilder);
             PUBLIC(
                 (gfx::Device*, mDevice, nullptr)
-                (LayoutGraphData, mData, _)
+                (LayoutGraphData*, mData, nullptr)
             );
-            CNTR(mDevice);
+            CNTR(mDevice, mData);
         }
 
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
@@ -61,7 +61,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (ccstd::string, mConstantMacros, _)
                 (std::unique_ptr<pipeline::GlobalDSManager>, mGlobalDSManager, _)
                 (scene::Model*, mProfiler, nullptr)
-               // (std::unique_ptr<pipeline::GeometryRenderer>, mGeometryRenderer, _)
+                ((PmrTransparentMap<ccstd::pmr::string, LayoutGraphData>), mLayoutGraphs, _)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
                 (framegraph::FrameGraph, mFrameGraph, _)
             );
