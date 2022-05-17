@@ -47,6 +47,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             INHERITS(LayoutGraphBuilder);
             PUBLIC(
                 (LayoutGraphData, mData, _)
+                (ccstd::pmr::vector<uint32_t>, mRegisters, _)
             );
         }
 

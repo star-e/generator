@@ -208,13 +208,14 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         STRUCT(DescriptorBlockData) {
             PUBLIC(
-                (gfx::Type, mType, gfx::Type::UNKNOWN)
+                (DescriptorTypeOrder, mType, DescriptorTypeOrder::UNIFORM_BUFFER)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (uint32_t, mOffset, 0)
                 (uint32_t, mCapacity, 0)
+                (uint32_t, mRegisterSlot, 0)
                 (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
             );
-            TS_INIT(mType, Type.UNKNOWN);
+            TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
             CNTR(mType, mVisibility, mCapacity);
         }
@@ -240,7 +241,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 
         STRUCT(PipelineLayoutData, .mFlags = NO_COPY) {
             PUBLIC(
-                ((PmrFlatMap<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
+                ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
             );
         }
 
