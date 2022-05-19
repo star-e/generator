@@ -33,6 +33,7 @@ namespace Cocos::Meta {
 void buildCocosCommon(ModuleBuilder& builder, Features features) {
     NAMESPACE(cc) {
         CONTAINER(IntrusivePtr);
+        PROJECT_TS(IntrusivePtr, _);
     }
     MODULE(PassUtils,
         .mTypescriptFolder = "cocos/core/renderer/core",

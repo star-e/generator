@@ -1407,23 +1407,33 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
                 result.append(paramName);
                 result.append("[]");   
             } else {
-                // is template
-                if (templateTS.mName.empty()) {
-                    result.append(templateName);
-                } else {
-                    result.append(templateTS.mName);
-                }
-                result.append("<");
-                int count = 0;
-                for (const auto& param : instance.mParameters) {
+                if (templateTS.mName == "_") {
+                    // is removed
+                    Expects(instance.mParameters.size() == 1);
+                    const auto& param = instance.mParameters.front();
                     auto paramID = locate(param, g);
                     auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
-                    if (count++) {
-                        result.append(", ");
-                    }
                     result.append(paramName);
+                    result.append(" | null");
+                } else {
+                    // is template
+                    if (templateTS.mName.empty()) {
+                        result.append(templateName);
+                    } else {
+                        result.append(templateTS.mName);
+                    }
+                    result.append("<");
+                    int count = 0;
+                    for (const auto& param : instance.mParameters) {
+                        auto paramID = locate(param, g);
+                        auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
+                        if (count++) {
+                            result.append(", ");
+                        }
+                        result.append(paramName);
+                    }
+                    result.append(">");
                 }
-                result.append(">");
             }
         },
         [&](const Concept&) {
@@ -1477,6 +1487,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
         initial1 = initial1.substr(1, initial1.size() - 2);
         boost::algorithm::trim(initial1);
     }
+    boost::algorithm::replace_all(initial1, "::", ".");
 
     std::string_view initial = initial1;
 
@@ -1559,7 +1570,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
         }
     };
 
-    if (m.mPointer) {
+    auto outputNull = [&]() {
         if (initial.empty()) {
             oss << "null";
         } else {
@@ -1571,6 +1582,9 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
                 oss << initial;
             }
         }
+    };
+    if (m.mPointer) {
+        outputNull();
         return oss.str();
     }
 
@@ -1616,23 +1630,12 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
                 auto templateID = g.getTemplate(vertID, scratch);
                 const auto& templateName = get(g.names, g, templateID);
                 const auto& templateTS = get(g.typescripts, g, templateID);
-                oss << "new ";
-                if (templateTS.mName.empty()) {
-                    oss << templateName;
+                if (templateTS.mName == "_") {
+                    outputNull();
                 } else {
-                    oss << templateTS.mName;
+                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                    oss << "new " << name << "(" << initial << ")";
                 }
-                oss << "<";
-                int count = 0;
-                for (const auto& param : instance.mParameters) {
-                    auto paramID = locate(param, g);
-                    auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
-                    if (count++) {
-                        oss << ", ";
-                    }
-                    oss << paramName;
-                }
-                oss << ">(" << initial << ")";
             }
         },
         [&](const Concept&) {
