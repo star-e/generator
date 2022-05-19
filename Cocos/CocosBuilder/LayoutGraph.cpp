@@ -237,6 +237,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
                 (IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
             );
+            CNTR_NO_DEFAULT(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
         }
 
         STRUCT(PipelineLayoutData, .mFlags = NO_COPY) {

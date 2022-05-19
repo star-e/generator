@@ -1414,7 +1414,6 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
                     auto paramID = locate(param, g);
                     auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
                     result.append(paramName);
-                    result.append(" | null");
                 } else {
                     // is template
                     if (templateTS.mName.empty()) {
@@ -1630,12 +1629,8 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
                 auto templateID = g.getTemplate(vertID, scratch);
                 const auto& templateName = get(g.names, g, templateID);
                 const auto& templateTS = get(g.typescripts, g, templateID);
-                if (templateTS.mName == "_") {
-                    outputNull();
-                } else {
-                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-                    oss << "new " << name << "(" << initial << ")";
-                }
+                auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                oss << "new " << name << "(" << initial << ")";
             }
         },
         [&](const Concept&) {
