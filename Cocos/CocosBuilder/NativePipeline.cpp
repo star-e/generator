@@ -64,6 +64,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 ((PmrTransparentMap<ccstd::pmr::string, LayoutGraphData>), mLayoutGraphs, _)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
                 (framegraph::FrameGraph, mFrameGraph, _)
+                (RenderGraph, mRenderGraph, _)
             );
         }
 
