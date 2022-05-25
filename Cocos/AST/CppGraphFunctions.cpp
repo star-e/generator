@@ -1818,101 +1818,129 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 OSS << "inline void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept { // NOLINT\n";
                 {
                     INDENT();
-                    if (s.isDirectedOnly()) {
-                        OSS << "auto  e           = *iter;\n";
-                        OSS << "auto& outEdgeList = g.getOutEdgeList(source(e, g));\n";
-                        OSS << "outEdgeList.erase(iter.base());\n";
+                    OSS << "auto e = *iter;\n";
+                    if (s.isVector()) {
+                        OSS << "const auto u = source(e, g);\n";
+                        OSS << "const auto v = target(e, g);\n";
                     } else {
-                        if (s.mUndirected) {
-                            OSS << "remove_edge(*iter, g);\n";
+                        OSS << "auto* u = source(e, g);\n";
+                        OSS << "auto* v = target(e, g);\n";
+                    }
+                    if (false && s.mReferenceGraph && s.mAliasGraph && s.mNamed /*&& s.mUniqueName*/) {
+                        OSS << "// CC_EXPECTS(detachable(v));\n";
+                    }
+                    if (s.isVector()) {
+                        OSS << "auto& s = g.vertices[u];\n";
+                        OSS << "auto& t = g.vertices[v];\n";
+                    } else {
+                        OSS << "using VertexType = " << name << "::vertex_descriptor;\n";
+                        OSS << "auto& s = *static_cast<VertexType*>(u);\n";
+                        OSS << "auto& t = *static_cast<VertexType*>(v);\n";
+                    }
+                    if (s.needEdgeList()) {
+                        OSS << "auto edgeIter = iter.base()->get_iter();\n";
+                        if (s.isBidirectionalOnly()) {
+                            OSS << name << "::InEdge ie(u, edgeIter);\n";
+                            OSS << "auto inIter = std::find(t.inEdges.begin(), t.inEdges.end(), ie);\n";
+                            OSS << "CC_EXPECTS(inIter != t.inEdges.end());\n";
+                            OSS << "t.inEdges.erase(inIter);\n";
                         } else {
-                            Expects(s.mBidirectional);
-                            OSS << "auto  e           = *iter;\n";
-                            OSS << "auto& outEdgeList = g.getOutEdgeList(source(e, g));\n";
-                            OSS << "auto& inEdgeList  = g.getInEdgeList(target(e, g));\n";
-                            OSS << "auto e1 = e;\n";
-                            OSS << "std::swap(e1.source, e1.target);\n";
-                            OSS << "impl::removeIncidenceEdge(e1, inEdgeList);\n";
-                            if (s.hasEdgeProperty()) {
-                                OSS << "g.edges.erase(iter.base()->get_iter());\n";
-                            }
-                            OSS << "outEdgeList.erase(iter.base());\n";
+                            OSS << name << "::OutEdge oe(u, edgeIter);\n";
+                            OSS << "auto outIter = std::find_if(t.outEdges.begin(), t.outEdges.end(), oe);\n";
+                            OSS << "CC_EXPECTS(outIter != t.outEdges.end());\n";
+                            OSS << "t.outEdges.erase(outIter);\n";
+                        }
+                        OSS << "g.edges.erase(edgeIter);\n";
+                    } else {
+                        if (s.isBidirectionalOnly()) {
+                            OSS << "auto inIter = std::find(t.inEdges.begin(), t.inEdges.end(), "
+                                << name << "::InEdge(u));\n";
+                            OSS << "CC_EXPECTS(inIter != t.inEdges.end());\n";
+                            OSS << "t.inEdges.erase(inIter);\n";
+                        } else {
+                            OSS << "auto outIter = std::find_if(t.outEdges.begin(), t.outEdges.end(), "
+                                << name << "::OutEdge(u));\n";
+                            OSS << "CC_EXPECTS(outIter != t.outEdges.end());\n";
+                            OSS << "t.outEdges.erase(outIter);\n";
                         }
                     }
+                    OSS << "s.outEdges.erase(iter.base());\n";
                 }
                 OSS << "}\n";
 
                 // remove out edge if
-                oss << "\n";
-                OSS << "template <class Predicate>\n";
-                OSS << "inline void remove_out_edge_if(" << name << "::vertex_descriptor u, Predicate&& pred, " << name << "& g)";
-                if (!s.mUndirected && !s.hasEdgeProperty())
-                    oss << " noexcept";
-                oss << " { // NOLINT\n";
-                {
-                    INDENT();
-                    if (s.isDirectedOnly()) {
-                        OSS << "auto pair = out_edges(u, g);\n";
-                        OSS << "auto& first = pair.first;\n";
-                        OSS << "auto& last = pair.second;\n";
-                        OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
-                        copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
-                    } else if (s.mUndirected) {
-                        OSS << "auto pair = out_edges(u, g);\n";
-                        OSS << "auto& first = pair.first;\n";
-                        OSS << "auto& last = pair.second;\n";
-                        OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
-                        visit(
-                            overload(
-                                [&]<Sequence_ T>(T) {
-                                    OSS << "impl::sequenceRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
-                                },
-                                [&]<Associative_ T>(T) {
-                                    OSS << "impl::associativeRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
-                                }),
-                            s.mOutEdgeListType);
-                    } else {
-                        Expects(s.mBidirectional);
-                        if (s.hasEdgeProperty()) {
-                            OSS << "ccstd::vector<" << edgeListType(ns) << "::iterator> garbage;\n";
-                        }
+                if (false) {
+                    oss << "\n";
+                    OSS << "template <class Predicate>\n";
+                    OSS << "inline void remove_out_edge_if(" << name << "::vertex_descriptor u, Predicate&& pred, " << name << "& g)";
+                    if (!s.mUndirected && !s.hasEdgeProperty())
+                        oss << " noexcept";
+                    oss << " { // NOLINT\n";
+                    {
+                        INDENT();
+                        if (s.isDirectedOnly()) {
+                            OSS << "auto pair = out_edges(u, g);\n";
+                            OSS << "auto& first = pair.first;\n";
+                            OSS << "auto& last = pair.second;\n";
+                            OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
+                            copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
+                        } else if (s.mUndirected) {
+                            OSS << "auto pair = out_edges(u, g);\n";
+                            OSS << "auto& first = pair.first;\n";
+                            OSS << "auto& last = pair.second;\n";
+                            OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
+                            visit(
+                                overload(
+                                    [&]<Sequence_ T>(T) {
+                                        OSS << "impl::sequenceRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
+                                    },
+                                    [&]<Associative_ T>(T) {
+                                        OSS << "impl::associativeRemoveUndirectedOutEdgeIf(g, first, last, outEdgeList, std::forward<Predicate>(pred));\n";
+                                    }),
+                                s.mOutEdgeListType);
+                        } else {
+                            Expects(s.mBidirectional);
+                            if (s.hasEdgeProperty()) {
+                                OSS << "ccstd::vector<" << edgeListType(ns) << "::iterator> garbage;\n";
+                            }
 
-                        OSS << "for (auto pair = out_edges(u, g); pair.first != pair.second; ++pair.first) {\n";
-                        {
-                            INDENT();
-                            OSS << "auto& outIter = pair.first;\n";
-                            OSS << "auto& outEnd = pair.second;\n";
-                            OSS << "if (pred(*outIter)) {\n";
+                            OSS << "for (auto pair = out_edges(u, g); pair.first != pair.second; ++pair.first) {\n";
                             {
                                 INDENT();
-                                OSS << "auto& inEdgeList = g.getInEdgeList(target(*outIter, g));\n";
-                                OSS << "auto  e          = *outIter;\n";
-                                OSS << "std::swap(e.source, e.target);\n";
-                                OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
-                                if (s.hasEdgeProperty()) {
-                                    OSS << "garbage.emplace_back((*outIter.base()).get_iter());\n";
+                                OSS << "auto& outIter = pair.first;\n";
+                                OSS << "auto& outEnd = pair.second;\n";
+                                OSS << "if (pred(*outIter)) {\n";
+                                {
+                                    INDENT();
+                                    OSS << "auto& inEdgeList = g.getInEdgeList(target(*outIter, g));\n";
+                                    OSS << "auto  e          = *outIter;\n";
+                                    OSS << "std::swap(e.source, e.target);\n";
+                                    OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
+                                    if (s.hasEdgeProperty()) {
+                                        OSS << "garbage.emplace_back((*outIter.base()).get_iter());\n";
+                                    }
                                 }
+                                OSS << "}\n";
                             }
                             OSS << "}\n";
-                        }
-                        OSS << "}\n";
 
-                        OSS << "auto pair = out_edges(u, g);\n";
-                        OSS << "auto& first = pair.first;\n";
-                        OSS << "auto& last = pair.second;\n";
-                        OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
-                        copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
+                            OSS << "auto pair = out_edges(u, g);\n";
+                            OSS << "auto& first = pair.first;\n";
+                            OSS << "auto& last = pair.second;\n";
+                            OSS << "auto& outEdgeList  = g.getOutEdgeList(u);\n";
+                            copyString(oss, space, removeDirectedEdgeIf(s, "outEdgeList", scratch));
 
-                        if (s.hasEdgeProperty()) {
-                            OSS << "for (const auto& v : garbage) {\n";
-                            OSS << "    g.edges.erase(v);\n";
-                            OSS << "}\n";
+                            if (s.hasEdgeProperty()) {
+                                OSS << "for (const auto& v : garbage) {\n";
+                                OSS << "    g.edges.erase(v);\n";
+                                OSS << "}\n";
+                            }
                         }
                     }
+                    OSS << "}\n";
                 }
-                OSS << "}\n";
-
-                if (s.mBidirectional) {
+                
+                if (false && s.mBidirectional) {
                     // remove in edge if
                     oss << "\n";
                     OSS << "template <class Predicate>\n";
@@ -1965,36 +1993,38 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 } // BidirectionalGraph
 
                 // remove edge if
-                oss << "\n";
-                OSS << "template <class Predicate>\n";
-                OSS << "inline void remove_edge_if(Predicate&& pred, " << name << "& g)";
-                if (!s.mUndirected && !s.hasEdgeProperty())
-                    oss << " noexcept";
-                oss << " { // NOLINT\n";
-                {
-                    INDENT();
-                    if (s.isDirectedOnly()) {
-                        OSS << "for (auto pair = vertices(g); pair.first != pair.second; ++pair.first) {\n";
-                        OSS << "    auto& vi = pair.first;\n";
-                        OSS << "    auto& viEnd = pair.second;\n";
-                        OSS << "    remove_out_edge_if(*vi, std::forward<Predicate>(pred), g);\n";
-                        OSS << "}\n";
-                    } else {
-                        OSS << "auto pair = edges(g);\n";
-                        OSS << "auto& ei = pair.first;\n";
-                        OSS << "auto& eiEnd = pair.second;\n";
-                        OSS << "for (auto next = ei; ei != eiEnd; ei = next) {\n";
-                        {
-                            INDENT();
-                            OSS << "++next;\n";
-                            OSS << "if (pred(*ei)) {\n";
-                            OSS << "    remove_edge(*ei, g);\n";
+                if (false) {
+                    oss << "\n";
+                    OSS << "template <class Predicate>\n";
+                    OSS << "inline void remove_edge_if(Predicate&& pred, " << name << "& g)";
+                    if (!s.mUndirected && !s.hasEdgeProperty())
+                        oss << " noexcept";
+                    oss << " { // NOLINT\n";
+                    {
+                        INDENT();
+                        if (s.isDirectedOnly()) {
+                            OSS << "for (auto pair = vertices(g); pair.first != pair.second; ++pair.first) {\n";
+                            OSS << "    auto& vi = pair.first;\n";
+                            OSS << "    auto& viEnd = pair.second;\n";
+                            OSS << "    remove_out_edge_if(*vi, std::forward<Predicate>(pred), g);\n";
+                            OSS << "}\n";
+                        } else {
+                            OSS << "auto pair = edges(g);\n";
+                            OSS << "auto& ei = pair.first;\n";
+                            OSS << "auto& eiEnd = pair.second;\n";
+                            OSS << "for (auto next = ei; ei != eiEnd; ei = next) {\n";
+                            {
+                                INDENT();
+                                OSS << "++next;\n";
+                                OSS << "if (pred(*ei)) {\n";
+                                OSS << "    remove_edge(*ei, g);\n";
+                                OSS << "}\n";
+                            }
                             OSS << "}\n";
                         }
-                        OSS << "}\n";
                     }
+                    OSS << "}\n";
                 }
-                OSS << "}\n";
             } // IncidenceGraph
         } // MutableGraph(Edge)
     } // EdgeList
