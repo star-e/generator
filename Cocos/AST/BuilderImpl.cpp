@@ -1251,6 +1251,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             if (g.moduleHasContainer(modulePath, "/boost/container/pmr/list")) {
                 OSS << "#include <boost/container/pmr/list.hpp>\n";
             }
+            if (g.moduleUsesHashCombine(modulePath)) {
+                OSS << "#include \"cocos/base/std/hash/hash.h\"\n";
+            }
             if (!moduleInfo.mHeader.empty()) {
                 copyCppString(oss, space, moduleInfo.mHeader);
             }

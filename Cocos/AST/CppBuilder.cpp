@@ -1118,11 +1118,11 @@ std::pmr::string generateTypes_h(std::string_view projectName,
                         OSS << "inline size_t hash<" << name << ">::operator()(const " << name << "& v) const noexcept {\n";
                         {
                             INDENT();
-                            OSS << "size_t seed = 0;\n";
+                            OSS << "ccstd::hash_t seed = 0;\n";
                             for (const auto& m : s.mMembers) {
-                                OSS << "boost::hash_combine(seed, v." << m.getMemberName() << ");\n";
+                                OSS << "ccstd::hash_combine(seed, v." << m.getMemberName() << ");\n";
                             }
-                            OSS << "return seed;\n";
+                            OSS << "return static_cast<size_t>(seed);\n";
                         }
                         OSS << "}\n";
                     }

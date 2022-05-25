@@ -359,7 +359,7 @@ std::pmr::string removePolymorphicType(const SyntaxGraph& g, const CppGraphBuild
         INDENT();
         OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
 
-        OSS << "cc::visit(\n";
+        OSS << "ccstd::visit(\n";
         {
             INDENT();
             OSS << "overload(\n";
@@ -1325,9 +1325,9 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
             }
         } // PolymorphicGraph
 
-        if (s.mAddressable) {
+        if (s.mReferenceGraph) {
             oss << "\n";
-            OSS << "// AddressableGraph\n";
+            OSS << "// ReferenceGraph\n";
             OSS << "addPathImpl(u, v, g);\n";
         }
 
@@ -2566,7 +2566,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
-                OSS << "return cc::visit(\n";
+                OSS << "return ccstd::visit(\n";
                 {
                     INDENT();
                     OSS << "overload(\n";
@@ -2612,7 +2612,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         {
             INDENT();
             OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
-            OSS << "return cc::visit(\n";
+            OSS << "return ccstd::visit(\n";
             {
                 INDENT();
                 OSS << "overload(\n";
@@ -2651,7 +2651,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             {
                 INDENT();
                 OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
-                OSS << "return cc::visit(\n";
+                OSS << "return ccstd::visit(\n";
                 {
                     INDENT();
                     OSS << "overload(\n";
@@ -3697,7 +3697,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         }
     }
 
-    if (s.mVertexList && s.mMutableGraphVertex && s.mAddressable) {
+    if (s.mVertexList && s.mMutableGraphVertex && s.mReferenceGraph) {
         oss << "\n";
         OSS << "// MutableGraph(Vertex)\n";
         OSS << "inline void addPathImpl(" << name << "::vertex_descriptor u, "
@@ -3711,7 +3711,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 copyString(oss, space, generateAddEdge(false, false, false, true, false));
             }
             OSS << "}\n";
-            if (s.isVector()) {
+            if (s.mAddressable && s.isVector()) {
                 visit(
                     overload(
                         [&](Direct_) {
@@ -3742,7 +3742,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
         }
         OSS << "}\n";
 
-        if (holds_alternative<Map_>(s.mAddressableConcept.mType)) {
+        if (s.mAddressable && holds_alternative<Map_>(s.mAddressableConcept.mType)) {
             oss << "\n";
             OSS << "inline void removePathImpl(" << name << "::vertex_descriptor u, " << name << "& g) noexcept {\n";
             {
