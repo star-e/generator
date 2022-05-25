@@ -1760,60 +1760,8 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             }
             OSS << "}\n";
 
-            // remove edge (iter) declare
-            if (s.mBidirectional && s.hasEdgeProperty()) {
-                oss << "\n";
-                OSS << "void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept; // NOLINT\n";
-            }
-            // remove edge (descriptor)
-            oss << "\n";
-            OSS << "inline void remove_edge(" << name << "::edge_descriptor e, " << name << "& g) noexcept { // NOLINT\n";
-            {
-                INDENT();
-                OSS << "// remove_edge need rewrite\n";
-                if (!s.needEdgeList()) {
-                    OSS << "auto& outEdgeList = g.getOutEdgeList(source(e, g));\n";
-                    OSS << "impl::removeIncidenceEdge(e, outEdgeList);\n";
-                    if (s.isBidirectionalOnly()) {
-                        OSS << "auto& inEdgeList = g.getInEdgeList(target(e, g));\n";
-                        OSS << "std::swap(e.source, e.target);\n";
-                        OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
-                    }
-                } else {
-                    if (s.mUndirected) {
-                        OSS << "impl::removeUndirectedEdge(g, e, *static_cast<";
-                        if (s.hasEdgeProperty()) {
-                            oss << cpp.getDependentName(s.mEdgeProperty);
-                        } else {
-                            oss << "boost::no_property";
-                        }
-                        oss << "*>(e.get_property()));\n";
-                    } else {
-                        Expects(s.mBidirectional);
-                        visit(
-                            overload(
-                                [&]<Associative_ T>(T) {
-                                    OSS << "using out_edge_iterator = " << name << "::out_edge_iterator;\n";
-                                    OSS << "auto u = source(e, g);\n";
-                                    OSS << "auto& outEdgeList = g.getOutEdgeList(u);\n";
-                                    OSS << "auto key = " << name << "::OutEdge(target(e, g));\n";
-                                    OSS << "auto [first, last] = outEdgeList.equal_range(key);\n";
-                                    OSS << "auto range = std::make_pair(out_edge_iterator(first, u), out_edge_iterator(last, u));\n";
-                                },
-                                [&](auto) {
-                                    OSS << "auto range = out_edges(source(e, g), g);\n";
-                                }),
-                            s.mOutEdgeListType);
-                        OSS << "range.first = std::find(range.first, range.second, e);\n";
-                        OSS << "CC_ENSURES(range.first != range.second);\n";
-                        OSS << "remove_edge(range.first, g);\n";
-                    }
-                }
-            }
-            OSS << "}\n";
-
+            // remove edge (iter)
             if (s.mIncidence) {
-                // remove edge (iter)
                 oss << "\n";
                 OSS << "inline void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept { // NOLINT\n";
                 {
@@ -1867,7 +1815,58 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                     OSS << "s.outEdges.erase(iter.base());\n";
                 }
                 OSS << "}\n";
+            }
 
+            // remove edge (descriptor)
+            oss << "\n";
+            OSS << "inline void remove_edge(" << name << "::edge_descriptor e, " << name << "& g) noexcept { // NOLINT\n";
+            {
+                INDENT();
+                if (s.needEdgeList()) {
+                    if (s.isDirectedOnly()) {
+                        Expects(false);
+                    } else {
+                        if (s.isVector()) {
+                            OSS << "const auto u = source(e, g);\n";
+                            OSS << "const auto v = target(e, g);\n";
+                        } else {
+                            OSS << "auto* u = source(e, g);\n";
+                            OSS << "auto* v = target(e, g);\n";
+                        }
+                        OSS << "auto* const p = e.get_property();\n";
+                        if (s.isVector()) {
+                            OSS << "auto& s = g.vertices[u];\n";
+                        } else {
+                            OSS << "auto& s = *static_cast<" << name << "::Vertex*>(u);\n";
+                        }
+                        // find edgeIter
+                        OSS << "auto outIter = std::find_if(s.outEdges.begin(), s.outEdges.end(), [p](const auto& oe) {\n";
+                        OSS << "    return &oe.get_property() == p;\n";
+                        OSS << "});\n";
+                        OSS << "CC_EXPECTS(outIter != s.outEdges.end());\n";
+                    }
+                } else {
+                    if (s.isVector()) {
+                        OSS << "const auto u = source(e, g);\n";
+                        OSS << "const auto v = target(e, g);\n";
+                    } else {
+                        OSS << "auto* u = source(e, g);\n";
+                        OSS << "auto* v = target(e, g);\n";
+                    }
+                    if (s.isVector()) {
+                        OSS << "auto& s = g.vertices[u];\n";
+                    } else {
+                        OSS << "auto& s = *static_cast<" << name << "::Vertex*>(u);\n";
+                    }
+                    OSS << "auto outIter = std::find(s.outEdges.begin(), s.outEdges.end(), "
+                        << name << "::OutEdge(v));\n";
+                    OSS << "CC_EXPECTS(outIter != s.outEdges.end());\n";
+                }
+                OSS << "remove_edge(" << name << "::out_edge_iterator(outIter, u), g);\n";
+            }
+            OSS << "}\n";
+
+            if (s.mIncidence) {
                 // remove out edge if
                 if (false) {
                     oss << "\n";
