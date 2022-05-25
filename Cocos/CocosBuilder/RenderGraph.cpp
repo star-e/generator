@@ -232,6 +232,8 @@ bool isWrite() const {
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
                 (SubpassGraph, mSubpassGraph, _)
+                (uint32_t, mWidth, 0)
+                (uint32_t, mHeight, 0)
             );
         }
 

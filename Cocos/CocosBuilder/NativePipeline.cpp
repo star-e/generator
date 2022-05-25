@@ -52,6 +52,51 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             CNTR(mDevice, mData);
         }
 
+        STRUCT(NativeRasterPassBuilder) {
+            INHERITS(RasterPassBuilder);
+            PUBLIC(
+                (RenderGraph*, mRenderGraph, nullptr)
+                (uint32_t, mPassID, RenderGraph::null_vertex())
+            );
+            CNTR(mRenderGraph, mPassID);
+        }
+
+        STRUCT(NativeComputePassBuilder) {
+            INHERITS(ComputePassBuilder);
+            PUBLIC(
+                (RenderGraph*, mRenderGraph, nullptr)
+                (uint32_t, mPassID, RenderGraph::null_vertex())
+            );
+            CNTR(mRenderGraph, mPassID);
+        }
+
+        STRUCT(NativeMovePassBuilder) {
+            INHERITS(MovePassBuilder);
+            PUBLIC(
+                (RenderGraph*, mRenderGraph, nullptr)
+                (uint32_t, mPassID, RenderGraph::null_vertex())
+            );
+            CNTR(mRenderGraph, mPassID);
+        }
+
+        STRUCT(NativeCopyPassBuilder) {
+            INHERITS(CopyPassBuilder);
+            PUBLIC(
+                (RenderGraph*, mRenderGraph, nullptr)
+                (uint32_t, mPassID, RenderGraph::null_vertex())
+            );
+            CNTR(mRenderGraph, mPassID);
+        }
+
+        STRUCT(NativeSceneTransversal) {
+            INHERITS(SceneTransversal);
+            PUBLIC(
+                (const scene::Camera*, mCamera, nullptr)
+                (const scene::RenderScene*, mScene, nullptr)
+            );
+            CNTR(mCamera, mScene);
+        }
+
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
             PUBLIC(
@@ -64,6 +109,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 ((PmrTransparentMap<ccstd::pmr::string, LayoutGraphData>), mLayoutGraphs, _)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
                 (framegraph::FrameGraph, mFrameGraph, _)
+                (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
             );
         }

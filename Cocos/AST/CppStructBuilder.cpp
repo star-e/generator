@@ -1271,6 +1271,9 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
                 oss << "std::u8string_view " << getParameterName(m.mMemberName, scratch);
             } else {
                 auto name = g.getDependentName(mCurrentNamespace, memberID, scratch, scratch);
+                if (m.mConst) {
+                    oss << "const ";
+                }
                 oss << getCppPath(name, scratch);
                 if (m.mPointer) {
                     oss << "*";
