@@ -1776,6 +1776,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                     OSS << "impl::removeIncidenceEdge(e, outEdgeList);\n";
                     if (s.isBidirectionalOnly()) {
                         OSS << "auto& inEdgeList = g.getInEdgeList(target(e, g));\n";
+                        OSS << "std::swap(e.source, e.target);\n";
                         OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                     }
                 } else {
@@ -1829,7 +1830,9 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "auto  e           = *iter;\n";
                             OSS << "auto& outEdgeList = g.getOutEdgeList(source(e, g));\n";
                             OSS << "auto& inEdgeList  = g.getInEdgeList(target(e, g));\n";
-                            OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
+                            OSS << "auto e1 = e;\n";
+                            OSS << "std::swap(e1.source, e1.target);\n";
+                            OSS << "impl::removeIncidenceEdge(e1, inEdgeList);\n";
                             if (s.hasEdgeProperty()) {
                                 OSS << "g.edges.erase(iter.base()->get_iter());\n";
                             }
@@ -1884,6 +1887,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                                 INDENT();
                                 OSS << "auto& inEdgeList = g.getInEdgeList(target(*outIter, g));\n";
                                 OSS << "auto  e          = *outIter;\n";
+                                OSS << "std::swap(e.source, e.target);\n";
                                 OSS << "impl::removeIncidenceEdge(e, inEdgeList);\n";
                                 if (s.hasEdgeProperty()) {
                                     OSS << "garbage.emplace_back((*outIter.base()).get_iter());\n";
