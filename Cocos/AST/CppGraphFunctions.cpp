@@ -1705,57 +1705,68 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                 << name << "::vertex_descriptor v, " << name << "& g) noexcept { // NOLINT\n";
             {
                 INDENT();
-
-                if (!s.needEdgeList()) {
-                    OSS << "// remove out-edges\n";
-                    OSS << "auto& outEdgeList = g.getOutEdgeList(u);\n";
-                    copyString(oss, space, eraseFromIncidenceList(
-                        s, name, "outEdgeList", "v", R"([v](const auto& e) {
-    return e.get_target() == v;
-})", true, scratch));
-                } else {
-                    OSS << "auto& outEdgeList = g.getOutEdgeList(u);\n";
-                    visit(
-                        overload(
-                            [&]<UniqueAssociative_ T>(T) {
-                                oss << "\n";
-                                OSS << "// remove out-edges and properties\n";
-                                OSS << "auto iter = outEdgeList.find(" << name << "::OutEdge(v, {}));\n";
-                                OSS << "if (iter != outEdgeList.end()) {\n";
-                                OSS << "    g.edges.erase((*iter).get_iter());\n";
-                                OSS << "    outEdgeList.erase(iter);\n";
-                                OSS << "}\n";
-                            },
-                            [&](auto) {
-                                oss << "\n";
-                                OSS << "impl::removeDirectedAllEdgeProperties(g, outEdgeList, v);\n";
-                                oss << "\n";
-                                OSS << "// remove out-edges\n";
-                                copyString(oss, space, eraseFromIncidenceList(
-                                    s, name, "outEdgeList", "v", R"([v](const auto& e) {
-    return e.get_target() == v;
-})", true, scratch));
-                            }),
-                        s.mOutEdgeListType);
+                if (false && s.mReferenceGraph && s.mAliasGraph && s.mNamed /* && s.mUniqueName*/) {
+                    OSS << "Expects(detachable(v));\n";
                 }
-
-                if (s.mUndirected) {
-                    oss << "\n";
-                    OSS << "// remove reciprocal (undirected) out-edges\n";
-                    OSS << "auto& outEdgeListV = g.getOutEdgeList(v);\n";
-                    copyString(oss, space, eraseFromIncidenceList(
-                        s, name, "outEdgeListV", "u", R"([u](const auto& e) {
-    return e.get_target() == u;
-})", true, scratch));
-                } else if (s.mBidirectional) {
-                    Expects(s.mBidirectional);
-                    oss << "\n";
-                    OSS << "// remove reciprocal (bidirectional) in-edges\n";
-                    OSS << "auto& inEdgeList = g.getInEdgeList(v);\n";
-                    copyString(oss, space, eraseFromIncidenceList(
-                        s, name, "inEdgeList", "u", R"([u](const auto& e) {
-    return e.get_target() == u;
-})", false, scratch));
+                if (s.needEdgeList()) {
+                    if (s.isDirectedOnly()) {
+                        Expects(false);
+                    } else {
+                        if (s.isVector()) {
+                            OSS << "auto& s = g.vertices[u];\n";
+                            OSS << "auto& t = g.vertices[v];\n";
+                        } else {
+                            OSS << "auto& s = *static_cast<" << name << "::Vertex*>(u);\n";
+                            OSS << "auto& t = *static_cast<" << name << "::Vertex*>(v);\n";
+                        }
+                        // remove edges
+                        oss << "\n";
+                        OSS << "impl::removeDirectedAllEdgeProperties(g, s.outEdges, v);\n";
+                        // remove incidence edges
+                        oss << "\n";
+                        OSS << "s.outEdges.erase(std::remove_if(s.outEdges.begin(), s.outEdges.end(),\n";
+                        {
+                            INDENT();
+                            OSS << "[v](const " << name << "::OutEdge& oe) {\n";
+                            OSS << "    return oe.target == v;\n";
+                            OSS << "}), s.outEdges.end());\n";
+                        }
+                        if (s.isBidirectionalOnly()) {
+                            OSS << "t.inEdges.erase(std::remove_if(t.inEdges.begin(), t.inEdges.end(),\n";
+                            {
+                                INDENT();
+                                OSS << "[u](const " << name << "::InEdge& ie) {\n";
+                                OSS << "    return ie.target == u;\n";
+                                OSS << "}), t.inEdges.end());\n";
+                            }
+                        } else {
+                            OSS << "t.outEdges.erase(std::remove_if(t.outEdges.begin(), t.outEdges.end(),\n";
+                            {
+                                INDENT();
+                                OSS << "[u](const " << name << "::OutEdge& oe) {\n";
+                                OSS << "    return oe.target == u;\n";
+                                OSS << "}), t.outEdges.end());\n";
+                            }
+                        }
+                    }
+                } else {
+                    if (s.isDirectedOnly()) {
+                        Expects(false);
+                    } else {
+                        if (s.isVector()) {
+                            OSS << "auto& s = g.vertices[u];\n";
+                            OSS << "auto& t = g.vertices[v];\n";
+                        } else {
+                            OSS << "auto& s = *static_cast<" << name << "::Vertex*>(u);\n";
+                            OSS << "auto& t = *static_cast<" << name << "::Vertex*>(v);\n";
+                        }
+                        OSS << "s.outEdges.erase(std::remove(s.outEdges.begin(), s.outEdges.end(), " << name << "::OutEdge(v)), s.outEdges.end());\n";
+                        if (s.isBidirectionalOnly()) {
+                            OSS << "t.inEdges.erase(std::remove(t.inEdges.begin(), t.inEdges.end(), " << name << "::InEdge(u)), t.inEdges.end());\n";
+                        } else {
+                            OSS << "t.outEdges.erase(std::remove_if(t.outEdges.begin(), t.outEdges.end(), " << name << "::OutEdge(u)), t.outEdges.end());\n";
+                        }
+                    }
                 }
             }
             OSS << "}\n";
@@ -1763,10 +1774,10 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
             // remove edge (iter)
             if (s.mIncidence) {
                 oss << "\n";
-                OSS << "inline void remove_edge(" << name << "::out_edge_iterator iter, " << name << "& g) noexcept { // NOLINT\n";
+                OSS << "inline void remove_edge(" << name << "::out_edge_iterator outIter, " << name << "& g) noexcept { // NOLINT\n";
                 {
                     INDENT();
-                    OSS << "auto e = *iter;\n";
+                    OSS << "auto e = *outIter;\n";
                     if (s.isVector()) {
                         OSS << "const auto u = source(e, g);\n";
                         OSS << "const auto v = target(e, g);\n";
@@ -1786,7 +1797,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                         OSS << "auto& t = *static_cast<VertexType*>(v);\n";
                     }
                     if (s.needEdgeList()) {
-                        OSS << "auto edgeIter = iter.base()->get_iter();\n";
+                        OSS << "auto edgeIter = outIter.base()->get_iter();\n";
                         if (s.isBidirectionalOnly()) {
                             OSS << name << "::InEdge ie(u, edgeIter);\n";
                             OSS << "auto inIter = std::find(t.inEdges.begin(), t.inEdges.end(), ie);\n";
@@ -1812,7 +1823,7 @@ std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
                             OSS << "t.outEdges.erase(outIter);\n";
                         }
                     }
-                    OSS << "s.outEdges.erase(iter.base());\n";
+                    OSS << "s.outEdges.erase(outIter.base());\n";
                 }
                 OSS << "}\n";
             }
