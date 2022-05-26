@@ -185,11 +185,13 @@ Member::~Member() noexcept = default;
 
 Parameter::Parameter(const allocator_type& alloc) noexcept
     : mTypePath(alloc)
-    , mName(alloc) {}
+    , mName(alloc)
+    , mDefaultValue(alloc) {}
 
 Parameter::Parameter(Parameter&& rhs, const allocator_type& alloc)
     : mTypePath(std::move(rhs.mTypePath), alloc)
     , mName(std::move(rhs.mName), alloc)
+    , mDefaultValue(std::move(rhs.mDefaultValue), alloc)
     , mConst(std::move(rhs.mConst))
     , mPointer(std::move(rhs.mPointer))
     , mReference(std::move(rhs.mReference)) {}
@@ -197,6 +199,7 @@ Parameter::Parameter(Parameter&& rhs, const allocator_type& alloc)
 Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
     , mName(rhs.mName, alloc)
+    , mDefaultValue(rhs.mDefaultValue, alloc)
     , mConst(rhs.mConst)
     , mPointer(rhs.mPointer)
     , mReference(rhs.mReference) {}

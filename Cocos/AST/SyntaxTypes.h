@@ -315,6 +315,7 @@ struct Parameter {
 
     std::pmr::string mTypePath;
     std::pmr::string mName;
+    std::pmr::string mDefaultValue;
     bool mConst = false;
     bool mPointer = false;
     bool mReference = false;

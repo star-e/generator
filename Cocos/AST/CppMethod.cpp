@@ -81,6 +81,14 @@ Parameter findLastParameter(ModuleBuilder& builder, std::string_view& parameters
     auto scratch = builder.mScratch;
     Parameter param(scratch);
 
+    {
+        auto pos = parameters.rfind('=');
+        if (pos != std::string_view::npos) {
+            param.mDefaultValue = parameters.substr(pos + 1);
+            parameters = parameters.substr(0, pos);
+        }
+    }
+
     Expects(!parameters.empty());
     auto pos = parameters.find_last_of(" *&>");
     Expects(pos != std::string_view::npos);
@@ -105,7 +113,7 @@ Parameter findLastParameter(ModuleBuilder& builder, std::string_view& parameters
 Method parseFunction(ModuleBuilder& builder, std::string_view function) {
     auto scratch = builder.mScratch;
     Method method(scratch);
-    
+
     if (boost::algorithm::contains(function, "[[skip]]")) {
         method.mSkip = true;
     }
@@ -163,7 +171,7 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
     // parameters end
     Expects(function.ends_with(')'));
 
-    // parameters beg 
+    // parameters beg
     {
         auto paramBeg = findBegMatch(function, '(', ')', function.size() - 1) + 1;
         auto paramEnd = function.size() - 1;
