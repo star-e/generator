@@ -75,8 +75,7 @@ int main() {
 
         // native
         buildRenderCompiler(builder, Fwd | Types | Names | Reflection | Graphs);
-        buildNativePipeline(builder, Fwd | Types | Names | Reflection | Graphs);
-
+        buildNativePipeline(builder, Fwd | Types | Graphs);
 
         // build render example
         buildExecutorExample(builder, Typescripts | Jsb);

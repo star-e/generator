@@ -52,6 +52,15 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             CNTR(mDevice, mData);
         }
 
+        STRUCT(NativeRasterQueueBuilder) {
+            INHERITS(RasterQueueBuilder);
+            PUBLIC(
+                (RenderGraph*, mRenderGraph, nullptr)
+                (uint32_t, mQueueID, RenderGraph::null_vertex())
+            );
+            CNTR(mRenderGraph, mQueueID);
+        }
+
         STRUCT(NativeRasterPassBuilder) {
             INHERITS(RasterPassBuilder);
             PUBLIC(
