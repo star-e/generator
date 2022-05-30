@@ -56,27 +56,44 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             INHERITS(RasterQueueBuilder);
             PUBLIC(
                 (RenderGraph*, mRenderGraph, nullptr)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (uint32_t, mQueueID, RenderGraph::null_vertex())
+                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
-            CNTR(mRenderGraph, mQueueID);
+            CNTR(mRenderGraph, mQueueID, mLayoutGraph, mLayoutID);
         }
 
         STRUCT(NativeRasterPassBuilder) {
             INHERITS(RasterPassBuilder);
             PUBLIC(
                 (RenderGraph*, mRenderGraph, nullptr)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (uint32_t, mPassID, RenderGraph::null_vertex())
+                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
-            CNTR(mRenderGraph, mPassID);
+            CNTR(mRenderGraph, mPassID, mLayoutGraph, mLayoutID);
+        }
+
+        STRUCT(NativeComputeQueueBuilder) {
+            INHERITS(ComputeQueueBuilder);
+            PUBLIC(
+                (RenderGraph*, mRenderGraph, nullptr)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
+                (uint32_t, mQueueID, RenderGraph::null_vertex())
+                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
+            );
+            CNTR(mRenderGraph, mQueueID, mLayoutGraph, mLayoutID);
         }
 
         STRUCT(NativeComputePassBuilder) {
             INHERITS(ComputePassBuilder);
             PUBLIC(
                 (RenderGraph*, mRenderGraph, nullptr)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (uint32_t, mPassID, RenderGraph::null_vertex())
+                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
-            CNTR(mRenderGraph, mPassID);
+            CNTR(mRenderGraph, mPassID, mLayoutGraph, mLayoutID);
         }
 
         STRUCT(NativeMovePassBuilder) {
@@ -117,6 +134,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (scene::Model*, mProfiler, nullptr)
                 ((PmrTransparentMap<ccstd::pmr::string, LayoutGraphData>), mLayoutGraphs, _)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (framegraph::FrameGraph, mFrameGraph, _)
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)

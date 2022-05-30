@@ -347,9 +347,9 @@ bool isWrite() const {
         STRUCT(RenderData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrUnorderedMap<uint32_t, ccstd::pmr::vector<uint8_t>>), mConstants, _)
-                ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Buffer>>), mBuffers, _)
-                ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Texture>>), mTextures, _)
-                ((PmrUnorderedMap<uint32_t, std::unique_ptr<gfx::Sampler>>), mSamplers, _)
+                ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Buffer>>), mBuffers, _)
+                ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Texture>>), mTextures, _)
+                ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Sampler>>), mSamplers, _)
             );
         }
 
