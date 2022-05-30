@@ -36,7 +36,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "RenderCompiler", "FrameGraph" },
+        .mRequires = { "RenderInterface", "FrameGraph" },
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 )"
     ) {

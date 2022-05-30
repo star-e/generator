@@ -74,13 +74,17 @@ int main() {
         buildWebPipeline(builder, Typescripts);
 
         // native
-        buildRenderCompiler(builder, Fwd | Types | Names | Reflection | Graphs);
+        if (false) {
+            buildRenderCompiler(builder, Fwd | Types | Names | Reflection | Graphs);
+        }
         buildNativePipeline(builder, Fwd | Types | Graphs);
 
         // build render example
-        buildExecutorExample(builder, Typescripts | Jsb);
-        buildRenderExample(builder,
-            Fwd | Types | Names | Reflection | Graphs);
+        if (false) {
+            buildExecutorExample(builder, Typescripts | Jsb);
+            buildRenderExample(builder,
+                Fwd | Types | Names | Reflection | Graphs);
+        }
     }
 
     builder.compile();
@@ -89,8 +93,6 @@ int main() {
     // output files
     {
         // manually added
-        files.emplace("cocos/renderer/pipeline/custom/RenderCompilerImpl.cpp");
-        files.emplace("cocos/renderer/pipeline/custom/RenderExampleImpl.cpp");
         files.emplace("cocos/renderer/pipeline/custom/RenderInterfaceImpl.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativePipelineImpl.cpp");
 
@@ -110,12 +112,16 @@ int main() {
         builder.outputModule("WebPipeline", files);
 
         // native
-        builder.outputModule("RenderCompiler", files);
+        if (false) {
+            builder.outputModule("RenderCompiler", files);
+        }
         builder.outputModule("NativePipeline", files);
 
         // render example
-        //builder.outputModule("ExecutorExample", files);
-        builder.outputModule("RenderExample", files);
+        if (false) {
+            builder.outputModule("ExecutorExample", files);
+            builder.outputModule("RenderExample", files);
+        }
     }
 
     // update cmakelists

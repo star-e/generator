@@ -12,15 +12,6 @@
     <ClCompile Include="RenderCommon.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
-    <ClCompile Include="RenderExecutor.cpp">
-      <Filter>Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="RenderExample.cpp">
-      <Filter>Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="RenderCompiler.cpp">
-      <Filter>Modules</Filter>
-    </ClCompile>
     <ClCompile Include="CocosCommon.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
@@ -36,6 +27,15 @@
     <ClCompile Include="FGDispatcher.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="RenderCompiler.cpp">
+      <Filter>Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderExample.cpp">
+      <Filter>Examples</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderExecutor.cpp">
+      <Filter>Examples</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -44,6 +44,9 @@
   <ItemGroup>
     <Filter Include="Modules">
       <UniqueIdentifier>{0644d922-5b41-457c-bbc6-88ba625679f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Examples">
+      <UniqueIdentifier>{d58b8452-9e67-404a-9553-dbdaba9fd16c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
