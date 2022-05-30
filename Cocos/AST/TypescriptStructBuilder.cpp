@@ -213,8 +213,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         if (!m.mPublic) {
             oss << "private ";
         }
-        if (!m.mPointer && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
+        bool bTypscriptPointer = g.isTypescriptPointer(memberID);
+        if (!m.mPointer && !bTypscriptPointer && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
+        } else if (bTypscriptPointer) {
+            oss << "/*object*/ ";
         }
         if (bNeedIntial) {
             oss << builder.getTypedMemberName(m, m.mPublic);

@@ -1169,6 +1169,8 @@ struct SyntaxGraph {
 
     bool isTypescriptArray(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const;
 
+    bool isTypescriptPointer(vertex_descriptor vertID) const;
+
     std::pmr::string getTypescriptTypename(vertex_descriptor vertID,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
 

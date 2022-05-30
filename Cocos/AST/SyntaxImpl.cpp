@@ -1363,6 +1363,21 @@ bool SyntaxGraph::isTypescriptArray(vertex_descriptor instanceID,
     return false;
 }
 
+bool SyntaxGraph::isTypescriptPointer(vertex_descriptor vertID) const {
+    const auto& g = *this;
+    auto scratch = mScratch;
+    if (holds_tag<Instance_>(vertID, g)) {
+        if (!g.isTypescriptArray(vertID, scratch)) {
+            auto templateID = g.getTemplate(vertID, scratch);
+            const auto& templateTS = get(g.typescripts, g, templateID);
+            if (templateTS.mName == "_") {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
     const auto& g = *this;
