@@ -349,7 +349,7 @@ bool isWrite() const {
                 ((PmrUnorderedMap<uint32_t, ccstd::pmr::vector<uint8_t>>), mConstants, _)
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Buffer>>), mBuffers, _)
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Texture>>), mTextures, _)
-                ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Sampler>>), mSamplers, _)
+                ((PmrUnorderedMap<uint32_t, ObserverPtr<gfx::Sampler>>), mSamplers, _)
             );
         }
 
