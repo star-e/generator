@@ -87,20 +87,26 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(ResourceAccessNode) {
             PUBLIC(
                 (std::vector<AccessStatus>, mAttachemntStatus, _)
+                (uint32_t, mCircuitFlag, _)
             );
         }
 
         PMR_GRAPH(ResourceAccessGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
-                (std::vector<RenderGraph::vertex_descriptor>, mPresentPasses, _)
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
+                (RenderGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
+                (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mExternalPasses, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
                 (AccessNode_, ResourceAccessNode, mAccess)
             );
             COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
+        }
+
+        GRAPH(EmptyGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
+
         }
 
         STRUCT(Barrier) {
@@ -124,14 +130,32 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (RenderGraph&, mGraph, _)
                 (LayoutGraphData&, mLayoutGraph, _)
                 (boost::container::pmr::memory_resource*, mScratch, nullptr)
-            );
-            PRIVATE(
                 ((PmrFlatMap<ccstd::pmr::string, ResourceTransition>), mExternalResMap, _)
+                (EmptyGraph, mRelationGraph, _)
+            );
+            
+            PRIVATE(
+                (bool, mEnablePassReorder, false)
+                (bool, mEnableAutoBarrier, true)
+                (bool, mEnableMemoryAliasing, false)
+                (bool, mAccessGraphBuilt, false)
+                (float, mParalellExecWeight, 0.0F)
             );
 
             CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
+
+            
             MEMBER_FUNCTIONS(R"(
-void buildBarriers();
+void enablePassReorder(bool enable);
+
+// how much paralell-execution weights during pass reorder,
+// eg:0.3 means 30% of effort aim to paralellize execution, other 70% aim to decrease memory using.
+// 0 by default 
+void setParalellWeight(float paralellExecWeight);
+
+void enableMemoryAliasing(bool enable);
+
+void run();
 )");
         }
 
