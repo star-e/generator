@@ -200,6 +200,7 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 
         INTERFACE(LayoutGraphBuilder) {
             MEMBER_FUNCTIONS(R"(
+virtual void clear() = 0;
 virtual uint32_t addRenderStage(const ccstd::string& name) = 0;
 virtual uint32_t addRenderPhase(const ccstd::string& name, uint32_t parentID) = 0;
 virtual void addDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlock& block) = 0;
@@ -227,7 +228,7 @@ virtual CopyPassBuilder    *addCopyPass(const ccstd::string& name) = 0;
 virtual void                presentAll() = 0;
 
 virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
-virtual LayoutGraphBuilder *createLayoutGraph(const ccstd::string& name) = 0;
+[[getter]] virtual LayoutGraphBuilder *getLayoutGraphBuilder() = 0;
 )");
         }
 

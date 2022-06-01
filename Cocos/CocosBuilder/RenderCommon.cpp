@@ -35,7 +35,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderCommon",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
-        .mTypescriptFilePrefix = "types",
+        .mTypescriptFilePrefix = "types"
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
