@@ -1342,6 +1342,33 @@ bool SyntaxGraph::isTypescriptData(std::string_view name) const {
     return false;
 }
 
+bool SyntaxGraph::isTypescriptBoolean(vertex_descriptor vertID) const {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    auto typeName = g.getTypescriptTypename(vertID, scratch, scratch);
+    if (typeName == "boolean")
+        return true;
+    return false;
+}
+
+bool SyntaxGraph::isTypescriptNumber(vertex_descriptor vertID) const {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    auto typeName = g.getTypescriptTypename(vertID, scratch, scratch);
+    if (typeName == "number")
+        return true;
+    return false;
+}
+
+bool SyntaxGraph::isTypescriptString(vertex_descriptor vertID) const {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    auto typeName = g.getTypescriptTypename(vertID, scratch, scratch);
+    if (typeName == "string")
+        return true;
+    return false;
+}
+
 bool SyntaxGraph::isTypescriptArray(vertex_descriptor instanceID,
     std::pmr::memory_resource* scratch) const {
     const auto& g = *this;
@@ -1360,6 +1387,40 @@ bool SyntaxGraph::isTypescriptArray(vertex_descriptor instanceID,
         return true;
     }
 
+    return false;
+}
+
+bool SyntaxGraph::isTypescriptSet(vertex_descriptor vertID) const {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    Expects(holds_tag<Instance_>(vertID, g));
+    const auto& instance = get<Instance>(vertID, g);
+
+    auto templateID = g.getTemplate(vertID, scratch);
+    const auto& templateTS = get(g.typescripts, g, templateID);
+
+    // 1. is container
+    // 2. has only one parameter
+    // 3. not specialized
+    if (holds_tag<Container_>(templateID, g)
+        && instance.mParameters.size() == 1
+        && templateTS.mName == "Set") {
+        return true;
+    }
+
+    return false;
+}
+
+bool SyntaxGraph::isTypescriptMap(vertex_descriptor vertID) const {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    Expects(holds_tag<Instance_>(vertID, g));
+    const auto& instance = get<Instance>(vertID, g);
+
+    auto templateID = g.getTemplate(vertID, scratch);
+    if (holds_tag<Map_>(templateID, g)) {
+        return true;
+    }
     return false;
 }
 

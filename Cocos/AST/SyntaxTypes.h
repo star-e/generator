@@ -1163,12 +1163,15 @@ struct SyntaxGraph {
     bool moduleHasImpl(std::string_view modulePath, bool bDLL) const;
 
     // Typescript
+    bool isTypescriptData(std::string_view name) const;
     bool isTypescriptValueType(vertex_descriptor vertID) const;
 
-    bool isTypescriptData(std::string_view name) const;
-
+    bool isTypescriptBoolean(vertex_descriptor vertID) const;
+    bool isTypescriptNumber(vertex_descriptor vertID) const;
+    bool isTypescriptString(vertex_descriptor vertID) const;
     bool isTypescriptArray(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const;
-
+    bool isTypescriptSet(vertex_descriptor vertID) const;
+    bool isTypescriptMap(vertex_descriptor vertID) const;
     bool isTypescriptPointer(vertex_descriptor vertID) const;
 
     std::pmr::string getTypescriptTypename(vertex_descriptor vertID,

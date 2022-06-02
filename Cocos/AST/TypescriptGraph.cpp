@@ -947,6 +947,125 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             std::pmr::string enumTypeMap(name, scratch);
             enumTypeMap += "ValueType";
 
+            // clear all
+            OSS << "clear (): void {\n";
+            {
+                INDENT();
+
+                // Members
+                int count = 0;
+                int i = 0;
+                int numCleared = 0;
+                for (const auto& m : s.mMembers) {
+                    if (m.mFlags & IMPL_DETAIL) {
+                        ++i;
+                        continue;
+                    }
+                    bool bSkip = false;
+                    for (const auto& cntr : s.mConstructors) {
+                        Expects(s.mConstructors.size() == 1);
+                        for (const auto& index : cntr.mIndices) {
+                            if (index == i) {
+                                bSkip = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (count++ == 0) {
+                        OSS << "// Members\n";
+                    }
+
+                    const auto memberID = locate(m.mTypePath, g);
+                    auto memberName = g.getMemberName(m.mMemberName, true);
+
+                    if (bSkip) {
+                        OSS << "// skip this." << memberName << "\n";
+                        ++numCleared;
+                        ++i;
+                        continue;
+                    }
+
+                    if (g.isTypescriptArray(memberID, scratch)) {
+                        OSS << "this." << memberName << ".length = 0;\n";
+                    } else if (g.isTypescriptPointer(memberID)) {
+                        OSS << "this." << memberName << " = null;\n";
+                    } else if (g.isTypescriptBoolean(memberID)) {
+                        OSS << "this." << memberName << " = false;\n";
+                    } else if (g.isTypescriptNumber(memberID)) {
+                        OSS << "this." << memberName << " = 0;\n";
+                    } else if (g.isTypescriptString(memberID)) {
+                        OSS << "this." << memberName << " = '';\n";
+                    } else if (g.isTypescriptSet(memberID)) {
+                        OSS << "this." << memberName << ".clear();\n";
+                    } else if (g.isTypescriptMap(memberID)) {
+                        OSS << "this." << memberName << ".clear();\n";
+                    } else {
+                        OSS << "this." << memberName << ".clear();\n";
+                    }
+                    ++numCleared;
+                    ++i;
+                }
+
+                // UuidGraph
+                if (!s.mVertexMaps.empty()) {
+                    Expects(s.mVertexMaps.size() == 1);
+                    OSS << "// UuidGraph\n";
+                    for (const auto& map : s.mVertexMaps) {
+                        for (const auto& c : s.mComponents) {
+                            if (c.mName != map.mComponentName)
+                                continue;
+                            const auto& componentVar = getTagVariableName(c.mName, scratch);
+                            OSS << "this." << g.getMemberName(map.mMemberName, false)
+                                << ".clear();\n";
+                            ++numCleared;
+                            break;
+                        }
+                    }
+                }
+
+                // AddressableGraph
+                if (s.isAddressable() && s.hasAddressIndex()) {
+                    ++numCleared;
+                }
+
+                // Graph Edges
+                if (s.needEdgeList()) {
+                    OSS << "// Graph Edges\n";
+                    OSS << "this._edges.clear();\n";
+                    ++numCleared;
+                }
+
+                // ComponentGraph
+                if (s.isVector()) {
+                    OSS << "// ComponentGraph\n";
+                    for (const auto& c : s.mComponents) {
+                        OSS << "this." << g.getMemberName(c.mMemberName, false) << ".length = 0;\n";
+                        ++numCleared;
+                    }
+                }
+
+                // PolymorphicGraph
+                if (s.isVector()) {
+                    numCleared += gsl::narrow_cast<int>(s.mPolymorphic.mConcepts.size());
+                }
+                // ReferenceGraph
+                if (s.isReference() && !s.isAliasGraph()) {
+                    ++numCleared; // mObjects
+                }
+                // Graph Vertices
+                OSS << "// Graph Vertices\n";
+                if (s.isVector()) {
+                    OSS << "this._vertices.length = 0;\n";
+                    ++numCleared;
+                } else {
+                    OSS << "this._vertices.clear();\n";
+                    ++numCleared;
+                }
+                Ensures(numCleared == s.mMembers.size());
+            }
+            OSS << "}\n";
+
+            // add vertex
             OSS << "addVertex";
             {
                 {
