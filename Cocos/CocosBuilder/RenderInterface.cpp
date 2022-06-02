@@ -14,7 +14,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",
-        .mRequires = { "Gfx", "RenderCommon", "LayoutGraph", "RenderGraph", "Assets" },
+        .mRequires = { "Gfx", "RenderCommon", "LayoutGraph", "RenderGraph" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {
@@ -25,8 +25,6 @@ class Quaternion;
 class Vec4;
 class Vec3;
 class Vec2;
-
-class EffectAsset;
 
 namespace pipeline {
 
@@ -78,12 +76,6 @@ virtual void onGlobalPipelineStateChanged() = 0;
 )");
             TS_FUNCTIONS(R"(
 public abstract get macros(): MacroRecord;
-)");
-        }
-
-        INTERFACE(DescriptorHierarchy) {
-            MEMBER_FUNCTIONS(R"(
-virtual void addEffect(EffectAsset* asset) = 0;
 )");
         }
 
@@ -235,7 +227,6 @@ virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, co
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
 static Pipeline            *createPipeline();
-static DescriptorHierarchy *createDescriptorHierarchy();
 )");
         }
 
