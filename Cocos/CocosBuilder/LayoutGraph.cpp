@@ -291,6 +291,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (ccstd::pmr::vector<ccstd::pmr::string>, mValueNames, _)
                 ((PmrFlatMap<ccstd::pmr::string, NameLocalID>), mAttributeIndex, _)
                 ((PmrFlatMap<ccstd::pmr::string, NameLocalID>), mConstantIndex, _)
+                ((PmrFlatMap<ccstd::pmr::string, uint32_t>), mShaderLayoutIndex, _)
             );
         }
         NAMESPACE_END(render);

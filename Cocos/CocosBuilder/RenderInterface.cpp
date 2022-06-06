@@ -195,6 +195,7 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 virtual void clear() = 0;
 virtual uint32_t addRenderStage(const ccstd::string& name) = 0;
 virtual uint32_t addRenderPhase(const ccstd::string& name, uint32_t parentID) = 0;
+virtual void addShader(const ccstd::string& name, uint32_t parentPhaseID) = 0;
 virtual void addDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlock& block) = 0;
 virtual void reserveDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlock& block) = 0;
 virtual int compile() = 0;
@@ -221,6 +222,7 @@ virtual void                presentAll() = 0;
 
 virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[getter]] virtual LayoutGraphBuilder *getLayoutGraphBuilder() = 0;
+virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
         }
 
