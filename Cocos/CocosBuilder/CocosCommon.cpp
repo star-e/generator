@@ -145,6 +145,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             NAMESPACE(pipeline) {
                 IMPORT_CLASS(GeometryRenderer);
+                IMPORT_CLASS(RenderQueue);
             }
         }
     }

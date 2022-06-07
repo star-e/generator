@@ -222,7 +222,7 @@ virtual void                presentAll() = 0;
 
 virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[getter]] virtual LayoutGraphBuilder *getLayoutGraphBuilder() = 0;
-virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+[[nullable]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
         }
 

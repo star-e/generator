@@ -133,6 +133,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (std::unique_ptr<pipeline::GlobalDSManager>, mGlobalDSManager, _)
                 (scene::Model*, mProfiler, nullptr)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
+                // ((ccstd::pmr::unordered_map<ccstd::pmr::string, pipeline::RenderQueue>), mRenderQueues, _)
                 (LayoutGraphData, mLayoutGraph, _)
                 (framegraph::FrameGraph, mFrameGraph, _)
                 (ResourceGraph, mResourceGraph, _)
