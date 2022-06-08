@@ -30,6 +30,7 @@ namespace pipeline {
 
 class GlobalDSManager;
 class PipelineSceneData;
+class GeometryRenderer;
 
 } // namespace pipeline
 
@@ -47,9 +48,6 @@ class RenderWindow;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-//class GeometryRenderer;
-        // virtual void setGeometryRenderer(pipeline::GeometryRenderer * geometryRenderer) = 0;
-
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
 virtual bool activate(gfx::Swapchain * swapchain) = 0;
@@ -63,6 +61,7 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual const ccstd::string         &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
 [[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) = 0;
+[[nullable]] [[getter]] virtual pipeline::GeometryRenderer  *getGeometryRenderer() const = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
 [[setter]] virtual void  setShadingScale(float scale) = 0;
