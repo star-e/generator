@@ -30,6 +30,16 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+#ifdef OPAQUE
+#undef OPAQUE
+#endif
+
+#ifdef TRANSPARENT
+#undef TRANSPARENT
+#endif
+
+// clang-format off
+
 void buildRenderCommon(ModuleBuilder& builder, Features features) {
     MODULE(RenderCommon,
         .mFolder = "cocos/renderer/pipeline/custom",
@@ -79,6 +89,18 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
 
         ENUM_CLASS(TaskType) {
             ENUMS(SYNC, ASYNC);
+        }
+
+        FLAG_CLASS(SceneFlags) {
+            UNDERLYING_TYPE(uint32_t);
+            FLAGS(
+                (NONE, 0)
+                (OPAQUE_OBJECT, 0x1)
+                (CUTOUT_OBJECT, 0x2)
+                (TRANSPARENT_OBJECT, 0x4)
+                (SHADOW_CASTER, 0x8)
+                (ALL, 0xFFFFFFFF)
+            );
         }
 
         NAMESPACE_END(render);
