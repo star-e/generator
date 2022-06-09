@@ -1126,7 +1126,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             }
         }
         if (mBoost) {
-            OSS << "#include <boost/variant2/variant.hpp>\n";
+            OSS << "#include \"cocos/base/std/variant.h\"\n";
         }
         copyString(oss, generateFwd_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
         oss << "\n";

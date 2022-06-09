@@ -325,7 +325,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
                 outputNs();
                 lineBreak(BreakType::Variant);
                 if (sBoost) {
-                    OSS << "using " << name << " = boost::variant2::variant<";
+                    OSS << "using " << name << " = ccstd::variant<";
                 } else {
                     OSS << "using " << name << " = std::variant<";
                 }
@@ -734,7 +734,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             [&](const Variant& v) {
                 lineBreak();
                 if (sBoost) {
-                    OSS << "using " << name << " = boost::variant2::variant<";
+                    OSS << "using " << name << " = ccstd::variant<";
                 } else {
                     OSS << "using " << name << " = std::variant<";
                 }
