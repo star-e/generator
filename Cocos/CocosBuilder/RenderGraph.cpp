@@ -308,6 +308,7 @@ bool isWrite() const {
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
                 (scene::Camera*, mCamera, nullptr)
+                (scene::Light*, mLight, nullptr)
                 (SceneFlags, mFlags, SceneFlags::NONE)
                 (ccstd::pmr::vector<ccstd::pmr::string>, mScenes, _)
             );
