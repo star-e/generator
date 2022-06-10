@@ -52,6 +52,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             NAMESPACE(scene) {
                 IMPORT_CLASS(Model);
+                IMPORT_CLASS(Light);
             }
         }
     }

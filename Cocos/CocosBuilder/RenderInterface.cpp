@@ -60,7 +60,7 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
 [[getter]] virtual const ccstd::string         &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
-[[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) = 0;
+[[setter]] virtual void                         setProfiler([[nullable]] scene::Model *profiler) = 0;
 [[nullable]] [[getter]] virtual pipeline::GeometryRenderer  *getGeometryRenderer() const = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
@@ -98,8 +98,7 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
         INTERFACE(RasterQueueBuilder) {
             INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
-virtual void addSceneOfCamera(scene::Camera* camera, SceneFlags sceneFlags, const ccstd::string& name) = 0;
-virtual void addSceneOfCamera(scene::Camera* camera, SceneFlags sceneFlags) = 0;
+virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* light, SceneFlags sceneFlags, const ccstd::string& name = "Camera") = 0;
 virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags) = 0;
 virtual void addFullscreenQuad(const ccstd::string& shader, const ccstd::string& name) = 0;
 virtual void addFullscreenQuad(const ccstd::string& shader) = 0;

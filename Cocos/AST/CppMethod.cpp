@@ -62,11 +62,14 @@ void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parame
             parameters = {};
         }
     }
+    if (boost::algorithm::starts_with(typeName, "[[nullable]]")) {
+        param.mNullable = true;
+        typeName = typeName.substr(12);
+    }
     if (typeName.starts_with("const ")) {
         param.mConst = true;
         typeName = typeName.substr(6);
     }
-
     auto& g = builder.mSyntaxGraph;
     if (isInstance(typeName)) {
         g.instantiate(builder.mCurrentScope, typeName, scratch);
@@ -132,9 +135,29 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
 
     // skip attributes
     {
-        auto pos = function.rfind("]]");
-        if (pos != function.npos) {
-            function = function.substr(pos + 2);
+        int count = 0;
+        bool inAttribute = false;
+        for (size_t pos = 0; pos != function.size(); ++pos) {
+            if (function[pos] == ' ') {
+                continue;
+            }
+            if (function[pos] == '[') {
+                Expects(pos + 1 != function.size());
+                Expects(function[pos + 1] == '[');
+                ++pos;
+                inAttribute = true;
+            } else if (function[pos] == ']') {
+                Expects(pos + 1 != function.size());
+                Expects(function[pos + 1] == ']');
+                ++pos;
+                Expects(inAttribute);
+                inAttribute = false;
+            } else if (inAttribute) {
+                continue;
+            } else {
+                function = function.substr(pos);
+                break;
+            }
         }
     }
 

@@ -1738,6 +1738,34 @@ std::pmr::string SyntaxGraph::getTypescriptGraphPolymorphicVariant(const Graph& 
     return oss.str();
 }
 
+std::pmr::string SyntaxGraph::getTypedParameterName(const Parameter& p, bool bPublic, bool bFull, bool bOptional) const {
+    const auto& g = *this;
+    auto scratch = mScratch;
+
+    auto memberID = locate(p.mTypePath, g);
+    auto typeName = g.getTypescriptTypename(memberID, scratch, scratch);
+    Expects(!typeName.empty());
+
+    std::pmr::string result(scratch);
+
+    if (bFull || !g.isTypescriptData(typeName)) {
+        if (p.mTypePath == "/void" && p.mPointer) {
+            result += "unknown";
+        } else {
+            result += typeName;
+            if (p.mPointer) {
+                if (bOptional) {
+                    // currently, reference is not supported
+                    // we must use pointer
+                    result += " | null";
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
 namespace {
 
 void addImported(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g,
