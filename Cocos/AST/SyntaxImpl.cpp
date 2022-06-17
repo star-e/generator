@@ -297,8 +297,9 @@ bool SyntaxGraph::isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const n
         if (g.isInstantiation(vertID)) {
             auto& inst = get<Instance>(vertID, g);
             auto templateID = locate(inst.mTemplate, g);
+            const auto& traits = get(g.traits, g, templateID);
             auto type = g.getTypescriptTypename(templateID, scratch, scratch);
-            if (type == "Map" || type == "Array" || type == "Set") {
+            if (type == "Map" || type == "Array" || type == "Set" || (traits.mFlags & JSB)) {
                 for (const auto& param : inst.mParameters) {
                     auto paramID = locate(param, g);
                     if (!g.isJsb(paramID, mg)) {

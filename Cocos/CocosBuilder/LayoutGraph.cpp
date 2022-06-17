@@ -90,7 +90,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             CNTR(mType);
         }
 
-        STRUCT(DescriptorBlock, .mFlags = JSB) {
+        STRUCT(DescriptorBlock) {
             PUBLIC(
                 ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
                 ((ccstd::map<ccstd::string, UniformBlockDB>), mUniformBlocks, _)
@@ -99,7 +99,18 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (uint32_t, mCount, 0)
             );
         }
-        
+
+        STRUCT(DescriptorBlockFlattened, .mFlags = JSB) {
+            PUBLIC(
+                (ccstd::vector<ccstd::string>, mDescriptorNames, _)
+                (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
+                (ccstd::vector<Descriptor>, mDescriptors, _)
+                (ccstd::vector<UniformBlockDB>, mUniformBlocks, _)
+                (uint32_t, mCapacity, 0)
+                (uint32_t, mCount, 0)
+            );
+        }
+
         STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB) {
             PUBLIC(
                 (UpdateFrequency, mUpdateFrequency, _)

@@ -128,11 +128,11 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
 builder.addConstructor(s.mVertexDescriptor, {\
 BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) }, false)
 
-#define CONTAINER(NAME) \
-    builder.addContainer(BOOST_PP_STRINGIZE(NAME), Traits{})
+#define CONTAINER(NAME, ...) \
+    builder.addContainer(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ })
 
-#define PMR_CONTAINER(NAME) \
-    builder.addContainer(BOOST_PP_STRINGIZE(NAME), Traits{ .mPmr = true })
+#define PMR_CONTAINER(NAME, ...) \
+    builder.addContainer(BOOST_PP_STRINGIZE(NAME), Traits{ .mPmr = true, __VA_ARGS__ })
 
 #define MAP(NAME) \
     builder.addMap(BOOST_PP_STRINGIZE(NAME), Traits{})
