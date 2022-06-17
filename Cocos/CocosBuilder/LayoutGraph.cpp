@@ -75,12 +75,6 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(UniformBlockDB, .mFlags = JSB) {
-            PUBLIC(
-                ((ccstd::map<ccstd::string, gfx::Uniform>), mValues, _)
-            );
-        }
-
         STRUCT(Descriptor, .mFlags = JSB) {
             PUBLIC(
                 (gfx::Type, mType, gfx::Type::UNKNOWN)
@@ -93,7 +87,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         STRUCT(DescriptorBlock) {
             PUBLIC(
                 ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
-                ((ccstd::map<ccstd::string, UniformBlockDB>), mUniformBlocks, _)
+                ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
                 //((ccstd::map<gfx::Type, Descriptor>), mMerged, _)
                 (uint32_t, mCapacity, 0)
                 (uint32_t, mCount, 0)
@@ -105,7 +99,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (ccstd::vector<ccstd::string>, mDescriptorNames, _)
                 (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
                 (ccstd::vector<Descriptor>, mDescriptors, _)
-                (ccstd::vector<UniformBlockDB>, mUniformBlocks, _)
+                (ccstd::vector<gfx::UniformBlock>, mUniformBlocks, _)
                 (uint32_t, mCapacity, 0)
                 (uint32_t, mCount, 0)
             );
