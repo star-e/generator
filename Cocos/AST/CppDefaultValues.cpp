@@ -196,12 +196,12 @@ void addCppDefaultValues(ModuleBuilder& builder) {
 
     NAMESPACE(ccstd) {
         CLASS(string, .mFlags = JSB);
-        CONTAINER(vector);
+        CONTAINER(vector, .mFlags = JSB);
         MAP(map);
         MAP(unordered_map);
         NAMESPACE(pmr) {
             IMPORT_PMR_CLASS(string, .mFlags = JSB);
-            PMR_CONTAINER(vector);
+            PMR_CONTAINER(vector, .mFlags = JSB);
             PMR_MAP(map);
             PMR_MAP(unordered_map);
         }

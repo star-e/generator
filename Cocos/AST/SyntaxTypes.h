@@ -319,6 +319,7 @@ struct Parameter {
     bool mConst = false;
     bool mPointer = false;
     bool mReference = false;
+    bool mNullable = false;
 };
 
 struct Method {
@@ -1193,6 +1194,8 @@ struct SyntaxGraph {
     std::pmr::string getTypescriptGraphPolymorphicVariant(const Graph& s,
         std::pmr::memory_resource* mr,
         std::pmr::memory_resource* scratch) const;
+
+    std::pmr::string getTypedParameterName(const Parameter& p, bool bPublic, bool bFull = false, bool bOptional = false) const;
 
     PmrMap<std::pmr::string, PmrSet<std::pmr::string>> getImportedTypes(
         std::string_view modulePath, std::pmr::memory_resource* mr) const;

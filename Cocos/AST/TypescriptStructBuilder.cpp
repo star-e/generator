@@ -157,32 +157,47 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     for (const auto& method : methods) {
         if (method.mSkip)
             continue;
-        OSS << "public ";
-        if (method.mPure)
-            oss << "abstract ";
-        if (method.mGetter) {
-            auto methodName = method.mFunctionName.substr(3);
-            methodName = camelToVariable(methodName, scratch);
-            oss << "get " << methodName << "(";
-        } else if (method.mSetter) {
-            auto methodName = method.mFunctionName.substr(3);
-            methodName = camelToVariable(methodName, scratch);
-            oss << "set " << methodName << "(";
-        } else {
-            oss << method.mFunctionName << "(";
+        int32_t numParams = static_cast<int32_t>(method.mParameters.size());
+        for (; numParams >= 0; --numParams) {
+            OSS << "public ";
+            if (method.mPure)
+                oss << "abstract ";
+            if (method.mGetter) {
+                auto methodName = method.mFunctionName.substr(3);
+                methodName = camelToVariable(methodName, scratch);
+                oss << "get " << methodName << "(";
+            } else if (method.mSetter) {
+                auto methodName = method.mFunctionName.substr(3);
+                methodName = camelToVariable(methodName, scratch);
+                oss << "set " << methodName << "(";
+            } else {
+                oss << method.mFunctionName << "(";
+            }
+            for (uint32_t count = 0; const auto& param : method.mParameters) {
+                if (count == numParams)
+                    break;
+                if (param.mName.back() == '_')
+                    continue;
+                if (count++)
+                    oss << ", ";
+                oss << param.mName;
+                auto paramID = locate(param.mTypePath, g);
+                oss << ": " << g.getTypedParameterName(param, true, true, param.mNullable);
+            }
+            oss << ")";
+            if (!method.mSetter) {
+                oss << ": ";
+                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mNullable);
+            }
+            oss << ";";
+            if (false && method.mConst) {
+                oss << " /*const*/";
+            }
+            oss << "\n";
+
+            if (numParams > 0 && method.mParameters[numParams - 1].mDefaultValue.empty())
+                break;
         }
-        for (uint32_t count = 0; const auto& param : method.mParameters) {
-            if (count++)
-                oss << ", ";
-            oss << param.mName;
-            auto paramID = locate(param.mTypePath, g);
-            oss << builder.getTypedParameterName(param, true, true, method.mNullable);
-        }
-        oss << ")";
-        if (!method.mSetter) {
-            oss << builder.getTypedParameterName(method.mReturnType, true, true, method.mNullable);
-        }
-        oss << ";\n";
     }
 
     if (!functions.empty()) {

@@ -489,7 +489,7 @@ std::pmr::string CppGraphBuilder::tagType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
     if (mStruct.mBoost) {
-        oss << "boost::variant2::variant<";
+        oss << "ccstd::variant<";
     } else {
         oss << "std::variant<";
     }
@@ -512,7 +512,7 @@ std::pmr::string CppGraphBuilder::valueType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
     if (mStruct.mBoost) {
-        oss << "boost::variant2::variant<";
+        oss << "ccstd::variant<";
     } else {
         oss << "std::variant<";
     }
@@ -536,7 +536,7 @@ std::pmr::string CppGraphBuilder::constValueType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
     if (mStruct.mBoost) {
-        oss << "boost::variant2::variant<";
+        oss << "ccstd::variant<";
     } else {
         oss << "std::variant<";
     }
@@ -597,7 +597,7 @@ std::pmr::string CppGraphBuilder::handleType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
     std::pmr::string space(get_allocator());
     if (mStruct.mBoost) {
-        oss << "boost::variant2::variant<\n";
+        oss << "ccstd::variant<\n";
     } else {
         oss << "std::variant<\n";
     }

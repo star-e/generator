@@ -30,6 +30,7 @@ namespace pipeline {
 
 class GlobalDSManager;
 class PipelineSceneData;
+class GeometryRenderer;
 
 } // namespace pipeline
 
@@ -47,9 +48,6 @@ class RenderWindow;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-//class GeometryRenderer;
-        // virtual void setGeometryRenderer(pipeline::GeometryRenderer * geometryRenderer) = 0;
-
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
 virtual bool activate(gfx::Swapchain * swapchain) = 0;
@@ -62,10 +60,15 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
 [[getter]] virtual const ccstd::string         &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
-[[nullable]] [[setter]] virtual void                         setProfiler(scene::Model *profiler) = 0;
+[[setter]] virtual void                         setProfiler([[nullable]] scene::Model *profiler) = 0;
+[[nullable]] [[getter]] virtual pipeline::GeometryRenderer  *getGeometryRenderer() const = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
 [[setter]] virtual void  setShadingScale(float scale) = 0;
+
+virtual void setMacroString(const ccstd::string& name, const ccstd::string& value) = 0;
+virtual void setMacroInt(const ccstd::string& name, int32_t value) = 0;
+virtual void setMacroBool(const ccstd::string& name, bool value) = 0;
 
 virtual void onGlobalPipelineStateChanged() = 0;
 
@@ -99,9 +102,9 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
         INTERFACE(RasterQueueBuilder) {
             INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
-virtual void addSceneOfCamera(scene::Camera* camera, const ccstd::string& name) = 0;
-virtual void addSceneOfCamera(scene::Camera* camera) = 0;
-virtual void addScene(const ccstd::string& name) = 0;
+virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* light, SceneFlags sceneFlags, const ccstd::string& name) = 0;
+virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* light, SceneFlags sceneFlags) = 0;
+virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags) = 0;
 virtual void addFullscreenQuad(const ccstd::string& shader, const ccstd::string& name) = 0;
 virtual void addFullscreenQuad(const ccstd::string& shader) = 0;
 )");
@@ -196,8 +199,8 @@ virtual void clear() = 0;
 virtual uint32_t addRenderStage(const ccstd::string& name) = 0;
 virtual uint32_t addRenderPhase(const ccstd::string& name, uint32_t parentID) = 0;
 virtual void addShader(const ccstd::string& name, uint32_t parentPhaseID) = 0;
-virtual void addDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlock& block) = 0;
-virtual void reserveDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlock& block) = 0;
+virtual void addDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlockFlattened& block) = 0;
+virtual void reserveDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlockFlattened& block) = 0;
 virtual int compile() = 0;
 
 virtual ccstd::string print() const = 0;
@@ -222,7 +225,7 @@ virtual void                presentAll() = 0;
 
 virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[getter]] virtual LayoutGraphBuilder *getLayoutGraphBuilder() = 0;
-virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+[[nullable]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
         }
 

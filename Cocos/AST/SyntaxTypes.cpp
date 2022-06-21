@@ -194,7 +194,8 @@ Parameter::Parameter(Parameter&& rhs, const allocator_type& alloc)
     , mDefaultValue(std::move(rhs.mDefaultValue), alloc)
     , mConst(std::move(rhs.mConst))
     , mPointer(std::move(rhs.mPointer))
-    , mReference(std::move(rhs.mReference)) {}
+    , mReference(std::move(rhs.mReference))
+    , mNullable(std::move(rhs.mNullable)) {}
 
 Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
@@ -202,7 +203,8 @@ Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     , mDefaultValue(rhs.mDefaultValue, alloc)
     , mConst(rhs.mConst)
     , mPointer(rhs.mPointer)
-    , mReference(rhs.mReference) {}
+    , mReference(rhs.mReference)
+    , mNullable(rhs.mNullable) {}
 
 Parameter::~Parameter() noexcept = default;
 

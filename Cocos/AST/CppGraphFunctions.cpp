@@ -2799,7 +2799,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                 }
                 {
                     INDENT();
-                    OSS << "return boost::variant2::holds_alternative<\n";
+                    OSS << "return ccstd::holds_alternative<\n";
                     OSS << "    " << handleElemType(c, cn, false) << ">(\n";
                     OSS << "    g.vertices[v].handle);\n";
                 }
@@ -2957,14 +2957,14 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS;
                         if (bConst)
                             oss << "const ";
-                        oss << "auto& handle = boost::variant2::get<\n";
+                        oss << "auto& handle = ccstd::get<\n";
                         OSS << "    " << handleElemType(c, cn, false) << ">(\n";
                         OSS << "    g.vertices[v].handle);\n";
                     } else {
                         OSS;
                         if (bConst)
                             oss << "const ";
-                        oss << "auto& handle = boost::variant2::get<\n";
+                        oss << "auto& handle = ccstd::get<\n";
                         OSS << "    " << handleElemType(c, cn, false) << ">(\n";
                         OSS << "    static_cast<" << name << "::Vertex*>(v)->handle);\n";
                     }
@@ -3102,14 +3102,14 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS;
                         if (bConst)
                             oss << "const ";
-                        oss << "auto* pHandle = boost::variant2::get_if<\n";
+                        oss << "auto* pHandle = ccstd::get_if<\n";
                         OSS << "    " << handleElemType(c, cn, false) << ">(\n";
                         OSS << "    &g.vertices[v].handle);\n";
                     } else {
                         OSS;
                         if (bConst)
                             oss << "const ";
-                        oss << "auto* pHandle = boost::variant2::get_if<\n";
+                        oss << "auto* pHandle = ccstd::get_if<\n";
                         OSS << "    " << handleElemType(c, cn, false) << ">(\n";
                         OSS << "    &(static_cast<" << name << "::Vertex*>(v)->handle));\n";
                     }
