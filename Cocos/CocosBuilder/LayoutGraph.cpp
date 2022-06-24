@@ -232,7 +232,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
                 (uint32_t, mSlot, 0xFFFFFFFF)
                 (uint32_t, mCapacity, 0)
                 (ccstd::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
-                ((ccstd::pmr::unordered_map<NameLocalID, UniformBlockData>), mUniformBlocks, _)
+                ((ccstd::pmr::unordered_map<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
             CNTR(mSlot, mCapacity);
