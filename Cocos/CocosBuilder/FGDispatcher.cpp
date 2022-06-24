@@ -86,7 +86,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(ResourceAccessNode) {
             PUBLIC(
                 (std::vector<AccessStatus>, mAttachemntStatus, _)
-                (uint32_t, mCircuitFlag, _)
+                (ResourceAccessNode*, mNextSubpass, nullptr)
             );
         }
 
@@ -117,10 +117,16 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(BarrierNode) {
+        STRUCT(BarrierPair) {
             PUBLIC(
                 (std::vector<Barrier>, mFrontBarriers, _)
                 (std::vector<Barrier>, mRearBarriers, _)
+            );
+        }
+
+        STRUCT(BarrierNode) {
+            PUBLIC(
+                (std::vector<BarrierPair>, mBarriers, _)
             );
         }
 
