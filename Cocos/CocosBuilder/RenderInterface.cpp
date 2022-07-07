@@ -66,6 +66,10 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual float getShadingScale() const = 0;
 [[setter]] virtual void  setShadingScale(float scale) = 0;
 
+virtual const ccstd::string& getMacroString(const ccstd::string& name) const = 0;
+virtual int32_t getMacroInt(const ccstd::string& name) const = 0;
+virtual bool getMacroBool(const ccstd::string& name) const = 0;
+
 virtual void setMacroString(const ccstd::string& name, const ccstd::string& value) = 0;
 virtual void setMacroInt(const ccstd::string& name, int32_t value) = 0;
 virtual void setMacroBool(const ccstd::string& name, bool value) = 0;
@@ -200,6 +204,7 @@ virtual uint32_t addRenderStage(const ccstd::string& name) = 0;
 virtual uint32_t addRenderPhase(const ccstd::string& name, uint32_t parentID) = 0;
 virtual void addShader(const ccstd::string& name, uint32_t parentPhaseID) = 0;
 virtual void addDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlockFlattened& block) = 0;
+virtual void addUniformBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const ccstd::string& name, const gfx::UniformBlock& uniformBlock) = 0;
 virtual void reserveDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex& index, const DescriptorBlockFlattened& block) = 0;
 virtual int compile() = 0;
 
