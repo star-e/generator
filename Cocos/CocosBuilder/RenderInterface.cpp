@@ -12,6 +12,9 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsPrefix = "render",
         .mToJsNamespace = "render",
         .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h",
+        .mToJsConfigs = R"(
+method_module_configs = PipelineRuntime::[getGeometryRenderer/CC_USE_GEOMETRY_RENDERER]
+)",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon", "LayoutGraph", "RenderGraph" },
@@ -109,22 +112,23 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
 virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* light, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* light, SceneFlags sceneFlags) = 0;
 virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags) = 0;
-virtual void addFullscreenQuad(const ccstd::string& shader, const ccstd::string& name) = 0;
-virtual void addFullscreenQuad(const ccstd::string& shader) = 0;
+virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
+virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags) = 0;
+virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags) = 0;
 )");
         }
 
         INTERFACE(RasterPassBuilder) {
             INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
-virtual void                addRasterView(const ccstd::string& name, const RasterView& view) = 0;
-virtual void                addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
+virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint, const ccstd::string& layoutName, const ccstd::string& name) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint, const ccstd::string& layoutName) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint) = 0;
-virtual void                addFullscreenQuad(const ccstd::string& shader, const ccstd::string& layoutName, const ccstd::string& name) = 0;
-virtual void                addFullscreenQuad(const ccstd::string& shader, const ccstd::string& layoutName) = 0;
-virtual void                addFullscreenQuad(const ccstd::string& shader) = 0;
+virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
+virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags) = 0;
+virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags) = 0;
 )");
         }
 

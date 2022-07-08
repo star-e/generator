@@ -281,7 +281,7 @@ classes_owned_by_cpp =
 
 obtain_return_value =
 )";
-
+    copyString(oss, space, m.mToJsConfigs);
     return oss.str();
 }
 

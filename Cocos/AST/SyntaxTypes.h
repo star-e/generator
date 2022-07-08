@@ -1333,6 +1333,7 @@ struct ModuleInfo {
     std::string mToJsNamespace;
     std::string mToJsHppHeaders;
     std::string mToJsCppHeaders;
+    std::string mToJsConfigs;
     std::string mTypescriptFolder;
     std::string mTypescriptFilePrefix;
     std::string mAPI;

@@ -132,6 +132,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (ccstd::string, mConstantMacros, _)
                 (std::unique_ptr<pipeline::GlobalDSManager>, mGlobalDSManager, _)
                 (scene::Model*, mProfiler, nullptr)
+                (LightingMode, mLightingMode, LightingMode::DEFAULT)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
                 // ((ccstd::pmr::unordered_map<ccstd::pmr::string, pipeline::RenderQueue>), mRenderQueues, _)
                 (LayoutGraphData, mLayoutGraph, _)

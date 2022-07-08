@@ -100,8 +100,16 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 (TRANSPARENT_OBJECT, 0x4)
                 (SHADOW_CASTER, 0x8)
                 (UI, 0x10)
+                (DEFAULT_LIGHTING, 0x20)
+                (VOLUMETRIC_LIGHTING, 0x40)
+                (CLUSTERED_LIGHTING, 0x80)
                 (ALL, 0xFFFFFFFF)
             );
+        }
+
+        ENUM_CLASS(LightingMode) {
+            UNDERLYING_TYPE(uint32_t);
+            ENUMS(NONE, DEFAULT, CLUSTERED);
         }
 
         NAMESPACE_END(render);

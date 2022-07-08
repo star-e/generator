@@ -111,7 +111,9 @@ int main() {
         builder.outputModule("FGDispatcher", files);
 
         // web
-        builder.outputModule("WebPipeline", files);
+        if (false) {
+            builder.outputModule("WebPipeline", files);
+        }
 
         // native
         if (false) {

@@ -361,6 +361,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             }
             IMPORT_CLASS(RenderTexture) {
             }
+            IMPORT_CLASS(Material) {
+            }
         }
     }
 }

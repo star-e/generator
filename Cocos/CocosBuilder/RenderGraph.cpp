@@ -327,9 +327,9 @@ bool isWrite() const {
 
         STRUCT(Blit) {
             PUBLIC(
-                (ccstd::pmr::string, mShader, _)
+                (IntrusivePtr<cc::Material>, mMaterial, _)
             );
-            CNTR(mShader);
+            CNTR_NO_DEFAULT(mMaterial);
         }
 
         STRUCT(Present) {
