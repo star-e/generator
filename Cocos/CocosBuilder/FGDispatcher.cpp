@@ -82,7 +82,6 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
-        //resourceStatus
         STRUCT(ResourceAccessNode) {
             PUBLIC(
                 (std::vector<AccessStatus>, mAttachemntStatus, _)
@@ -96,12 +95,28 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
                 (RenderGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
                 (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mExternalPasses, _)
+                ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
                 (AccessNode_, ResourceAccessNode, mAccess)
             );
             COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
+            MEMBER_FUNCTIONS(R"(
+~ResourceAccessGraph() {
+    for (auto& node : access) {
+        auto* resNode = node.nextSubpass;
+        node.nextSubpass = nullptr;
+        while(resNode) {
+            auto* oldResNode = resNode;
+            resNode = resNode->nextSubpass;
+            oldResNode->nextSubpass = nullptr;
+            delete oldResNode;
+        }
+    }
+}
+
+)");
         }
 
         GRAPH(EmptyGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
@@ -126,7 +141,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(BarrierNode) {
             PUBLIC(
-                (std::vector<BarrierPair>, mBarriers, _)
+                (BarrierPair, mBlockBarrier, _)
+                (std::vector<BarrierPair>, mSubpassBarriers, _)
             );
         }
 
