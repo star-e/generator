@@ -328,8 +328,10 @@ bool isWrite() const {
         STRUCT(Blit) {
             PUBLIC(
                 (IntrusivePtr<cc::Material>, mMaterial, _)
+                (SceneFlags, mSceneFlags, _)
+                (scene::Camera*, mCamera, nullptr)
             );
-            CNTR_NO_DEFAULT(mMaterial);
+            CNTR_NO_DEFAULT(mMaterial, mSceneFlags, mCamera);
         }
 
         STRUCT(Present) {
