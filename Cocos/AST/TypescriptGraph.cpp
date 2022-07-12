@@ -259,6 +259,20 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     OSS << "}\n";
 
     oss << "\n";
+    OSS << "export function get" << name << "ValueName (e: " << name << "Value): string {\n";
+    {
+        INDENT();
+        OSS << "switch (e) {\n";
+        for (const auto& c : s.mPolymorphic.mConcepts) {
+            auto eName = getTypescriptTagType(extractName(c.mTag), scratch);
+            OSS << "case " << name << "Value." << eName << ": return '" << eName << "';\n";
+        }
+        OSS << "default: return '';\n";
+        OSS << "}\n";
+    }
+    OSS << "}\n";
+
+    oss << "\n";
     OSS << "interface " << name << "ValueType {\n";
     {
         INDENT();
