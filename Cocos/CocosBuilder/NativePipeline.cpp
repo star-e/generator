@@ -58,9 +58,8 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (RenderGraph*, mRenderGraph, nullptr)
                 (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (uint32_t, mQueueID, RenderGraph::null_vertex())
-                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
-            CNTR(mRenderGraph, mQueueID, mLayoutGraph, mLayoutID);
+            CNTR(mRenderGraph, mQueueID, mLayoutGraph);
         }
 
         STRUCT(NativeRasterPassBuilder) {
@@ -80,9 +79,8 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (RenderGraph*, mRenderGraph, nullptr)
                 (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (uint32_t, mQueueID, RenderGraph::null_vertex())
-                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
-            CNTR(mRenderGraph, mQueueID, mLayoutGraph, mLayoutID);
+            CNTR(mRenderGraph, mQueueID, mLayoutGraph);
         }
 
         STRUCT(NativeComputePassBuilder) {

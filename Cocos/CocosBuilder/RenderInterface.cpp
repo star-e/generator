@@ -114,6 +114,7 @@ virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* 
 virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags) = 0;
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags) = 0;
+virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags) = 0;
 )");
         }
@@ -123,11 +124,11 @@ virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneF
             MEMBER_FUNCTIONS(R"(
 virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
-virtual RasterQueueBuilder *addQueue(QueueHint hint, const ccstd::string& layoutName, const ccstd::string& name) = 0;
-virtual RasterQueueBuilder *addQueue(QueueHint hint, const ccstd::string& layoutName) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint, const ccstd::string& name) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint) = 0;
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags) = 0;
+virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags) = 0;
 )");
         }
@@ -135,8 +136,7 @@ virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneF
         INTERFACE(ComputeQueueBuilder) {
             INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
-virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const ccstd::string& layoutName, const ccstd::string& name) = 0;
-virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const ccstd::string& layoutName) = 0;
+virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const ccstd::string& name) = 0;
 virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
 )");
         }
@@ -146,12 +146,10 @@ virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX
             MEMBER_FUNCTIONS(R"(
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName, const ccstd::string& name) = 0;
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName) = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& name) = 0;
 virtual ComputeQueueBuilder *addQueue() = 0;
 
-virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const ccstd::string& layoutName, const ccstd::string& name) = 0;
-virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const ccstd::string& layoutName) = 0;
+virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, const ccstd::string& name) = 0;
 virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
 )");
         }
