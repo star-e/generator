@@ -1640,19 +1640,21 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     }
                     OSS << "}\n";
 
-                    if (false && g.isTypescriptValueType(componentID)) {
-                        OSS << "set" << convertTag(c.mName) << " (v: " << vertexDescType
-                            << ", value: " << componentType << ") {\n";
-                        {
-                            INDENT();
-                            Expects(c.isValid());
-                            if (s.isVector()) {
-                                OSS << "this." << member << "[v] = value;\n";
-                            } else {
-                                OSS << "v." << member << " = value;\n";
+                    if (g.isTypescriptValueType(componentID)) {
+                        if (!(s.mNamedConcept.mComponent && s.mNamedConcept.mComponentName == c.mName)) {
+                            OSS << "set" << convertTag(c.mName) << " (v: " << vertexDescType
+                                << ", value: " << componentType << ") {\n";
+                            {
+                                INDENT();
+                                Expects(c.isValid());
+                                if (s.isVector()) {
+                                    OSS << "this." << member << "[v] = value;\n";
+                                } else {
+                                    OSS << "v." << member << " = value;\n";
+                                }
                             }
+                            OSS << "}\n";
                         }
-                        OSS << "}\n";
                     }
                 }
             }
