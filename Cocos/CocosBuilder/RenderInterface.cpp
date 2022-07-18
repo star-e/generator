@@ -57,17 +57,18 @@ virtual bool activate(gfx::Swapchain * swapchain) = 0;
 virtual bool destroy() noexcept = 0;
 virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 
-[[skip]] virtual const MacroRecord           &getMacros() const = 0;
-[[getter]] virtual pipeline::GlobalDSManager   *getGlobalDSManager() const = 0;
-[[getter]] virtual gfx::DescriptorSetLayout    *getDescriptorSetLayout() const = 0;
+[[getter]] virtual gfx::Device* getDevice() const = 0;
+[[skip]] virtual const MacroRecord &getMacros() const = 0;
+[[getter]] virtual pipeline::GlobalDSManager *getGlobalDSManager() const = 0;
+[[getter]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout() const = 0;
 [[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
-[[getter]] virtual const ccstd::string         &getConstantMacros() const = 0;
-[[nullable]] [[getter]] virtual scene::Model                *getProfiler() const = 0;
-[[setter]] virtual void                         setProfiler([[nullable]] scene::Model *profiler) = 0;
+[[getter]] virtual const ccstd::string &getConstantMacros() const = 0;
+[[nullable]] [[getter]] virtual scene::Model *getProfiler() const = 0;
+[[setter]] virtual void setProfiler([[nullable]] scene::Model *profiler) = 0;
 [[nullable]] [[getter]] virtual pipeline::GeometryRenderer  *getGeometryRenderer() const = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
-[[setter]] virtual void  setShadingScale(float scale) = 0;
+[[setter]] virtual void setShadingScale(float scale) = 0;
 
 virtual const ccstd::string& getMacroString(const ccstd::string& name) const = 0;
 virtual int32_t getMacroInt(const ccstd::string& name) const = 0;
@@ -109,8 +110,8 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
         INTERFACE(RasterQueueBuilder) {
             INHERITS(Setter);
             MEMBER_FUNCTIONS(R"(
-virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* light, SceneFlags sceneFlags, const ccstd::string& name) = 0;
-virtual void addSceneOfCamera(scene::Camera* camera, [[nullable]] scene::Light* light, SceneFlags sceneFlags) = 0;
+virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags, const ccstd::string& name) = 0;
+virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags) = 0;
 virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags) = 0;
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags) = 0;
@@ -217,8 +218,6 @@ virtual ccstd::string print() const = 0;
         INTERFACE(Pipeline) {
             INHERITS(PipelineRuntime);
             MEMBER_FUNCTIONS(R"(
-[[getter]] virtual gfx::Device* getDevice() const = 0;
-
 virtual bool containsResource(const ccstd::string& name) const = 0;
 virtual uint32_t addRenderTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
@@ -237,6 +236,12 @@ virtual void presentAll() = 0;
 virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[getter]] virtual LayoutGraphBuilder *getLayoutGraphBuilder() = 0;
 [[nullable]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+)");
+        }
+
+        INTERFACE(PipelineBuilder) {
+            MEMBER_FUNCTIONS(R"(
+virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipeline) = 0;
 )");
         }
 

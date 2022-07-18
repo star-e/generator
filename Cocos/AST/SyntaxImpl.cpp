@@ -1660,7 +1660,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
             }
         }
     };
-    if (m.mPointer) {
+    if (m.mPointer || g.isTypescriptPointer(vertID)) {
         outputNull();
         return oss.str();
     }

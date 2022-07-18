@@ -32,7 +32,7 @@ namespace Cocos::Meta {
 
 void buildCocosCommon(ModuleBuilder& builder, Features features) {
     NAMESPACE(cc) {
-        CONTAINER(IntrusivePtr);
+        CONTAINER(IntrusivePtr, .mFlags = JSB);
         PROJECT_TS(IntrusivePtr, _);
     }
     MODULE(PassUtils,
@@ -52,7 +52,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             NAMESPACE(scene) {
                 IMPORT_CLASS(Model);
-                IMPORT_CLASS(Light);
+                IMPORT_CLASS(Light, .mFlags = JSB);
             }
         }
     }

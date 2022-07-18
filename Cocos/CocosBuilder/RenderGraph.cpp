@@ -37,6 +37,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderGraph",
         .mJsbHeaders = R"(#include "cocos/bindings/auto/jsb_gfx_auto.h"
+#include "cocos/bindings/auto/jsb_scene_auto.h"
 )",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "render-graph",
@@ -304,15 +305,23 @@ bool isWrite() const {
             CNTR(mHint);
         }
 
+        STRUCT(LightInfo, .mFlags = JSB) {
+            PUBLIC(
+                (IntrusivePtr<scene::Light>, mLight, _)
+                (uint32_t, mLevel, 0)
+            );
+            CNTR(mLight, mLevel);
+        }
+
         STRUCT(SceneData) {
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
                 (scene::Camera*, mCamera, nullptr)
-                (scene::Light*, mLight, nullptr)
+                (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
                 (ccstd::pmr::vector<ccstd::pmr::string>, mScenes, _)
             );
-            CNTR(mName, mFlags);
+            CNTR(mName, mFlags, mLight);
         }
 
         STRUCT(Dispatch) {
