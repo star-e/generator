@@ -117,6 +117,8 @@ virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags, co
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags) = 0;
+virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color) = 0;
+virtual void setViewport(const gfx::Viewport &viewport) = 0;
 )");
         }
 
@@ -131,6 +133,7 @@ virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags, co
 virtual void addFullscreenQuad(cc::Material *material, SceneFlags sceneFlags) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags, const ccstd::string& name) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, SceneFlags sceneFlags) = 0;
+virtual void setViewport(const gfx::Viewport &viewport) = 0;
 )");
         }
 

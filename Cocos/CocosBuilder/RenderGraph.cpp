@@ -47,7 +47,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
 #include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
-#include "cocos/math/Vec4.h"
+#include "cocos/math/Geometry.h"
 )",
     ) {
         NAMESPACE_BEG(cc);
@@ -236,6 +236,7 @@ bool isWrite() const {
                 (SubpassGraph, mSubpassGraph, _)
                 (uint32_t, mWidth, 0)
                 (uint32_t, mHeight, 0)
+                (gfx::Viewport, mViewport, _)
             );
         }
 
@@ -296,24 +297,15 @@ bool isWrite() const {
             );
         }
 
-        TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Present_, CommandList_);
+        TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Present_, Clear_, Viewport_);
 
-        ENUM_CLASS(CommandType) {
-            ENUMS(VIEWPORT, CLEAR);
-        }
-
-        STRUCT(Command) {
+        STRUCT(ClearView, .mFlags = JSB | PMR_DEFAULT) {
             PUBLIC(
-                (CommandType, mType, _)
-                (Vec4, mValue, _)
+                (ccstd::pmr::string, mSlotName, _)
+                (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
+                (gfx::Color, mClearColor, _)
             );
-            CNTR(mType, mValue);
-        }
-
-        STRUCT(CommandList) {
-            PUBLIC(
-                (ccstd::pmr::vector<Command>, mCommands, _)
-            );
+            CNTR(mSlotName, mClearFlags, mClearColor);
         }
 
         STRUCT(RenderQueue) {
@@ -407,7 +399,8 @@ bool isWrite() const {
                 (Scene_, SceneData, mScenes)
                 (Blit_, Blit, mBlits)
                 (Dispatch_, Dispatch, mDispatches)
-                (CommandList_, CommandList, mCommandLists)
+                (Clear_, ccstd::pmr::vector<ClearView>, mClearViews)
+                (Viewport_, gfx::Viewport, mViewports)
             );
             PUBLIC(
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mIndex, _)
