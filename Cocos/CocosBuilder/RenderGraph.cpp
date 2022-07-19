@@ -47,6 +47,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
 #include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
+#include "cocos/math/Vec4.h"
 )",
     ) {
         NAMESPACE_BEG(cc);
@@ -295,7 +296,25 @@ bool isWrite() const {
             );
         }
 
-        TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Present_);
+        TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Present_, CommandList_);
+
+        ENUM_CLASS(CommandType) {
+            ENUMS(VIEWPORT, CLEAR);
+        }
+
+        STRUCT(Command) {
+            PUBLIC(
+                (CommandType, mType, _)
+                (Vec4, mValue, _)
+            );
+            CNTR(mType, mValue);
+        }
+
+        STRUCT(CommandList) {
+            PUBLIC(
+                (ccstd::pmr::vector<Command>, mCommands, _)
+            );
+        }
 
         STRUCT(RenderQueue) {
             PUBLIC(
@@ -388,6 +407,7 @@ bool isWrite() const {
                 (Scene_, SceneData, mScenes)
                 (Blit_, Blit, mBlits)
                 (Dispatch_, Dispatch, mDispatches)
+                (CommandList_, CommandList, mCommandLists)
             );
             PUBLIC(
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mIndex, _)
