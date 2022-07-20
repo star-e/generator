@@ -11,7 +11,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
         .mToJsFilename = "render.ini",
         .mToJsPrefix = "render",
         .mToJsNamespace = "render",
-        .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h",
+        .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h cocos/renderer/pipeline/GeometryRenderer.h cocos/renderer/pipeline/GlobalDescriptorSetManager.h",
         .mToJsConfigs = R"(
 method_module_configs = PipelineRuntime::[getGeometryRenderer/CC_USE_GEOMETRY_RENDERER]
 )",

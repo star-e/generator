@@ -254,7 +254,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
                 IMPORT_CLASS(TextureCopy);
                 IMPORT_CLASS(TextureBlit);
                 IMPORT_CLASS(BufferTextureCopy);
-                IMPORT_CLASS(Viewport);
+                VALUE(Viewport);
                 VALUE(Color);
                 IMPORT_CLASS(BindingMappingInfo);
                 IMPORT_CLASS(SwapchainInfo);
