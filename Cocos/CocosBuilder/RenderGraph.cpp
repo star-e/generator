@@ -164,55 +164,6 @@ bool hasSideEffects() const noexcept {
         //        (ccstd::pmr::string, mValue, "")
         //    );
         //}
-
-        ENUM_CLASS(AttachmentType) {
-            ENUMS(RENDER_TARGET, DEPTH_STENCIL);
-        }
-        ENUM_CLASS(AccessType) {
-            ENUMS(READ, READ_WRITE, WRITE);
-        }
-
-        STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT) {
-            PUBLIC(
-                (ccstd::pmr::string, mSlotName, _)
-                (AccessType, mAccessType, AccessType::WRITE)
-                (AttachmentType, mAttachmentType, _)
-                (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
-                (gfx::StoreOp, mStoreOp, gfx::StoreOp::STORE)
-                (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
-                (gfx::Color, mClearColor, _)
-            );
-            TS_INIT(mAccessType, AccessType.WRITE);
-            TS_INIT(mLoadOp, LoadOp.LOAD);
-            TS_INIT(mStoreOp, StoreOp.STORE);
-            TS_INIT(mClearFlags, ClearFlagBit.ALL);
-            CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor);
-        }
-
-        ENUM_CLASS(ClearValueType) {
-            ENUMS(FLOAT_TYPE, INT_TYPE);
-        }
-
-        STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT) {
-            PUBLIC(
-                (ccstd::pmr::string, mName, _)
-                (AccessType, mAccessType, AccessType::READ)
-                (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
-                (gfx::Color, mClearColor, _)
-                (ClearValueType, mClearValueType, _)
-            );
-            MEMBER_FUNCTIONS(R"(
-bool isRead() const {
-    return accessType != AccessType::WRITE;
-}
-bool isWrite() const {
-    return accessType != AccessType::READ;
-}
-)");
-            TS_INIT(mAccessType, AccessType.READ);
-            TS_INIT(mClearFlags, ClearFlagBit.NONE);
-        }
-
         STRUCT(RasterSubpass) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
@@ -314,14 +265,6 @@ bool isWrite() const {
             );
             TS_INIT(mHint, QueueHint.RENDER_OPAQUE);
             CNTR(mHint);
-        }
-
-        STRUCT(LightInfo, .mFlags = JSB) {
-            PUBLIC(
-                (IntrusivePtr<scene::Light>, mLight, _)
-                (uint32_t, mLevel, 0)
-            );
-            CNTR(mLight, mLevel);
         }
 
         STRUCT(SceneData) {
