@@ -38,40 +38,39 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "FGDispatcher",
         .mJsbHeaders = R"(#include "cocos/bindings/auto/jsb_gfx_auto.h")",
         .mRequires = { "RenderGraph", "LayoutGraph", "Gfx" },
-        .mHeader = R"(#include "gfx-base/GFXDef-common.h")",
+        .mHeader = R"(#include "gfx-base/GFXDef-common.h"
+#include <variant>)",
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        ENUM_CLASS(PassType) {
-            ENUMS(    
-                RASTER,
-                COMPUTE,
-                COPY,
-                MOVE,
-                RAYTRACE,
-                PRESENT);
-        }
-
         STRUCT(NullTag) {
         };
 
-        STRUCT(Range) {
+        STRUCT(BufferRange) {
             PUBLIC(
-                (uint32_t, mMipLevels, 0xFFFFFFFF)
-                (uint32_t, mNumSlices, 0xFFFFFFFF)
-                (uint32_t, mMostDetailedMip, 0xFFFFFFFF)
-                (uint32_t, mFirstSlice, 0xFFFFFFFF)
-                (uint32_t, mPlaneSlice, 0xFFFFFFFF)
+                (uint32_t, mOffset, 0)
+                (uint32_t, mSize, 0)
             );
         };
+
+        STRUCT(TextureRange) {
+            PUBLIC(
+                (uint32_t, mFirstSlice, 0)
+                (uint32_t, mNumSlices, 1)
+                (uint32_t, mMipLevel, 0)
+                (uint32_t, mLevelCount, 1)
+            );
+        };
+        
+        VARIANT(Range, (BufferRange, TextureRange), LESS)
 
         STRUCT(AccessStatus) {
             PUBLIC(
                 (uint32_t, mVertID, 0xFFFFFFFF)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
-                (PassType, mPassType, PassType::RASTER)
+                (gfx::PassType, mPassType, gfx::PassType::RASTER)
                 (Range, mRange, _)
             );
         }
@@ -83,11 +82,10 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
-        //resourceStatus
         STRUCT(ResourceAccessNode) {
             PUBLIC(
                 (std::vector<AccessStatus>, mAttachemntStatus, _)
-                (uint32_t, mCircuitFlag, _)
+                (ResourceAccessNode*, mNextSubpass, nullptr)
             );
         }
 
@@ -97,12 +95,28 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
                 (RenderGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
                 (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mExternalPasses, _)
+                ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
                 (AccessNode_, ResourceAccessNode, mAccess)
             );
             COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
+            MEMBER_FUNCTIONS(R"(
+~ResourceAccessGraph() {
+    for (auto& node : access) {
+        auto* resNode = node.nextSubpass;
+        node.nextSubpass = nullptr;
+        while(resNode) {
+            auto* oldResNode = resNode;
+            resNode = resNode->nextSubpass;
+            oldResNode->nextSubpass = nullptr;
+            delete oldResNode;
+        }
+    }
+}
+
+)");
         }
 
         GRAPH(EmptyGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
@@ -112,20 +126,29 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(Barrier) {
             PUBLIC(
                 (RenderGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
+                (gfx::BarrierType, mType, gfx::BarrierType::FULL)
                 (AccessStatus, mBeginStatus, _)
                 (AccessStatus, mEndStatus, _)
             );
         }
 
-        STRUCT(BarrierNode) {
+        STRUCT(BarrierPair) {
             PUBLIC(
                 (std::vector<Barrier>, mFrontBarriers, _)
                 (std::vector<Barrier>, mRearBarriers, _)
             );
         }
 
+        STRUCT(BarrierNode) {
+            PUBLIC(
+                (BarrierPair, mBlockBarrier, _)
+                (std::vector<BarrierPair>, mSubpassBarriers, _)
+            );
+        }
+
         STRUCT(FrameGraphDispatcher, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
+                (ResourceAccessGraph, mResourceAccessGraph, _)
                 (ResourceGraph&, mResourceGraph, _)
                 (RenderGraph&, mGraph, _)
                 (LayoutGraphData&, mLayoutGraph, _)
@@ -146,6 +169,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
             
             MEMBER_FUNCTIONS(R"(
+using BarrierMap = FlatMap<ResourceAccessGraph::vertex_descriptor, BarrierNode>;
+
 void enablePassReorder(bool enable);
 
 // how much paralell-execution weights during pass reorder,
@@ -156,6 +181,10 @@ void setParalellWeight(float paralellExecWeight);
 void enableMemoryAliasing(bool enable);
 
 void run();
+
+inline const BarrierMap& getBarriers() const { return barrierMap; }
+
+BarrierMap barrierMap;
 )");
         }
 

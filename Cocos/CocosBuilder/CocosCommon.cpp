@@ -241,6 +241,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
                 IMPORT_ENUM(QueueType);
                 IMPORT_ENUM(QueryType);
                 IMPORT_ENUM(CommandBufferType);
+                IMPORT_ENUM(PassType);
+                IMPORT_ENUM(BarrierType);
 
                 IMPORT_FLAGS(ClearFlagBit);
 
