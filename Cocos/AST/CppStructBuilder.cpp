@@ -1048,24 +1048,22 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
             default:
                 break;
             }
-
+            
             auto needDtor = g.needDtor(vertID, bDLL);
             switch (needDtor) {
             case ImplEnum::Inline:
             case ImplEnum::Separated:
                 if (traits.mInterface) {
-                    if (sFormat)
-                        oss << "\n";
                     if (bDerived) {
-                        OSS << api << "~" << name << "() noexcept override = 0;\n";
+                        // do nothing
                     } else {
-                        OSS << api << "virtual ~" << name << "() noexcept = 0";
+                        if (sFormat)
+                            oss << "\n";
                         if (bDLL) {
                             // defaulted dtor is defined in cpp
-                            oss << ";\n";
+                            OSS << api << "virtual ~" << name << "() noexcept = 0;\n";
                         } else {
-                            // defaulted dtor is defined out of class
-                            oss << ";\n";
+                            OSS << "virtual ~" << name << "() noexcept = default;\n";
                         }
                     }
                 } else {
