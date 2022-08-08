@@ -313,7 +313,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(RenderData, .mFlags = NO_COPY) {
             PUBLIC(
-                ((PmrUnorderedMap<uint32_t, ccstd::pmr::vector<uint8_t>>), mConstants, _)
+                ((PmrUnorderedMap<uint32_t, ccstd::pmr::vector<char>>), mConstants, _)
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Buffer>>), mBuffers, _)
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Texture>>), mTextures, _)
                 ((PmrUnorderedMap<uint32_t, ObserverPtr<gfx::Sampler>>), mSamplers, _)
