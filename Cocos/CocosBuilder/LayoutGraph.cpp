@@ -44,6 +44,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 )",
+        .mTypescriptInclude = R"(import { ccclass } from '../../data/decorators';
+)"
     ) {
         NAMESPACE_BEG(cc);
 
@@ -94,7 +96,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(DescriptorBlockFlattened, .mFlags = JSB) {
+        STRUCT(DescriptorBlockFlattened, .mFlags = JSB | DECORATOR) {
             PUBLIC(
                 (ccstd::vector<ccstd::string>, mDescriptorNames, _)
                 (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
@@ -241,6 +243,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         STRUCT(DescriptorSetData, .mFlags = NO_COPY) {
             PUBLIC(
                 (DescriptorSetLayoutData, mDescriptorSetLayoutData, _)
+                (gfx::DescriptorSetLayoutInfo, mDescriptorSetLayoutInfo, _)
                 (IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
                 (IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
             );
@@ -277,7 +280,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             );
         }
 
-        PMR_GRAPH(LayoutGraphData, _, _, .mFlags = NO_COPY) {
+        PMR_GRAPH(LayoutGraphData, _, _, .mFlags = NO_COPY | DECORATOR) {
             NAMED_GRAPH(Name_);
             ALIAS_REFERENCE_GRAPH();
             ADDRESSABLE_GRAPH(mPathIndex);

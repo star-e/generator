@@ -30,7 +30,7 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-static const bool sFormat = true;
+static const bool sFormat = false;
 
 CppStructBuilder::CppStructBuilder(const allocator_type& alloc)
     : mCurrentNamespace(alloc)

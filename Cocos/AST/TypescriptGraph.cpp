@@ -699,6 +699,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
     oss << "\n";
     OSS << "//-----------------------------------------------------------------\n";
     OSS << "// " << name << " Implementation\n";
+    const auto& traits = get(g.traits, g, vertID);
+    if (traits.mFlags & DECORATOR) {
+        OSS << "@ccclass('cc." << name << "')\n";
+    }
     OSS << "export class " << name;
     
     const auto& constraints = get(g.constraints, g, vertID);

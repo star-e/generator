@@ -54,6 +54,7 @@ enum GenerationFlags : uint64_t {
     PMR_DEFAULT = 1 << 17,
     IMPL_DETAIL = 1 << 18,
     JSB = 1 << 19,
+    DECORATOR = 1 << 20,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {

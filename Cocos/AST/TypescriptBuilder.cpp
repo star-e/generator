@@ -97,6 +97,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         [&](const Struct& s) {
             if (currScope.mCount++)
                 oss << "\n";
+            if (traits.mFlags & DECORATOR) {
+                OSS << "@ccclass('cc." << name << "')\n";
+            }
             OSS << "export";
             if (traits.mInterface) {
                 oss << " abstract";
