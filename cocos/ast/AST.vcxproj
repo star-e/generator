@@ -263,6 +263,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="JsbBuilder.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="SwigConfig.h" />
     <ClInclude Include="SyntaxFwd.h" />
     <ClInclude Include="SyntaxGraphs.h" />
     <ClInclude Include="SyntaxNames.h" />
@@ -292,6 +293,7 @@
     <ClCompile Include="CppGraphBuilder.cpp" />
     <ClCompile Include="CppGraphFunctions.cpp" />
     <ClCompile Include="CppStructBuilder.cpp" />
+    <ClCompile Include="SwigConfig.cpp" />
     <ClCompile Include="SyntaxImpl.cpp" />
     <ClCompile Include="SyntaxReflection.cpp" />
     <ClCompile Include="SyntaxTypes.cpp" />

@@ -293,9 +293,18 @@ std::string_view getTemplateName(std::string_view instanceName) {
     return name;
 }
 
-void extractTemplate(std::string_view instanceName,
+std::pmr::string extractTemplate(std::string_view instanceName,
     std::pmr::string& name,
     std::pmr::vector<std::pmr::string>& parameters) {
+    auto scratch = name.get_allocator().resource();
+    std::pmr::string suffix(scratch);
+    if (instanceName.back() != '>') {
+        auto pos = instanceName.rfind('>');
+        Expects(pos != instanceName.npos);
+        suffix = instanceName.substr(pos + 1);
+        instanceName = instanceName.substr(0, pos + 1);
+    }
+
     name.clear();
     parameters.clear();
 
@@ -320,7 +329,7 @@ void extractTemplate(std::string_view instanceName,
 
     size_t paramBeg = name.size() + 1;
     size_t paramEnd = paramBeg;
-    for (auto i = paramBeg; i + 1 != instanceName.size(); ++i, ++paramEnd) {
+    for (auto i = paramBeg; i + 1 < instanceName.size(); ++i, ++paramEnd) {
         if (instanceName[i] == ',') {
             if (bInstance) {
                 // comma in instance, ignore
@@ -343,18 +352,30 @@ void extractTemplate(std::string_view instanceName,
             }
 
             if (bInstance && count == 0) {
-                auto range = instanceName.substr(paramBeg, paramEnd + 1 - paramBeg);
-                Expects(isInstance(range));
-
-                addParameter(range);
                 bInstance = false;
+                if (instanceName[i + 1] == '/') {
+                    auto pos = instanceName.find_first_of(",<>", i + 1);
+                    Expects(instanceName[pos] != '<');
+                    i = pos;
+                    paramEnd = pos;
+                    auto range = instanceName.substr(paramBeg, paramEnd - paramBeg);
+                    Expects(isInstance(range));
+                    addParameter(range);
+                } else {
+                    auto range = instanceName.substr(paramBeg, paramEnd + 1 - paramBeg);
+                    Expects(isInstance(range));
+                    addParameter(range);
+                }
                 paramBeg = paramEnd + 1;
             }
         }
     }
-    addParameter(instanceName.substr(paramBeg, paramEnd - paramBeg));
+
+    auto lastParam = instanceName.substr(paramBeg, paramEnd - paramBeg);
+    addParameter(lastParam);
 
     Ensures(!name.empty());
+    return suffix;
 }
 
 std::string_view extractName(std::string_view typePath) {
@@ -365,6 +386,33 @@ std::string_view extractName(std::string_view typePath) {
     Expects(pos != typePath.npos);
     Expects(pos != typePath.size() - 1);
     return typePath.substr(pos + 1);
+}
+
+TypeInfo extractType(std::string_view typePath) {
+    Expects(!typePath.empty());
+
+    TypeInfo result;
+    if (typePath.starts_with("const ")) {
+        result.mConst = true;
+        typePath = typePath.substr(6);
+    }
+    if (typePath.back() == '*') {
+        result.mPointer = true;
+        typePath = typePath.substr(0, typePath.size() - 1);
+    }
+    result.mShortName = typePath;
+
+    return result;
+}
+
+TypeInfo getTypeInfo(std::string_view scope, std::string_view typePath) {
+    Expects(!typePath.empty());
+
+    TypeInfo result = extractType(typePath);
+
+    result.mShortName = getDependentPath(scope, result.mShortName);
+
+    return result;
 }
 
 ParameterTraits getParameterTraits(std::string_view typePath) {

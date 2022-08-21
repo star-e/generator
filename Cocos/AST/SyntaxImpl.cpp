@@ -88,6 +88,15 @@ bool SyntaxGraph::isInstantiation(vertex_descriptor vertID) const noexcept {
     return false;
 }
 
+bool SyntaxGraph::isInstanceDependent(vertex_descriptor vertID) const noexcept {
+    for (const auto& g = *this; vertID != null_vertex(); vertID = parent(vertID, g)) {
+        if (holds_tag<Instance_>(vertID, g)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool SyntaxGraph::isTag(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     if (holds_tag<Tag_>(vertID, g))
@@ -942,17 +951,20 @@ std::pmr::string SyntaxGraph::getTypePath(
 
 std::pmr::string SyntaxGraph::getDependentName(std::string_view ns, vertex_descriptor vertID,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
-    if (!isInstantiation(vertID)) {
+    if (!isInstanceDependent(vertID)) {
         auto typePath = getTypePath(vertID, mr);
         auto dependentName = getDependentPath(ns, typePath);
         typePath.erase(0, typePath.size() - dependentName.size());
+        if (!typePath.empty() && typePath.front() == '/') {
+            typePath = typePath.substr(1);
+        }
         return typePath;
     }
     const auto& g = *this;
     const auto typePath = getTypePath(vertID, scratch);
     std::pmr::string name(scratch);
     std::pmr::vector<std::pmr::string> parameters(scratch);
-    extractTemplate(typePath, name, parameters);
+    auto suffix = extractTemplate(typePath, name, parameters);
 
     pmr_ostringstream oss(std::ios_base::out, scratch);
 
@@ -961,12 +973,23 @@ std::pmr::string SyntaxGraph::getDependentName(std::string_view ns, vertex_descr
     for (int count = 0; const auto& param : parameters) {
         if (count++)
             oss << ", ";
-        auto paramID = locate(param, g);
+        auto info = extractType(param);
+        auto paramID = locate(info.mShortName, g);
+        if (info.mConst) {
+            oss << "const ";
+        }
         oss << getDependentName(ns, paramID, scratch, scratch);
+        if (info.mPointer) {
+            oss << "*";
+        }
     }
     oss << ">";
-
-    return oss.str(std::pmr::polymorphic_allocator<char>(mr));
+    oss << suffix;
+    auto result = oss.str(std::pmr::polymorphic_allocator<char>(mr));
+    if (!result.empty() && result.front() == '/') {
+        result = result.substr(1);
+    }
+    return result;
 }
 
 std::pmr::string SyntaxGraph::getDependentCppName(std::string_view ns, vertex_descriptor vertID,

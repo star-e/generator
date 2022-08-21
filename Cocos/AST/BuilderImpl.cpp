@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include "JsbBuilder.h"
 #include "ToJsBuilder.h"
 #include "CppMethod.h"
+#include "SwigConfig.h"
 
 namespace Cocos::Meta {
 
@@ -1426,7 +1427,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         }
     }
 
-    if (features & Features::ToJs) {
+    if (false && (features & Features::ToJs)) {
         // we must manually update
         // 1. CMakeLists
         // 2. tools/bindings-generator/conversions.yaml
@@ -1440,6 +1441,20 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::pmr::string space(scratch);
         
         copyString(oss, generateToJsIni(*this, moduleID));
+
+        updateFile(filename, oss.str());
+    }
+
+    if (features & Features::ToJs) {
+        Expects(!m.mToJsFilename.empty());
+        Expects(!m.mToJsPrefix.empty());
+        Expects(!m.mToJsNamespace.empty());
+        std::filesystem::path filename = cppFolder / "tools/swig-config" / m.mToJsFilename;
+
+        std::ostringstream oss;
+        std::pmr::string space(scratch);
+
+        copyString(oss, generateSwigConfig(*this, moduleID));
 
         updateFile(filename, oss.str());
     }

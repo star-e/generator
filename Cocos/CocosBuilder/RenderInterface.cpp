@@ -8,12 +8,21 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
     MODULE(RenderInterface,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderInterface",
-        .mToJsFilename = "render.ini",
+        .mToJsFilename = "renderer.i",
         .mToJsPrefix = "render",
         .mToJsNamespace = "render",
-        .mToJsCppHeaders = " cocos/bindings/auto/jsb_gfx_auto.h cocos/bindings/auto/jsb_scene_auto.h cocos/renderer/pipeline/GeometryRenderer.h cocos/renderer/pipeline/GlobalDescriptorSetManager.h",
-        .mToJsConfigs = R"(
-method_module_configs = PipelineRuntime::[getGeometryRenderer/CC_USE_GEOMETRY_RENDERER]
+        .mToJsCppHeaders = R"(#include "bindings/auto/jsb_render_auto.h"
+#include "bindings/auto/jsb_scene_auto.h"
+#include "bindings/auto/jsb_gfx_auto.h"
+#include "bindings/auto/jsb_assets_auto.h"
+#include "renderer/pipeline/GeometryRenderer.h"
+#include "renderer/pipeline/GlobalDescriptorSetManager.h"
+)",
+        .mToJsUsingNamespace = R"(
+using namespace cc;
+using namespace cc::render;
+)",
+        .mToJsConfigs = R"(%module_macro(CC_USE_GEOMETRY_RENDERER) cc::render::PipelineRuntime::geometryRenderer;
 )",
         .mTypescriptFolder = "cocos/core/pipeline/custom",
         .mTypescriptFilePrefix = "pipeline",

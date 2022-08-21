@@ -1089,6 +1089,7 @@ struct SyntaxGraph {
     bool isNamespace(std::string_view typePath) const noexcept;
     bool isValueType(vertex_descriptor vertID) const noexcept;
     bool isInstantiation(vertex_descriptor vertID) const noexcept;
+    bool isInstanceDependent(vertex_descriptor vertID) const noexcept;
     bool isTag(vertex_descriptor vertID) const noexcept;
     bool isPmr(vertex_descriptor vertID) const noexcept;
     bool isNoexcept(vertex_descriptor vertID) const noexcept;
@@ -1334,6 +1335,7 @@ struct ModuleInfo {
     std::string mToJsNamespace;
     std::string mToJsHppHeaders;
     std::string mToJsCppHeaders;
+    std::string mToJsUsingNamespace;
     std::string mToJsConfigs;
     std::string mTypescriptFolder;
     std::string mTypescriptFilePrefix;

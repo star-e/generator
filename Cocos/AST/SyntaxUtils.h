@@ -49,11 +49,21 @@ std::string_view getDependentPath(std::string_view scope, std::string_view typeP
 
 std::string_view getTemplateName(std::string_view instanceName);
 
-void extractTemplate(std::string_view instanceName,
+std::pmr::string extractTemplate(std::string_view instanceName,
     std::pmr::string& name,
     std::pmr::vector<std::pmr::string>& parameters);
 
 std::string_view extractName(std::string_view typePath);
+
+struct TypeInfo {
+    std::string_view mShortName;
+    bool mConst = false;
+    bool mPointer = false;
+};
+
+TypeInfo extractType(std::string_view anyType);
+
+TypeInfo getTypeInfo(std::string_view scope, std::string_view typePath);
 
 struct ParameterTraits {
     bool mConst = false;
