@@ -95,6 +95,9 @@ virtual void onGlobalPipelineStateChanged() = 0;
 [[skip]] virtual void setValue(const ccstd::string& name, bool value) = 0;
 
 [[skip]] virtual bool isOcclusionQueryEnabled() const = 0;
+
+[[skip]] virtual void resetRenderQueue(bool reset) = 0;
+[[skip]] virtual bool isRenderQueueReset() const = 0;
 )");
             TS_FUNCTIONS(R"(
 public abstract get macros(): MacroRecord;
