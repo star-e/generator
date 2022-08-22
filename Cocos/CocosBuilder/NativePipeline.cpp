@@ -121,6 +121,20 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             CNTR(mCamera, mScene);
         }
 
+        STRUCT(NativeRenderViewHandle) {
+            PUBLIC(
+                (AccessType, mAccessType, _)
+                (framegraph::TextureHandle, mHandle, _)
+            );
+            CNTR(mAccessType, mHandle);
+        }
+
+        STRUCT(NativePassData) {
+            PUBLIC(
+                (ccstd::pmr::vector<NativeRenderViewHandle>, mOutputViews, _)
+            );
+        }
+
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
             PUBLIC(
