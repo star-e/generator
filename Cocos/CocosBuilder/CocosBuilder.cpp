@@ -96,6 +96,7 @@ int main() {
         files.emplace("cocos/renderer/pipeline/custom/RenderInterfaceImpl.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeLayoutGraphImpl.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativePipelineImpl.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraphSetup.cpp");
 
         // common types, shared by different modules
