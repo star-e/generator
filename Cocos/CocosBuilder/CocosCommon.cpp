@@ -182,7 +182,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     MODULE(Gfx,
         .mFolder = "cocos/renderer/gfx-base",
         .mFilePrefix = "GFXDef-common.h",
-        .mTypescriptFolder = "cocos/core",
+        .mTypescriptFolder = "cocos",
         .mTypescriptFilePrefix = "gfx",
     ) {
         ADD_FEATURES(ToJs);
