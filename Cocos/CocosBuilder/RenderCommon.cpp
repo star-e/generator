@@ -139,6 +139,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
                 (gfx::Color, mClearColor, _)
             );
+            builder.setMemberFlags(s.mVertexDescriptor, "mClearColor", NOT_ELEMENT);
             TS_INIT(mAccessType, AccessType.WRITE);
             TS_INIT(mLoadOp, LoadOp.LOAD);
             TS_INIT(mStoreOp, StoreOp.STORE);
@@ -158,6 +159,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
                 (gfx::Color, mClearColor, _)
                 (ClearValueType, mClearValueType, _)
             );
+            builder.setMemberFlags(s.mVertexDescriptor, "mClearColor", NOT_ELEMENT);
             MEMBER_FUNCTIONS(R"(
 bool isRead() const {
     return accessType != AccessType::WRITE;

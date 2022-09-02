@@ -178,8 +178,8 @@ bool hasSideEffects() const noexcept {
                 (Subpass_, RasterSubpass, mSubpasses)
             );
         }
-                
-        STRUCT(RasterPass) {
+
+        STRUCT(RasterPass, .mFlags = EQUAL | HASH_COMBINE) {
             PUBLIC(
                 (bool, mIsValid, false)
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)

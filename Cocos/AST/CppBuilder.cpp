@@ -157,7 +157,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
 
     bool usesHashCombine = g.moduleUsesHashCombine(moduleName0);
     if (usesHashCombine) {
-        oss << "#include <functional>\n";
+        oss << "#include \"cocos/base/std/hash/hash.h\"\n";
     }
 
     for (const auto& vertID : make_range(vertices(g))) {
@@ -381,7 +381,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
 
     if (usesHashCombine) {
         oss << "\n";
-        OSS << "namespace std {\n";
+        OSS << "namespace ccstd {\n";
 
         for (const auto& vertID : make_range(vertices(g))) {
             const auto& moduleName = get(g.modulePaths, g, vertID);
@@ -397,13 +397,13 @@ std::pmr::string generateFwd_h(std::string_view projectName,
                 OSS << "struct hash<" << name << "> {\n";
                 {
                     INDENT();
-                    OSS << "size_t operator()(const " << name << "& v) const noexcept;\n";
+                    OSS << "hash_t operator()(const " << name << "& val) const noexcept;\n";
                 }
                 OSS << "};\n";
             }
         }
         oss << "\n";
-        OSS << "}\n";
+        OSS << "} // namespace ccstd\n";
     }
 
     return oss.str();
@@ -993,6 +993,22 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 Expects(space.size() >= 4);
                 space.resize(space.size() - 4);
                 oss << "};\n";
+                if (traits.mFlags & EQUAL) {
+                    oss << "\n";
+                    OSS << cpp.generateOperatorSignature(OperatorType::Equal, true) << " {\n";
+                    {
+                        INDENT();
+                        copyString(oss, space, cpp.generateOperatorBody(OperatorType::Equal));
+                    }
+                    OSS << "}\n";
+                    oss << "\n";
+                    OSS << cpp.generateOperatorSignature(OperatorType::Unequal, true) << " {\n";
+                    {
+                        INDENT();
+                        copyString(oss, space, cpp.generateOperatorBody(OperatorType::Unequal));
+                    }
+                    OSS << "}\n";
+                }
             },
             [&](const auto&) {
             });
@@ -1102,7 +1118,7 @@ std::pmr::string generateTypes_h(std::string_view projectName,
 
     if (g.moduleUsesHashCombine(moduleName0)) {
         oss << "\n";
-        OSS << "namespace std {\n";
+        OSS << "namespace ccstd {\n";
 
         for (const auto& vertID : make_range(vertices(g))) {
             const auto& moduleName = get(g.modulePaths, g, vertID);
@@ -1117,14 +1133,17 @@ std::pmr::string generateTypes_h(std::string_view projectName,
                     if (traits.mFlags & GenerationFlags::HASH_COMBINE) {
                         auto name = getCppPath(g.getDependentName("/std", vertID, scratch, scratch), scratch);
                         oss << "\n";
-                        OSS << "inline size_t hash<" << name << ">::operator()(const " << name << "& v) const noexcept {\n";
+                        OSS << "inline hash_t hash<" << name << ">::operator()(const " << name << "& val) const noexcept {\n";
                         {
                             INDENT();
-                            OSS << "ccstd::hash_t seed = 0;\n";
+                            OSS << "hash_t seed = 0;\n";
                             for (const auto& m : s.mMembers) {
-                                OSS << "ccstd::hash_combine(seed, v." << m.getMemberName() << ");\n";
+                                if (m.mFlags & NOT_ELEMENT) {
+                                    continue;
+                                }
+                                OSS << "hash_combine(seed, val." << m.getMemberName() << ");\n";
                             }
-                            OSS << "return static_cast<size_t>(seed);\n";
+                            OSS << "return seed;\n";
                         }
                         OSS << "}\n";
                     }
@@ -1133,7 +1152,7 @@ std::pmr::string generateTypes_h(std::string_view projectName,
                 });
         }
         oss << "\n";
-        OSS << "} // namespace std\n";
+        OSS << "} // namespace ccstd\n";
     }
 
     return oss.str();

@@ -347,7 +347,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             NAMESPACE(framegraph) {
                 IMPORT_CLASS(FrameGraph);
-                IMPORT_CLASS(TextureHandle);
+                VALUE(TextureHandle);
             }
         }
     }

@@ -1145,6 +1145,11 @@ void SyntaxGraph::instantiate(std::string_view currentScope, std::string_view de
 
 void SyntaxGraph::propagate(vertex_descriptor vertID, GenerationFlags flags) {
     auto& g = *this;
+
+    if (g.isValueType(vertID)) {
+        return;
+    }
+
     auto& traits = get(g.traits, g, vertID);
 
     if (flags == GenerationFlags::NO_FLAGS) {
@@ -1181,12 +1186,38 @@ void SyntaxGraph::propagate(vertex_descriptor vertID, GenerationFlags flags) {
                 propagate(memberID, flags);
             }
         },
+        [&](const Graph& s) {
+            for (const auto& c : s.mComponents) {
+                auto componentID = locate(c.mValuePath, g);
+                propagate(componentID, flags);
+            }
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                auto conceptID = locate(c.mValue, g);
+                propagate(conceptID, flags);
+            }
+            for (const Member& m : s.mMembers) {
+                if (m.mPointer || m.mReference) {
+                    continue;
+                }
+                if (m.mFlags & NOT_ELEMENT) {
+                    continue;
+                }
+                auto memberID = locate(m.mTypePath, g);
+                propagate(memberID, flags);
+            }
+        },
         [&](const Variant& s) {
             if (!g.isTag(vertID)) {
                 for (const auto& v : s.mVariants) {
                     auto typeID = locate(v, g);
                     propagate(typeID, flags);
                 }
+            }
+        },
+        [&](const Instance& s) {
+            for (const auto& p : s.mParameters) {
+                auto typeID = locate(p, g);
+                propagate(typeID, flags);
             }
         },
         [&](const auto&) {

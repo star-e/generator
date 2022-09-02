@@ -121,7 +121,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             CNTR(mCamera, mScene);
         }
 
-        STRUCT(NativeRenderViewHandle) {
+        STRUCT(NativeRenderViewDesc) {
             PUBLIC(
                 (AccessType, mAccessType, _)
                 (framegraph::TextureHandle, mHandle, _)
@@ -131,7 +131,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
 
         STRUCT(NativePassData) {
             PUBLIC(
-                (ccstd::pmr::vector<NativeRenderViewHandle>, mOutputViews, _)
+                (ccstd::pmr::vector<NativeRenderViewDesc>, mOutputViews, _)
             );
         }
 

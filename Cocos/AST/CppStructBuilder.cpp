@@ -438,6 +438,9 @@ std::pmr::string CppStructBuilder::generateOperatorBody(OperatorType type) const
             int count = 0;
             std::string v = "lhs.";
             for (const Member& m : s.mMembers) {
+                if (m.mFlags & NOT_ELEMENT) {
+                    continue;
+                }
                 if (count++)
                     oss << ", ";
                 oss << v << m.getMemberName();
@@ -447,6 +450,9 @@ std::pmr::string CppStructBuilder::generateOperatorBody(OperatorType type) const
             v = "rhs.";
             count = 0;
             for (const Member& m : s.mMembers) {
+                if (m.mFlags & NOT_ELEMENT) {
+                    continue;
+                }
                 if (count++)
                     oss << ", ";
                 oss << v << m.getMemberName();

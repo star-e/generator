@@ -1736,12 +1736,12 @@ int ModuleBuilder::compile() {
 
         if (s.mReferenceGraph && !s.mAliasGraph) {
             addMember(vertID, true, builder.objectListType(), "mObjects", "_",
-                NO_SERIALIZATION | IMPL_DETAIL, R"(// Owners
+                NO_SERIALIZATION | IMPL_DETAIL | NOT_ELEMENT, R"(// Owners
 )");
         }
 
         addMember(vertID, true, builder.vertexListType(), "mVertices", "_",
-            NO_SERIALIZATION | IMPL_DETAIL, R"(// Vertices
+            NO_SERIALIZATION | IMPL_DETAIL | NOT_ELEMENT, R"(// Vertices
 )");
 
         for (size_t i = 0; i != s.mComponents.size(); ++i) {
@@ -1788,7 +1788,7 @@ int ModuleBuilder::compile() {
 
         if (s.needEdgeList()) {
             addMember(vertID, true, builder.edgeListType(), "mEdges", "_",
-                NO_SERIALIZATION | IMPL_DETAIL,
+                NO_SERIALIZATION | IMPL_DETAIL | NOT_ELEMENT,
                 R"(// Edges
 )");
         }
@@ -1799,7 +1799,7 @@ int ModuleBuilder::compile() {
                 comments = R"(// UuidGraph
 )";
             addMember(vertID, true, map.mTypePath, map.mMemberName,
-                "_", NO_SERIALIZATION | IMPL_DETAIL, comments);
+                "_", NO_SERIALIZATION | IMPL_DETAIL | NOT_ELEMENT, comments);
         }
 
         int count = 0;
@@ -1829,7 +1829,7 @@ int ModuleBuilder::compile() {
                         }
                         addMember(vertID, true, indexName,
                             s.mAddressableConcept.mMemberName,
-                            "_", NO_SERIALIZATION | IMPL_DETAIL, "// Path\n");
+                            "_", NO_SERIALIZATION | IMPL_DETAIL | NOT_ELEMENT, "// Path\n");
                     },
                     [&](auto) {
                     }),
