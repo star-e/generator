@@ -51,6 +51,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         ADD_FEATURES(ToJs);
         NAMESPACE(cc) {
             NAMESPACE(scene) {
+                IMPORT_CLASS(Pass);
+                IMPORT_CLASS(SubModel);
                 IMPORT_CLASS(Model);
                 IMPORT_CLASS(Light, .mFlags = JSB);
             }

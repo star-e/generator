@@ -146,11 +146,64 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             );
         }
 
-        //STRUCT(NativeRenderQueue, NO_MOVE_NO_COPY) {
+        STRUCT(RenderElem) {
+            PUBLIC(
+                (uint32_t, mPriority, 0)
+                (float, mDepth, 0)
+                (uint32_t, shaderID, 0)
+                (uint32_t, passIndex, 0)
+                (const scene::SubModel*, mSubModel, nullptr)
+            );
+        }
+
+        STRUCT(RenderElemQueue, .mFlags = NO_MOVE_NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<RenderElem>, mQueue, _)
+            );
+        }
+
+        STRUCT(RenderInstance) {
+            PUBLIC(
+                (uint32_t, mCount, 0)
+                (uint32_t, mCapacity, 0)
+                (gfx::Buffer*, mVertexBuffer, nullptr)
+                (uint8_t*, mData, nullptr)
+                (gfx::InputAssembler*, mInputAssembler, nullptr)
+                (uint32_t, mStride, 0)
+                (gfx::Shader*, mShader, nullptr)
+                (gfx::DescriptorSet*, mDescriptorSet, nullptr)
+                (gfx::Texture*, mLightmap, nullptr)
+            );
+        }
+
+        STRUCT(RenderInstanceBatch, .mFlags = NO_MOVE_NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<RenderInstance>, mInstances, _)
+                (ccstd::pmr::vector<uint32_t>, mBufferOffsets, _)
+                (const scene::Pass*, mPass, nullptr)
+                (gfx::Device*, mDevice, nullptr)
+            );
+        }
+
+        //STRUCT(InstancingRenderQueue, .mFlags = NO_MOVE_NO_COPY) {
         //    PUBLIC(
-        //        (cc)
+        //        (ccstd::pmr::set<RenderElem>, mQueue, _)
         //    );
         //}
+
+        STRUCT(DefaultSceneVisitor) {
+            INHERITS(SceneVisitor);
+            PUBLIC(
+                (ccstd::pmr::string, mName, _)
+            );
+        }
+
+        STRUCT(DefaultForwardLightingTransversal) {
+            INHERITS(SceneTransversal);
+            PUBLIC(
+                (ccstd::pmr::string, mName, _)
+            );
+        }
 
         STRUCT(RenderContext) {
             PUBLIC(
