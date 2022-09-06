@@ -121,17 +121,41 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             CNTR(mCamera, mScene);
         }
 
-        STRUCT(NativeRenderViewDesc) {
+        //STRUCT(NativeRenderViewDesc) {
+        //    PUBLIC(
+        //        (AccessType, mAccessType, _)
+        //        (framegraph::TextureHandle, mHandle, _)
+        //    );
+        //    CNTR(mAccessType, mHandle);
+        //}
+
+        //STRUCT(NativePassData) {
+        //    PUBLIC(
+        //        (ccstd::pmr::vector<NativeRenderViewDesc>, mOutputViews, _)
+        //    );
+        //}
+
+        STRUCT(PersistentRenderPassAndFramebuffer) {
             PUBLIC(
-                (AccessType, mAccessType, _)
-                (framegraph::TextureHandle, mHandle, _)
+                (IntrusivePtr<gfx::RenderPass>, mRenderPass, _)
+                (IntrusivePtr<gfx::Framebuffer>, mFramebuffer, _)
+                (ccstd::pmr::vector<gfx::Color>, mClearColors, _)
+                (float, mClearDepth, 0)
+                (uint8_t, mClearStencil, 0)
+                (int32_t, mRefCount, 1)
             );
-            CNTR(mAccessType, mHandle);
         }
 
-        STRUCT(NativePassData) {
+        //STRUCT(NativeRenderQueue, NO_MOVE_NO_COPY) {
+        //    PUBLIC(
+        //        (cc)
+        //    );
+        //}
+
+        STRUCT(RenderContext) {
             PUBLIC(
-                (ccstd::pmr::vector<NativeRenderViewDesc>, mOutputViews, _)
+                ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
+                //((PmrTransparentMap<std::pmr::string, >), )
             );
         }
 
@@ -152,6 +176,12 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
             );
+            MEMBER_FUNCTIONS(R"(
+private:
+ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
+
+public:
+)");
         }
 
         NAMESPACE_END(render);
