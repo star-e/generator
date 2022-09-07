@@ -189,9 +189,34 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(RenderBatch, .mFlags = NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<gfx::Buffer*>, mVertexBuffers, _)
+                (ccstd::pmr::vector<uint8_t*>, mVertexBufferData, _)
+                (gfx::Buffer*, mIndexBuffer, nullptr)
+                (float*, mIndexBufferData, nullptr)
+                (uint32_t, mVertexBufferCount, 0)
+                (uint32_t, mMergeCount, 0)
+                (gfx::InputAssembler*, mInputAssembler, nullptr)
+                (ccstd::pmr::vector<uint8_t>, mUniformBufferData, _)
+                (gfx::Buffer*, mUniformBuffer, nullptr)
+                (gfx::DescriptorSet*, mDescriptorSet, nullptr)
+                (const scene::Pass*, mScenePass, nullptr)
+                (gfx::Shader*, mShader, nullptr)
+            );
+        }
+
+        STRUCT(RenderBatchPack, .mFlags = NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<PmrUniquePtr<RenderBatch>>, mBatches, _)
+                (ccstd::pmr::vector<uint32_t>, mBufferOffset, _)
+            );
+        }
+
         STRUCT(NativeRenderQueue, .mFlags = NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
+                (ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
                 (ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
                 ((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
             );

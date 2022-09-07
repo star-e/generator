@@ -220,6 +220,10 @@ bool SyntaxGraph::isNoexcept(vertex_descriptor vertID) const noexcept {
                 bThrow = true;
 
             for (const auto& typePath : s.mParameters) {
+                auto typeInfo = extractType(typePath);
+                if (typeInfo.mPointer) {
+                    continue;
+                }
                 auto paramID = locate(typePath, g);
                 const auto& traits = get(g.traits, g, paramID);
                 if (!traits.mNoexcept)
