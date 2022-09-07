@@ -211,7 +211,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(RenderContext, .mFlags = NO_MOVE_NO_COPY) {
+        STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
                 (ccstd::pmr::vector<PmrUniquePtr<NativeRenderQueue>>, mFreeRenderQueues, _)
