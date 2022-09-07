@@ -490,11 +490,9 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
             [&](const Composition_ auto& s) {
                 if (s.mConstructors.empty()) {
                     bSkip = true;
-                    return true;
                 }
             },
             [&](const auto&) {
-                return false;
             });
 
         if (bSkip)

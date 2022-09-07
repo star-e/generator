@@ -145,8 +145,14 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (int32_t, mRefCount, 1)
             );
         }
+        
+        STRUCT(ScenePassHandle, .mFlags = LESS) {
+            PUBLIC(
+                (const scene::Pass*, mHandle, nullptr)
+            );
+        }
 
-        STRUCT(RenderElem) {
+        STRUCT(ScenePass) {
             PUBLIC(
                 (uint32_t, mPriority, 0)
                 (float, mDepth, 0)
@@ -156,13 +162,13 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(RenderElemQueue, .mFlags = NO_MOVE_NO_COPY) {
+        STRUCT(ScenePassQueue, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
-                (ccstd::pmr::vector<RenderElem>, mQueue, _)
+                (ccstd::pmr::vector<ScenePass>, mQueue, _)
             );
         }
 
-        STRUCT(RenderInstance) {
+        STRUCT(RenderInstance, .mAlignment = 64) {
             PUBLIC(
                 (uint32_t, mCount, 0)
                 (uint32_t, mCapacity, 0)
@@ -170,26 +176,26 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (uint8_t*, mData, nullptr)
                 (gfx::InputAssembler*, mInputAssembler, nullptr)
                 (uint32_t, mStride, 0)
+                (uint32_t, mBufferOffset, 0)
                 (gfx::Shader*, mShader, nullptr)
                 (gfx::DescriptorSet*, mDescriptorSet, nullptr)
                 (gfx::Texture*, mLightmap, nullptr)
             );
         }
 
-        STRUCT(RenderInstanceBatch, .mFlags = NO_MOVE_NO_COPY) {
+        STRUCT(RenderInstancePack, .mFlags = NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::vector<RenderInstance>, mInstances, _)
-                (ccstd::pmr::vector<uint32_t>, mBufferOffsets, _)
-                (const scene::Pass*, mPass, nullptr)
-                (gfx::Device*, mDevice, nullptr)
             );
         }
 
-        //STRUCT(InstancingRenderQueue, .mFlags = NO_MOVE_NO_COPY) {
-        //    PUBLIC(
-        //        (ccstd::pmr::set<RenderElem>, mQueue, _)
-        //    );
-        //}
+        STRUCT(NativeRenderQueue, .mFlags = NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
+                (ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
+                ((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
+            );
+        }
 
         STRUCT(DefaultSceneVisitor) {
             INHERITS(SceneVisitor);
@@ -205,10 +211,11 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(RenderContext) {
+        STRUCT(RenderContext, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
-                //((PmrTransparentMap<std::pmr::string, >), )
+                (ccstd::pmr::vector<PmrUniquePtr<NativeRenderQueue>>, mFreeRenderQueues, _)
+                (ccstd::pmr::vector<PmrUniquePtr<RenderInstancePack>>, mFreeInstancePacks, _)
             );
         }
 

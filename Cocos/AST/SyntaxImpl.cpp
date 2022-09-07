@@ -1216,6 +1216,10 @@ void SyntaxGraph::propagate(vertex_descriptor vertID, GenerationFlags flags) {
         },
         [&](const Instance& s) {
             for (const auto& p : s.mParameters) {
+                auto info = extractType(p);
+                if (info.mPointer) {
+                    continue;
+                }
                 auto typeID = locate(p, g);
                 propagate(typeID, flags);
             }
