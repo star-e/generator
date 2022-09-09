@@ -145,6 +145,8 @@ void addCppDefaultValues(ModuleBuilder& builder) {
             CONTAINER(set);
             NAMESPACE(pmr) {
                 IMPORT_CLASS(memory_resource);
+                IMPORT_CLASS(unsynchronized_pool_resource);
+                IMPORT_CLASS(synchronized_pool_resource);
                 PMR_CONTAINER(vector);
                 PMR_CONTAINER(list);
                 PMR_CONTAINER(set);

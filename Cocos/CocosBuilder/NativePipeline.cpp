@@ -247,6 +247,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
             PUBLIC(
+                (boost::container::pmr::unsynchronized_pool_resource, mUnsyncPool, _)
                 (gfx::Device*, mDevice, nullptr)
                 (gfx::Swapchain*, mSwapchain, nullptr)
                 (MacroRecord, mMacros, _)
