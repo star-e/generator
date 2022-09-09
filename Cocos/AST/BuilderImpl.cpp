@@ -1300,7 +1300,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         oss << "#include \"cocos/renderer/pipeline/custom/Overload.h\"\n";
         oss << "#include \"cocos/renderer/pipeline/custom/PathUtils.h\"\n";
         oss << "#include \"cocos/renderer/pipeline/custom/GslUtils.h\"\n";
-        oss << "#include \"cocos/renderer/pipeline/custom/invoke.hpp\"\n";
+        oss << "#include <tuple>\n";
         oss << "#include <boost/utility/string_view.hpp>\n";
 
         copyString(oss, generateGraphs_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));

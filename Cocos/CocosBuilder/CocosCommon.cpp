@@ -357,7 +357,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     MODULE(Assets,
         .mFolder = "cocos/core/assets",
         .mFilePrefix = "EffectAsset.h",
-        .mTypescriptFolder = "cocos/core",
+        .mTypescriptFolder = "cocos/asset",
         .mTypescriptFilePrefix = "assets",
         ) {
         ADD_FEATURES(ToJs);

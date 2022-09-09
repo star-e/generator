@@ -870,7 +870,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
 
                 {
                     INDENT();
-                    OSS << "invoke_hpp::apply(\n";
+                    OSS << "std::apply(\n";
                     {
                         INDENT();
                         OSS << "[&](auto&&... args) {\n";
@@ -1028,7 +1028,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
             oss << "\n";
             if (piecewise) {
                 if (s.hasVertexProperty()) {
-                    OSS << "invoke_hpp::apply(\n";
+                    OSS << "std::apply(\n";
                     {
                         INDENT();
                         OSS << "[&](auto&&... args) {\n";
@@ -1063,7 +1063,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
             }
             if (piecewise) {
                 if (s.hasVertexProperty()) {
-                    OSS << "invoke_hpp::apply(\n";
+                    OSS << "std::apply(\n";
                     {
                         INDENT();
                         OSS << "[&](auto&&... args) {\n";
@@ -1108,7 +1108,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                 const auto& mapMemberName = g.getMemberName(map.mMemberName, true);
                 if (piecewise) {
                     if (true) {
-                        OSS << "invoke_hpp::apply(\n";
+                        OSS << "std::apply(\n";
                         {
                             INDENT();
                             OSS << "[&](const auto&... args) {\n";
@@ -1171,7 +1171,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                         const auto& member = g.getMemberName(c.mMemberName, true);
                         if (piecewise) {
                             oss << "\n";
-                            OSS << "invoke_hpp::apply(\n";
+                            OSS << "std::apply(\n";
                             {
                                 INDENT();
                                 OSS << "[&](auto&&... args) {\n";
@@ -1226,7 +1226,7 @@ std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, 
                             << cpp.getDependentName(c.mTag) << ">) {\n";
                         {
                             INDENT();
-                            OSS << "invoke_hpp::apply(\n";
+                            OSS << "std::apply(\n";
                             {
                                 INDENT();
                                 OSS << "[&](auto&&... args) {\n";
