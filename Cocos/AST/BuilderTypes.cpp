@@ -65,9 +65,9 @@ CppGraphBuilder::CppGraphBuilder(const allocator_type& alloc) noexcept
 CppGraphBuilder::~CppGraphBuilder() noexcept = default;
 
 TypeHandle::TypeHandle(TypeHandle&& rhs, const allocator_type& alloc)
-    : mModuleBuilder(std::move(rhs.mModuleBuilder))
-    , mPathSuffix(std::move(rhs.mPathSuffix), alloc)
-    , mVertexDescriptor(std::move(rhs.mVertexDescriptor)) {}
+    : mVertexDescriptor(std::move(rhs.mVertexDescriptor))
+    , mModuleBuilder(std::move(rhs.mModuleBuilder))
+    , mPathSuffix(std::move(rhs.mPathSuffix), alloc) {}
 
 ModuleHandle::ModuleHandle(ModuleHandle&& rhs, const allocator_type& alloc)
     : mModuleBuilder(std::move(rhs.mModuleBuilder))

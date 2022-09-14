@@ -103,6 +103,23 @@ bool hasSideEffects() const noexcept {
             TS_INIT(mStates, AccessFlagBit.NONE);
         }
 
+        //STRUCT(ManagedBuffer) {
+        //    PUBLIC(
+        //        (IntrusivePtr<gfx::Buffer>, mBuffer, _)
+        //        (uint32_t, mRefCount, 0)
+        //    );
+        //    CNTR(mBuffer);
+        //}
+
+        //STRUCT(ManagedTexture) {
+        //    builder.addStruct()
+        //    PUBLIC(
+        //        (IntrusivePtr<gfx::Texture>, mTexture, _)
+        //        (uint32_t, mRefCount, 0)
+        //    );
+        //    CNTR(mTexture);
+        //}
+
         STRUCT(ManagedResource) {
             PUBLIC(
                 (uint32_t, mUnused, 0)

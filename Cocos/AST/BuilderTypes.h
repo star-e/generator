@@ -310,9 +310,9 @@ struct TypeHandle {
     TypeHandle& operator=(TypeHandle const& rhs) = delete;
     ~TypeHandle() noexcept;
 
+    uint32_t mVertexDescriptor = std::numeric_limits<uint32_t>::max();
     move_ptr<ModuleBuilder> mModuleBuilder = nullptr;
     std::pmr::string mPathSuffix;
-    uint32_t mVertexDescriptor = std::numeric_limits<uint32_t>::max();
 };
 
 struct ModuleHandle {

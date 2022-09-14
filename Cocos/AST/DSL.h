@@ -27,6 +27,8 @@ THE SOFTWARE.
 #pragma once
 #pragma warning(disable : 4390)
 
+// clang-format off
+
 // Helpers
 #define COMMA_STRINGIZE_ELEM(r, _, i, C) BOOST_PP_COMMA_IF(i) BOOST_PP_STRINGIZE(C)
 
@@ -111,21 +113,21 @@ builder.addEnumElement(vertID, \
         Traits{ .mImport = true, .mClass = false, .mPmr = true, __VA_ARGS__ }); true)
 
 #define STRUCT(NAME, ...) \
-    for (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); \
-        s.mVertexDescriptor != SyntaxGraph::null_vertex(); \
-        builder.syntax().propagate(s.mVertexDescriptor), \
-        s.mVertexDescriptor = SyntaxGraph::null_vertex())
+    for (auto&& [vertID, mb, path] = builder.addStruct(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); \
+        vertID != SyntaxGraph::null_vertex(); \
+        builder.syntax().propagate(vertID), \
+        vertID = SyntaxGraph::null_vertex())
 
 #define CLASS(NAME, ...) STRUCT(NAME, .mClass = true, __VA_ARGS__)
 
 #define CNTR_MEMBER(r, _, i, MEMBER) BOOST_PP_STRINGIZE(MEMBER),
 
 #define CNTR(...) \
-builder.addConstructor(s.mVertexDescriptor, {\
+builder.addConstructor(vertID, {\
 BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) }, true)
 
 #define CNTR_NO_DEFAULT(...) \
-builder.addConstructor(s.mVertexDescriptor, {\
+builder.addConstructor(vertID, {\
 BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) }, false)
 
 #define CONTAINER(NAME, ...) \
@@ -150,23 +152,23 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
 #define TAGS(Cs, ...) BOOST_PP_SEQ_FOR_EACH_I(TAG_ELEM, (BOOST_PP_SEQ_FOR_EACH(STRINGIZE_ELEM, _, BOOST_PP_TUPLE_TO_SEQ(Cs))), BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
 
 // Concept
-#define REQUIRES_ELEM(r, _, i, SUPERTYPE) builder.addConstraints(s.mVertexDescriptor, BOOST_PP_STRINGIZE(SUPERTYPE));
+#define REQUIRES_ELEM(r, _, i, SUPERTYPE) builder.addConstraints(vertID, BOOST_PP_STRINGIZE(SUPERTYPE));
 #define REQUIRES(...) BOOST_PP_SEQ_FOR_EACH_I(REQUIRES_ELEM, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
 
 // Interface
 #define INTERFACE(NAME, ...) \
-    for (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME), \
+    for (auto&& [vertID, mb, path] = builder.addStruct(BOOST_PP_STRINGIZE(NAME), \
         Traits{ .mInterface = true, .mClass = true, __VA_ARGS__ }); \
-        s.mVertexDescriptor != SyntaxGraph::null_vertex(); \
-        builder.syntax().propagate(s.mVertexDescriptor), \
-        s.mVertexDescriptor = SyntaxGraph::null_vertex())
+        vertID != SyntaxGraph::null_vertex(); \
+        builder.syntax().propagate(vertID), \
+        vertID = SyntaxGraph::null_vertex())
 
 // Struct
 #define INHERITS(NAME) \
-builder.addInherits(s.mVertexDescriptor, BOOST_PP_STRINGIZE(NAME))
+builder.addInherits(vertID, BOOST_PP_STRINGIZE(NAME))
 
 #define STRUCT_MEMBER(r, COND, i, MEMBER) \
-builder.addMember(s.mVertexDescriptor, COND,\
+builder.addMember(vertID, COND,\
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 0, MEMBER)), \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 1, MEMBER)), \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 2, MEMBER)), \
@@ -180,10 +182,10 @@ builder.addMember(s.mVertexDescriptor, COND,\
     BOOST_PP_SEQ_FOR_EACH_I(STRUCT_MEMBER, false, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
 
 #define MEMBER_FUNCTIONS(STR) \
-    builder.addMemberFunctions(s.mVertexDescriptor, STR)
+    builder.addMemberFunctions(vertID, STR)
 
 #define TS_FUNCTIONS(STR) \
-    builder.addTypescriptFunctions(s.mVertexDescriptor, STR)
+    builder.addTypescriptFunctions(vertID, STR)
 
 // Variant
 #define VARIANT_ELEM(r, V, i, MEMBER) \
@@ -199,12 +201,12 @@ builder.addMember(s.mVertexDescriptor, COND,\
 
 // Graph
 #define GRAPH(NAME, VERTEX, EDGE, ...) \
-    for (auto s = builder.addGraph(BOOST_PP_STRINGIZE(NAME),\
+    for (auto&& [vertID, mb, path] = builder.addGraph(BOOST_PP_STRINGIZE(NAME),\
         BOOST_PP_STRINGIZE(VERTEX), BOOST_PP_STRINGIZE(EDGE), Traits{ __VA_ARGS__ }); \
-        s.mVertexDescriptor != SyntaxGraph::null_vertex(); \
-        builder.syntax().propagate(s.mVertexDescriptor), \
-        s.mVertexDescriptor = SyntaxGraph::null_vertex()) \
-        if (auto& graph = get_by_tag<Graph_>(s.mVertexDescriptor, builder.mSyntaxGraph); true) \
+        vertID != SyntaxGraph::null_vertex(); \
+        builder.syntax().propagate(vertID), \
+        vertID = SyntaxGraph::null_vertex()) \
+        if (auto& graph = get_by_tag<Graph_>(vertID, builder.mSyntaxGraph); true) \
 
 #define PMR_GRAPH(NAME, VERTEX, EDGE, ...) GRAPH(NAME, VERTEX, EDGE, .mPmr = true, __VA_ARGS__)
 
@@ -212,11 +214,11 @@ builder.addMember(s.mVertexDescriptor, COND,\
     graph.mVertexListType = List_ {}
 
 #define NAMED_GRAPH(...)                               \
-    builder.addNamedConcept(s.mVertexDescriptor, true, \
+    builder.addNamedConcept(vertID, true, \
         BOOST_PP_SEQ_FOR_EACH_I(COMMA_STRINGIZE_ELEM, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))))
 
 #define GRAPH_COMPONENT_ELEM(r, _, i, MEMBER) \
-builder.addGraphComponent(s.mVertexDescriptor, \
+builder.addGraphComponent(vertID, \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 0, MEMBER)), \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 1, MEMBER)), \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 2, MEMBER)) \
@@ -226,7 +228,7 @@ builder.addGraphComponent(s.mVertexDescriptor, \
 BOOST_PP_SEQ_FOR_EACH_I(GRAPH_COMPONENT_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
 
 #define POLYMORPHIC_GRAPH_ELEM(r, _, i, MEMBER) \
-builder.addGraphPolymorphic(s.mVertexDescriptor, \
+builder.addGraphPolymorphic(vertID, \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 0, MEMBER)), \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 1, MEMBER)), \
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 2, MEMBER)));
@@ -248,7 +250,7 @@ BOOST_PP_SEQ_FOR_EACH_I(POLYMORPHIC_GRAPH_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(
     graph.mAddressableConcept.mMemberName = BOOST_PP_STRINGIZE(MEMBER)
 
 #define COMPONENT_BIMAP(MAPTYPE, MEMBER, ...) \
-    builder.addVertexBimap(s.mVertexDescriptor,\
+    builder.addVertexBimap(vertID,\
         BOOST_PP_STRINGIZE(MAPTYPE), BOOST_PP_STRINGIZE(MEMBER), \
         BOOST_PP_SEQ_FOR_EACH_I(COMMA_STRINGIZE_ELEM, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))))
 
@@ -259,5 +261,7 @@ BOOST_PP_SEQ_FOR_EACH_I(POLYMORPHIC_GRAPH_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(
 #define TS_PROJECT PROJECT_TS
 
 #define TS_INIT(MEMBER, VALUE) \
-    builder.setTypescriptInitValue(s.mVertexDescriptor, \
+    builder.setTypescriptInitValue(vertID, \
         BOOST_PP_STRINGIZE(MEMBER), BOOST_PP_STRINGIZE(VALUE))
+
+// clang-format on

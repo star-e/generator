@@ -297,6 +297,7 @@ struct Member {
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
     bool mTypescriptArray = false;
+    bool mTypescriptOptional = false;
 };
 
 struct Parameter {
