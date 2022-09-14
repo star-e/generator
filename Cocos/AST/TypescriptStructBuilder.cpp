@@ -182,12 +182,12 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                     oss << ", ";
                 oss << param.mName;
                 auto paramID = locate(param.mTypePath, g);
-                oss << ": " << g.getTypedParameterName(param, true, true, param.mNullable);
+                oss << ": " << g.getTypedParameterName(param, true, true, param.mOptional);
             }
             oss << ")";
             if (!method.mSetter) {
                 oss << ": ";
-                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mNullable);
+                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
             }
             oss << ";";
             if (false && method.mConst) {

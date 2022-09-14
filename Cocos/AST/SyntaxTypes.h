@@ -322,7 +322,7 @@ struct Parameter {
     bool mConst = false;
     bool mPointer = false;
     bool mReference = false;
-    bool mNullable = false;
+    bool mOptional = false;
 };
 
 struct Method {
@@ -351,7 +351,7 @@ struct Method {
     bool mStatic = false;
     bool mGetter = false;
     bool mSetter = false;
-    bool mNullable = false;
+    bool mOptional = false;
     bool mSkip = false;
 };
 

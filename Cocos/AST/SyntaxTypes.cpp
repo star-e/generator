@@ -197,7 +197,7 @@ Parameter::Parameter(Parameter&& rhs, const allocator_type& alloc)
     , mConst(std::move(rhs.mConst))
     , mPointer(std::move(rhs.mPointer))
     , mReference(std::move(rhs.mReference))
-    , mNullable(std::move(rhs.mNullable)) {}
+    , mOptional(std::move(rhs.mOptional)) {}
 
 Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
@@ -206,7 +206,7 @@ Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     , mConst(rhs.mConst)
     , mPointer(rhs.mPointer)
     , mReference(rhs.mReference)
-    , mNullable(rhs.mNullable) {}
+    , mOptional(rhs.mOptional) {}
 
 Parameter::~Parameter() noexcept = default;
 
@@ -226,7 +226,7 @@ Method::Method(Method&& rhs, const allocator_type& alloc)
     , mStatic(std::move(rhs.mStatic))
     , mGetter(std::move(rhs.mGetter))
     , mSetter(std::move(rhs.mSetter))
-    , mNullable(std::move(rhs.mNullable))
+    , mOptional(std::move(rhs.mOptional))
     , mSkip(std::move(rhs.mSkip)) {}
 
 Method::Method(Method const& rhs, const allocator_type& alloc)
@@ -240,7 +240,7 @@ Method::Method(Method const& rhs, const allocator_type& alloc)
     , mStatic(rhs.mStatic)
     , mGetter(rhs.mGetter)
     , mSetter(rhs.mSetter)
-    , mNullable(rhs.mNullable)
+    , mOptional(rhs.mOptional)
     , mSkip(rhs.mSkip) {}
 
 Method::~Method() noexcept = default;

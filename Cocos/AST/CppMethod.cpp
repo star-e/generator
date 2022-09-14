@@ -63,7 +63,7 @@ void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parame
         }
     }
     if (boost::algorithm::starts_with(typeName, "[[optional]]")) {
-        param.mNullable = true;
+        param.mOptional = true;
         typeName = typeName.substr(12);
     }
     if (typeName.starts_with("const ")) {
@@ -130,7 +130,7 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
     }
 
     if (boost::algorithm::contains(function, "[[optional]]")) {
-        method.mNullable = true;
+        method.mOptional = true;
     }
 
     // skip attributes
