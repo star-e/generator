@@ -232,7 +232,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         if (!m.mPointer && !bTypscriptPointer && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         } else if (bTypscriptPointer) {
-            oss << "/*object*/ ";
+            oss << "/*refcount*/ ";
+        } else if (m.mPointer) {
+            oss << "/*pointer*/ ";
+        } else if (m.mReference) {
+            oss << "/*reference*/ ";
         }
         if (bNeedIntial) {
             oss << builder.getTypedMemberName(m, m.mPublic);

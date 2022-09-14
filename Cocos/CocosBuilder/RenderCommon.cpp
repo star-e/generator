@@ -174,7 +174,7 @@ bool isWrite() const {
 
         STRUCT(LightInfo, .mFlags = JSB) {
             PUBLIC(
-                (IntrusivePtr<scene::Light>, mLight, _)
+                ([[optional]] IntrusivePtr<scene::Light>, mLight, _)
                 (uint32_t, mLevel, 0)
             );
             CNTR(mLight, mLevel);

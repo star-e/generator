@@ -306,7 +306,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(Blit) {
             PUBLIC(
-                (IntrusivePtr<cc::Material>, mMaterial, _)
+                ([[optional]] IntrusivePtr<cc::Material>, mMaterial, _)
                 (SceneFlags, mSceneFlags, _)
                 ([[optional]] scene::Camera*, mCamera, nullptr)
             );

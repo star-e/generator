@@ -1553,7 +1553,6 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
                     auto paramID = locate(param, g);
                     auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
                     result.append(paramName);
-                    result.append(" | null");
                 } else {
                     // is template
                     if (templateTS.mName.empty()) {
@@ -1816,12 +1815,10 @@ std::pmr::string SyntaxGraph::getTypedParameterName(const Parameter& p, bool bPu
             result += "unknown";
         } else {
             result += typeName;
-            if (p.mPointer) {
-                if (bOptional) {
-                    // currently, reference is not supported
-                    // we must use pointer
-                    result += " | null";
-                }
+            if (bOptional) {
+                // currently, reference is not supported
+                // we must use pointer
+                result += " | null";
             }
         }
     }

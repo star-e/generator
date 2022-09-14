@@ -244,8 +244,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (DescriptorSetLayoutData, mDescriptorSetLayoutData, _)
                 (gfx::DescriptorSetLayoutInfo, mDescriptorSetLayoutInfo, _)
-                (IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
-                (IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
+                ([[optional]] IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
+                ([[optional]] IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
             );
             CNTR_NO_DEFAULT(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
         }
