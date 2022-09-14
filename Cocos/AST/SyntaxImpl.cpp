@@ -1435,6 +1435,9 @@ bool SyntaxGraph::isTypescriptString(vertex_descriptor vertID) const {
 bool SyntaxGraph::isTypescriptArray(vertex_descriptor instanceID,
     std::pmr::memory_resource* scratch) const {
     const auto& g = *this;
+    if (!holds_tag<Instance_>(instanceID, g)) {
+        return false;
+    }
     Expects(holds_tag<Instance_>(instanceID, g));
     const auto& instance = get<Instance>(instanceID, g);
 
@@ -1456,6 +1459,9 @@ bool SyntaxGraph::isTypescriptArray(vertex_descriptor instanceID,
 bool SyntaxGraph::isTypescriptSet(vertex_descriptor vertID) const {
     auto scratch = mScratch;
     const auto& g = *this;
+    if (!holds_tag<Instance_>(vertID, g)) {
+        return false;
+    }
     Expects(holds_tag<Instance_>(vertID, g));
     const auto& instance = get<Instance>(vertID, g);
 
@@ -1477,6 +1483,9 @@ bool SyntaxGraph::isTypescriptSet(vertex_descriptor vertID) const {
 bool SyntaxGraph::isTypescriptMap(vertex_descriptor vertID) const {
     auto scratch = mScratch;
     const auto& g = *this;
+    if (!holds_tag<Instance_>(vertID, g)) {
+        return false;
+    }
     Expects(holds_tag<Instance_>(vertID, g));
     const auto& instance = get<Instance>(vertID, g);
 

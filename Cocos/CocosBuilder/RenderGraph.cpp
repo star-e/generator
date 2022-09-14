@@ -106,7 +106,7 @@ bool hasSideEffects() const noexcept {
         STRUCT(ManagedBuffer) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
-                (uint32_t, mRefCount, 0)
+                (uint64_t, mFenceValue, 0)
             );
             CNTR(mBuffer);
         }
@@ -114,18 +114,18 @@ bool hasSideEffects() const noexcept {
         STRUCT(ManagedTexture) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<gfx::Texture>, mTexture, _)
-                (uint32_t, mRefCount, 0)
+                (uint64_t, mFenceValue, 0)
             );
             CNTR(mTexture);
         }
 
-        STRUCT(ManagedResource) {
-            PUBLIC(
-                (uint32_t, mUnused, 0)
-            );
-        }
+        //STRUCT(ManagedResource) {
+        //    PUBLIC(
+        //        (uint32_t, mUnused, 0)
+        //    );
+        //}
 
-        TAGS((_), Managed_, PersistentBuffer_, PersistentTexture_,
+        TAGS((_), ManagedBuffer_, ManagedTexture_, PersistentBuffer_, PersistentTexture_,
             Framebuffer_, Swapchain_);
 
         PMR_GRAPH(ResourceGraph, _, _) {
@@ -138,12 +138,20 @@ bool hasSideEffects() const noexcept {
             );
             COMPONENT_BIMAP(PmrUnorderedStringMap, mValueIndex, Name_);
             POLYMORPHIC_GRAPH(
-                (Managed_, ManagedResource, mResources)
+                (ManagedBuffer_, ManagedBuffer, mManagedBuffers)
+                (ManagedTexture_, ManagedTexture, mManagedTextures)
                 (PersistentBuffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
                 (PersistentTexture_, IntrusivePtr<gfx::Texture>, mTextures)
                 (Framebuffer_, IntrusivePtr<gfx::Framebuffer>, mFramebuffers)
                 (Swapchain_, RenderSwapchain, mSwapchains)
             );
+            PUBLIC(
+                (uint64_t, mNextFenceValue, 1)
+            );
+            MEMBER_FUNCTIONS(R"(
+void mount(vertex_descriptor vertID, ccstd::pmr::vector<vertex_descriptor>& mounted);
+void unmount(uint64_t completedFenceValue);
+)");
         }
 
         PROJECT_TS(IntrusivePtr<gfx::Buffer>, Buffer);

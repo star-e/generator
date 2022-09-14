@@ -39,17 +39,17 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(char, number);
     PROJECT_TS(char8_t, number);
 
-    PROJECT_TS(size_t, BigInt);
+    PROJECT_TS(size_t, number);
 
     PROJECT_TS(int8_t, number);
     PROJECT_TS(int16_t, number);
     PROJECT_TS(int32_t, number);
-    PROJECT_TS(int64_t, BigInt);
+    PROJECT_TS(int64_t, number);
 
     PROJECT_TS(uint8_t, number);
     PROJECT_TS(uint16_t, number);
     PROJECT_TS(uint32_t, number);
-    PROJECT_TS(uint64_t, BigInt);
+    PROJECT_TS(uint64_t, number);
 
     PROJECT_TS(uintptr_t, BigInt);
 

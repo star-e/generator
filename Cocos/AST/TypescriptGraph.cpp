@@ -1003,7 +1003,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         continue;
                     }
 
-                    if (g.isTypescriptArray(memberID, scratch)) {
+                    if (!m.mDefaultValue.empty()) {
+                        OSS << "this." << memberName << " = "
+                            << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                    } else if (g.isTypescriptArray(memberID, scratch)) {
                         OSS << "this." << memberName << ".length = 0;\n";
                     } else if (g.isTypescriptPointer(memberID)) {
                         OSS << "this." << memberName << " = null;\n";
