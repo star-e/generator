@@ -88,7 +88,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(RenderSwapchain) {
             PUBLIC(
-                (gfx::Swapchain*, mSwapchain, nullptr)
+                ([[nullable]] gfx::Swapchain*, mSwapchain, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
             );
@@ -103,22 +103,21 @@ bool hasSideEffects() const noexcept {
             TS_INIT(mStates, AccessFlagBit.NONE);
         }
 
-        //STRUCT(ManagedBuffer) {
-        //    PUBLIC(
-        //        (IntrusivePtr<gfx::Buffer>, mBuffer, _)
-        //        (uint32_t, mRefCount, 0)
-        //    );
-        //    CNTR(mBuffer);
-        //}
+        STRUCT(ManagedBuffer) {
+            PUBLIC(
+                ([[nullable]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
+                (uint32_t, mRefCount, 0)
+            );
+            CNTR(mBuffer);
+        }
 
-        //STRUCT(ManagedTexture) {
-        //    builder.addStruct()
-        //    PUBLIC(
-        //        (IntrusivePtr<gfx::Texture>, mTexture, _)
-        //        (uint32_t, mRefCount, 0)
-        //    );
-        //    CNTR(mTexture);
-        //}
+        STRUCT(ManagedTexture) {
+            PUBLIC(
+                ([[nullable]] IntrusivePtr<gfx::Texture>, mTexture, _)
+                (uint32_t, mRefCount, 0)
+            );
+            CNTR(mTexture);
+        }
 
         STRUCT(ManagedResource) {
             PUBLIC(
@@ -287,7 +286,7 @@ bool hasSideEffects() const noexcept {
         STRUCT(SceneData) {
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
-                (scene::Camera*, mCamera, nullptr)
+                ([[nullable]] scene::Camera*, mCamera, nullptr)
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
                 (ccstd::pmr::vector<ccstd::pmr::string>, mScenes, _)
@@ -309,7 +308,7 @@ bool hasSideEffects() const noexcept {
             PUBLIC(
                 (IntrusivePtr<cc::Material>, mMaterial, _)
                 (SceneFlags, mSceneFlags, _)
-                (scene::Camera*, mCamera, nullptr)
+                ([[nullable]] scene::Camera*, mCamera, nullptr)
             );
             CNTR_NO_DEFAULT(mMaterial, mSceneFlags, mCamera);
         }

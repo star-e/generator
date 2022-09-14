@@ -502,6 +502,14 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
     auto scratch = get_allocator().resource();
 
     std::pmr::string adlPath(className, scratch);
+
+    bool bOptional = false;
+    if (boost::algorithm::contains(adlPath, "[[nullable]]")) {
+        bOptional = true;
+        boost::algorithm::replace_all(adlPath, "[[nullable]]", "");
+        boost::algorithm::trim(adlPath);
+    }
+
     convertTypename(adlPath);
 
     memberName = boost::algorithm::trim_copy(memberName);
@@ -561,6 +569,7 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
         }
         m.mFlags = flags;
         m.mComments = comments;
+        m.mTypescriptOptional = bOptional;
 
         s.mMembers.emplace_back(std::move(m));
         ptr = &s.mMembers.back();
@@ -580,7 +589,7 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
 }
 
 void ModuleBuilder::setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
-    std::string_view memberName, GenerationFlags flags) {
+    std::string_view memberName, GenerationFlags flags, bool bOptional) {
     auto& g = mSyntaxGraph;
     visit_vertex(
         vertID, g,
@@ -588,6 +597,7 @@ void ModuleBuilder::setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
             for (Member& m : s.mMembers) {
                 if (m.mMemberName == memberName) {
                     m.mFlags = flags;
+                    m.mTypescriptOptional = bOptional;
                     break;
                 }
             }
@@ -1856,7 +1866,7 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
     if (bFull || !g.isTypescriptData(typeName)) {
         name += ": ";
         name += typeName;
-        if (m.mPointer) {
+        if (m.mTypescriptOptional) {
             name += " | null";
         }
     }
@@ -1878,12 +1888,10 @@ std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p,
     if (bFull || !g.isTypescriptData(typeName)) {
         result += ": ";
         result += typeName;
-        if (p.mPointer) {
-            if (bOptional) {
-                // currently, reference is not supported
-                // we must use pointer
-                result += " | null";
-            }
+        if (bOptional) {
+            // currently, reference is not supported
+            // we must use pointer
+            result += " | null";
         }
     }
 
