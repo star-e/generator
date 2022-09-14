@@ -74,9 +74,9 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers() const = 0;
 [[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
 [[getter]] virtual const ccstd::string &getConstantMacros() const = 0;
-[[nullable]] [[getter]] virtual scene::Model *getProfiler() const = 0;
-[[setter]] virtual void setProfiler([[nullable]] scene::Model *profiler) = 0;
-[[nullable]] [[getter]] virtual pipeline::GeometryRenderer  *getGeometryRenderer() const = 0;
+[[optional]] [[getter]] virtual scene::Model *getProfiler() const = 0;
+[[setter]] virtual void setProfiler([[optional]] scene::Model *profiler) = 0;
+[[optional]] [[getter]] virtual pipeline::GeometryRenderer  *getGeometryRenderer() const = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
 [[setter]] virtual void setShadingScale(float scale) = 0;
@@ -252,7 +252,7 @@ virtual void presentAll() = 0;
 
 virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[getter]] virtual LayoutGraphBuilder *getLayoutGraphBuilder() = 0;
-[[nullable]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+[[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
         }
 

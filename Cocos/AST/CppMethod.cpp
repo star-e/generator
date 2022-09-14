@@ -62,7 +62,7 @@ void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parame
             parameters = {};
         }
     }
-    if (boost::algorithm::starts_with(typeName, "[[nullable]]")) {
+    if (boost::algorithm::starts_with(typeName, "[[optional]]")) {
         param.mNullable = true;
         typeName = typeName.substr(12);
     }
@@ -129,7 +129,7 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
         method.mSetter = true;
     }
 
-    if (boost::algorithm::contains(function, "[[nullable]]")) {
+    if (boost::algorithm::contains(function, "[[optional]]")) {
         method.mNullable = true;
     }
 

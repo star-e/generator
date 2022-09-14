@@ -88,7 +88,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(RenderSwapchain) {
             PUBLIC(
-                ([[nullable]] gfx::Swapchain*, mSwapchain, nullptr)
+                ([[optional]] gfx::Swapchain*, mSwapchain, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
             );
@@ -105,7 +105,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(ManagedBuffer) {
             PUBLIC(
-                ([[nullable]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
+                ([[optional]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
                 (uint32_t, mRefCount, 0)
             );
             CNTR(mBuffer);
@@ -113,7 +113,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(ManagedTexture) {
             PUBLIC(
-                ([[nullable]] IntrusivePtr<gfx::Texture>, mTexture, _)
+                ([[optional]] IntrusivePtr<gfx::Texture>, mTexture, _)
                 (uint32_t, mRefCount, 0)
             );
             CNTR(mTexture);
@@ -286,7 +286,7 @@ bool hasSideEffects() const noexcept {
         STRUCT(SceneData) {
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
-                ([[nullable]] scene::Camera*, mCamera, nullptr)
+                ([[optional]] scene::Camera*, mCamera, nullptr)
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
                 (ccstd::pmr::vector<ccstd::pmr::string>, mScenes, _)
@@ -308,7 +308,7 @@ bool hasSideEffects() const noexcept {
             PUBLIC(
                 (IntrusivePtr<cc::Material>, mMaterial, _)
                 (SceneFlags, mSceneFlags, _)
-                ([[nullable]] scene::Camera*, mCamera, nullptr)
+                ([[optional]] scene::Camera*, mCamera, nullptr)
             );
             CNTR_NO_DEFAULT(mMaterial, mSceneFlags, mCamera);
         }

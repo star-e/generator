@@ -504,9 +504,9 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
     std::pmr::string adlPath(className, scratch);
 
     bool bOptional = false;
-    if (boost::algorithm::contains(adlPath, "[[nullable]]")) {
+    if (boost::algorithm::contains(adlPath, "[[optional]]")) {
         bOptional = true;
-        boost::algorithm::replace_all(adlPath, "[[nullable]]", "");
+        boost::algorithm::replace_all(adlPath, "[[optional]]", "");
         boost::algorithm::trim(adlPath);
     }
 
