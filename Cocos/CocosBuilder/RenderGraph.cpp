@@ -139,8 +139,8 @@ bool hasSideEffects() const noexcept {
             COMPONENT_BIMAP(PmrUnorderedStringMap, mValueIndex, Name_);
             POLYMORPHIC_GRAPH(
                 (Managed_, ManagedResource, mResources)
-                //(ManagedBuffer_, ManagedBuffer, mManagedBuffers)
-                //(ManagedTexture_, ManagedTexture, mManagedTextures)
+                (ManagedBuffer_, ManagedBuffer, mManagedBuffers)
+                (ManagedTexture_, ManagedTexture, mManagedTextures)
                 (PersistentBuffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
                 (PersistentTexture_, IntrusivePtr<gfx::Texture>, mTextures)
                 (Framebuffer_, IntrusivePtr<gfx::Framebuffer>, mFramebuffers)
