@@ -32,7 +32,7 @@ namespace Cocos::Meta {
 
 void buildWebPipeline(ModuleBuilder& builder, Features features) {
     MODULE(WebPipeline,
-        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "web-pipeline-impl",
         .mRequires = { "RenderInterface" },
     ) {

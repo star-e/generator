@@ -24,7 +24,7 @@ using namespace cc::render;
 )",
         .mToJsConfigs = R"(%module_macro(CC_USE_GEOMETRY_RENDERER) cc::render::PipelineRuntime::geometryRenderer;
 )",
-        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon", "LayoutGraph", "RenderGraph" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"

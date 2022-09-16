@@ -34,7 +34,7 @@ void buildExecutorExample(ModuleBuilder& builder, Features features) {
     MODULE(ExecutorExample,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderExecutor",
-        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "executor",
         .mRequires = { "RenderCommon", /*"RenderGraph", */"Gfx" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"

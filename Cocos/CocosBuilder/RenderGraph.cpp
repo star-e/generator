@@ -39,7 +39,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         .mJsbHeaders = R"(#include "cocos/bindings/auto/jsb_gfx_auto.h"
 #include "cocos/bindings/auto/jsb_scene_auto.h"
 )",
-        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "render-graph",
         .mRequires = { "RenderCommon", "Gfx", "Camera", "PipelineSceneData" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"

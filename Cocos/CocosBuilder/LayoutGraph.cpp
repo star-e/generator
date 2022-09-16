@@ -38,13 +38,13 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "LayoutGraph",
         .mJsbHeaders = R"(#include "cocos/bindings/auto/jsb_gfx_auto.h"
 )",
-        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "layout-graph",
         .mRequires = { "Gfx", "RenderCommon" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 )",
-        .mTypescriptInclude = R"(import { ccclass } from '../../data/decorators';
+        .mTypescriptInclude = R"(import { ccclass } from '../../core/data/decorators';
 )"
     ) {
         NAMESPACE_BEG(cc);

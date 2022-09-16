@@ -141,7 +141,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(GeometryRenderer,
-        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFolder = "cocos/rendering",
         .mTypescriptFilePrefix = "geometry-renderer", ) {
         ADD_FEATURES(ToJs);
 
@@ -156,7 +156,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     MODULE(PipelineSceneData,
         .mFolder = "cocos/renderer/pipeline",
         .mFilePrefix = "PipelineSceneData.h",
-        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFolder = "cocos/rendering",
         .mTypescriptFilePrefix = "pipeline-scene-data", ) {
         ADD_FEATURES(ToJs);
 
@@ -169,7 +169,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(GlobalDSManager,
-        .mTypescriptFolder = "cocos/core/pipeline",
+        .mTypescriptFolder = "cocos/rendering",
         .mTypescriptFilePrefix = "global-descriptor-set-manager",
     ) {
         ADD_FEATURES(ToJs);

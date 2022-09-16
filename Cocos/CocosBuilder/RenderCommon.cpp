@@ -47,7 +47,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mJsbHeaders = R"(#include "cocos/bindings/auto/jsb_gfx_auto.h"
 #include "cocos/bindings/auto/jsb_scene_auto.h"
 )",
-        .mTypescriptFolder = "cocos/core/pipeline/custom",
+        .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "types",
         .mRequires = { "Gfx" },
         .mHeader = R"(#include "cocos/scene/Light.h"
