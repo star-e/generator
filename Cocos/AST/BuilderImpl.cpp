@@ -1750,7 +1750,7 @@ int ModuleBuilder::compile() {
 )");
         }
 
-        addMember(vertID, true, builder.vertexListType(), "mVertices", "_",
+        addMember(vertID, false, builder.vertexListType(), "mVertices", "_",
             NO_SERIALIZATION | IMPL_DETAIL | NOT_ELEMENT, R"(// Vertices
 )");
 
