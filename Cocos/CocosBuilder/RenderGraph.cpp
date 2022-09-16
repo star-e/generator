@@ -315,10 +315,11 @@ void unmount(uint64_t completedFenceValue);
         STRUCT(Blit) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<cc::Material>, mMaterial, _)
+                (uint32_t, mPassID, 0)
                 (SceneFlags, mSceneFlags, _)
                 ([[optional]] scene::Camera*, mCamera, nullptr)
             );
-            CNTR_NO_DEFAULT(mMaterial, mSceneFlags, mCamera);
+            CNTR_NO_DEFAULT(mMaterial, mPassID, mSceneFlags, mCamera);
         }
 
         STRUCT(Present) {
