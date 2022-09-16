@@ -156,11 +156,12 @@ void addCppDefaultValues(ModuleBuilder& builder) {
     }
 
     NAMESPACE(cc) {
+        NAMESPACE(render) {
+            CONTAINER(PmrUniquePtr);
+            TS_PROJECT(PmrUniquePtr, _);
+        }
         CONTAINER(ObserverPtr);
         TS_PROJECT(ObserverPtr, _);
-
-        CONTAINER(PmrUniquePtr);
-        TS_PROJECT(PmrUniquePtr, _);
 
         IMPORT_PMR_CLASS(PmrString, .mFlags = JSB);
         PMR_CONTAINER(PmrList);

@@ -119,13 +119,13 @@ bool hasSideEffects() const noexcept {
             CNTR(mTexture);
         }
 
-        //STRUCT(ManagedResource) {
-        //    PUBLIC(
-        //        (uint32_t, mUnused, 0)
-        //    );
-        //}
+        STRUCT(ManagedResource) {
+            PUBLIC(
+                (uint32_t, mUnused, 0)
+            );
+        }
 
-        TAGS((_), ManagedBuffer_, ManagedTexture_, PersistentBuffer_, PersistentTexture_,
+        TAGS((_), Managed_, ManagedBuffer_, ManagedTexture_, PersistentBuffer_, PersistentTexture_,
             Framebuffer_, Swapchain_);
 
         PMR_GRAPH(ResourceGraph, _, _) {
@@ -138,8 +138,9 @@ bool hasSideEffects() const noexcept {
             );
             COMPONENT_BIMAP(PmrUnorderedStringMap, mValueIndex, Name_);
             POLYMORPHIC_GRAPH(
-                (ManagedBuffer_, ManagedBuffer, mManagedBuffers)
-                (ManagedTexture_, ManagedTexture, mManagedTextures)
+                (Managed_, ManagedResource, mResources)
+                //(ManagedBuffer_, ManagedBuffer, mManagedBuffers)
+                //(ManagedTexture_, ManagedTexture, mManagedTextures)
                 (PersistentBuffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
                 (PersistentTexture_, IntrusivePtr<gfx::Texture>, mTextures)
                 (Framebuffer_, IntrusivePtr<gfx::Framebuffer>, mFramebuffers)
@@ -205,7 +206,6 @@ void unmount(uint64_t completedFenceValue);
 
         STRUCT(RasterPass, .mFlags = EQUAL | HASH_COMBINE) {
             PUBLIC(
-                (bool, mIsValid, false)
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
                 (SubpassGraph, mSubpassGraph, _)

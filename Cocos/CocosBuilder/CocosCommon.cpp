@@ -36,7 +36,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         PROJECT_TS(IntrusivePtr, _);
     }
     MODULE(PassUtils,
-        .mTypescriptFolder = "cocos/core/renderer/core",
+        .mTypescriptFolder = "cocos/render-scene/core",
         .mTypescriptFilePrefix = "pass-utils",
     ) {
         ADD_FEATURES(ToJs);
@@ -46,7 +46,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(Scene,
-        .mTypescriptFolder = "cocos/core/renderer",
+        .mTypescriptFolder = "cocos/render-scene",
         .mTypescriptFilePrefix = "scene", ) {
         ADD_FEATURES(ToJs);
         NAMESPACE(cc) {
@@ -60,7 +60,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(RenderWindow,
-        .mTypescriptFolder = "cocos/core/renderer/core",
+        .mTypescriptFolder = "cocos/render-scene/core",
         .mTypescriptFilePrefix = "render-window", ) {
         ADD_FEATURES(ToJs);
         NAMESPACE(cc) {
@@ -71,7 +71,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(RenderScene,
-        .mTypescriptFolder = "cocos/core/renderer/core",
+        .mTypescriptFolder = "cocos/render-scene/core",
         .mTypescriptFilePrefix = "render-scene",
     ) {
         ADD_FEATURES(ToJs);
@@ -104,7 +104,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     MODULE(Camera,
         .mFolder = "cocos/scene",
         .mFilePrefix = "Camera.h",
-        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFolder = "cocos/render-scene/scene",
         .mTypescriptFilePrefix = "camera",
     ) {
         ADD_FEATURES(ToJs);
@@ -116,7 +116,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
     MODULE(Ambient,
-        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFolder = "cocos/render-scene/scene",
         .mTypescriptFilePrefix = "ambient",
     ) {
         NAMESPACE(cc) {
@@ -124,7 +124,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
     MODULE(Fog,
-        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFolder = "cocos/render-scene/scene",
         .mTypescriptFilePrefix = "fog",
     ) {
         NAMESPACE(cc) {
@@ -132,7 +132,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
     MODULE(Shadows,
-        .mTypescriptFolder = "cocos/core/renderer/scene",
+        .mTypescriptFolder = "cocos/render-scene/scene",
         .mTypescriptFilePrefix = "shadows",
     ) {
         NAMESPACE(cc) {
