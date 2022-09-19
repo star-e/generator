@@ -48,6 +48,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 #include "cocos/math/Geometry.h"
+#include "cocos/renderer/pipeline/custom/Set.h"
 )",
     ) {
         NAMESPACE_BEG(cc);
@@ -150,7 +151,7 @@ bool hasSideEffects() const noexcept {
                 (uint64_t, mNextFenceValue, 1)
             );
             MEMBER_FUNCTIONS(R"(
-void mount(vertex_descriptor vertID, ccstd::pmr::vector<vertex_descriptor>& mounted);
+void mount(gfx::Device* device, vertex_descriptor vertID);
 void unmount(uint64_t completedFenceValue);
 )");
         }

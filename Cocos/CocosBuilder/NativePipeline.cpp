@@ -36,8 +36,10 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "FrameGraph" },
+        .mRequires = { "RenderInterface" },
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
+#include "cocos/renderer/gfx-base/GFXRenderPass.h"
+#include "cocos/renderer/gfx-base/GFXFramebuffer.h"
 )"
     ) {
         NAMESPACE_BEG(cc);
@@ -256,9 +258,8 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (scene::Model*, mProfiler, nullptr)
                 (LightingMode, mLightingMode, LightingMode::DEFAULT)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
-                // ((ccstd::pmr::unordered_map<ccstd::pmr::string, pipeline::RenderQueue>), mRenderQueues, _)
+                (NativeRenderContext, mNativeContext, _)
                 (LayoutGraphData, mLayoutGraph, _)
-                (framegraph::FrameGraph, mFrameGraph, _)
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
             );
