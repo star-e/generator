@@ -47,6 +47,13 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(NullTag) {
         };
 
+        STRUCT(LeafStatus) {
+            PUBLIC(
+                (bool, mIsExternal, false)
+                (bool, mNeedCulling, false)
+            );
+        };
+
         STRUCT(BufferRange) {
             PUBLIC(
                 (uint32_t, mOffset, 0)
@@ -94,7 +101,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
                 (RenderGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
-                (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mExternalPasses, _)
+                ((PmrFlatMap<RenderGraph::vertex_descriptor, LeafStatus>), mLeafPasses, _)
+                ((PmrFlatSet<RenderGraph::vertex_descriptor>), mCulledPasses, _)
                 ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
             );
             COMPONENT_GRAPH(
