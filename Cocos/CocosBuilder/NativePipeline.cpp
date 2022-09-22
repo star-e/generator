@@ -264,6 +264,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (RenderGraph, mRenderGraph, _)
             );
             MEMBER_FUNCTIONS(R"(
+void executeRenderGraph(const RenderGraph& rg);
 private:
 ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
 
