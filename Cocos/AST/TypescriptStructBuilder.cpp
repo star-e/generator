@@ -166,13 +166,13 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (method.mGetter) {
                 auto methodName = method.mFunctionName.substr(3);
                 methodName = camelToVariable(methodName, scratch);
-                oss << "get " << methodName << "(";
+                oss << "get " << methodName << " (";
             } else if (method.mSetter) {
                 auto methodName = method.mFunctionName.substr(3);
                 methodName = camelToVariable(methodName, scratch);
-                oss << "set " << methodName << "(";
+                oss << "set " << methodName << " (";
             } else {
-                oss << method.mFunctionName << "(";
+                oss << method.mFunctionName << " (";
             }
             for (uint32_t count = 0; const auto& param : method.mParameters) {
                 if (count == numParams)
