@@ -214,6 +214,7 @@ void unmount(uint64_t completedFenceValue);
                 (uint32_t, mHeight, 0)
                 (gfx::Viewport, mViewport, _)
             );
+            MEMBER_FLAGS(mViewport, NOT_ELEMENT);
         }
 
         STRUCT(ComputePass) {
