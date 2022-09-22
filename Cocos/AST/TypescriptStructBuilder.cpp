@@ -159,9 +159,10 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             continue;
         int32_t numParams = static_cast<int32_t>(method.mParameters.size());
         for (; numParams >= 0; --numParams) {
-            OSS << "public ";
-            if (method.mPure)
-                oss << "abstract ";
+            OSS;
+            if (!method.mPure) {
+                oss << "public ";
+            }
             if (method.mGetter) {
                 auto methodName = method.mFunctionName.substr(3);
                 methodName = camelToVariable(methodName, scratch);

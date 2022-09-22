@@ -100,7 +100,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
 [[skip]] virtual bool isRenderQueueReset() const = 0;
 )");
             TS_FUNCTIONS(R"(
-public abstract get macros(): MacroRecord;
+get macros(): MacroRecord;
 )");
         }
 
@@ -197,8 +197,8 @@ virtual void bindInputAssembler(gfx::InputAssembler *ia) = 0;
 virtual void draw(const gfx::DrawInfo &info) = 0;
 )");
             TS_FUNCTIONS(R"(
-public abstract bindDescriptorSet (set: number, descriptorSet: DescriptorSet, dynamicOffsets?: number[]): void;
-public abstract updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number): void;
+bindDescriptorSet (set: number, descriptorSet: DescriptorSet, dynamicOffsets?: number[]): void;
+updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number): void;
 )");
         }
 

@@ -102,9 +102,10 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             }
             OSS << "export";
             if (traits.mInterface) {
-                oss << " abstract";
+                oss << " interface " << name;
+            } else {
+                oss << " class " << name;
             }
-            oss << " class " << name;
             const auto& inherits = get(g.inherits, g, vertID);
             for (int count = 0; const auto& conceptPath : inherits.mBases) {
                 auto superID = locate(conceptPath, g);
