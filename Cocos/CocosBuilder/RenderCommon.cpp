@@ -57,7 +57,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(render);
         
         ENUM_CLASS(UpdateFrequency) {
-            ENUMS(PER_INSTANCE, PER_BATCH, PER_QUEUE, PER_PASS, COUNT);
+            ENUMS(PER_INSTANCE, PER_BATCH, PER_PHASE, PER_PASS, COUNT);
         }
 
         ENUM_CLASS(ParameterType) {
