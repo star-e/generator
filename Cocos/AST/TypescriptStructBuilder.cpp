@@ -154,9 +154,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     if (false && !methods.empty()) {
         OSS << "// API\n";
     }
-    for (const auto& method : methods) {
-        if (method.mSkip)
+    for (uint32_t methodID = 0; const auto& method : methods) {
+        if (method.mSkip || method.mSetter) {
+            ++methodID;
             continue;
+        }
         int32_t numParams = static_cast<int32_t>(method.mParameters.size());
         for (; numParams >= 0; --numParams) {
             OSS;
@@ -166,7 +168,19 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (method.mGetter) {
                 auto methodName = method.mFunctionName.substr(3);
                 methodName = camelToVariable(methodName, scratch);
-                oss << "get " << methodName << " (";
+                if (methodID + 1 < methods.size()) {
+                    const auto& nextMethod = methods[methodID + 1];
+                    if (nextMethod.mSetter) {
+                        oss << methodName;
+                    } else {
+                        oss << "readonly " << methodName;
+                    }
+                    oss << ": ";
+                    oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+                    oss << ";\n";
+                }
+                break;
+                //oss << "get " << methodName << " (";
             } else if (method.mSetter) {
                 auto methodName = method.mFunctionName.substr(3);
                 methodName = camelToVariable(methodName, scratch);
@@ -199,6 +213,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (numParams > 0 && method.mParameters[numParams - 1].mDefaultValue.empty())
                 break;
         }
+        ++methodID;
     }
 
     if (!functions.empty()) {
