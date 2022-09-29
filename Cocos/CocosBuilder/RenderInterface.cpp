@@ -100,7 +100,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
 [[skip]] virtual bool isRenderQueueReset() const = 0;
 )");
             TS_FUNCTIONS(R"(
-get macros (): MacroRecord;
+readonly macros: MacroRecord;
 )");
         }
 
