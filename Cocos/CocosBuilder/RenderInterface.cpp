@@ -267,7 +267,23 @@ virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipel
 
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
-static Pipeline            *createPipeline();
+static Pipeline *createPipeline();
+)");
+        }
+
+        INTERFACE(OutputArchive) {
+            MEMBER_FUNCTIONS(R"(
+virtual void save_bool(bool value) = 0;
+virtual void save_number(double value) = 0;
+virtual void save_string(std::string_view value) = 0;
+)");
+        }
+
+        INTERFACE(InputArchive) {
+            MEMBER_FUNCTIONS(R"(
+virtual bool load_bool() = 0;
+virtual double load_number() = 0;
+virtual std::string_view load_string() = 0;
 )");
         }
 

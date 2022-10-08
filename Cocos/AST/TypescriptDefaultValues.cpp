@@ -55,6 +55,7 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
 
     PROJECT_TS(std::byte, number);
 
+    PROJECT_TS(std::string_view, string);
     PROJECT_TS(std::string, string);
     PROJECT_TS(std::u8string, string);
 
