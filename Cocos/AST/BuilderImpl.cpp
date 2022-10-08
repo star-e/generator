@@ -659,7 +659,7 @@ void ModuleBuilder::addMemberFunctions(SyntaxGraph::vertex_descriptor vertID,
             auto modulePath = get(g.modulePaths, g, vertID);
             auto moduleID = locate(modulePath, mModuleGraph);
             const auto& m = get(mModuleGraph.modules, mModuleGraph, moduleID);
-            if (m.mFeatures & ToJs) {
+            if (m.mFeatures & Interface) {
                 s.mMethods = parseFunctions(*this, content);
             }
         },

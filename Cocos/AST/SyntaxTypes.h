@@ -1297,6 +1297,7 @@ enum Features : uint32_t {
     Typescripts = 1 << 8,
     Jsb = 1 << 9,
     ToJs = 1 << 10,
+    Interface = 1 << 11,
 };
 
 constexpr Features operator|(const Features lhs, const Features rhs) noexcept {

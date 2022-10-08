@@ -67,8 +67,8 @@ int main() {
         buildFGDispatcher(builder, Types | Graphs);
 
         // build render compiler (native)
-        buildRenderInterface(builder,
-            Fwd | Types | Typescripts | ToJs);
+        buildArchiveInterface(builder, Fwd | Types | Typescripts | Interface);
+        buildRenderInterface(builder, Fwd | Types | Typescripts | Interface | ToJs);
 
         // web
         buildWebPipeline(builder, Typescripts);
@@ -107,6 +107,7 @@ int main() {
 
         // render graph
         builder.outputModule("RenderGraph", files);
+        builder.outputModule("ArchiveInterface", files);
         builder.outputModule("RenderInterface", files);
 
         builder.outputModule("FGDispatcher", files);

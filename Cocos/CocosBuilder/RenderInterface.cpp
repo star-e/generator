@@ -4,6 +4,46 @@
 
 namespace Cocos::Meta {
 
+void buildArchiveInterface(ModuleBuilder& builder, Features features) {
+    MODULE(ArchiveInterface,
+        .mFolder = "cocos/renderer/pipeline/custom",
+        .mFilePrefix = "Archive",
+        .mToJsFilename = "",
+        .mToJsPrefix = "",
+        .mToJsNamespace = "",
+        .mToJsCppHeaders = "",
+        .mToJsUsingNamespace = "",
+        .mToJsConfigs = "",
+        .mTypescriptFolder = "cocos/rendering/custom",
+        .mTypescriptFilePrefix = "archive",
+        .mRequires = {},
+        .mHeader = R"(#include <string_view>
+)"
+    ) {
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
+
+        INTERFACE(OutputArchive) {
+            MEMBER_FUNCTIONS(R"(
+virtual void saveBool(bool value) = 0;
+virtual void saveNumber(double value) = 0;
+virtual void saveString(std::string_view value) = 0;
+)");
+        }
+
+        INTERFACE(InputArchive) {
+            MEMBER_FUNCTIONS(R"(
+virtual bool loadBool() = 0;
+virtual double loadNumber() = 0;
+virtual std::string_view loadString() = 0;
+)");
+        }
+
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
+    }
+}
+
 void buildRenderInterface(ModuleBuilder& builder, Features features) {
     MODULE(RenderInterface,
         .mFolder = "cocos/renderer/pipeline/custom",
@@ -59,22 +99,6 @@ class RenderWindow;
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
-
-        INTERFACE(OutputArchive) {
-            MEMBER_FUNCTIONS(R"(
-virtual void saveBool(bool value) = 0;
-virtual void saveNumber(double value) = 0;
-virtual void saveString(std::string_view value) = 0;
-)");
-        }
-
-        INTERFACE(InputArchive) {
-            MEMBER_FUNCTIONS(R"(
-virtual bool loadBool() = 0;
-virtual double loadNumber() = 0;
-virtual std::string_view loadString() = 0;
-)");
-        }
 
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
