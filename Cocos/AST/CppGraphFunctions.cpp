@@ -3411,7 +3411,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     stringName = "std::u8string";
             } else {
                 charName = "char";
-                viewName = "boost::string_view";
+                viewName = "std::string_view";
                 if (pmr)
                     stringName = "ccstd::pmr::string";
                 else
@@ -3495,7 +3495,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     stringName = "std::u8string";
             } else {
                 charName = "char";
-                viewName = "boost::string_view";
+                viewName = "std::string_view";
                 if (pmr)
                     stringName = "ccstd::pmr::string";
                 else
@@ -3564,7 +3564,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             viewName = "std::u8string_view";
         } else {
             stringName = "std::pmr::string";
-            viewName = "boost::string_view";
+            viewName = "std::string_view";
         }
         oss << "\n";
         OSS << gNoDiscard << "inline " << name << "::vertex_descriptor\n";
@@ -3604,8 +3604,8 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             Expects(false);
                         },
                         [&](Map_) {
-                            OSS << "CC_EXPECTS(!relative.starts_with('/'));\n";
-                            OSS << "CC_EXPECTS(!relative.ends_with('/'));\n";
+                            OSS << "CC_EXPECTS(!boost::algorithm::starts_with(relative, \"/\"));\n";
+                            OSS << "CC_EXPECTS(!boost::algorithm::ends_with(relative, \"/\"));\n";
                             if (pmr) {
                                 OSS << "auto key = getPath(u, relative, g, mr);\n";
                             } else {
@@ -3637,7 +3637,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (s.mAddressableConcept.mUtf8) {
                 OSS << "get(std::u8string_view pt, " << name << "& g) {\n";
             } else {
-                OSS << "get(boost::string_view pt, " << name << "& g) {\n";
+                OSS << "get(std::string_view pt, " << name << "& g) {\n";
             }
             OSS << "    auto v = locate(pt, g);\n";
             OSS << "    if (v == " << name << "::null_vertex()) {\n";
@@ -3652,7 +3652,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (s.mAddressableConcept.mUtf8) {
                 OSS << "get(std::u8string_view pt, const " << name << "& g) {\n";
             } else {
-                OSS << "get(boost::string_view pt, const " << name << "& g) {\n";
+                OSS << "get(std::string_view pt, const " << name << "& g) {\n";
             }
             OSS << "    auto v = locate(pt, g);\n";
             OSS << "    if (v == " << name << "::null_vertex()) {\n";
@@ -3667,7 +3667,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (s.mAddressableConcept.mUtf8) {
                 OSS << "get_if(std::u8string_view pt, " << name << "* pGraph) noexcept { // NOLINT\n";
             } else {
-                OSS << "get_if(boost::string_view pt, " << name << "* pGraph) noexcept { // NOLINT\n";
+                OSS << "get_if(std::string_view pt, " << name << "* pGraph) noexcept { // NOLINT\n";
             }
             OSS << "    if (pGraph) {\n";
             OSS << "        auto v = locate(pt, *pGraph);\n";
@@ -3684,7 +3684,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             if (s.mAddressableConcept.mUtf8) {
                 OSS << "get_if(std::u8string_view pt, const " << name << "* pGraph) noexcept { // NOLINT\n";
             } else {
-                OSS << "get_if(boost::string_view pt, const " << name << "* pGraph) noexcept { // NOLINT\n";
+                OSS << "get_if(std::string_view pt, const " << name << "* pGraph) noexcept { // NOLINT\n";
             }
             OSS << "    if (pGraph) {\n";
             OSS << "        auto v = locate(pt, *pGraph);\n";
@@ -3781,7 +3781,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                     if (s.mAddressableConcept.mUtf8) {
                         OSS << "auto iter     = g." << member << ".find(std::u8string_view(pathName));\n";
                     } else {
-                        OSS << "auto iter     = g." << member << ".find(boost::string_view(pathName));\n";
+                        OSS << "auto iter     = g." << member << ".find(std::string_view(pathName));\n";
                     }
                     OSS << "CC_EXPECTS(iter != g." << member << ".end());\n";
                     OSS << "g." << member << ".erase(iter);\n";
@@ -3855,7 +3855,7 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         u8Name = ", std::u8string&& name";
                     }
                 } else {
-                    strName = ", boost::string_view name";
+                    strName = ", std::string_view name";
                     u8Name = ", std::u8string_view name";
                 }
                 if (!s.mNamedConcept.mComponent) {

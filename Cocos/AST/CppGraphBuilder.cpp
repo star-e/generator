@@ -653,7 +653,7 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapName(bool bConst) const {
         OSS << (bConst ? "const " : "") << cpp.getDependentName(mStruct.mCurrentPath) << ",\n";
         if (isString) {
             if (isU8String) {
-                OSS << "boost::string_view,\n";
+                OSS << "std::string_view,\n";
             } else {
                 OSS << "std::u8string_view,\n";
             }
@@ -711,7 +711,7 @@ std::pmr::string CppGraphBuilder::vertexPropertyMapMemberName(bool bConst) const
             if (isU8String) {
                 OSS << "std::u8string_view,\n";
             } else {
-                OSS << "boost::string_view,\n";
+                OSS << "std::string_view,\n";
             }
         }
         if (!isString) {
@@ -763,7 +763,7 @@ std::pmr::string CppGraphBuilder::edgePropertyMapName(bool bConst) const {
             if (g.isUtf8(epID)) {
                 OSS << "std::u8string_view,\n";
             } else {
-                OSS << "boost::string_view,\n";
+                OSS << "std::string_view,\n";
             }
         } else {
             OSS << "" << cpp.getDependentName(s.mEdgeProperty) << ",\n";
@@ -821,7 +821,7 @@ std::pmr::string CppGraphBuilder::edgePropertyMapMemberName(bool bConst, std::st
             if (isU8String) {
                 OSS << "std::u8string_view,\n";
             } else {
-                OSS << "boost::string_view,\n";
+                OSS << "std::string_view,\n";
             }
         }
         if (!isString) {
@@ -908,7 +908,7 @@ std::pmr::string CppGraphBuilder::vertexComponentMapName(const Component& c, boo
             if (isU8String) {
                 OSS << "std::u8string_view,\n";
             } else {
-                OSS << "boost::string_view,\n";
+                OSS << "std::string_view,\n";
             }
         } else {
             OSS << component << ",\n";
@@ -992,7 +992,7 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
             if (isU8String) {
                 OSS << "std::u8string_view,\n";
             } else {
-                OSS << "boost::string_view,\n";
+                OSS << "std::string_view,\n";
             }
         }
         // reference & member

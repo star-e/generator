@@ -60,6 +60,22 @@ class RenderWindow;
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+        INTERFACE(OutputArchive) {
+            MEMBER_FUNCTIONS(R"(
+virtual void saveBool(bool value) = 0;
+virtual void saveNumber(double value) = 0;
+virtual void saveString(std::string_view value) = 0;
+)");
+        }
+
+        INTERFACE(InputArchive) {
+            MEMBER_FUNCTIONS(R"(
+virtual bool loadBool() = 0;
+virtual double loadNumber() = 0;
+virtual std::string_view loadString() = 0;
+)");
+        }
+
         INTERFACE(PipelineRuntime) {
             MEMBER_FUNCTIONS(R"(
 virtual bool activate(gfx::Swapchain * swapchain) = 0;
@@ -268,22 +284,6 @@ virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipel
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
 static Pipeline *createPipeline();
-)");
-        }
-
-        INTERFACE(OutputArchive) {
-            MEMBER_FUNCTIONS(R"(
-virtual void save_bool(bool value) = 0;
-virtual void save_number(double value) = 0;
-virtual void save_string(std::string_view value) = 0;
-)");
-        }
-
-        INTERFACE(InputArchive) {
-            MEMBER_FUNCTIONS(R"(
-virtual bool load_bool() = 0;
-virtual double load_number() = 0;
-virtual std::string_view load_string() = 0;
 )");
         }
 
