@@ -25,17 +25,17 @@ void buildArchiveInterface(ModuleBuilder& builder, Features features) {
 
         INTERFACE(OutputArchive) {
             MEMBER_FUNCTIONS(R"(
-virtual void saveBool(bool value) = 0;
-virtual void saveNumber(double value) = 0;
-virtual void saveString(std::string_view value) = 0;
+virtual void writeBool(bool value) = 0;
+virtual void writeNumber(double value) = 0;
+virtual void writeString(std::string_view value) = 0;
 )");
         }
 
         INTERFACE(InputArchive) {
             MEMBER_FUNCTIONS(R"(
-virtual bool loadBool() = 0;
-virtual double loadNumber() = 0;
-virtual std::string_view loadString() = 0;
+virtual bool readBool() = 0;
+virtual double readNumber() = 0;
+virtual std::string_view readString() = 0;
 )");
         }
 
