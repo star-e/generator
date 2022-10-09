@@ -56,7 +56,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         [&](const Enum& e) {
             if (currScope.mCount++)
                 oss << "\n";
-            OSS << "export const enum " << name << " {\n";
+            OSS << "export enum " << name << " {\n";
             {
                 INDENT();
                 for (const auto& v : e.mValues) {
