@@ -59,7 +59,7 @@ int main() {
 
         // build render pipeline
         buildRenderCommon(builder,
-            Fwd | Types | Names | Reflection | Typescripts | Jsb);
+            Fwd | Types | Names | Reflection | Typescripts | Jsb | Serialization);
         buildLayoutGraph(builder,
             Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
         buildRenderGraph(builder,

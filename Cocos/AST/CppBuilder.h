@@ -70,4 +70,12 @@ std::pmr::string generateReflection_cpp(std::string_view projectName,
     std::string_view moduleName,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch);
 
+std::pmr::string generateSerialization_h(
+    std::string_view projectName, const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName0,
+    bool nvp,
+    std::pmr::memory_resource* mr,
+    std::pmr::memory_resource* scratch);
+
 }

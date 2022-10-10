@@ -1580,6 +1580,33 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         codegen.mScopes.pop_back();
         updateFile(filename, oss.str());
     }
+
+    if (features & Features::Serialization) {
+        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Serialization.h", scratch);
+        std::filesystem::path filename = cppFolder / shortname;
+        files.emplace(std::move(shortname));
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+        std::pmr::string space(scratch);
+        outputComment(oss);
+        OSS << "#pragma once\n";
+        OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
+        const auto included = getIndirectIncludes(moduleID, mg, scratch);
+        for (const auto& require : m.mRequires) {
+            auto moduleID = locate(mg.null_vertex(), require, mg);
+            if (included.contains(moduleID))
+                continue;
+            const auto& dep = get(mg.modules, mg, moduleID);
+            auto ccDepFolder = std::string_view(dep.mFolder);
+            if (!dep.mFilePrefix.ends_with(".h")) {
+                OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Serialization.h\"\n";
+            }
+        }
+        OSS << "#include \"" << ccFolder << "/ArchiveTypes.h\"\n";
+        OSS << "#include \"" << ccFolder << "/SerializationUtils.h\"\n";
+        copyString(oss, generateSerialization_h(mProjectName, mSyntaxGraph,
+            mModuleGraph, modulePath, false, scratch, scratch));
+        updateFile(filename, reorderIncludes(oss.str(), scratch));
+    }
 }
 
 void ModuleBuilder::addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content) {
