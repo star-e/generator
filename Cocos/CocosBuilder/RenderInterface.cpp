@@ -66,7 +66,7 @@ using namespace cc::render;
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
-        .mRequires = { "Gfx", "RenderCommon", "LayoutGraph", "RenderGraph" },
+        .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {

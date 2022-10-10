@@ -51,6 +51,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mTypescriptFilePrefix = "types",
         .mRequires = { "Gfx" },
         .mHeader = R"(#include "cocos/scene/Light.h"
+#include "cocos/base/std/container/map.h"
 )",
     ) {
         NAMESPACE_BEG(cc);
@@ -180,6 +181,114 @@ bool isWrite() const {
                 (uint32_t, mLevel, 0)
             );
             CNTR(mLight, mLevel);
+        }
+
+        // Descriptor
+        // See native/cocos/renderer/gfx-validator/DescriptorSetLayoutValidator.cpp
+        //ENUM_CLASS(DescriptorTypeOrder) {
+        //    ENUMS(
+        //        UNIFORM_BLOCK,
+        //        SAMPLER_TEXTURE,
+        //        SAMPLER,
+        //        TEXTURE,
+        //        STORAGE_BUFFER,
+        //        STORAGE_TEXTURE,
+        //        SUBPASS_INPUT
+        //    );
+        //}
+        ENUM_CLASS(DescriptorTypeOrder) {
+            ENUMS(
+                UNIFORM_BUFFER,
+                DYNAMIC_UNIFORM_BUFFER,
+                SAMPLER_TEXTURE,
+                SAMPLER,
+                TEXTURE,
+                STORAGE_BUFFER,
+                DYNAMIC_STORAGE_BUFFER,
+                STORAGE_IMAGE,
+                INPUT_ATTACHMENT
+            );
+        }
+
+        STRUCT(Descriptor, .mFlags = JSB) {
+            PUBLIC(
+                (gfx::Type, mType, gfx::Type::UNKNOWN)
+                (uint32_t, mCount, 1)
+            );
+            TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mType);
+        }
+
+        STRUCT(DescriptorBlock) {
+            PUBLIC(
+                ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
+                ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
+                //((ccstd::map<gfx::Type, Descriptor>), mMerged, _)
+                (uint32_t, mCapacity, 0)
+                (uint32_t, mCount, 0)
+            );
+        }
+
+        STRUCT(DescriptorBlockFlattened, .mFlags = JSB) {
+            PUBLIC(
+                (ccstd::vector<ccstd::string>, mDescriptorNames, _)
+                (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
+                (ccstd::vector<Descriptor>, mDescriptors, _)
+                (ccstd::vector<gfx::UniformBlock>, mUniformBlocks, _)
+                (uint32_t, mCapacity, 0)
+                (uint32_t, mCount, 0)
+            );
+        }
+
+        STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB) {
+            PUBLIC(
+                (UpdateFrequency, mUpdateFrequency, _)
+                (ParameterType, mParameterType, _)
+                (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+            );
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
+            CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
+        }
+        
+        PROJECT_TS(
+            (ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>),
+            (Map<string, DescriptorBlock>)
+        );
+
+        // RenderGraph
+        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB) {
+            PUBLIC(
+                (ccstd::pmr::string, mSource, _)
+                (ccstd::pmr::string, mTarget, _)
+                (uint32_t, mMipLevels, 0xFFFFFFFF)
+                (uint32_t, mNumSlices, 0xFFFFFFFF)
+                (uint32_t, mSourceMostDetailedMip, 0)
+                (uint32_t, mSourceFirstSlice, 0)
+                (uint32_t, mSourcePlaneSlice, 0)
+                (uint32_t, mTargetMostDetailedMip, 0)
+                (uint32_t, mTargetFirstSlice, 0)
+                (uint32_t, mTargetPlaneSlice, 0)
+            );
+            CNTR(mSource, mTarget, mMipLevels, mNumSlices,
+                mSourceMostDetailedMip, mSourceFirstSlice, mSourcePlaneSlice,
+                mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
+        }
+
+        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB) {
+            PUBLIC(
+                (ccstd::pmr::string, mSource, _)
+                (ccstd::pmr::string, mTarget, _)
+                (uint32_t, mMipLevels, 0xFFFFFFFF)
+                (uint32_t, mNumSlices, 0xFFFFFFFF)
+                (uint32_t, mTargetMostDetailedMip, 0)
+                (uint32_t, mTargetFirstSlice, 0)
+                (uint32_t, mTargetPlaneSlice, 0)
+            );
+            CNTR(mSource, mTarget, mMipLevels, mNumSlices,
+                mTargetMostDetailedMip,
+                mTargetFirstSlice, mTargetPlaneSlice);
         }
 
         NAMESPACE_END(render);

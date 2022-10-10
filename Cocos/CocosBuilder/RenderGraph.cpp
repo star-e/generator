@@ -41,7 +41,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "render-graph",
-        .mRequires = { "RenderCommon", "Gfx", "Camera", "PipelineSceneData" },
+        .mRequires = { "RenderCommon", "Gfx", "Camera" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"
 #include "cocos/renderer/gfx-base/GFXTexture.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
@@ -49,6 +49,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 #include "cocos/math/Geometry.h"
 #include "cocos/renderer/pipeline/custom/Set.h"
+#include "cocos/core/assets/Material.h"
 )",
     ) {
         NAMESPACE_BEG(cc);
@@ -223,43 +224,10 @@ void unmount(uint64_t completedFenceValue);
             );
         }
 
-        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB) {
-            PUBLIC(
-                (ccstd::pmr::string, mSource, _)
-                (ccstd::pmr::string, mTarget, _)
-                (uint32_t, mMipLevels, 0xFFFFFFFF)
-                (uint32_t, mNumSlices, 0xFFFFFFFF)
-                (uint32_t, mSourceMostDetailedMip, 0)
-                (uint32_t, mSourceFirstSlice, 0)
-                (uint32_t, mSourcePlaneSlice, 0)
-                (uint32_t, mTargetMostDetailedMip, 0)
-                (uint32_t, mTargetFirstSlice, 0)
-                (uint32_t, mTargetPlaneSlice, 0)
-            );
-            CNTR(mSource, mTarget, mMipLevels, mNumSlices,
-                mSourceMostDetailedMip, mSourceFirstSlice, mSourcePlaneSlice,
-                mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
-        }
-
         STRUCT(CopyPass) {
             PUBLIC(
                 (ccstd::pmr::vector<CopyPair>, mCopyPairs, _)
             );
-        }
-
-        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB) {
-            PUBLIC(
-                (ccstd::pmr::string, mSource, _)
-                (ccstd::pmr::string, mTarget, _)
-                (uint32_t, mMipLevels, 0xFFFFFFFF)
-                (uint32_t, mNumSlices, 0xFFFFFFFF)
-                (uint32_t, mTargetMostDetailedMip, 0)
-                (uint32_t, mTargetFirstSlice, 0)
-                (uint32_t, mTargetPlaneSlice, 0)
-            );
-            CNTR(mSource, mTarget, mMipLevels, mNumSlices,
-                mTargetMostDetailedMip,
-                mTargetFirstSlice, mTargetPlaneSlice);
         }
 
         STRUCT(MovePass) {
