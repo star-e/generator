@@ -88,63 +88,59 @@ std::pmr::string generateSerialization_h(
                     || holds_tag<Graph_>(parentID, g))
                     return;
 
-                if (traits.mTrivial) {
-                    Expects(false);
-                } else {
-                    numTrival = 0;
-                    oss << "\n";
-                    oss << "inline void save(OutputArchive& ar, const " << cppName << "& v) {\n";
-                    {
-                        INDENT();
-                        if (nvp) {
-                            Expects(false);
-                        } else {
-                            for (const auto& m : s.mMembers) {
-                                if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
-                                    continue;
+                numTrival = 0;
+                oss << "\n";
+                oss << "inline void save(OutputArchive& ar, const " << cppName << "& v) {\n";
+                {
+                    INDENT();
+                    if (nvp) {
+                        Expects(false);
+                    } else {
+                        for (const auto& m : s.mMembers) {
+                            if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                continue;
 
-                                auto memberID = locate(m.mTypePath, g);
-                                if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
-                                    || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
-                                    continue;
-                                }
-                                if (g.isTypescriptPointer(memberID)) {
-                                    OSS << "// skip, " << m.getMemberName() << ": "
-                                        << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
-                                    continue;
-                                }
-                                OSS << "save(ar, v." << m.getMemberName() << ");\n";
+                            auto memberID = locate(m.mTypePath, g);
+                            if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                                continue;
                             }
+                            if (g.isTypescriptPointer(memberID)) {
+                                OSS << "// skip, " << m.getMemberName() << ": "
+                                    << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
+                                continue;
+                            }
+                            OSS << "save(ar, v." << m.getMemberName() << ");\n";
                         }
                     }
-                    oss << "}\n";
-                    oss << "\n";
-                    oss << "inline void load(InputArchive& ar, " << cppName << "& v) {\n";
-                    {
-                        INDENT();
-                        if (nvp) {
-                            Expects(false);
-                        } else {
-                            for (const auto& m : s.mMembers) {
-                                if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
-                                    continue;
-
-                                auto memberID = locate(m.mTypePath, g);
-                                if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
-                                    || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
-                                    continue;
-                                }
-                                if (g.isTypescriptPointer(memberID)) {
-                                    OSS << "// skip, " << m.getMemberName() << ": "
-                                        << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
-                                    continue;
-                                }
-                                OSS << "load(ar, v." << m.getMemberName() << ");\n";
-                            }
-                        }
-                    }
-                    oss << "}\n";
                 }
+                oss << "}\n";
+                oss << "\n";
+                oss << "inline void load(InputArchive& ar, " << cppName << "& v) {\n";
+                {
+                    INDENT();
+                    if (nvp) {
+                        Expects(false);
+                    } else {
+                        for (const auto& m : s.mMembers) {
+                            if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                continue;
+
+                            auto memberID = locate(m.mTypePath, g);
+                            if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                                continue;
+                            }
+                            if (g.isTypescriptPointer(memberID)) {
+                                OSS << "// skip, " << m.getMemberName() << ": "
+                                    << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
+                                continue;
+                            }
+                            OSS << "load(ar, v." << m.getMemberName() << ");\n";
+                        }
+                    }
+                }
+                oss << "}\n";
             },
             [&](const Graph& s) {
                 // const bool bDLL = !moduleInfo.mAPI.empty();

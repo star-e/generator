@@ -61,7 +61,7 @@ int main() {
         buildRenderCommon(builder,
             Fwd | Types | Names | Reflection | Typescripts | Jsb | Serialization);
         buildLayoutGraph(builder,
-            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
+            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb | Serialization);
         buildRenderGraph(builder,
             Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
         buildFGDispatcher(builder, Types | Graphs);
