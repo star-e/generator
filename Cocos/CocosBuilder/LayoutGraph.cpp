@@ -45,7 +45,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 )",
         .mTypescriptInclude = R"(import { ccclass } from '../../core/data/decorators';
-import { OutputArchive } from './archive';
+import { OutputArchive, InputArchive } from './archive';
 )"
     ) {
         NAMESPACE_BEG(cc);

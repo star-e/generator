@@ -46,4 +46,12 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const std::pmr::vector<Method>& methods,
     std::pmr::memory_resource* scratch);
 
+std::pmr::string generateSerialization_ts(
+    std::string_view projectName, const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName0,
+    bool nvp,
+    std::pmr::memory_resource* mr,
+    std::pmr::memory_resource* scratch);
+
 }

@@ -53,6 +53,8 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mHeader = R"(#include "cocos/scene/Light.h"
 #include "cocos/base/std/container/map.h"
 )",
+        .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
+)"
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);

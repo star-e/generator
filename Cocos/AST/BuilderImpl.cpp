@@ -1522,6 +1522,53 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             outputTypescript(oss, space, codegen, * this, "", vertID, scratch);
         }
 
+        if (features & Features::Serialization) {
+            for (const auto& requireName : moduleInfo.mRequires) {
+                const auto targetID = locate(mg.null_vertex(), requireName, mg);
+                const auto targetPath = get_path(targetID, mg, scratch);
+                const auto& target = get(mg.modules, mg, targetID);
+                if (!(target.mFeatures & Features::Serialization)) {
+                    continue;
+                }
+                oss << "\n";
+                OSS << "import {\n";
+                {
+                    INDENT();
+                    for (const auto& vertID : make_range(vertices(g))) {
+                        const auto& moduleName = get(g.modulePaths, g, vertID);
+                        if (moduleName != targetPath) {
+                            continue;
+                        }
+                        if (holds_tag<Define_>(vertID, g)) {
+                            continue;
+                        }
+                        const auto& traits = get(g.traits, g, vertID);
+                        if (traits.mUnknown)
+                            continue;
+                        if (traits.mImport)
+                            continue;
+                        if (traits.mFlags & GenerationFlags::NO_SERIALIZATION)
+                            continue;
+
+                        std::string_view ns = "/cc/render";
+                        auto typePath = g.getTypePath(vertID, scratch);
+                        auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+                        auto cppName = getCppPath(typeName, scratch);
+                        const auto& name = get(g.names, g, vertID);
+                        if (holds_tag<Struct_>(vertID, g)) {
+                            OSS << "save" << name << ", load" << name << ",\n";
+                        }
+                    }
+                }
+                OSS << "} from '";
+                std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
+                oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
+                oss << "';\n";
+            }
+            copyString(oss, space, generateSerialization_ts(
+                mProjectName, mSyntaxGraph, mModuleGraph, modulePath, false, scratch, scratch));
+        }
+
         if (false) {
             OSS << "/*\n";
             OSS << "import {";

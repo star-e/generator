@@ -265,4 +265,161 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     }
 }
 
+namespace {
+
+void outputArray(std::ostream& oss, std::pmr::string& space,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth) {
+    
+    OSS << "{ // Array\n";
+    {
+        INDENT();
+        OSS << "ar.writeNumber(" << varName << ".length);\n";
+        //OSS << "for ("
+    }
+    OSS << "}\n";
+}
+
+} // namespace
+
+std::pmr::string generateSerialization_ts(
+    std::string_view projectName, const SyntaxGraph& g,
+    const ModuleGraph& mg,
+    std::string_view moduleName0,
+    bool nvp,
+    std::pmr::memory_resource* mr,
+    std::pmr::memory_resource* scratch) {
+    pmr_ostringstream oss(std::ios_base::out, mr);
+    std::pmr::string space(scratch);
+    CodegenContext context(scratch);
+
+    const auto moduleID = locate(moduleName0, mg);
+    const auto& moduleInfo = get(mg.modules, mg, moduleID);
+    const bool bDLL = !moduleInfo.mAPI.empty();
+    std::pmr::string apiDLL(moduleInfo.mAPI, scratch);
+    apiDLL.append("_API");
+
+    std::string_view ns = "/cc/render";
+
+    int numTrival = 0;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& moduleName = get(g.modulePaths, g, vertID);
+        if (moduleName != moduleName0) {
+            continue;
+        }
+
+        if (holds_tag<Define_>(vertID, g)) {
+            continue;
+        }
+        const auto& traits = get(g.traits, g, vertID);
+        if (traits.mUnknown)
+            continue;
+        if (traits.mImport)
+            continue;
+        if (traits.mFlags & GenerationFlags::NO_SERIALIZATION)
+            continue;
+
+        auto typePath = g.getTypePath(vertID, scratch);
+        auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+        auto cppName = getCppPath(typeName, scratch);
+        const auto& name = get(g.names, g, vertID);
+
+        visit_vertex(
+            vertID, g,
+            [&](const Tag& t) {
+            },
+            [&](const Struct& s) {
+                auto parentID = parent(vertID, g);
+                if (holds_tag<Struct_>(parentID, g)
+                    || holds_tag<Graph_>(parentID, g))
+                    return;
+
+                if (traits.mTrivial) {
+                    return;
+                }
+                numTrival = 0;
+                oss << "\n";
+                oss << "export function save" << cppName << " (ar: OutputArchive, v: " << cppName << ") {\n";
+                {
+                    INDENT();
+                    if (nvp) {
+                        Expects(false);
+                    } else {
+                        for (const auto& m : s.mMembers) {
+                            if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                continue;
+
+                            auto memberID = locate(m.mTypePath, g);
+                            if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                                continue;
+                            }
+                            if (g.isTypescriptPointer(memberID)) {
+                                OSS << "// skip, " << m.getMemberName() << ": "
+                                    << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
+                                continue;
+                            }
+                            if (g.isTypescriptBoolean(memberID)) {
+                                OSS << "ar.writeBool(v." << m.getMemberName() << ");\n";
+                            } else if (g.isTypescriptNumber(memberID) || holds_tag<Enum_>(memberID, g)) {
+                                OSS << "ar.writeNumber(v." << m.getMemberName() << ");\n";
+                            } else if (g.isTypescriptString(memberID)) {
+                                OSS << "ar.writeString(v." << m.getMemberName() << ");\n";
+                            } else if (g.isTypescriptMap(memberID)) {
+                                OSS << "// Map\n";
+                            } else if (g.isTypescriptArray(memberID, scratch)) {
+                                OSS << "// Array\n";
+                            } else if (holds_tag<Struct_>(memberID, g)) {
+                                OSS << "// Struct\n";
+                                const auto& memberName = get(g.names, g, memberID);
+                                OSS << "save" << memberName << "(ar, v." << m.getMemberName() << ");\n";
+                            } else {
+                                OSS << "// skip: " << m.getMemberName() << ": "
+                                        << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
+                            }
+                        }
+                    }
+                }
+                oss << "}\n";
+                oss << "\n";
+                oss << "export function load" << cppName << " (ar: InputArchive, v: " << cppName << ") {\n";
+                {
+                    INDENT();
+                    //if (nvp) {
+                    //    Expects(false);
+                    //} else {
+                    //    for (const auto& m : s.mMembers) {
+                    //        if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                    //            continue;
+
+                    //        auto memberID = locate(m.mTypePath, g);
+                    //        if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                    //            || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                    //            continue;
+                    //        }
+                    //        if (g.isTypescriptPointer(memberID)) {
+                    //            OSS << "// skip, " << m.getMemberName() << ": "
+                    //                << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
+                    //            continue;
+                    //        }
+                    //        OSS << "load(ar, v." << m.getMemberName() << ");\n";
+                    //    }
+                    //}
+                }
+                oss << "}\n";
+            },
+            [&](const Graph& s) {
+                // const bool bDLL = !moduleInfo.mAPI.empty();
+                // CppGraphBuilder builder(&g, &mg, vertID,
+                //     moduleID, ns, bDLL, projectName, scratch);
+                // copyString(oss, space, builder.generateGraphSerialization_h(nvp));
+            },
+            [&](const auto&) {
+            });
+    }
+
+    return oss.str();
+}
+
 }
