@@ -184,6 +184,19 @@ import { OutputArchive } from './archive';
             );
         }
 
+        STRUCT(ShaderBindingData, .mFlags = NO_COPY) {
+            PUBLIC(
+                ((PmrFlatMap<NameLocalID, uint32_t>), mDescriptorBindings, _)
+            );
+        }
+
+        STRUCT(ShaderLayoutData, .mFlags = NO_COPY) {
+            PUBLIC(
+                ((ccstd::pmr::map<UpdateFrequency, DescriptorSetLayoutData>), mLayoutData, _)
+                ((ccstd::pmr::map<UpdateFrequency, ShaderBindingData>), mBindingData, _)
+            );
+        }
+
         //-----------------------------------------------------------
         // Shader Program
         STRUCT(ShaderProgramData, .mFlags = NO_COPY) {
@@ -228,6 +241,7 @@ import { OutputArchive } from './archive';
                 ((PmrFlatMap<ccstd::pmr::string, NameLocalID>), mAttributeIndex, _)
                 ((PmrFlatMap<ccstd::pmr::string, NameLocalID>), mConstantIndex, _)
                 ((PmrFlatMap<ccstd::pmr::string, uint32_t>), mShaderLayoutIndex, _)
+                ((PmrFlatMap<ccstd::pmr::string, ShaderLayoutData>), mShaderLayoutData, _)
             );
         }
         NAMESPACE_END(render);
