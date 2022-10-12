@@ -128,7 +128,7 @@ bool hasSideEffects() const noexcept {
         }
 
         TAGS((_), Managed_, ManagedBuffer_, ManagedTexture_, PersistentBuffer_, PersistentTexture_,
-            Framebuffer_, Swapchain_);
+            Framebuffer_, Swapchain_, Sampler_);
 
         PMR_GRAPH(ResourceGraph, _, _) {
             NAMED_GRAPH(Name_);
@@ -137,6 +137,7 @@ bool hasSideEffects() const noexcept {
                 (Desc_, ResourceDesc, mDescs)
                 (Traits_, ResourceTraits, mTraits)
                 (States_, ResourceStates, mStates)
+                (Sampler_, gfx::SamplerInfo, mSamplerInfo)
             );
             COMPONENT_BIMAP(PmrUnorderedStringMap, mValueIndex, Name_);
             POLYMORPHIC_GRAPH(
