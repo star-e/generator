@@ -267,16 +267,223 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
 
 namespace {
 
-void outputArray(std::ostream& oss, std::pmr::string& space,
+void outputSaveArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
     const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
     std::string_view varName,
-    uint32_t depth) {
-    
-    OSS << "{ // Array\n";
+    uint32_t depth,
+    std::pmr::memory_resource* scratch);
+
+void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch);
+
+void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch) {
+    if (g.isTypescriptPointer(vertID)) {
+        OSS << "// skip, " << varName << ": "
+            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+        return;
+    }
+    const auto& traits = get(g.traits, g, vertID);
+    if (g.isTypescriptBoolean(vertID)) {
+        OSS << "ar.writeBool(" << varName << ");\n";
+    } else if (g.isTypescriptNumber(vertID) || holds_tag<Enum_>(vertID, g)) {
+        OSS << "ar.writeNumber(" << varName << ");\n";
+    } else if (g.isTypescriptString(vertID)) {
+        OSS << "ar.writeString(" << varName << ");\n";
+    } else if (g.isTypescriptMap(vertID)) {
+        outputSaveMap(oss, space, ns, g, vertID, varName, depth, scratch);
+    } else if (g.isTypescriptArray(vertID, scratch)) {
+        outputSaveArray(oss, space, ns, g, vertID, varName, depth, scratch);
+    } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
+        const auto& memberName = get(g.names, g, vertID);
+        OSS << "save" << memberName << "(ar, " << varName << ");\n";
+    } else {
+        OSS << "// skip: " << varName << ": "
+            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+    }
+}
+
+void outputSaveArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch) {
+    ++depth;
+    OSS << "ar.writeNumber(" << varName << ".length);\n";
+    OSS << "for (const v" << depth << " of " << varName << ") {\n";
     {
         INDENT();
-        OSS << "ar.writeNumber(" << varName << ".length);\n";
-        //OSS << "for ("
+        const auto& instance = get<Instance>(vertID, g);
+        Expects(!instance.mParameters.empty());
+        const auto& paramPath = instance.mParameters.front();
+        const auto paramID = locate(paramPath, g);
+        std::pmr::string paramName("v", scratch);
+        paramName.append(std::to_string(depth));
+        outputSaveSerializable(oss, space, ns, g, paramID, paramName, depth, scratch);
+    }
+    OSS << "}\n";
+}
+
+void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch) {
+    ++depth;
+    OSS << "ar.writeNumber(" << varName << ".size);\n";
+    OSS << "for (const [k" << depth << ", v" << depth << "] of " << varName << ") {\n";
+    {
+        INDENT();
+        const auto& instance = get<Instance>(vertID, g);
+        Expects(!instance.mParameters.empty());
+        Expects(instance.mParameters.size() == 2);
+        const auto& keyPath = instance.mParameters.at(0);
+        const auto& valuePath = instance.mParameters.at(1);
+        const auto keyID = locate(keyPath, g);
+        const auto valueID = locate(valuePath, g);
+        std::pmr::string keyName("k", scratch);
+        std::pmr::string valueName("v", scratch);
+        keyName.append(std::to_string(depth));
+        valueName.append(std::to_string(depth));
+        outputSaveSerializable(oss, space, ns, g, keyID, keyName, depth, scratch);
+        outputSaveSerializable(oss, space, ns, g, valueID, valueName, depth, scratch);
+    }
+    OSS << "}\n";
+}
+
+void outputLoadArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch);
+
+void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch);
+
+void outputLoadSerializable(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch) {
+    if (g.isTypescriptPointer(vertID)) {
+        OSS << "// skip, " << varName << ": "
+            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+        return;
+    }
+    const auto& traits = get(g.traits, g, vertID);
+    if (g.isTypescriptBoolean(vertID)) {
+        OSS << varName << " = ar.readBool();\n";
+    } else if (g.isTypescriptNumber(vertID) || holds_tag<Enum_>(vertID, g)) {
+        OSS << varName << " = ar.readNumber();\n";
+    } else if (g.isTypescriptString(vertID)) {
+        OSS << varName << " = ar.readString();\n";
+    } else if (g.isTypescriptMap(vertID)) {
+        //outputLoadMap(oss, space, ns, g, vertID, varName, depth, scratch);
+    } else if (g.isTypescriptArray(vertID, scratch)) {
+        outputLoadArray(oss, space, ns, g, vertID, varName, depth, scratch);
+    } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
+        const auto& memberName = get(g.names, g, vertID);
+        OSS << "load" << memberName << "(ar, " << varName << ");\n";
+    } else {
+        OSS << "// skip: " << varName << ": "
+            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+    }
+}
+
+void outputLoadArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch) {
+    ++depth;
+    // size
+    const auto& name = get(g.names, g, vertID);
+    std::pmr::string sizeName("sz", scratch);
+    if (depth == 1) {
+        OSS << sizeName << " = ar.readNumber(); // Array\n";
+    } else {
+        sizeName.append(std::to_string(depth));
+        OSS << "const " << sizeName << " = ar.readNumber(); // Array\n";
+    }
+
+    // elememt
+    const auto& instance = get<Instance>(vertID, g);
+    Expects(!instance.mParameters.empty());
+    const auto& paramPath = instance.mParameters.front();
+    const auto paramID = locate(paramPath, g);
+    
+    std::pmr::string counterName("i", scratch);
+    counterName.append(std::to_string(depth));
+
+    std::pmr::string paramName(varName, scratch);
+    paramName.append("[");
+    paramName.append(counterName);
+    paramName.append("]");
+
+    // resize
+    OSS << varName << ".length = " << sizeName << ";\n";
+    if (false && !g.isTypescriptValueType(paramID)) {
+        OSS << "for (let " << counterName << " = 0; "
+            << counterName << " !== " << sizeName << "; ++" << counterName << ") {\n";
+        {
+            INDENT();
+            OSS << paramName << " = new "
+                << g.getTypescriptTypename(paramID, scratch, scratch) << "();\n";
+        }
+        OSS << "}\n";
+    }
+
+    // for each element
+    OSS << "for (let " << counterName << " = 0; "
+        << counterName << " !== " << sizeName << "; ++" << counterName << ") {\n";
+    {
+        INDENT();
+        if (g.isTypescriptValueType(paramID)) {
+            outputLoadSerializable(oss, space, ns, g, paramID, paramName, depth, scratch);
+        } else {
+            std::pmr::string elemName("v", scratch);
+            elemName.append(std::to_string(depth));
+            OSS << "const " << elemName << " = new "
+                << g.getTypescriptTypename(paramID, scratch, scratch) << "();\n";
+            outputLoadSerializable(oss, space, ns, g, paramID, elemName, depth, scratch);
+            OSS << paramName << " = " << elemName << ";\n";
+        }
+    }
+    OSS << "}\n";
+}
+
+void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    std::string_view varName,
+    uint32_t depth,
+    std::pmr::memory_resource* scratch) {
+    ++depth;
+    OSS << "ar.writeNumber(" << varName << ".size);\n";
+    OSS << "for (const [k" << depth << ", v" << depth << "] of " << varName << ") {\n";
+    {
+        INDENT();
+        const auto& instance = get<Instance>(vertID, g);
+        Expects(!instance.mParameters.empty());
+        Expects(instance.mParameters.size() == 2);
+        const auto& keyPath = instance.mParameters.at(0);
+        const auto& valuePath = instance.mParameters.at(1);
+        const auto keyID = locate(keyPath, g);
+        const auto valueID = locate(valuePath, g);
+        std::pmr::string keyName("k", scratch);
+        std::pmr::string valueName("v", scratch);
+        keyName.append(std::to_string(depth));
+        valueName.append(std::to_string(depth));
+        outputLoadSerializable(oss, space, ns, g, keyID, keyName, depth, scratch);
+        outputLoadSerializable(oss, space, ns, g, valueID, valueName, depth, scratch);
     }
     OSS << "}\n";
 }
@@ -355,29 +562,9 @@ std::pmr::string generateSerialization_ts(
                                 || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
                                 continue;
                             }
-                            if (g.isTypescriptPointer(memberID)) {
-                                OSS << "// skip, " << m.getMemberName() << ": "
-                                    << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
-                                continue;
-                            }
-                            if (g.isTypescriptBoolean(memberID)) {
-                                OSS << "ar.writeBool(v." << m.getMemberName() << ");\n";
-                            } else if (g.isTypescriptNumber(memberID) || holds_tag<Enum_>(memberID, g)) {
-                                OSS << "ar.writeNumber(v." << m.getMemberName() << ");\n";
-                            } else if (g.isTypescriptString(memberID)) {
-                                OSS << "ar.writeString(v." << m.getMemberName() << ");\n";
-                            } else if (g.isTypescriptMap(memberID)) {
-                                OSS << "// Map\n";
-                            } else if (g.isTypescriptArray(memberID, scratch)) {
-                                OSS << "// Array\n";
-                            } else if (holds_tag<Struct_>(memberID, g)) {
-                                OSS << "// Struct\n";
-                                const auto& memberName = get(g.names, g, memberID);
-                                OSS << "save" << memberName << "(ar, v." << m.getMemberName() << ");\n";
-                            } else {
-                                OSS << "// skip: " << m.getMemberName() << ": "
-                                        << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
-                            }
+                            std::pmr::string memberVar("v.", scratch);
+                            memberVar.append(m.getMemberName());
+                            outputSaveSerializable(oss, space, ns, g, memberID, memberVar, 0, scratch);
                         }
                     }
                 }
@@ -386,26 +573,29 @@ std::pmr::string generateSerialization_ts(
                 oss << "export function load" << cppName << " (ar: InputArchive, v: " << cppName << ") {\n";
                 {
                     INDENT();
-                    //if (nvp) {
-                    //    Expects(false);
-                    //} else {
-                    //    for (const auto& m : s.mMembers) {
-                    //        if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
-                    //            continue;
+                    if (nvp) {
+                        Expects(false);
+                    } else {
+                        int numContainer = 0;
+                        for (const auto& m : s.mMembers) {
+                            if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                continue;
 
-                    //        auto memberID = locate(m.mTypePath, g);
-                    //        if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
-                    //            || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
-                    //            continue;
-                    //        }
-                    //        if (g.isTypescriptPointer(memberID)) {
-                    //            OSS << "// skip, " << m.getMemberName() << ": "
-                    //                << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
-                    //            continue;
-                    //        }
-                    //        OSS << "load(ar, v." << m.getMemberName() << ");\n";
-                    //    }
-                    //}
+                            auto memberID = locate(m.mTypePath, g);
+                            if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                                || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                                continue;
+                            }
+                            if (g.isTypescriptArray(memberID, scratch) || g.isTypescriptMap(memberID)) {
+                                if (numContainer++ == 0) {
+                                    OSS << "let sz = 0;\n";
+                                }
+                            }
+                            std::pmr::string memberVar("v.", scratch);
+                            memberVar.append(m.getMemberName());
+                            outputLoadSerializable(oss, space, ns, g, memberID, memberVar, 0, scratch);
+                        }
+                    }
                 }
                 oss << "}\n";
             },

@@ -1490,6 +1490,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             auto imported = g.getImportedTypes(modulePath, scratch);
             for (const auto& m : imported) {
+                const auto targetID = locate(m.first, mModuleGraph);
+                const auto targetPath = get_path(targetID, mg, scratch);
+                const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
                 OSS << "import { ";
                 int count = 0;
                 for (const auto& type : m.second) {
@@ -1497,42 +1500,12 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                         oss << ", ";
                     oss << g.getTypescriptTypename(type, scratch, scratch);
                 }
-                oss << " } from '";
 
-                const auto targetID = locate(m.first, mModuleGraph);
-                const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
-                std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
-                oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
-                oss << "';\n";
-            }
-
-            if (!m.mTypescriptInclude.empty()) {
-                copyString(oss, space, m.mTypescriptInclude);
-                ++count;
-            }
-
-            if (count || !imported.empty())
-                oss << "\n";
-        }
-
-        for (const auto& vertID : make_range(vertices(g))) {
-            const auto& typeModulePath = get(g.modulePaths, g, vertID);
-            if (typeModulePath != modulePath)
-                continue;
-            outputTypescript(oss, space, codegen, * this, "", vertID, scratch);
-        }
-
-        if (features & Features::Serialization) {
-            for (const auto& requireName : moduleInfo.mRequires) {
-                const auto targetID = locate(mg.null_vertex(), requireName, mg);
-                const auto targetPath = get_path(targetID, mg, scratch);
-                const auto& target = get(mg.modules, mg, targetID);
-                if (!(target.mFeatures & Features::Serialization)) {
-                    continue;
-                }
-                oss << "\n";
-                OSS << "import {\n";
-                {
+                if ((features & Features::Serialization) && (target.mFeatures & Features::Serialization)) {
+                    if (count) {
+                        oss << ",";
+                    }
+                    oss << "\n";
                     INDENT();
                     for (const auto& vertID : make_range(vertices(g))) {
                         const auto& moduleName = get(g.modulePaths, g, vertID);
@@ -1559,12 +1532,33 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                             OSS << "save" << name << ", load" << name << ",\n";
                         }
                     }
+                    oss << "} from '";
+                } else {
+                    oss << " } from '";
                 }
-                OSS << "} from '";
+
                 std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
                 oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
                 oss << "';\n";
             }
+
+            if (!m.mTypescriptInclude.empty()) {
+                copyString(oss, space, m.mTypescriptInclude);
+                ++count;
+            }
+
+            if (count || !imported.empty())
+                oss << "\n";
+        }
+
+        for (const auto& vertID : make_range(vertices(g))) {
+            const auto& typeModulePath = get(g.modulePaths, g, vertID);
+            if (typeModulePath != modulePath)
+                continue;
+            outputTypescript(oss, space, codegen, * this, "", vertID, scratch);
+        }
+
+        if (features & Features::Serialization) {
             copyString(oss, space, generateSerialization_ts(
                 mProjectName, mSyntaxGraph, mModuleGraph, modulePath, false, scratch, scratch));
         }

@@ -46,6 +46,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 )",
         .mTypescriptInclude = R"(import { ccclass } from '../../core/data/decorators';
 import { OutputArchive, InputArchive } from './archive';
+import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
 )"
     ) {
         NAMESPACE_BEG(cc);

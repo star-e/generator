@@ -54,6 +54,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
 #include "cocos/base/std/container/map.h"
 )",
         .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
+import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './serialization';
 )"
     ) {
         NAMESPACE_BEG(cc);
