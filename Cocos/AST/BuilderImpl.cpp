@@ -1482,6 +1482,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             outputComment(oss);
 
             OSS << "/* eslint-disable max-len */\n";
+            oss << "\n";
             int count = 0;
             if (g.moduleHasGraph(modulePath)) {
                 ++count;

@@ -56,6 +56,7 @@ enum GenerationFlags : uint64_t {
     JSB = 1 << 19,
     DECORATOR = 1 << 20,
     NOT_ELEMENT = 1 << 21,
+    STRING_KEY = 1 << 22,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {

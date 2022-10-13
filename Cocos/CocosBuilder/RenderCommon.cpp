@@ -243,7 +243,7 @@ bool isWrite() const {
             );
         }
 
-        STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB) {
+        STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB | STRING_KEY) {
             PUBLIC(
                 (UpdateFrequency, mUpdateFrequency, _)
                 (ParameterType, mParameterType, _)
@@ -254,11 +254,6 @@ bool isWrite() const {
             TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
             CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
         }
-        
-        PROJECT_TS(
-            (ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>),
-            (Map<string, DescriptorBlock>)
-        );
 
         // RenderGraph
         STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB) {

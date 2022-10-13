@@ -1576,6 +1576,11 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
                         auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
                         if (count++) {
                             result.append(", ");
+                        } else {
+                            const auto& paramTraits = get(g.traits, g, paramID);
+                            if (paramTraits.mFlags & STRING_KEY) {
+                                paramName = "string";
+                            }
                         }
                         result.append(paramName);
                     }

@@ -282,11 +282,11 @@ void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view 
 void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::string_view ns,
     const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
     std::string_view varName,
-    uint32_t depth,
+    uint32_t depth, bool isKey,
     std::pmr::memory_resource* scratch) {
     if (g.isTypescriptPointer(vertID)) {
         OSS << "// skip, " << varName << ": "
-            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
         return;
     }
     const auto& traits = get(g.traits, g, vertID);
@@ -302,10 +302,14 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
         outputSaveArray(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
-        OSS << "save" << memberName << "(ar, " << varName << ");\n";
+        if (isKey && (traits.mFlags & STRING_KEY)) {
+            OSS << "save" << memberName << "(ar, JSON.parse(" << varName << "));\n";
+        } else {
+            OSS << "save" << memberName << "(ar, " << varName << ");\n";
+        }
     } else {
         OSS << "// skip: " << varName << ": "
-            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     }
 }
 
@@ -326,7 +330,7 @@ void outputSaveArray(std::ostream& oss, std::pmr::string& space, std::string_vie
         const auto paramID = locate(paramPath, g);
         std::pmr::string paramName("v", scratch);
         paramName.append(std::to_string(depth));
-        outputSaveSerializable(oss, space, ns, g, paramID, paramName, depth, scratch);
+        outputSaveSerializable(oss, space, ns, g, paramID, paramName, depth, false, scratch);
     }
     OSS << "}\n";
 }
@@ -353,8 +357,8 @@ void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view 
         std::pmr::string valueName("v", scratch);
         keyName.append(std::to_string(depth));
         valueName.append(std::to_string(depth));
-        outputSaveSerializable(oss, space, ns, g, keyID, keyName, depth, scratch);
-        outputSaveSerializable(oss, space, ns, g, valueID, valueName, depth, scratch);
+        outputSaveSerializable(oss, space, ns, g, keyID, keyName, depth, true, scratch);
+        outputSaveSerializable(oss, space, ns, g, valueID, valueName, depth, false, scratch);
     }
     OSS << "}\n";
 }
@@ -528,7 +532,12 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
                 << g.getTypescriptTypename(valueID, scratch, scratch) << "();\n";
             outputLoadSerializable(oss, space, ns, g, valueID, valueName, depth, scratch);
         }
-        OSS << varName << ".set(" << keyName << ", " << valueName << ");\n";
+        const auto& keyTraits = get(g.traits, g, keyID);
+        if (keyTraits.mFlags & STRING_KEY) {
+            OSS << varName << ".set(JSON.stringify(" << keyName << "), " << valueName << ");\n";
+        } else {
+            OSS << varName << ".set(" << keyName << ", " << valueName << ");\n";
+        }
     }
     OSS << "}\n";
 }
@@ -609,7 +618,7 @@ std::pmr::string generateSerialization_ts(
                             }
                             std::pmr::string memberVar("v.", scratch);
                             memberVar.append(m.getMemberName());
-                            outputSaveSerializable(oss, space, ns, g, memberID, memberVar, 0, scratch);
+                            outputSaveSerializable(oss, space, ns, g, memberID, memberVar, 0, false, scratch);
                         }
                     }
                 }
