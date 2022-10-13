@@ -176,7 +176,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 ([[optional]] IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
                 ([[optional]] IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
             );
-            CNTR_NO_DEFAULT(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
+            CNTR(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
         }
 
         STRUCT(PipelineLayoutData, .mFlags = NO_COPY) {

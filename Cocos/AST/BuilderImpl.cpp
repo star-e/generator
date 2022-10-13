@@ -1498,44 +1498,17 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 for (const auto& type : m.second) {
                     if (count++)
                         oss << ", ";
-                    oss << g.getTypescriptTypename(type, scratch, scratch);
-                }
-
-                if ((features & Features::Serialization) && (target.mFeatures & Features::Serialization)) {
-                    if (count) {
-                        oss << ",";
-                    }
-                    oss << "\n";
-                    INDENT();
-                    for (const auto& vertID : make_range(vertices(g))) {
-                        const auto& moduleName = get(g.modulePaths, g, vertID);
-                        if (moduleName != targetPath) {
-                            continue;
-                        }
-                        if (holds_tag<Define_>(vertID, g)) {
-                            continue;
-                        }
-                        const auto& traits = get(g.traits, g, vertID);
-                        if (traits.mUnknown)
-                            continue;
-                        if (traits.mImport)
-                            continue;
-                        if (traits.mFlags & GenerationFlags::NO_SERIALIZATION)
-                            continue;
-
-                        std::string_view ns = "/cc/render";
-                        auto typePath = g.getTypePath(vertID, scratch);
-                        auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
-                        auto cppName = getCppPath(typeName, scratch);
-                        const auto& name = get(g.names, g, vertID);
+                    auto vertID = locate(type, g);
+                    auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+                    oss << tsName;
+                    if ((features & Features::Serialization) && (target.mFeatures & Features::Serialization)) {
                         if (holds_tag<Struct_>(vertID, g)) {
-                            OSS << "save" << name << ", load" << name << ",\n";
+                            oss << ", save" << tsName;
+                            oss << ", load" << tsName;
                         }
                     }
-                    oss << "} from '";
-                } else {
-                    oss << " } from '";
                 }
+                oss << " } from '";
 
                 std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
                 oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);

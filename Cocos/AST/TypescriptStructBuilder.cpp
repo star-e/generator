@@ -315,7 +315,8 @@ void outputSaveArray(std::ostream& oss, std::pmr::string& space, std::string_vie
     uint32_t depth,
     std::pmr::memory_resource* scratch) {
     ++depth;
-    OSS << "ar.writeNumber(" << varName << ".length);\n";
+    OSS << "ar.writeNumber(" << varName << ".length); // "
+        << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     OSS << "for (const v" << depth << " of " << varName << ") {\n";
     {
         INDENT();
@@ -336,7 +337,8 @@ void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     uint32_t depth,
     std::pmr::memory_resource* scratch) {
     ++depth;
-    OSS << "ar.writeNumber(" << varName << ".size);\n";
+    OSS << "ar.writeNumber(" << varName << ".size); // "
+        << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     OSS << "for (const [k" << depth << ", v" << depth << "] of " << varName << ") {\n";
     {
         INDENT();
@@ -387,7 +389,7 @@ void outputLoadSerializable(std::ostream& oss, std::pmr::string& space, std::str
     } else if (g.isTypescriptString(vertID)) {
         OSS << varName << " = ar.readString();\n";
     } else if (g.isTypescriptMap(vertID)) {
-        //outputLoadMap(oss, space, ns, g, vertID, varName, depth, scratch);
+        outputLoadMap(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (g.isTypescriptArray(vertID, scratch)) {
         outputLoadArray(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
@@ -409,10 +411,12 @@ void outputLoadArray(std::ostream& oss, std::pmr::string& space, std::string_vie
     const auto& name = get(g.names, g, vertID);
     std::pmr::string sizeName("sz", scratch);
     if (depth == 1) {
-        OSS << sizeName << " = ar.readNumber(); // Array\n";
+        OSS << sizeName << " = ar.readNumber(); // "
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     } else {
         sizeName.append(std::to_string(depth));
-        OSS << "const " << sizeName << " = ar.readNumber(); // Array\n";
+        OSS << "const " << sizeName << " = ar.readNumber(); // "
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     }
 
     // elememt
@@ -467,23 +471,64 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     uint32_t depth,
     std::pmr::memory_resource* scratch) {
     ++depth;
-    OSS << "ar.writeNumber(" << varName << ".size);\n";
-    OSS << "for (const [k" << depth << ", v" << depth << "] of " << varName << ") {\n";
+    // size
+    const auto& name = get(g.names, g, vertID);
+    std::pmr::string sizeName("sz", scratch);
+    if (depth == 1) {
+        OSS << sizeName << " = ar.readNumber(); // "
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+    } else {
+        sizeName.append(std::to_string(depth));
+        OSS << "const " << sizeName << " = ar.readNumber(); // "
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+    }
+
+    // elememt
+    const auto& instance = get<Instance>(vertID, g);
+    Expects(!instance.mParameters.empty());
+    Expects(instance.mParameters.size() == 2);
+    const auto& keyPath = instance.mParameters.at(0);
+    const auto& valuePath = instance.mParameters.at(1);
+    const auto keyID = locate(keyPath, g);
+    const auto valueID = locate(valuePath, g);
+    std::pmr::string keyName("k", scratch);
+    std::pmr::string valueName("v", scratch);
+    keyName.append(std::to_string(depth));
+    valueName.append(std::to_string(depth));
+
+    std::pmr::string counterName("i", scratch);
+    counterName.append(std::to_string(depth));
+
+    std::pmr::string paramName(varName, scratch);
+    paramName.append("[");
+    paramName.append(counterName);
+    paramName.append("]");
+
+    // for each element
+    OSS << "for (let " << counterName << " = 0; "
+        << counterName << " !== " << sizeName << "; ++" << counterName << ") {\n";
     {
         INDENT();
-        const auto& instance = get<Instance>(vertID, g);
-        Expects(!instance.mParameters.empty());
-        Expects(instance.mParameters.size() == 2);
-        const auto& keyPath = instance.mParameters.at(0);
-        const auto& valuePath = instance.mParameters.at(1);
-        const auto keyID = locate(keyPath, g);
-        const auto valueID = locate(valuePath, g);
-        std::pmr::string keyName("k", scratch);
-        std::pmr::string valueName("v", scratch);
-        keyName.append(std::to_string(depth));
-        valueName.append(std::to_string(depth));
-        outputLoadSerializable(oss, space, ns, g, keyID, keyName, depth, scratch);
-        outputLoadSerializable(oss, space, ns, g, valueID, valueName, depth, scratch);
+        if (g.isTypescriptValueType(keyID)) {
+            OSS << "const " << keyName;
+            std::pmr::string space2;
+            outputLoadSerializable(oss, space2, ns, g, keyID, "", depth, scratch);
+        } else {
+            OSS << "const " << keyName << " = new "
+                << g.getTypescriptTypename(keyID, scratch, scratch) << "();\n";
+            outputLoadSerializable(oss, space, ns, g, keyID, keyName, depth, scratch);
+        }
+
+        if (g.isTypescriptValueType(valueID)) {
+            OSS << "const " << valueName;
+            std::pmr::string space2;
+            outputLoadSerializable(oss, space2, ns, g, valueID, "", depth, scratch);
+        } else {
+            OSS << "const " << valueName << " = new "
+                << g.getTypescriptTypename(valueID, scratch, scratch) << "();\n";
+            outputLoadSerializable(oss, space, ns, g, valueID, valueName, depth, scratch);
+        }
+        OSS << varName << ".set(" << keyName << ", " << valueName << ");\n";
     }
     OSS << "}\n";
 }
