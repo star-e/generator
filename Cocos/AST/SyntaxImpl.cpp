@@ -1368,6 +1368,24 @@ bool SyntaxGraph::moduleHasGraph(std::string_view modulePath) const {
     return hasGraph;
 }
 
+bool SyntaxGraph::moduleHasGraphSerialization(std::string_view modulePath) const {
+    const auto& g = *this;
+    bool hasGraph = false;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path == modulePath) {
+            if (holds_tag<Graph_>(vertID, g)) {
+                const auto& traits = get(g.traits, g, vertID);
+                if (!(traits.mFlags & NO_SERIALIZATION)) {
+                    hasGraph = true;
+                    break;
+                }
+            }
+        }
+    }
+    return hasGraph;
+}
+
 bool SyntaxGraph::moduleUsesHashCombine(std::string_view modulePath) const {
     const auto& g = *this;
     bool usesHashCombine = false;

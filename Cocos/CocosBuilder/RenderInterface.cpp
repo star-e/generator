@@ -18,6 +18,7 @@ void buildArchiveInterface(ModuleBuilder& builder, Features features) {
         .mTypescriptFilePrefix = "archive",
         .mRequires = {},
         .mHeader = R"(#include <string_view>
+#include <boost/container/pmr/memory_resource.hpp>
 )"
     ) {
         NAMESPACE_BEG(cc);
@@ -28,6 +29,7 @@ void buildArchiveInterface(ModuleBuilder& builder, Features features) {
 virtual void writeBool(bool value) = 0;
 virtual void writeNumber(double value) = 0;
 virtual void writeString(std::string_view value) = 0;
+[[skip]] virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
 )");
         }
 
@@ -36,6 +38,7 @@ virtual void writeString(std::string_view value) = 0;
 virtual bool readBool() = 0;
 virtual double readNumber() = 0;
 virtual std::string_view readString() = 0;
+[[skip]] virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
 )");
         }
 

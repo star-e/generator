@@ -4010,6 +4010,7 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
     if (!s.isVector()) {
         bListVertexList = true;
     }
+    const auto bVector = s.isVector();
 
     visit(
         overload(
@@ -4020,6 +4021,36 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
 
             }),
         s.mOutEdgeListType);
+
+    OSS << "\n";
+    OSS << "inline void save(OutputArchive& ar, const " << name << "& g) {\n";
+    {
+        INDENT();
+        OSS << "using Graph = " << name << ";\n";
+        OSS << "using VertexT = Graph::vertex_descriptor;\n";
+        OSS << "using SizeT = Graph::vertices_size_type;\n";
+        if (!bListVertexList) {
+            OSS << "static_assert(std::is_same_v<VertexT, SizeT>);\n";
+        }
+        oss << "\n";
+        OSS << "const auto numVertices = num_vertices(g);\n";
+        OSS << "const auto numEdges = num_edges(g);\n";
+        OSS << "save(ar, numVertices);\n";
+        OSS << "save(ar, numEdges);\n";
+
+        if (s.isPolymorphic() && bVector) {
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                OSS << "save(ar, static_cast<SizeT>(g."
+                    << g.getMemberName(c.mMemberName, true) << ".size()));\n";
+            }
+        }
+        if (!bVector) {
+            OSS << "PmrFlatMap<VertexT, SizeT> indices(ar.scratch());\n";
+            OSS << "indices.reserve(numVertices);\n";
+            OSS << "SizeT count = 0;\n";
+        }
+    }
+    OSS << "}\n";
 
     return oss.str();
 }

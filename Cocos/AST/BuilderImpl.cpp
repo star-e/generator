@@ -1615,6 +1615,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Serialization.h\"\n";
             }
         }
+        if (features & Features::Graphs && g.moduleHasGraphSerialization(modulePath)) {
+            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Graphs.h>\n";
+        }
         OSS << "#include \"" << ccFolder << "/ArchiveTypes.h\"\n";
         OSS << "#include \"" << ccFolder << "/SerializationUtils.h\"\n";
         copyString(oss, generateSerialization_h(mProjectName, mSyntaxGraph,
