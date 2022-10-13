@@ -267,7 +267,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
 
 namespace {
 
-void outputSaveArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+void outputSaveCollection(std::ostream& oss, std::pmr::string& space, std::string_view ns,
     const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
     std::string_view varName,
     uint32_t depth,
@@ -298,8 +298,8 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
         OSS << "ar.writeString(" << varName << ");\n";
     } else if (g.isTypescriptMap(vertID)) {
         outputSaveMap(oss, space, ns, g, vertID, varName, depth, scratch);
-    } else if (g.isTypescriptArray(vertID, scratch)) {
-        outputSaveArray(oss, space, ns, g, vertID, varName, depth, scratch);
+    } else if (g.isTypescriptArray(vertID, scratch) || g.isTypescriptSet(vertID)) {
+        outputSaveCollection(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
         if (isKey && (traits.mFlags & STRING_KEY)) {
@@ -313,14 +313,19 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
     }
 }
 
-void outputSaveArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+void outputSaveCollection(std::ostream& oss, std::pmr::string& space, std::string_view ns,
     const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
     std::string_view varName,
     uint32_t depth,
     std::pmr::memory_resource* scratch) {
     ++depth;
-    OSS << "ar.writeNumber(" << varName << ".length); // "
-        << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+    if (g.isTypescriptSet(vertID)) {
+        OSS << "ar.writeNumber(" << varName << ".size); // "
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+    } else {
+        OSS << "ar.writeNumber(" << varName << ".length); // "
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+    }
     OSS << "for (const v" << depth << " of " << varName << ") {\n";
     {
         INDENT();
@@ -363,7 +368,7 @@ void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     OSS << "}\n";
 }
 
-void outputLoadArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::string_view ns,
     const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
     std::string_view varName,
     uint32_t depth,
@@ -382,7 +387,7 @@ void outputLoadSerializable(std::ostream& oss, std::pmr::string& space, std::str
     std::pmr::memory_resource* scratch) {
     if (g.isTypescriptPointer(vertID)) {
         OSS << "// skip, " << varName << ": "
-            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
         return;
     }
     const auto& traits = get(g.traits, g, vertID);
@@ -394,18 +399,18 @@ void outputLoadSerializable(std::ostream& oss, std::pmr::string& space, std::str
         OSS << varName << " = ar.readString();\n";
     } else if (g.isTypescriptMap(vertID)) {
         outputLoadMap(oss, space, ns, g, vertID, varName, depth, scratch);
-    } else if (g.isTypescriptArray(vertID, scratch)) {
-        outputLoadArray(oss, space, ns, g, vertID, varName, depth, scratch);
+    } else if (g.isTypescriptArray(vertID, scratch) || g.isTypescriptSet(vertID)) {
+        outputLoadCollection(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
         OSS << "load" << memberName << "(ar, " << varName << ");\n";
     } else {
         OSS << "// skip: " << varName << ": "
-            << g.getDependentCppName(ns, vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     }
 }
 
-void outputLoadArray(std::ostream& oss, std::pmr::string& space, std::string_view ns,
+void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::string_view ns,
     const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
     std::string_view varName,
     uint32_t depth,
@@ -432,22 +437,13 @@ void outputLoadArray(std::ostream& oss, std::pmr::string& space, std::string_vie
     std::pmr::string counterName("i", scratch);
     counterName.append(std::to_string(depth));
 
-    std::pmr::string paramName(varName, scratch);
-    paramName.append("[");
-    paramName.append(counterName);
-    paramName.append("]");
+    std::pmr::string paramName(scratch);
+    bool bArray = g.isTypescriptArray(vertID, scratch);
+    paramName.append("v");
+    paramName.append(std::to_string(depth));
 
-    // resize
-    OSS << varName << ".length = " << sizeName << ";\n";
-    if (false && !g.isTypescriptValueType(paramID)) {
-        OSS << "for (let " << counterName << " = 0; "
-            << counterName << " !== " << sizeName << "; ++" << counterName << ") {\n";
-        {
-            INDENT();
-            OSS << paramName << " = new "
-                << g.getTypescriptTypename(paramID, scratch, scratch) << "();\n";
-        }
-        OSS << "}\n";
+    if (bArray) {
+        OSS << varName << ".length = " << sizeName << ";\n";
     }
 
     // for each element
@@ -455,15 +451,29 @@ void outputLoadArray(std::ostream& oss, std::pmr::string& space, std::string_vie
         << counterName << " !== " << sizeName << "; ++" << counterName << ") {\n";
     {
         INDENT();
-        if (g.isTypescriptValueType(paramID)) {
-            outputLoadSerializable(oss, space, ns, g, paramID, paramName, depth, scratch);
+        std::pmr::string lhsName(scratch);
+        if (bArray) {
+            lhsName.append(varName);
+            lhsName.append("[");
+            lhsName.append(counterName);
+            lhsName.append("]");
         } else {
-            std::pmr::string elemName("v", scratch);
-            elemName.append(std::to_string(depth));
-            OSS << "const " << elemName << " = new "
+            lhsName.append("const v");
+            lhsName.append(std::to_string(depth));
+        }
+        if (g.isTypescriptValueType(paramID)) {
+            outputLoadSerializable(oss, space, ns, g, paramID, lhsName, depth, scratch);
+        } else {
+            OSS << "const " << paramName << " = new "
                 << g.getTypescriptTypename(paramID, scratch, scratch) << "();\n";
-            outputLoadSerializable(oss, space, ns, g, paramID, elemName, depth, scratch);
-            OSS << paramName << " = " << elemName << ";\n";
+            outputLoadSerializable(oss, space, ns, g, paramID, paramName, depth, scratch);
+        }
+        if (bArray) {
+            if (!g.isTypescriptValueType(paramID)) {
+                OSS << lhsName << " = " << paramName << ";\n";
+            }
+        } else {
+            OSS << varName << ".add(" << paramName << ");\n";
         }
     }
     OSS << "}\n";
@@ -640,7 +650,9 @@ std::pmr::string generateSerialization_ts(
                                 || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
                                 continue;
                             }
-                            if (g.isTypescriptArray(memberID, scratch) || g.isTypescriptMap(memberID)) {
+                            if (g.isTypescriptArray(memberID, scratch)
+                                || g.isTypescriptMap(memberID)
+                                || g.isTypescriptSet(memberID)) {
                                 if (numContainer++ == 0) {
                                     OSS << "let sz = 0;\n";
                                 }
