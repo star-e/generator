@@ -236,6 +236,19 @@ bool SyntaxGraph::isNoexcept(vertex_descriptor vertID) const noexcept {
         });
 }
 
+bool SyntaxGraph::isSerializable(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+    if (traits.mFlags & GenerationFlags::NO_SERIALIZATION)
+        return false;
+
+    return true;
+}
+
+bool SyntaxGraph::isSerializable(vertex_descriptor vertID, const Member& member) const noexcept {
+    return isSerializable(vertID) && !(member.mFlags & NO_SERIALIZATION);
+}
+
 bool SyntaxGraph::isComposition(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     return visit_vertex(

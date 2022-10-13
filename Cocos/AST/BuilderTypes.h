@@ -186,6 +186,7 @@ public:
     virtual std::pmr::string generateGraphFunctions_h() const = 0;
     virtual std::pmr::string generateGraphBoostFunctions_h() const = 0;
     virtual std::pmr::string generateGraphPropertyMaps_h() const = 0;
+    virtual std::pmr::string generateGraphSerialization_h(bool nvp) const = 0;
 };
 
 class CppGraphBuilder final : public GraphBuilder {
@@ -279,6 +280,7 @@ public:
     std::pmr::string generateGraphFunctions_h() const override;
     std::pmr::string generateGraphBoostFunctions_h() const override;
     std::pmr::string generateGraphPropertyMaps_h() const override;
+    std::pmr::string generateGraphSerialization_h(bool nvp) const override;
 
     CppGraphBuilder(const SyntaxGraph* syntaxGraph, const ModuleGraph* moduleGraph,
         uint32_t currentVertex, uint32_t currentModule,

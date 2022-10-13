@@ -1096,6 +1096,8 @@ struct SyntaxGraph {
     bool isTag(vertex_descriptor vertID) const noexcept;
     bool isPmr(vertex_descriptor vertID) const noexcept;
     bool isNoexcept(vertex_descriptor vertID) const noexcept;
+    bool isSerializable(vertex_descriptor vertID) const noexcept;
+    bool isSerializable(vertex_descriptor vertID, const Member& member) const noexcept;
     bool isComposition(vertex_descriptor vertID) const noexcept;
     bool isString(vertex_descriptor vertID) const noexcept;
     bool isUtf8(vertex_descriptor vertID) const noexcept;

@@ -143,10 +143,10 @@ std::pmr::string generateSerialization_h(
                 oss << "}\n";
             },
             [&](const Graph& s) {
-                // const bool bDLL = !moduleInfo.mAPI.empty();
-                // CppGraphBuilder builder(&g, &mg, vertID,
-                //     moduleID, ns, bDLL, projectName, scratch);
-                // copyString(oss, space, builder.generateGraphSerialization_h(nvp));
+                 const bool bDLL = !moduleInfo.mAPI.empty();
+                 CppGraphBuilder builder(&g, &mg, vertID,
+                     moduleID, ns, bDLL, projectName, scratch);
+                 copyString(oss, space, builder.generateGraphSerialization_h(nvp));
             },
             [&](const auto&) {
             });

@@ -3994,4 +3994,34 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
     return oss.str();
 }
 
+std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
+    pmr_ostringstream oss(std::ios::out, get_allocator());
+    std::pmr::string space(get_allocator());
+    const auto& g = *mStruct.mSyntaxGraph;
+    const auto& s = *mGraph;
+    const auto& cpp = mStruct;
+    auto scratch = get_allocator().resource();
+
+    auto cn = mStruct.mCurrentNamespace;
+    auto name = cpp.getDependentName(cpp.mCurrentPath);
+
+    bool bListVertexList = false;
+    bool bContinuousOutEdgeList = false;
+    if (!s.isVector()) {
+        bListVertexList = true;
+    }
+
+    visit(
+        overload(
+            [&](Vector_) {
+                bContinuousOutEdgeList = true;
+            },
+            [&](auto) {
+
+            }),
+        s.mOutEdgeListType);
+
+    return oss.str();
+}
+
 }
