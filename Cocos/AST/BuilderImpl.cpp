@@ -1620,6 +1620,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         }
         OSS << "#include \"" << ccFolder << "/ArchiveTypes.h\"\n";
         OSS << "#include \"" << ccFolder << "/SerializationUtils.h\"\n";
+        OSS << "#include \"" << ccFolder << "/Range.h\"\n";
         copyString(oss, generateSerialization_h(mProjectName, mSyntaxGraph,
             mModuleGraph, modulePath, false, scratch, scratch));
         updateFile(filename, reorderIncludes(oss.str(), scratch));

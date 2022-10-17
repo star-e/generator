@@ -3994,6 +3994,222 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
     return oss.str();
 }
 
+namespace {
+
+void outputVectorGraphSave(std::ostream& oss, std::pmr::string& space,
+    const SyntaxGraph& g,
+    const Graph& s,
+    std::pmr::memory_resource* scratch) {
+    
+    if (s.isPolymorphic()) {
+        oss << "\n";
+        for (const auto& c : s.mPolymorphic.mConcepts) {
+            OSS << "save(ar, static_cast<SizeT>(g."
+                << g.getMemberName(c.mMemberName, true) << ".size()));\n";
+        }
+    }
+
+    oss << "\n";
+    if (!s.mComponents.empty()) {
+        for (const auto& c : s.mComponents) {
+            auto tagVar = getTagVariableName(c.mName, scratch);
+            OSS << "const auto " << tagVar << "Map = get(Graph::" << convertTag(c.mName) << ", g);\n";
+        }
+    }
+    OSS << "for (const auto& v : makeRange(vertices(g))) {\n";
+    {
+        INDENT();
+        if (s.isPolymorphic()) {
+            OSS << "const auto typeID = static_cast<SizeT>(tag(v, g).index());\n";
+            OSS << "static_assert(std::is_same_v<decltype(typeID), const SizeT>);\n"; 
+            OSS << "save(ar, typeID);\n";
+        }
+        if (s.isAddressable()) {
+            OSS << "save(ar, parent(v, g));\n";
+        }
+        for (const auto& c : s.mComponents) {
+            std::pmr::string tagName(c.mName, scratch);
+            tagName.pop_back();
+            auto tagVar = getTagVariableName(c.mName, scratch);
+            OSS << "save(ar, get(" << tagVar << "Map, v));\n";
+        }
+        if (s.isPolymorphic()) {
+            OSS << "visitObject(\n";
+            {
+                INDENT();
+                OSS << "v, g,\n";
+                OSS << "overload(\n";
+                {
+                    INDENT();
+                    OSS << "[&](auto& object) {\n";
+                    {
+                        INDENT();
+                        OSS << "save(ar, object);\n";
+                    }
+                    OSS << "}));\n";
+                }
+            }
+        }
+    }
+    OSS << "}\n";
+
+    Expects(s.isAliasGraph());
+
+    for (const auto& m : s.mMembers) {
+        if (m.mFlags & IMPL_DETAIL) {
+            continue;
+        }
+        OSS << "save(ar, g." << m.getMemberName() << ");\n";
+    }
+}
+
+void outputVectorGraphLoad(std::ostream& oss, std::pmr::string& space,
+    std::string_view ns,
+    const SyntaxGraph& g,
+    const Graph& s,
+    std::pmr::memory_resource* scratch) {
+
+    if (s.isPolymorphic()) {
+        oss << "\n";
+        for (const auto& c : s.mPolymorphic.mConcepts) {
+            auto typeName = g.getMemberName(c.mMemberName, true);
+            OSS << "SizeT " << typeName << " = 0;\n";
+        }
+        for (const auto& c : s.mPolymorphic.mConcepts) {
+            auto typeName = g.getMemberName(c.mMemberName, true);
+            OSS << "load(ar, " << typeName << ");\n";
+        }
+        for (const auto& c : s.mPolymorphic.mConcepts) {
+            auto typeName = g.getMemberName(c.mMemberName, true);
+            OSS << "g." << typeName << ".reserve(" << typeName << ");\n";
+        }
+    }
+
+    oss << "\n";
+    if (!s.mComponents.empty()) {
+        for (const auto& c : s.mComponents) {
+            auto tagVar = getTagVariableName(c.mName, scratch);
+            OSS << "const auto " << tagVar << "Map = get(Graph::" << convertTag(c.mName) << ", g);\n";
+        }
+    }
+    OSS << "for (SizeT v = 0; v != numVertices; ++v) {\n";
+    {
+        INDENT();
+        if (s.isPolymorphic()) {
+            OSS << "SizeT id = std::numeric_limits<SizeT>::max();\n";
+        }
+        if (s.isAddressable()) {
+            OSS << "VertexT u = Graph::null_vertex();\n";
+        }
+        for (const auto& c : s.mComponents) {
+            std::pmr::string tagName(c.mName, scratch);
+            tagName.pop_back();
+            auto tagVar = getTagVariableName(c.mName, scratch);
+            auto valueID = locate(c.mValuePath, g);
+            auto valueName = g.getDependentCppName(ns, valueID, scratch, scratch);
+
+            OSS << valueName << " " << tagVar;
+            if (g.isPmr(valueID)) {
+                oss << "(g.get_allocator());\n";
+            } else {
+                oss << ";\n";
+            }
+        }
+        if (s.isPolymorphic()) {
+            OSS << "load(ar, id);\n";
+        }
+        if (s.isAddressable()) {
+            OSS << "load(ar, u);\n";
+        }
+        for (const auto& c : s.mComponents) {
+            auto tagVar = getTagVariableName(c.mName, scratch);
+            OSS << "load(ar, " << tagVar << ");\n";
+        }
+        if (s.isPolymorphic()) {
+            OSS << "switch(id) {\n";
+            for (uint32_t conceptID = 0;  const auto& c : s.mPolymorphic.mConcepts) {
+                OSS << "case " << conceptID++ << ": {\n";
+                {
+                    INDENT();
+                    auto typeID = locate(c.mValue, g);
+                    auto typeName = g.getDependentCppName(ns, typeID, scratch, scratch);
+                    OSS << typeName << " val";
+                    if (g.isPmr(typeID)) {
+                        oss << "(g.get_allocator());\n";
+                    } else {
+                        oss << ";\n";
+                    }
+                    OSS << "load(ar, val);\n";
+                    uint32_t count = 0;
+                    OSS << "addVertex(";
+                    for (const auto& c : s.mComponents) {
+                        auto componentID = locate(c.mValuePath, g);
+                        auto componentName = getTagVariableName(c.mName, scratch);
+                        if (count++) {
+                            oss << ", ";
+                        }
+                        if (g.isValueType(componentID)) {
+                            oss << componentName;
+                        } else {
+                            oss << "std::move(" << componentName << ")";
+                        }
+                    }
+                    if (count++) {
+                        oss << ", ";
+                    }
+                    if (g.isValueType(typeID)) {
+                        oss << "val";
+                    } else {
+                        oss << "std::move(val)";
+                    }
+                    oss << ", g";
+                    if (s.isAddressable()) {
+                        oss << ", u";
+                    }
+                    oss << ");\n";
+                    OSS << "break;\n";
+                }
+                OSS << "}\n";
+            }
+            OSS << "default:\n";
+            OSS << "    throw std::runtime_error(\"load graph failed\");\n";
+            OSS << "}\n";
+        } else {
+            uint32_t count = 0;
+            OSS << "addVertex(";
+            for (const auto& c : s.mComponents) {
+                auto componentID = locate(c.mValuePath, g);
+                auto componentName = getTagVariableName(c.mName, scratch);
+                if (count++) {
+                    oss << ", ";
+                }
+                if (g.isValueType(componentID)) {
+                    oss << componentName;
+                } else {
+                    oss << "std::move(" << componentName << ")";
+                }
+            }
+            oss << ", g";
+            if (s.isAddressable()) {
+                oss << ", u";
+            }
+            oss << ");\n";
+        }
+    }
+    OSS << "}\n";
+
+    Expects(s.isAliasGraph());
+
+    for (const auto& m : s.mMembers) {
+        if (m.mFlags & IMPL_DETAIL) {
+            continue;
+        }
+        OSS << "load(ar, g." << m.getMemberName() << ");\n";
+    }
+}
+
+} // namespace
+
 std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     std::pmr::string space(get_allocator());
@@ -4002,7 +4218,7 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
     const auto& cpp = mStruct;
     auto scratch = get_allocator().resource();
 
-    auto cn = mStruct.mCurrentNamespace;
+    auto ns = mStruct.mCurrentNamespace;
     auto name = cpp.getDependentName(cpp.mCurrentPath);
 
     bool bListVertexList = false;
@@ -4029,8 +4245,8 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
         OSS << "using Graph = " << name << ";\n";
         OSS << "using VertexT = Graph::vertex_descriptor;\n";
         OSS << "using SizeT = Graph::vertices_size_type;\n";
-        if (!bListVertexList) {
-            OSS << "static_assert(std::is_same_v<VertexT, SizeT>);\n";
+        if (bVector) {
+            OSS << "static_assert(std::is_same_v<SizeT, VertexT>);\n";
         }
         oss << "\n";
         OSS << "const auto numVertices = num_vertices(g);\n";
@@ -4038,16 +4254,39 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
         OSS << "save(ar, numVertices);\n";
         OSS << "save(ar, numEdges);\n";
 
-        if (s.isPolymorphic() && bVector) {
-            for (const auto& c : s.mPolymorphic.mConcepts) {
-                OSS << "save(ar, static_cast<SizeT>(g."
-                    << g.getMemberName(c.mMemberName, true) << ".size()));\n";
-            }
+        Expects(!s.hasVertexProperty());
+
+        if (bVector) {
+            outputVectorGraphSave(oss, space, g, s, scratch);
+        } else {
+            Expects(false); // not implemented yet
         }
-        if (!bVector) {
-            OSS << "PmrFlatMap<VertexT, SizeT> indices(ar.scratch());\n";
-            OSS << "indices.reserve(numVertices);\n";
-            OSS << "SizeT count = 0;\n";
+    }
+    OSS << "}\n";
+
+    OSS << "\n";
+    OSS << "inline void load(InputArchive& ar, " << name << "& g) {\n";
+    {
+        INDENT();
+        OSS << "using Graph = " << name << ";\n";
+        OSS << "using VertexT = Graph::vertex_descriptor;\n";
+        OSS << "using SizeT = Graph::vertices_size_type;\n";
+        if (bVector) {
+            OSS << "static_assert(std::is_same_v<SizeT, VertexT>);\n";
+        }
+        oss << "\n";
+        OSS << "SizeT numVertices = 0;\n";
+        OSS << "SizeT numEdges = 0;\n";
+        OSS << "load(ar, numVertices);\n";
+        OSS << "load(ar, numEdges);\n";
+
+        Expects(!s.hasVertexProperty());
+
+        if (bVector) {
+            OSS << "g.reserve(numVertices);\n";
+            outputVectorGraphLoad(oss, space, ns, g, s, scratch);
+        } else {
+            Expects(false); // not implemented yet
         }
     }
     OSS << "}\n";
