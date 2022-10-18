@@ -55,6 +55,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
 )",
         .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
 import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './serialization';
+import { ccclass } from '../../core/data/decorators';
 )"
     ) {
         NAMESPACE_BEG(cc);
@@ -232,7 +233,7 @@ bool isWrite() const {
             );
         }
 
-        STRUCT(DescriptorBlockFlattened, .mFlags = JSB) {
+        STRUCT(DescriptorBlockFlattened, .mFlags = JSB | DECORATOR) {
             PUBLIC(
                 (ccstd::vector<ccstd::string>, mDescriptorNames, _)
                 (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
