@@ -300,7 +300,9 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
         outputSaveMap(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (g.isTypescriptArray(vertID, scratch) || g.isTypescriptSet(vertID)) {
         outputSaveCollection(oss, space, ns, g, vertID, varName, depth, scratch);
-    } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
+    } else if (holds_tag<Struct_>(vertID, g)
+        || holds_tag<Value_>(vertID, g)
+        || holds_tag<Graph_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
         if (isKey && (traits.mFlags & STRING_KEY)) {
             OSS << "save" << memberName << "(ar, JSON.parse(" << varName << "));\n";
@@ -552,6 +554,234 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     OSS << "}\n";
 }
 
+std::pmr::string generateGraphSerialization_ts(
+    std::string_view ns,
+    const SyntaxGraph& g, SyntaxGraph::vertex_descriptor vertID,
+    const Graph& s, std::pmr::memory_resource* scratch) {
+    pmr_ostringstream oss(std::ios::out, scratch);
+    std::pmr::string space(scratch);
+    Expects(s.isVector());
+
+    auto typePath = g.getTypePath(vertID, scratch);
+    auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+    auto cppName = getCppPath(typeName, scratch);
+    const auto& name = get(g.names, g, vertID);
+
+    oss << "\n";
+    OSS << "export function save" << cppName << " (ar: OutputArchive, g: " << cppName << ") {\n";
+    {
+        INDENT();
+        OSS << "const numVertices = g.numVertices();\n";
+        OSS << "const numEdges = g.numEdges();\n";
+        const auto sizeID = locate("/uint32_t", g);
+        outputSaveSerializable(oss, space, ns, g, sizeID, "numVertices", 0, false, scratch);
+        outputSaveSerializable(oss, space, ns, g, sizeID, "numEdges", 0, false, scratch);
+        if (s.isPolymorphic()) {
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                std::pmr::string numTypes("num", scratch);
+                numTypes.append(c.mMemberName.substr(1));
+                OSS << "let " << numTypes << " = 0;\n";
+            }
+            OSS << "for (const v of g.vertices()) {\n";
+            {
+                INDENT();
+                OSS << "switch (g.id(v)) {\n";
+                for (const auto& c : s.mPolymorphic.mConcepts) {
+                    std::pmr::string numTypes("num", scratch);
+                    numTypes.append(c.mMemberName.substr(1));
+                    const auto tagID = locate(c.mTag, g);
+                    const auto& tagName = get(g.names, g, tagID);
+                    OSS << "case " << name << "Value." << convertTag(tagName) << ":\n";
+                    INDENT();
+                    OSS << numTypes << " += 1;\n";
+                    OSS << "break;\n";
+                }
+                OSS << "default:\n";
+                OSS << "    break;\n";
+                OSS << "}\n";
+            }
+            OSS << "}\n";
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                std::pmr::string numTypes("num", scratch);
+                numTypes.append(c.mMemberName.substr(1));
+                outputSaveSerializable(oss, space, ns, g, sizeID, numTypes, 0, false, scratch);
+            }
+        }
+        OSS << "for (const v of g.vertices()) {\n";
+        {
+            INDENT();
+            if (s.isPolymorphic()) {
+                outputSaveSerializable(oss, space, ns, g, sizeID, "g.id(v)", 0, false, scratch);
+            }
+            if (s.isAddressable()) {
+                outputSaveSerializable(oss, space, ns, g, sizeID, "g.getParent(v)", 0, false, scratch);
+            }
+            for (const auto& c : s.mComponents) {
+                const auto componentID = locate(c.mValuePath, g);
+                std::pmr::string componentVar("g.get", scratch);
+                componentVar.append(convertTag(c.mName));
+                componentVar.append("(v)");
+                outputSaveSerializable(oss, space, ns, g, componentID, componentVar, 0, false, scratch);
+            }
+            if (s.isPolymorphic()) {
+                OSS << "switch (g.id(v)) {\n";
+                for (const auto& c : s.mPolymorphic.mConcepts) {
+                    const auto objectID = locate(c.mValue, g);
+                    const auto tagID = locate(c.mTag, g);
+                    const auto& tagName = get(g.names, g, tagID);
+                    std::pmr::string objectVar("g.get", scratch);
+                    objectVar.append(convertTag(tagName));
+                    objectVar.append("(v)");
+
+                    OSS << "case " << name << "Value." << convertTag(tagName) << ": {\n";
+                    {
+                        INDENT();
+                        outputSaveSerializable(oss, space, ns, g, objectID, objectVar, 0, false, scratch);
+                        OSS << "break;\n";
+                    }
+                    OSS << "}\n";
+                }
+                OSS << "default:\n";
+                OSS << "    break;\n";
+                OSS << "}\n";
+            }
+        }
+        OSS << "}\n";
+
+        Expects(s.isAliasGraph());
+
+        for (const auto& m : s.mMembers) {
+            if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                continue;
+
+            auto memberID = locate(m.mTypePath, g);
+            if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                continue;
+            }
+            std::pmr::string memberVar("g.", scratch);
+            memberVar.append(m.getMemberName());
+            outputSaveSerializable(oss, space, ns, g, memberID, memberVar, 0, false, scratch);
+        }
+    }
+    oss << "}\n";
+
+    oss << "\n";
+    OSS << "export function load" << cppName << " (ar: InputArchive, g: " << cppName << ") {\n";
+    {
+        INDENT();
+        const auto sizeID = locate("/uint32_t", g);
+        outputLoadSerializable(oss, space, ns, g, sizeID, "const numVertices", 0, scratch);
+        outputLoadSerializable(oss, space, ns, g, sizeID, "const numEdges", 0, scratch);
+        if (s.isPolymorphic()) {
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                std::pmr::string numTypes("const num", scratch);
+                numTypes.append(c.mMemberName.substr(1));
+                outputLoadSerializable(oss, space, ns, g, sizeID, numTypes, 0, scratch);
+            }
+        }
+        OSS << "for (let v = 0; v !== numVertices; ++v) {\n";
+        {
+            INDENT();
+            if (s.isPolymorphic()) {
+                outputLoadSerializable(oss, space, ns, g, sizeID, "const id", 0, scratch);
+            }
+            if (s.isAddressable()) {
+                outputLoadSerializable(oss, space, ns, g, sizeID, "const u", 0, scratch);
+            }
+            for (const auto& c : s.mComponents) {
+                const auto componentID = locate(c.mValuePath, g);
+                std::pmr::string componentVar(scratch);
+                if (g.isTypescriptValueType(componentID)) {
+                    componentVar.append("const ");
+                    componentVar.append(getTagVariableName(c.mName, scratch));
+                } else {
+                    componentVar.append(getTagVariableName(c.mName, scratch));
+                    OSS << "const " << componentVar << " = new "
+                        << g.getTypescriptTypename(componentID, scratch, scratch) << "();\n";
+                }
+                outputLoadSerializable(oss, space, ns, g, componentID, componentVar, 0, scratch);
+            }
+            if (s.isPolymorphic()) {
+                OSS << "switch (id) {\n";
+                for (const auto& c : s.mPolymorphic.mConcepts) {
+                    const auto objectID = locate(c.mValue, g);
+                    const auto tagID = locate(c.mTag, g);
+                    const auto& tagName = get(g.names, g, tagID);
+                    std::pmr::string objectVar(scratch);
+                    objectVar.append(getTagVariableName(tagName, scratch));
+                    std::pmr::string typeName(name, scratch);
+                    typeName.append("Value.");
+                    typeName.append(convertTag(tagName));
+                    OSS << "case " << typeName << ":\n";
+                    {
+                        INDENT();
+                        if (g.isTypescriptValueType(objectID)) {
+                            outputLoadSerializable(oss, space, ns, g, objectID, "const " + objectVar, 0, scratch);
+                        } else {
+                            OSS << "const " << objectVar << " = new "
+                                << g.getTypescriptTypename(objectID, scratch, scratch) << "();\n";
+                            outputLoadSerializable(oss, space, ns, g, objectID, objectVar, 0, scratch);
+                        }
+                        OSS << "g.addVertex<" << typeName << ">(" << typeName << ", " << objectVar;
+                        for (const auto& c : s.mComponents) {
+                            const auto componentID = locate(c.mValuePath, g);
+                            std::pmr::string componentVar(scratch);
+                            componentVar.append(getTagVariableName(c.mName, scratch));
+                            oss << ", " << componentVar;
+                        }
+                        if (s.isAddressable()) {
+                            oss << ", u";
+                        }
+                        oss << ");\n";
+                        OSS << "break;\n";
+                    }
+                }
+                OSS << "default:\n";
+                OSS << "    break;\n";
+                OSS << "}\n";
+            } else { // isPolymorphic
+                OSS << "g.addVertex(";
+                for (uint32_t count = 0; const auto& c : s.mComponents) {
+                    if (count++) {
+                        oss << ", ";
+                    }
+                    const auto componentID = locate(c.mValuePath, g);
+                    std::pmr::string componentVar(scratch);
+                    componentVar.append(getTagVariableName(c.mName, scratch));
+                    oss << componentVar;
+                }
+                if (s.isAddressable()) {
+                    oss << "u";
+                }
+                oss << ");\n";
+            } // isPolymorphic
+        }
+        OSS << "}\n";
+
+        Expects(s.isAliasGraph());
+
+        for (uint32_t count = 0; const auto& m : s.mMembers) {
+            if (m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                continue;
+
+            auto memberID = locate(m.mTypePath, g);
+            if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
+                || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                continue;
+            }
+            if (count++ == 0) {
+                OSS << "let sz = 0;\n";
+            }
+            std::pmr::string memberVar("g.", scratch);
+            memberVar.append(m.getMemberName());
+            outputLoadSerializable(oss, space, ns, g, memberID, memberVar, 0, scratch);
+        }
+    }
+    oss << "}\n";
+    return oss.str();
+}
+
 } // namespace
 
 std::pmr::string generateSerialization_ts(
@@ -666,10 +896,7 @@ std::pmr::string generateSerialization_ts(
                 oss << "}\n";
             },
             [&](const Graph& s) {
-                // const bool bDLL = !moduleInfo.mAPI.empty();
-                // CppGraphBuilder builder(&g, &mg, vertID,
-                //     moduleID, ns, bDLL, projectName, scratch);
-                // copyString(oss, space, builder.generateGraphSerialization_h(nvp));
+                copyString(oss, space, generateGraphSerialization_ts(ns, g, vertID, s, scratch));
             },
             [&](const auto&) {
             });

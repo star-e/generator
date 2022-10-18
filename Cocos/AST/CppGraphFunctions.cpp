@@ -4041,7 +4041,7 @@ void outputVectorGraphSave(std::ostream& oss, std::pmr::string& space,
                 OSS << "overload(\n";
                 {
                     INDENT();
-                    OSS << "[&](auto& object) {\n";
+                    OSS << "[&](const auto& object) {\n";
                     {
                         INDENT();
                         OSS << "save(ar, object);\n";

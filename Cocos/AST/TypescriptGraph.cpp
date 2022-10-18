@@ -952,8 +952,26 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "}\n";
         }
 
-        if (false) { // EdgeList Graph
-            // not implemented yet
+        if (true) {
+            if (s.needEdgeList()) {
+                Expects(false);
+            } else {
+                OSS << "//-----------------------------------------------------------------\n";
+                OSS << "// EdgeListGraph\n";
+                OSS << "numEdges (): number {\n";
+                {
+                    INDENT();
+                    OSS << "let numEdges = 0;\n";
+                    OSS << "for (const v of this.vertices()) {\n";
+                    {
+                        INDENT();
+                        OSS << "numEdges += this.outDegree(v);\n";
+                    }
+                    OSS << "}\n";
+                    OSS << "return numEdges;\n";
+                }
+                OSS << "}\n";
+            }
         }
 
         if (true) { // MutableGraph
