@@ -633,13 +633,12 @@ std::pmr::string generateGraphSerialization_ts(
                     objectVar.append(convertTag(tagName));
                     objectVar.append("(v)");
 
-                    OSS << "case " << name << "Value." << convertTag(tagName) << ": {\n";
+                    OSS << "case " << name << "Value." << convertTag(tagName) << ":\n";
                     {
                         INDENT();
                         outputSaveSerializable(oss, space, ns, g, objectID, objectVar, 0, false, scratch);
                         OSS << "break;\n";
                     }
-                    OSS << "}\n";
                 }
                 OSS << "default:\n";
                 OSS << "    break;\n";
@@ -713,7 +712,7 @@ std::pmr::string generateGraphSerialization_ts(
                     std::pmr::string typeName(name, scratch);
                     typeName.append("Value.");
                     typeName.append(convertTag(tagName));
-                    OSS << "case " << typeName << ":\n";
+                    OSS << "case " << typeName << ": {\n";
                     {
                         INDENT();
                         if (g.isTypescriptValueType(objectID)) {
@@ -736,6 +735,7 @@ std::pmr::string generateGraphSerialization_ts(
                         oss << ");\n";
                         OSS << "break;\n";
                     }
+                    OSS << "}\n";
                 }
                 OSS << "default:\n";
                 OSS << "    break;\n";
