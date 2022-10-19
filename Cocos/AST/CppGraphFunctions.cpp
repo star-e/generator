@@ -4112,7 +4112,7 @@ void outputVectorGraphLoad(std::ostream& oss, std::pmr::string& space,
             if (g.isPmr(valueID)) {
                 oss << "(g.get_allocator());\n";
             } else {
-                oss << ";\n";
+                oss << "{};\n";
             }
         }
         if (s.isPolymorphic()) {
