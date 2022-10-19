@@ -2288,7 +2288,8 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
         // GraphMembers
         const auto& constraints = get(g.constraints, g, vertID);
-        outputMembers(oss, space, builder, g, constraints.mConcepts,
+        outputMembers(oss, space, builder, g, vertID,
+            constraints.mConcepts,
             s.mMembers, s.mTypescriptFunctions,
             s.mConstructors, s.mMethods, scratch);
     }

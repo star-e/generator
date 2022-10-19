@@ -120,11 +120,13 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             oss << " {\n";
             {
                 INDENT();
-                outputMembers(oss, space, builder, g,
+                outputMembers(oss, space, builder, g, vertID,
                     inherits.mBases, s.mMembers,
                     s.mTypescriptFunctions, s.mConstructors, s.mMethods, scratch);
             }
             OSS << "}\n";
+            
+            outputFunctions(oss, space, g, vertID, scratch);
         },
         [&](const Variant& s) {
             if (currScope.mCount++)

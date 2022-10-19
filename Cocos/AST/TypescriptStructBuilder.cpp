@@ -35,13 +35,16 @@ namespace Cocos::Meta {
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const SyntaxGraph& g,
+    const SyntaxGraph::vertex_descriptor vertID,
     const std::pmr::vector<std::pmr::string>& inherits,
     const std::pmr::vector<Member>& members,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,
     const std::pmr::vector<Method>& methods,
     std::pmr::memory_resource* scratch) {
+    const auto& traits = get(g.traits, g, vertID);
     const int maxParams = 4;
+    const auto& name = g.getTypescriptTypename(vertID, scratch, scratch);
     if (!cntrs.empty()) {
         auto& cntr = cntrs.front();
         bool bChangeLine = false;
@@ -793,7 +796,6 @@ std::pmr::string generateSerialization_ts(
     std::pmr::memory_resource* scratch) {
     pmr_ostringstream oss(std::ios_base::out, mr);
     std::pmr::string space(scratch);
-    CodegenContext context(scratch);
 
     const auto moduleID = locate(moduleName0, mg);
     const auto& moduleInfo = get(mg.modules, mg, moduleID);
@@ -903,6 +905,162 @@ std::pmr::string generateSerialization_ts(
     }
 
     return oss.str();
+}
+
+namespace {
+
+SyntaxGraph::vertex_descriptor
+getChainedArrayValueID(const SyntaxGraph& g,
+    SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::memory_resource* scratch) {
+    while (vertID != g.null_vertex()) {
+        if (g.isTypescriptMap(vertID) || g.isTypescriptValueType(vertID)) {
+            return g.null_vertex();
+        }
+        if (g.isTypescriptArray(vertID, scratch)) {
+            const auto& instance = get<Instance>(vertID, g);
+            Expects(!instance.mParameters.empty());
+            Expects(instance.mParameters.size() == 1);
+            const auto& valuePath = instance.mParameters.at(0);
+            vertID = locate(valuePath, g);
+        } else {
+            return vertID;
+        }
+    }
+}
+
+bool isEqualType(const SyntaxGraph& g,
+    const SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::memory_resource* scratch) {
+    return g.isTypescriptValueType(vertID)
+        || g.isTypescriptArray(vertID, scratch)
+        || g.isTypescriptMap(vertID)
+        || holds_tag<Struct_>(vertID, g)
+        || holds_tag<Graph_>(vertID, g);
+}
+
+} // namespace
+
+void outputFunctions(std::ostream& oss, std::pmr::string& space,
+    const SyntaxGraph& g,
+    const SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::memory_resource* scratch) {
+    std::string_view ns = "/cc/render";
+    int numTrival = 0;
+    
+    const auto& traits = get(g.traits, g, vertID);
+    if (traits.mUnknown)
+        return;
+    if (traits.mImport)
+        return;
+    if ((traits.mFlags & GenerationFlags::NO_EQUAL) || !(traits.mFlags & GenerationFlags::EQUAL))
+        return;
+
+    auto typePath = g.getTypePath(vertID, scratch);
+    auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+    auto cppName = getCppPath(typeName, scratch);
+    const auto& name = get(g.names, g, vertID);
+
+    visit_vertex(
+        vertID, g,
+        [&](const Tag& t) {
+        },
+        [&](const Struct& s) {
+            auto parentID = parent(vertID, g);
+            if (holds_tag<Struct_>(parentID, g)
+                || holds_tag<Graph_>(parentID, g))
+                return;
+
+            if (traits.mTrivial) {
+                return;
+            }
+            numTrival = 0;
+            oss << "\n";
+            oss << "export function equal" << cppName << " (lhs: " << cppName << ", rhs: " << cppName << "): boolean {\n";
+            {
+                INDENT();
+                uint32_t count = 0;
+                for (const auto& m : s.mMembers) {
+                    if (m.mFlags & GenerationFlags::NO_EQUAL)
+                        continue;
+                    auto memberID = locate(m.mTypePath, g);
+                    if ((m.mFlags & GenerationFlags::NO_EQUAL)
+                        || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                        continue;
+                    }
+                    std::pmr::string lhs("lhs.", scratch);
+                    lhs.append(m.getMemberName());
+                    std::pmr::string rhs("rhs.", scratch);
+                    rhs.append(m.getMemberName());
+
+                    auto memberName = g.getTypescriptTypename(memberID, scratch, scratch);
+                        
+                    if (count++ == 0) {
+                        OSS << "return ";
+                    } else if (isEqualType(g, memberID, scratch)) {
+                        oss << "\n";
+                        OSS << "    && ";
+                    }
+                    
+                    if (g.isTypescriptValueType(memberID)) {
+                        oss << lhs << " === " << rhs;
+                    } else if (g.isTypescriptArray(memberID, scratch)) {
+                        const auto& instance = get<Instance>(memberID, g);
+                        Expects(!instance.mParameters.empty());
+                        Expects(instance.mParameters.size() == 1);
+                        const auto& valuePath = instance.mParameters.at(0);
+                        const auto valueID = locate(valuePath, g);
+                        if (g.isTypescriptMap(valueID)) {
+                            throw std::runtime_error("array of map is not supported");
+                        }
+                        if (g.isTypescriptValueType(valueID)) {
+                            oss << "equalValueArray(" << lhs << ", " << rhs << ")";
+                        } else {
+                            const auto realValueID = getChainedArrayValueID(g, valueID, scratch);
+                            if (realValueID == g.null_vertex()) {
+                                throw std::runtime_error("array of unknown is not supported");
+                            }
+                            const auto& valueName = g.getTypescriptTypename(realValueID, scratch, scratch);
+                            oss << "equalObjectArray(" << lhs << ", " << rhs << ", equal" << valueName << ")";
+                        }
+                    } else if (g.isTypescriptMap(memberID)) {
+                        const auto& instance = get<Instance>(memberID, g);
+                        Expects(!instance.mParameters.empty());
+                        Expects(instance.mParameters.size() == 2);
+                        const auto& keyPath = instance.mParameters.at(0);
+                        const auto& valuePath = instance.mParameters.at(1);
+                        const auto keyID = locate(keyPath, g);
+                        const auto valueID = locate(valuePath, g);
+                        if (g.isTypescriptMap(valueID)) {
+                            throw std::runtime_error("map of map is not supported");
+                        }
+                        if (g.isTypescriptValueType(valueID)) {
+                            oss << "equalValueMap(" << lhs << ", " << rhs << ")";
+                        } else {
+                            const auto realValueID = getChainedArrayValueID(g, valueID, scratch);
+                            if (realValueID == g.null_vertex()) {
+                                throw std::runtime_error("array of unknown is not supported");
+                            }
+                            const auto& valueName = g.getTypescriptTypename(realValueID, scratch, scratch);
+                            oss << "equalObjectMap(" << lhs << ", " << rhs << ", equal" << valueName << ")";
+                        }
+                    } else if (holds_tag<Struct_>(memberID, g) || holds_tag<Graph_>(memberID, g)) {
+                        oss << "equal" << memberName << "(" << lhs << ", " << rhs << ")";
+                    } else {
+                        oss << "/* skip: " << m.getMemberName() << ": "
+                            << g.getTypescriptTypename(vertID, scratch, scratch) << " */";
+                    }
+                }
+                if (count) {
+                    oss << ";\n";
+                }
+            }
+            oss << "}\n";
+        },
+        [&](const Graph& s) {
+        },
+        [&](const auto&) {
+        });
 }
 
 }

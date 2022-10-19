@@ -47,6 +47,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mTypescriptInclude = R"(import { ccclass } from '../../core/data/decorators';
 import { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
+import { equalObjectArray, equalValueArray, equalObjectMap, equalValueMap } from './utils';
 )"
     ) {
         NAMESPACE_BEG(cc);
@@ -234,7 +235,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
             );
         }
 
-        PMR_GRAPH(LayoutGraphData, _, _, .mFlags = NO_COPY | DECORATOR) {
+        PMR_GRAPH(LayoutGraphData, _, _, .mFlags = NO_COPY | DECORATOR | EQUAL) {
             NAMED_GRAPH(Name_);
             ALIAS_REFERENCE_GRAPH();
             ADDRESSABLE_GRAPH(mPathIndex);

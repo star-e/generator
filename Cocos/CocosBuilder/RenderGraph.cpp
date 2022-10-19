@@ -51,6 +51,8 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/pipeline/custom/Set.h"
 #include "cocos/core/assets/Material.h"
 )",
+        .mTypescriptInclude = R"(import { equalObjectArray, equalValueArray, equalObjectMap, equalValueMap } from './utils';
+)",
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);

@@ -1507,6 +1507,10 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                             oss << ", load" << tsName;
                         }
                     }
+                    const auto& traits = get(g.traits, g, vertID);
+                    if (traits.mFlags & EQUAL && !(traits.mFlags & NO_EQUAL)) {
+                        oss << ", equal" << tsName;
+                    }
                 }
                 oss << " } from '";
 
