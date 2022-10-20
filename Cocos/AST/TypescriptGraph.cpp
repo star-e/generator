@@ -461,7 +461,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
             }
             if (s.isPolymorphic()) {
                 OSS << "readonly _id: " << name << "Value;\n";
-                OSS << "readonly _object: "<< name << "Object;\n";
+                OSS << "_object: "<< name << "Object;\n";
             }
             if (false && s.mNamed)
                 OSS << "readonly _name: string;\n";
