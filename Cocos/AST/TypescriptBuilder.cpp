@@ -126,7 +126,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             }
             OSS << "}\n";
             
-            outputFunctions(oss, space, g, vertID, scratch);
+            if (false) {
+                outputFunctions(oss, space, g, vertID, scratch);
+            }
         },
         [&](const Variant& s) {
             if (currScope.mCount++)
