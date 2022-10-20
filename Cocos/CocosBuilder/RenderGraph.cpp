@@ -153,6 +153,7 @@ bool hasSideEffects() const noexcept {
             );
             PUBLIC(
                 (uint64_t, mNextFenceValue, 1)
+                (uint64_t, mVersion, 0)
             );
             MEMBER_FUNCTIONS(R"(
 void mount(gfx::Device* device, vertex_descriptor vertID);
