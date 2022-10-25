@@ -927,6 +927,7 @@ getChainedArrayValueID(const SyntaxGraph& g,
             return vertID;
         }
     }
+    return SyntaxGraph::null_vertex();
 }
 
 bool isEqualType(const SyntaxGraph& g,

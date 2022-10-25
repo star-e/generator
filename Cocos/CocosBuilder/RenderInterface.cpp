@@ -147,7 +147,15 @@ readonly macros: MacroRecord;
 )");
         }
 
+        INTERFACE(RenderNode) {
+            MEMBER_FUNCTIONS(R"(
+[[getter]] virtual ccstd::string getName() const = 0;
+[[setter]] virtual void setName(const ccstd::string& name) = 0;
+)");
+        }
+
         INTERFACE(Setter) {
+            INHERITS(RenderNode);
             MEMBER_FUNCTIONS(R"(
 virtual void setMat4(const ccstd::string& name, const cc::Mat4& mat) = 0;
 virtual void setQuaternion(const ccstd::string& name, const cc::Quaternion& quat) = 0;
@@ -216,12 +224,14 @@ virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX
         }
 
         INTERFACE(MovePassBuilder) {
+            INHERITS(RenderNode);
             MEMBER_FUNCTIONS(R"(
 virtual void addPair(const MovePair& pair) = 0;
 )");
         }
 
         INTERFACE(CopyPassBuilder) {
+            INHERITS(RenderNode);
             MEMBER_FUNCTIONS(R"(
 virtual void addPair(const CopyPair& pair) = 0;
 )");

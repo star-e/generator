@@ -588,9 +588,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
     }
 
     if (s.hasProperties()) { // PropertyMap
-        auto outputPropertyMap = [&](std::string_view mapName, bool bMember,
-                                     std::string_view container, std::string_view component,
-                                     std::string_view value, std::string_view type) {
+        auto outputPropertyMap = [&](SyntaxGraph::vertex_descriptor vertID,
+            const Component* c,
+            std::string_view mapName, bool bMember,
+            std::string_view container, std::string_view component,
+            std::string_view value, std::string_view type) {
             std::string_view arg = (!value.empty() && value.front() == '_')
                 ? value.substr(1)
                 : value;
@@ -628,26 +630,29 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
                 OSS << "}\n";
 
-                if (false) {
-                    OSS << "set(v: " << vertexDescType << ", " << arg << ": " << type << "): void {\n";
-                    {
-                        INDENT();
-                        if (!container.empty()) {
-                            if (s.isVector()) {
-                                if (bMember) {
-                                    OSS << "this._" << container << "[v]." << value << " = " << arg << ";\n";
+                if (vertID != g.null_vertex() && g.isTypescriptValueType(vertID)) {
+                    if (c && !(s.mNamedConcept.mComponent && s.mNamedConcept.mComponentName == c->mName && s.mAddressable)) {
+                        OSS << "set (v: " << vertexDescType << ", " << arg << ": " << type << "): void {\n";
+                        {
+                            INDENT();
+                            if (!container.empty()) {
+                                if (s.isVector()) {
+                                    if (bMember) {
+                                        OSS << "this._" << container << "[v]." << value << " = " << arg << ";\n";
+                                    } else {
+                                        OSS << "this._" << container << "[v]"
+                                            << " = " << arg << ";\n";
+                                    }
                                 } else {
-                                    OSS << "this._" << container << "[v]"
-                                        << " = " << arg << ";\n";
+                                    OSS << "v." << value << " = " << arg << ";\n";
                                 }
-                            } else {
-                                OSS << "v." << value << " = " << arg << ";\n";
                             }
                         }
+                        OSS << "}\n";
+                    } else {
+                        OSS << "// skip set, name is constant in AddressableGraph\n";
                     }
-                    OSS << "}\n";
                 }
-
                 if (s.isVector()) {
                     OSS << "readonly _" << container << ": " << component << "[];\n";
                 }
@@ -662,7 +667,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (false && s.mNamed) {
             if (count++)
                 oss << "\n";
-            outputPropertyMap("Name", true, "vertices", vertexName, "_name", "string");
+            outputPropertyMap(SyntaxGraph::null_vertex(), nullptr, "Name", true, "vertices", vertexName, "_name", "string");
         }
 
         if (!s.mVertexProperty.empty()) {
@@ -672,7 +677,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             auto tsType = g.getTypescriptTypename(vertID, scratch, scratch);
             auto member = std::pmr::string(get(g.names, g, vertID), scratch);
             member.front() = tolower(member.front());
-            outputPropertyMap("VertexProperty", true, "vertices", vertexName, "_property", tsType);
+            outputPropertyMap(vertID, nullptr, "VertexProperty", true, "vertices", vertexName, "_property", tsType);
         }
 
         if (!s.mComponents.empty()) {
@@ -683,7 +688,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 auto componentType = g.getTypescriptTypename(vertID, scratch, scratch);
                 Expects(!c.mMemberName.empty());
                 auto member = g.getMemberName(c.mMemberName, true);
-                outputPropertyMap(convertTag(c.mName), false, member, componentType,
+                outputPropertyMap(vertID, &c, convertTag(c.mName), false, member, componentType,
                     g.getMemberName(c.mMemberName, false), componentType);
             }
         }
@@ -1648,7 +1653,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     const auto componentID = locate(c.mValuePath, g);
                     auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
                     auto member = g.getMemberName(c.mMemberName, false);
-
+                    auto bNeedNameSetter = !(s.mNamedConcept.mComponent && s.mNamedConcept.mComponentName == c.mName && s.mAddressable);
+                    if (!bNeedNameSetter) {
+                        OSS << "// skip set" << convertTag(c.mName) << ", " << convertTag(c.mName) << " is constant in AddressableGraph\n";
+                    }
                     OSS << "get" << convertTag(c.mName) << " (v: " << vertexDescType << "): "
                         << componentType << " {\n";
                     {
@@ -1666,7 +1674,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     OSS << "}\n";
 
                     if (g.isTypescriptValueType(componentID)) {
-                        if (!(s.mNamedConcept.mComponent && s.mNamedConcept.mComponentName == c.mName)) {
+                        if (bNeedNameSetter) {
                             OSS << "set" << convertTag(c.mName) << " (v: " << vertexDescType
                                 << ", value: " << componentType << ") {\n";
                             {
