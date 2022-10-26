@@ -187,6 +187,9 @@ builder.addMember(vertID, COND,\
 #define MEMBER_FUNCTIONS(STR) \
     builder.addMemberFunctions(vertID, STR)
 
+#define PUBLIC_METHODS(STR) \
+    builder.addMethods(vertID, STR)
+
 #define TS_FUNCTIONS(STR) \
     builder.addTypescriptFunctions(vertID, STR)
 

@@ -656,12 +656,18 @@ void ModuleBuilder::addMemberFunctions(SyntaxGraph::vertex_descriptor vertID,
         vertID, g,
         [&](Composition_ auto& s) {
             s.mMemberFunctions.emplace_back(content);
-            auto modulePath = get(g.modulePaths, g, vertID);
-            auto moduleID = locate(modulePath, mModuleGraph);
-            const auto& m = get(mModuleGraph.modules, mModuleGraph, moduleID);
-            if (m.mFeatures & Interface) {
-                s.mMethods = parseFunctions(*this, content);
-            }
+        },
+        [&](const auto&) {
+        });
+}
+
+void ModuleBuilder::addMethods(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view content) {
+    auto& g = mSyntaxGraph;
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            s.mMethods = parseFunctions(*this, content);
         },
         [&](const auto&) {
         });

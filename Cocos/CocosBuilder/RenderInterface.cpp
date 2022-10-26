@@ -25,7 +25,7 @@ void buildArchiveInterface(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(render);
 
         INTERFACE(OutputArchive) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void writeBool(bool value) = 0;
 virtual void writeNumber(double value) = 0;
 virtual void writeString(std::string_view value) = 0;
@@ -34,7 +34,7 @@ virtual void writeString(std::string_view value) = 0;
         }
 
         INTERFACE(InputArchive) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual bool readBool() = 0;
 virtual double readNumber() = 0;
 virtual std::string_view readString() = 0;
@@ -104,7 +104,7 @@ class RenderWindow;
         NAMESPACE_BEG(render);
 
         INTERFACE(PipelineRuntime) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual bool activate(gfx::Swapchain * swapchain) = 0;
 virtual bool destroy() noexcept = 0;
 virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
@@ -148,7 +148,7 @@ readonly macros: MacroRecord;
         }
 
         INTERFACE(RenderNode) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 [[getter]] virtual ccstd::string getName() const = 0;
 [[setter]] virtual void setName(const ccstd::string& name) = 0;
 )");
@@ -156,7 +156,7 @@ readonly macros: MacroRecord;
 
         INTERFACE(Setter) {
             INHERITS(RenderNode);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void setMat4(const ccstd::string& name, const cc::Mat4& mat) = 0;
 virtual void setQuaternion(const ccstd::string& name, const cc::Quaternion& quat) = 0;
 virtual void setColor(const ccstd::string& name, const gfx::Color& color) = 0;
@@ -174,7 +174,7 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
 
         INTERFACE(RasterQueueBuilder) {
             INHERITS(Setter);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags) = 0;
 virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags) = 0;
@@ -186,7 +186,7 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 
         INTERFACE(RasterPassBuilder) {
             INHERITS(Setter);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint) = 0;
@@ -196,14 +196,14 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 
         INTERFACE(ComputeQueueBuilder) {
             INHERITS(Setter);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
 )");
         }
 
         INTERFACE(ComputePassBuilder) {
             INHERITS(Setter);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
 virtual ComputeQueueBuilder *addQueue() = 0;
@@ -212,20 +212,20 @@ virtual ComputeQueueBuilder *addQueue() = 0;
 
         INTERFACE(MovePassBuilder) {
             INHERITS(RenderNode);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void addPair(const MovePair& pair) = 0;
 )");
         }
 
         INTERFACE(CopyPassBuilder) {
             INHERITS(RenderNode);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void addPair(const CopyPair& pair) = 0;
 )");
         }
 
         INTERFACE(SceneVisitor) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 [[getter]] virtual const pipeline::PipelineSceneData* getPipelineSceneData() const = 0;
 
 virtual void setViewport(const gfx::Viewport &vp) = 0;
@@ -243,7 +243,7 @@ updateBuffer (buffer: Buffer, data: ArrayBuffer, size?: number): void;
         }
 
         INTERFACE(SceneTask) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 [[getter]] virtual TaskType getTaskType() const noexcept = 0;
 virtual void     start() = 0;
 virtual void     join() = 0;
@@ -252,13 +252,13 @@ virtual void     submit() = 0;
         }
 
         INTERFACE(SceneTransversal) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 )");
         }
 
         INTERFACE(LayoutGraphBuilder) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void clear() = 0;
 virtual uint32_t addRenderStage(const ccstd::string& name) = 0;
 virtual uint32_t addRenderPhase(const ccstd::string& name, uint32_t parentID) = 0;
@@ -274,7 +274,7 @@ virtual ccstd::string print() const = 0;
 
         INTERFACE(Pipeline) {
             INHERITS(PipelineRuntime);
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void beginSetup() = 0;
 virtual void endSetup() = 0;
 
@@ -300,7 +300,7 @@ virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, co
         }
 
         INTERFACE(PipelineBuilder) {
-            MEMBER_FUNCTIONS(R"(
+            PUBLIC_METHODS(R"(
 virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipeline) = 0;
 )");
         }

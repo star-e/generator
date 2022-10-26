@@ -1422,4 +1422,136 @@ std::pmr::string CppStructBuilder::generateMemberFunctions(std::pmr::string& spa
     return oss.str();
 }
 
+namespace {
+
+void outputParam(const CppStructBuilder& builder, std::ostream& oss, const Parameter& p) {
+    if (p.mConst) {
+        oss << "const ";
+    }
+    oss << builder.getDependentName(p.mTypePath);
+    oss << " ";
+    if (p.mPointer) {
+        oss << "*";
+    }
+    if (p.mReference) {
+        oss << "&";
+    }
+}
+
+} // namespace
+
+std::pmr::string CppStructBuilder::generateDispatchMethods(const Method& m) const {
+    auto scratch = get_allocator().resource();
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+    std::pmr::string space(scratch);
+
+    const auto& g = *mSyntaxGraph;
+
+    uint32_t numDefaultValues = 0;
+    for (const auto& param : m.mParameters) {
+        if (!param.mDefaultValue.empty()) {
+            ++numDefaultValues;
+        }
+    }
+    for (uint32_t i = numDefaultValues; i-- > 0;) {
+        OSS;
+        outputParam(*this, oss, m.mReturnType);
+        uint32_t count = 0;
+        oss << m.mFunctionName << "(";
+        for (const auto& param : m.mParameters) {
+            Expects(m.mParameters.size() >= i + 1);
+            if (count == m.mParameters.size() - i - 1) {
+                break;
+            }
+            if (count++) {
+                oss << ", ";
+            }
+            outputParam(*this, oss, param);
+            oss << param.name();
+        }
+        oss << ") {\n";
+        {
+            INDENT();
+            if (!m.mReturnType.isVoid()) {
+                OSS << "return ";
+            } else {
+                OSS;
+            }
+            uint32_t count = 0;
+            oss << m.mFunctionName << "(";
+            for (const auto& param : m.mParameters) {
+                if (count++) {
+                    oss << ", ";
+                }
+                auto paramID = locate(param.mTypePath, g);
+                Expects(m.mParameters.size() >= i + 1);
+                uint32_t start = static_cast<uint32_t>(m.mParameters.size()) - i - 1;
+                if (count > start) {
+                    oss << getCppPath(param.mDefaultValue, scratch);
+                } else {
+                    if (param.mReference || param.mPointer || g.isValueType(paramID)) {
+                        oss << param.name();
+                    } else {
+                        oss << "std::move(" << param.name() << ")";
+                    }
+                }
+            }
+            oss << ");\n";
+        }
+        OSS << "}\n";
+    }
+    return oss.str();
+}
+
+std::pmr::string CppStructBuilder::generateMethod(const Method& m,
+    bool bOverride, bool bDefaultParam) const {
+    auto scratch = get_allocator().resource();
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+
+    bool bEnableDefaultParam = false;
+
+    const auto& g = *mSyntaxGraph;
+    const auto vertID = mCurrentVertex;
+    auto name = get(g.names, g, vertID);
+    const auto& traits = get(g.traits, g, vertID);
+
+    if (!bOverride && m.mVirtual) {
+        oss << "virtual ";
+    }
+
+    outputParam(*this, oss, m.mReturnType);
+
+    oss << m.mFunctionName << "(";
+
+    int numDefaultValues = 0;
+    int count = 0;
+    for (const auto& param : m.mParameters) {
+        if (count++) {
+            oss << ", ";
+        }
+        outputParam(*this, oss, param);
+        oss << param.name();
+        if (bEnableDefaultParam && bDefaultParam && !param.mDefaultValue.empty()) {
+            ++numDefaultValues;
+            oss << " = " << getCppPath(param.mDefaultValue, scratch);
+        }
+    }
+
+    oss << ")";
+
+    if (m.mConst) {
+        oss << " const";
+    }
+    if (m.mNoexcept) {
+        oss << " noexcept";
+    }
+    if (!bOverride && m.mPure) {
+        oss << " = 0";
+    }
+    if (bOverride && m.mVirtual) {
+        oss << " override";
+    }
+    return oss.str();
+}
+
 }

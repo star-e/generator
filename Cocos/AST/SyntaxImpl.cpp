@@ -62,6 +62,13 @@ bool SyntaxGraph::isNamespace(std::string_view typePath) const noexcept {
     return parentID != g.null_vertex();
 }
 
+bool SyntaxGraph::isInterface(vertex_descriptor vertID) const noexcept {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+    return traits.mInterface;
+}
+
 bool SyntaxGraph::isValueType(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     if (holds_tag<Value_>(vertID, g)
@@ -763,6 +770,52 @@ SyntaxGraph::vertex_descriptor SyntaxGraph::getFirstMemberUtf8(vertex_descriptor
         [&](const auto&) {
             return g.null_vertex();
         });
+}
+
+namespace {
+
+void collectBasesImpl(const SyntaxGraph& g,
+    const std::pmr::vector<std::pmr::string>& bases,
+    std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
+    std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
+    for (const auto& base : bases) {
+        auto baseID = locate(base, g);
+        auto& childBases = get(g.inherits, g, baseID).mBases;
+        collectBasesImpl(g, childBases, baseIDs, results);
+        if (!baseIDs.contains(baseID)) {
+            baseIDs.emplace(baseID);
+            results.emplace_back(baseID);
+        }
+    }
+}
+
+void collectOverridedImpl(const SyntaxGraph& g,
+    const std::pmr::vector<std::pmr::string>& bases,
+    std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
+    std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
+    for (const auto& base : bases) {
+        auto baseID = locate(base, g);
+        auto& bases = get(g.inherits, g, baseID).mBases;
+        if (!g.isInterface(baseID)) {
+            collectBasesImpl(g, bases, baseIDs, results);
+            baseIDs.emplace(baseID);
+        } else {
+            collectOverridedImpl(g, bases, baseIDs, results);
+        }
+    }
+}
+
+}
+
+std::pmr::set<SyntaxGraph::vertex_descriptor>
+SyntaxGraph::collectOverrided(vertex_descriptor vertID) const {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    const auto& inherits = get(g.inherits, g, vertID);
+    std::pmr::set<SyntaxGraph::vertex_descriptor> bases(scratch);
+    std::pmr::vector<SyntaxGraph::vertex_descriptor> results(scratch);
+    collectOverridedImpl(g, inherits.mBases, bases, results);
+    return bases;
 }
 
 bool SyntaxGraph::isPathPmr(const Graph& s) const noexcept {

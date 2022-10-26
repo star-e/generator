@@ -317,6 +317,22 @@ struct Parameter {
     Parameter& operator=(Parameter const& rhs) = default;
     ~Parameter() noexcept;
 
+    bool isImpl() const noexcept {
+        Expects(!mName.empty());
+        return mName.back() == '_';
+    }
+    bool isVoid() const noexcept {
+        return mTypePath == "/void" && !mPointer;
+    }
+    std::string_view name() const noexcept {
+        Expects(!mName.empty());
+        if (mName.back() == '_') {
+            return std::string_view(mName).substr(0, mName.size() - 1);
+        } else {
+            return std::string_view(mName);
+        }
+    }
+
     std::pmr::string mTypePath;
     std::pmr::string mName;
     std::pmr::string mDefaultValue;
@@ -1090,6 +1106,7 @@ struct SyntaxGraph {
         Impl::ValueHandle<Instance_, vertex_descriptor>>;
 
     bool isNamespace(std::string_view typePath) const noexcept;
+    bool isInterface(vertex_descriptor vertID) const noexcept;
     bool isValueType(vertex_descriptor vertID) const noexcept;
     bool isInstantiation(vertex_descriptor vertID) const noexcept;
     bool isInstanceDependent(vertex_descriptor vertID) const noexcept;
@@ -1122,6 +1139,8 @@ struct SyntaxGraph {
     vertex_descriptor getMemberType(vertex_descriptor vertID, std::string_view member) const noexcept;
     vertex_descriptor getFirstMemberString(vertex_descriptor vertID) const noexcept;
     vertex_descriptor getFirstMemberUtf8(vertex_descriptor vertID) const noexcept;
+
+    std::pmr::set<vertex_descriptor> collectOverrided(vertex_descriptor vertID) const;
 
     // graph
     bool isPathPmr(const Graph& s) const noexcept;

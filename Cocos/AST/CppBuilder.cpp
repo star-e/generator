@@ -499,6 +499,21 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
 
 namespace {
 
+void collectBases(const SyntaxGraph& g,
+    const std::pmr::vector<std::pmr::string>& bases,
+    std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
+    std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
+    for (const auto& base : bases) {
+        auto baseID = locate(base, g);
+        auto& childBases = get(g.inherits, g, baseID).mBases;
+        collectBases(g, childBases, baseIDs, results);
+        if (!baseIDs.contains(baseID)) {
+            baseIDs.emplace(baseID);
+            results.emplace_back(baseID);
+        }
+    }
+}
+
 struct VisitorTypes_h : boost::dfs_visitor<> {
     using VisitGraph = Impl::AddressableView<SyntaxGraph>;
     bool needOutput(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g) {
@@ -556,16 +571,29 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
     };
 
     void outputOverride(CppStructBuilder& cpp, const SyntaxGraph& g,
-        const std::pmr::vector<std::pmr::string>& basePaths) {
+        const std::pmr::vector<SyntaxGraph::vertex_descriptor>& baseIDs,
+        const std::pmr::set<SyntaxGraph::vertex_descriptor>& overrided) {
         auto apiDLL = mAPI;
-        for (const auto& basePath : basePaths) {
-            auto baseID = locate(basePath, g);
+        for (const auto baseID : baseIDs) {
+            if (overrided.contains(baseID))
+                continue;
             const auto& baseTraits = get(g.traits, g, baseID);
             visit_vertex(
                 baseID, g,
                 [&](const Composition_ auto& s) {
                     if (!baseTraits.mInterface)
                         return;
+
+                    int count = 0;
+                    for (const Method& m : s.mMethods) {
+                        if (!m.mPure)
+                            continue;
+                        if (count++ == 0) {
+                            oss << "\n";
+                        }
+                        OSS << cpp.generateMethod(m, true) << ";\n";
+                    }
+
                     for (const auto& func : s.mMemberFunctions) {
                         size_t pos = 0;
                         std::pmr::string str(func, scratch);
@@ -586,14 +614,14 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                             }
                         }
                         boost::algorithm::replace_all(str, "virtual ", apiDLL);
-                        removeCustomAttributes(str, apiDLL);
+                        boost::algorithm::replace_all(str, "[[no_sender]] ", apiDLL);
+                        boost::algorithm::replace_all(str, "[[sender]] ", apiDLL);
+                        boost::algorithm::replace_all(str, "[[dll]] ", apiDLL);
                         copyCppString(oss, space, str);
                     }
                 },
                 [&](const auto&) {
                 });
-            const auto& childBases = get(g.inherits, g, baseID).mBases;
-            outputOverride(cpp, g, childBases);
         }
     }
 
@@ -635,7 +663,22 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
 
         // virtual functions
         if (!traits.mInterface) {
-            outputOverride(cpp, g, inherits.mBases);
+            std::pmr::set<SyntaxGraph::vertex_descriptor> bases(scratch);
+            std::pmr::vector<SyntaxGraph::vertex_descriptor> results(scratch);
+            collectBases(g, inherits.mBases, bases, results);
+            auto overrided = g.collectOverrided(vertID);
+            outputOverride(cpp, g, results, overrided);
+        }
+
+        // public methods
+        if (!s.mMethods.empty()) {
+            oss << "\n";
+        }
+        for (const Method& m : s.mMethods) {
+            OSS << cpp.generateMethod(m, false, true) << ";\n";
+        }
+        for (const Method& m : s.mMethods) {
+            copyString(oss, space, cpp.generateDispatchMethods(m));
         }
 
         // member functions
