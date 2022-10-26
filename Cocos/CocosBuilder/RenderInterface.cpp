@@ -175,11 +175,11 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
         INTERFACE(RasterQueueBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags) = 0;
-virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags) = 0;
-virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags) = 0;
-virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags) = 0;
-virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color) = 0;
+virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 )");
         }
@@ -189,7 +189,7 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
             PUBLIC_METHODS(R"(
 virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
-virtual RasterQueueBuilder *addQueue(QueueHint hint) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 )");
         }
@@ -280,14 +280,14 @@ virtual void endSetup() = 0;
 
 virtual bool containsResource(const ccstd::string& name) const = 0;
 virtual uint32_t addRenderTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
-virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
-virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency) = 0;
+virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
+virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 
 virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
 
 virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
-virtual RasterPassBuilder *addRasterPass(uint32_t width, uint32_t height, const ccstd::string& layoutName) = 0;
+virtual RasterPassBuilder *addRasterPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
 virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
 virtual MovePassBuilder *addMovePass() = 0;
 virtual CopyPassBuilder *addCopyPass() = 0;

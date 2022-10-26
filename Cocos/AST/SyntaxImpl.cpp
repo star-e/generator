@@ -1706,16 +1706,18 @@ std::pmr::string SyntaxGraph::getTypescriptTagName(std::string_view typePath,
 }
 
 std::pmr::string SyntaxGraph::getTypescriptInitialValue(
-    vertex_descriptor vertID, const Member& m,
-    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
+    vertex_descriptor vertID,
+    std::string_view tsDefaultValue,
+    std::string_view cppDefautValue, bool bPointer) const {
+    auto* scratch = mScratch;
     const auto& g = *this;
     const auto& ts = get(g.typescripts, g, vertID);
 
-    if (!m.mTypescriptDefaultValue.empty())
-        return std::pmr::string(m.mTypescriptDefaultValue, scratch);
+    if (!tsDefaultValue.empty())
+        return std::pmr::string(tsDefaultValue, scratch);
 
-    Expects(m.mDefaultValue != "_");
-    std::pmr::string initial1(m.mDefaultValue, scratch);
+    Expects(cppDefautValue != "_");
+    std::pmr::string initial1(cppDefautValue, scratch);
 
     boost::algorithm::trim(initial1);
     if (!initial1.empty() && initial1.front() == '{' && initial1.back() == '}') {
@@ -1724,6 +1726,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
         boost::algorithm::trim(initial1);
     }
     boost::algorithm::replace_all(initial1, "::", ".");
+    boost::algorithm::replace_all(initial1, "/", ".");
 
     std::string_view initial = initial1;
 
@@ -1819,7 +1822,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
             }
         }
     };
-    if (m.mPointer || g.isTypescriptPointer(vertID)) {
+    if (bPointer || g.isTypescriptPointer(vertID)) {
         outputNull();
         return oss.str();
     }
@@ -1881,6 +1884,12 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
     Ensures(!result.empty());
     Ensures(!boost::algorithm::contains(result, "/"));
     return result;
+}
+
+std::pmr::string SyntaxGraph::getTypescriptInitialValue(
+    vertex_descriptor vertID, const Member& m,
+    std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
+    return getTypescriptInitialValue(vertID, m.mTypescriptDefaultValue, m.mDefaultValue, m.mPointer);
 }
 
 std::pmr::string SyntaxGraph::getTypescriptGraphPolymorphicVariant(const Graph& s,

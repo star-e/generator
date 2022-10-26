@@ -1214,6 +1214,8 @@ struct SyntaxGraph {
     std::pmr::string getTypescriptTagName(std::string_view typePath,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
 
+    std::pmr::string getTypescriptInitialValue(vertex_descriptor vertID,
+        std::string_view tsDefaultValue, std::string_view cppDefautValue, bool bPointer) const;
     std::pmr::string getTypescriptInitialValue(
         vertex_descriptor vertID, const Member& member,
         std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;

@@ -191,16 +191,32 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             } else {
                 oss << method.mFunctionName << " (";
             }
-            for (uint32_t count = 0; const auto& param : method.mParameters) {
-                if (count == numParams)
-                    break;
-                if (param.mName.back() == '_')
+            bool bHasDefaultParams = false;
+            for (int32_t count = 0; const auto& param : method.mParameters) {
+                if (param.mName.back() == '_') {
+                    if (bHasDefaultParams && count + 1 == method.mParameters.size()) {
+                        oss << "*/";
+                    }
                     continue;
-                if (count++)
+                }
+                if (count == numParams) {
+                    oss << "/*";
+                    bHasDefaultParams = true;
+                }
+                if (count++) {
                     oss << ", ";
-                oss << param.mName;
+                }
                 auto paramID = locate(param.mTypePath, g);
-                oss << ": " << g.getTypedParameterName(param, true, true, param.mOptional);
+                if (count > numParams) {
+                    oss << g.getTypescriptInitialValue(
+                        paramID, "", param.mDefaultValue, param.mPointer);
+                } else {
+                    oss << param.name();
+                    oss << ": " << g.getTypedParameterName(param, true, true, param.mOptional);
+                }
+                if (bHasDefaultParams && count == method.mParameters.size()) {
+                    oss << "*/";
+                }
             }
             oss << ")";
             if (!method.mSetter) {
