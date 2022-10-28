@@ -347,6 +347,9 @@ void unmount(uint64_t completedFenceValue);
             PUBLIC(
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mIndex, _)
             );
+            MEMBER_FUNCTIONS(R"(
+ccstd::string print(boost::container::pmr::memory_resource* scratch) const;
+)");
         }
 
         NAMESPACE_END(render);
