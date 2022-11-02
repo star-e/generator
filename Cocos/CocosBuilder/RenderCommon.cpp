@@ -164,7 +164,7 @@ import { ccclass } from '../../core/data/decorators';
                 (AccessType, mAccessType, AccessType::READ)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
                 (gfx::Color, mClearColor, _)
-                (ClearValueType, mClearValueType, _)
+                (ClearValueType, mClearValueType, ClearValueType::FLOAT_TYPE)
             );
             builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
             MEMBER_FUNCTIONS(R"(
@@ -175,8 +175,8 @@ bool isWrite() const {
     return accessType != AccessType::READ;
 }
 )");
-            TS_INIT(mAccessType, AccessType.READ);
             TS_INIT(mClearFlags, ClearFlagBit.NONE);
+            CNTR(mName, mAccessType, mClearFlags, mClearColor, mClearValueType);
         }
 
         STRUCT(LightInfo, .mFlags = JSB) {
