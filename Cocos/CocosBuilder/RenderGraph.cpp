@@ -152,7 +152,7 @@ bool hasSideEffects() const noexcept {
                 (Swapchain_, RenderSwapchain, mSwapchains)
             );
             PUBLIC(
-                (uint64_t, mNextFenceValue, 1)
+                (uint64_t, mNextFenceValue, 0)
                 (uint64_t, mVersion, 0)
             );
             MEMBER_FUNCTIONS(R"(
@@ -351,7 +351,7 @@ void unmount(uint64_t completedFenceValue);
 ccstd::string print(boost::container::pmr::memory_resource* scratch) const;
 )");
         }
-
+          
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     }
