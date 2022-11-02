@@ -71,6 +71,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         };
         
         VARIANT(Range, (BufferRange, TextureRange), LESS)
+        VARIANT(ResourceUsage, (gfx::BufferUsageBit, gfx::TextureUsageBit), LESS)
 
         STRUCT(AccessStatus) {
             PUBLIC(
@@ -78,6 +79,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
                 (gfx::PassType, mPassType, gfx::PassType::RASTER)
+                (ResourceUsage, mUsage, _)
                 (Range, mRange, _)
             );
         }
@@ -91,7 +93,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(ResourceAccessNode) {
             PUBLIC(
-                (std::vector<AccessStatus>, mAttachemntStatus, _)
+                (std::vector<AccessStatus>, mAttachmentStatus, _)
                 (ResourceAccessNode*, mNextSubpass, nullptr)
             );
         }
