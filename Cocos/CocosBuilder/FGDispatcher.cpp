@@ -47,6 +47,13 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(NullTag) {
         };
 
+        STRUCT(ResourceLifeRecord) {
+            PUBLIC(
+                (RenderGraph::vertex_descriptor, mStart, 0)
+                (RenderGraph::vertex_descriptor, mEnd, 0)
+            );
+        };
+
         STRUCT(LeafStatus) {
             PUBLIC(
                 (bool, mIsExternal, false)
@@ -106,6 +113,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 ((PmrFlatMap<RenderGraph::vertex_descriptor, LeafStatus>), mLeafPasses, _)
                 ((PmrFlatSet<RenderGraph::vertex_descriptor>), mCulledPasses, _)
                 ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
+                ((PmrFlatMap<ccstd::pmr::string, ResourceLifeRecord>), mResourceLifeRecord, _)
+                (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mTopologicalOrder, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
