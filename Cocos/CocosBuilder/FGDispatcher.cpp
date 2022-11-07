@@ -86,6 +86,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
                 (gfx::PassType, mPassType, gfx::PassType::RASTER)
+                (gfx::AccessFlagBit, mAccessFlag, gfx::AccessFlagBit::NONE)
                 (ResourceUsage, mUsage, _)
                 (Range, mRange, _)
             );
@@ -146,6 +147,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (RenderGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
                 (gfx::BarrierType, mType, gfx::BarrierType::FULL)
+                (gfx::GFXObject*, mBarrier, nullptr)
                 (AccessStatus, mBeginStatus, _)
                 (AccessStatus, mEndStatus, _)
             );
