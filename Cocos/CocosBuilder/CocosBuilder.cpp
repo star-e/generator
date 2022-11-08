@@ -98,6 +98,7 @@ int main() {
         files.emplace("cocos/renderer/pipeline/custom/NativePipelineImpl.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraph.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeRenderQueue.cpp");
 
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);

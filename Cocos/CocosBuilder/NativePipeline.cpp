@@ -36,7 +36,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "LayoutGraph", "RenderGraph" },
+        .mRequires = { "RenderInterface", "LayoutGraph", "RenderGraph", "InstancedBuffer" },
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
@@ -148,80 +148,110 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             );
         }
         
-        STRUCT(ScenePassHandle, .mFlags = LESS) {
-            PUBLIC(
-                (const scene::Pass*, mHandle, nullptr)
-            );
+        if (false) {
+            STRUCT(ScenePassHandle, .mFlags = LESS) {
+                PUBLIC(
+                    (const scene::Pass*, mHandle, nullptr)
+                );
+            }
+
+            STRUCT(ScenePass) {
+                PUBLIC(
+                    (uint32_t, mPriority, 0)
+                    (float, mDepth, 0)
+                    (uint32_t, shaderID, 0)
+                    (uint32_t, passIndex, 0)
+                    (const scene::SubModel*, mSubModel, nullptr)
+                );
+            }
+
+            STRUCT(ScenePassQueue, .mFlags = NO_MOVE_NO_COPY) {
+                PUBLIC(
+                    (ccstd::pmr::vector<ScenePass>, mQueue, _)
+                );
+            }
+
+            STRUCT(RenderInstance, .mAlignment = 64) {
+                PUBLIC(
+                    (uint32_t, mCount, 0)
+                    (uint32_t, mCapacity, 0)
+                    (gfx::Buffer*, mVertexBuffer, nullptr)
+                    (uint8_t*, mData, nullptr)
+                    (gfx::InputAssembler*, mInputAssembler, nullptr)
+                    (uint32_t, mStride, 0)
+                    (uint32_t, mBufferOffset, 0)
+                    (gfx::Shader*, mShader, nullptr)
+                    (gfx::DescriptorSet*, mDescriptorSet, nullptr)
+                    (gfx::Texture*, mLightmap, nullptr)
+                );
+            }
+
+            STRUCT(RenderInstancePack, .mFlags = NO_COPY) {
+                PUBLIC(
+                    (ccstd::pmr::vector<RenderInstance>, mInstances, _)
+                );
+            }
+
+            STRUCT(RenderBatch, .mFlags = NO_COPY) {
+                PUBLIC(
+                    (ccstd::pmr::vector<gfx::Buffer*>, mVertexBuffers, _)
+                    (ccstd::pmr::vector<uint8_t*>, mVertexBufferData, _)
+                    (gfx::Buffer*, mIndexBuffer, nullptr)
+                    (float*, mIndexBufferData, nullptr)
+                    (uint32_t, mVertexBufferCount, 0)
+                    (uint32_t, mMergeCount, 0)
+                    (gfx::InputAssembler*, mInputAssembler, nullptr)
+                    (ccstd::pmr::vector<uint8_t>, mUniformBufferData, _)
+                    (gfx::Buffer*, mUniformBuffer, nullptr)
+                    (gfx::DescriptorSet*, mDescriptorSet, nullptr)
+                    (const scene::Pass*, mScenePass, nullptr)
+                    (gfx::Shader*, mShader, nullptr)
+                );
+            }
+
+            STRUCT(RenderBatchPack, .mFlags = NO_COPY) {
+                PUBLIC(
+                    (ccstd::pmr::vector<PmrUniquePtr<RenderBatch>>, mBatches, _)
+                    (ccstd::pmr::vector<uint32_t>, mBufferOffset, _)
+                );
+            }
+            
+            STRUCT(RenderObject, .mAlignment = 16) {
+                PUBLIC(
+                    (const scene::Model*, mModel, nullptr)
+                    (float, mDepth, 0.0F)
+                );
+                CNTR(mModel, mDepth);
+            }
         }
 
-        STRUCT(ScenePass) {
+        STRUCT(RenderInstancingQueue) {
             PUBLIC(
-                (uint32_t, mPriority, 0)
-                (float, mDepth, 0)
-                (uint32_t, shaderID, 0)
-                (uint32_t, passIndex, 0)
-                (const scene::SubModel*, mSubModel, nullptr)
+                (PmrUnorderedSet<pipeline::InstancedBuffer*>, mBatches, _)
+                (ccstd::pmr::vector<pipeline::InstancedBuffer*>, mSortedBatches, _)
             );
-        }
-
-        STRUCT(ScenePassQueue, .mFlags = NO_MOVE_NO_COPY) {
-            PUBLIC(
-                (ccstd::pmr::vector<ScenePass>, mQueue, _)
-            );
-        }
-
-        STRUCT(RenderInstance, .mAlignment = 64) {
-            PUBLIC(
-                (uint32_t, mCount, 0)
-                (uint32_t, mCapacity, 0)
-                (gfx::Buffer*, mVertexBuffer, nullptr)
-                (uint8_t*, mData, nullptr)
-                (gfx::InputAssembler*, mInputAssembler, nullptr)
-                (uint32_t, mStride, 0)
-                (uint32_t, mBufferOffset, 0)
-                (gfx::Shader*, mShader, nullptr)
-                (gfx::DescriptorSet*, mDescriptorSet, nullptr)
-                (gfx::Texture*, mLightmap, nullptr)
-            );
-        }
-
-        STRUCT(RenderInstancePack, .mFlags = NO_COPY) {
-            PUBLIC(
-                (ccstd::pmr::vector<RenderInstance>, mInstances, _)
-            );
-        }
-
-        STRUCT(RenderBatch, .mFlags = NO_COPY) {
-            PUBLIC(
-                (ccstd::pmr::vector<gfx::Buffer*>, mVertexBuffers, _)
-                (ccstd::pmr::vector<uint8_t*>, mVertexBufferData, _)
-                (gfx::Buffer*, mIndexBuffer, nullptr)
-                (float*, mIndexBufferData, nullptr)
-                (uint32_t, mVertexBufferCount, 0)
-                (uint32_t, mMergeCount, 0)
-                (gfx::InputAssembler*, mInputAssembler, nullptr)
-                (ccstd::pmr::vector<uint8_t>, mUniformBufferData, _)
-                (gfx::Buffer*, mUniformBuffer, nullptr)
-                (gfx::DescriptorSet*, mDescriptorSet, nullptr)
-                (const scene::Pass*, mScenePass, nullptr)
-                (gfx::Shader*, mShader, nullptr)
-            );
-        }
-
-        STRUCT(RenderBatchPack, .mFlags = NO_COPY) {
-            PUBLIC(
-                (ccstd::pmr::vector<PmrUniquePtr<RenderBatch>>, mBatches, _)
-                (ccstd::pmr::vector<uint32_t>, mBufferOffset, _)
-            );
+            MEMBER_FUNCTIONS(R"(
+void add(pipeline::InstancedBuffer *instancedBuffer);
+void sort();
+void uploadBuffers(gfx::CommandBuffer *cmdBuffer) const;
+void recordCommandBuffer(
+    gfx::RenderPass *renderPass, gfx::CommandBuffer *cmdBuffer,
+    gfx::DescriptorSet *ds = nullptr, uint32_t offset = 0,
+    const ccstd::vector<uint32_t> *dynamicOffsets = nullptr) const;
+)");
         }
 
         STRUCT(NativeRenderQueue, .mFlags = NO_COPY) {
             PUBLIC(
-                (ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
-                (ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
-                (ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
-                ((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
+                (SceneFlags, mSceneFlags, SceneFlags::NONE)
+                //(ccstd::pmr::vector<RenderObject>, mRenderObjects, _)
+                (RenderInstancingQueue, mInstancingQueue, _)
+                //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
+                //(ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
+                //(ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
+                //((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
             );
+            CNTR(mSceneFlags);
         }
 
         STRUCT(DefaultSceneVisitor) {
@@ -237,13 +267,24 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (ccstd::pmr::string, mName, _)
             );
         }
+        
+        STRUCT(ResourceGroup, .mFlags = NO_MOVE_NO_COPY | CUSTOM_DTOR) {
+            PUBLIC(
+                (PmrUnorderedSet<IntrusivePtr<pipeline::InstancedBuffer>>, mInstancingBuffers, _)
+            );
+        }
 
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
-                (ccstd::pmr::vector<PmrUniquePtr<NativeRenderQueue>>, mFreeRenderQueues, _)
-                (ccstd::pmr::vector<PmrUniquePtr<RenderInstancePack>>, mFreeInstancePacks, _)
+                ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
+                //(ccstd::pmr::vector<PmrUniquePtr<NativeRenderQueue>>, mFreeRenderQueues, _)
+                //(ccstd::pmr::vector<PmrUniquePtr<RenderInstancePack>>, mFreeInstancePacks, _)
+                (uint64_t, mNextFenceValue, 0)
             );
+            MEMBER_FUNCTIONS(R"(
+void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
+)");
         }
 
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
