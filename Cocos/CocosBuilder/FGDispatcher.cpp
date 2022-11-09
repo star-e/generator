@@ -49,8 +49,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(ResourceLifeRecord) {
             PUBLIC(
-                (RenderGraph::vertex_descriptor, mStart, 0)
-                (RenderGraph::vertex_descriptor, mEnd, 0)
+                (uint32_t, mStart, 0)
+                (uint32_t, mEnd, 0)
             );
         };
 
@@ -110,12 +110,12 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
-                (RenderGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
-                ((PmrFlatMap<RenderGraph::vertex_descriptor, LeafStatus>), mLeafPasses, _)
-                ((PmrFlatSet<RenderGraph::vertex_descriptor>), mCulledPasses, _)
+                (ResourceAccessGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
+                ((PmrFlatMap<ResourceAccessGraph::vertex_descriptor, LeafStatus>), mLeafPasses, _)
+                ((PmrFlatSet<ResourceAccessGraph::vertex_descriptor>), mCulledPasses, _)
                 ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
                 ((PmrFlatMap<ccstd::pmr::string, ResourceLifeRecord>), mResourceLifeRecord, _)
-                (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mTopologicalOrder, _)
+                (ccstd::pmr::vector<ResourceAccessGraph::vertex_descriptor>, mTopologicalOrder, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
@@ -148,7 +148,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(Barrier) {
             PUBLIC(
-                (RenderGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
+                (ResourceGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
                 (gfx::BarrierType, mType, gfx::BarrierType::FULL)
                 (gfx::GFXObject*, mBarrier, nullptr)
                 (AccessStatus, mBeginStatus, _)
