@@ -168,6 +168,16 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(InstancedBuffer,
+        .mFolder = "cocos/renderer/pipeline",
+        .mFilePrefix = "InstancedBuffer.h") {
+        NAMESPACE(cc) {
+            NAMESPACE(pipeline) {
+                IMPORT_CLASS(InstancedBuffer);
+            }
+        }
+    }
+
     MODULE(GlobalDSManager,
         .mTypescriptFolder = "cocos/rendering",
         .mTypescriptFilePrefix = "global-descriptor-set-manager",

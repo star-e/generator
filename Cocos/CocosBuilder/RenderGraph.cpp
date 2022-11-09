@@ -351,7 +351,7 @@ void unmount(uint64_t completedFenceValue);
 ccstd::string print(boost::container::pmr::memory_resource* scratch) const;
 )");
         }
-          
+
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     }
