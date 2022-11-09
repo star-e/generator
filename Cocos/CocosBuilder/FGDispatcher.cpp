@@ -139,8 +139,11 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 )");
         }
 
-        GRAPH(EmptyGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
-
+        PMR_GRAPH(RelationGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
+            COMPONENT_GRAPH(
+                (DescID_, ResourceAccessGraph::vertex_descriptor, mDescID)
+            );
+            COMPONENT_BIMAP(PmrUnorderedMap, mVertexMap, DescID_);
         }
 
         STRUCT(Barrier) {
@@ -175,7 +178,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (LayoutGraphData&, mLayoutGraph, _)
                 (boost::container::pmr::memory_resource*, mScratch, nullptr)
                 ((PmrFlatMap<ccstd::pmr::string, ResourceTransition>), mExternalResMap, _)
-                (EmptyGraph, mRelationGraph, _)
+                (RelationGraph, mRelationGraph, _)
             );
             
             PRIVATE(
