@@ -47,6 +47,13 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(NullTag) {
         };
 
+        STRUCT(ResourceLifeRecord) {
+            PUBLIC(
+                (uint32_t, mStart, 0)
+                (uint32_t, mEnd, 0)
+            );
+        };
+
         STRUCT(LeafStatus) {
             PUBLIC(
                 (bool, mIsExternal, false)
@@ -79,6 +86,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
                 (gfx::PassType, mPassType, gfx::PassType::RASTER)
+                (gfx::AccessFlagBit, mAccessFlag, gfx::AccessFlagBit::NONE)
                 (ResourceUsage, mUsage, _)
                 (Range, mRange, _)
             );
@@ -102,10 +110,12 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mResourceIndex, _)
-                (RenderGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
-                ((PmrFlatMap<RenderGraph::vertex_descriptor, LeafStatus>), mLeafPasses, _)
-                ((PmrFlatSet<RenderGraph::vertex_descriptor>), mCulledPasses, _)
+                (ResourceAccessGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
+                ((PmrFlatMap<ResourceAccessGraph::vertex_descriptor, LeafStatus>), mLeafPasses, _)
+                ((PmrFlatSet<ResourceAccessGraph::vertex_descriptor>), mCulledPasses, _)
                 ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
+                ((PmrFlatMap<ccstd::pmr::string, ResourceLifeRecord>), mResourceLifeRecord, _)
+                (ccstd::pmr::vector<ResourceAccessGraph::vertex_descriptor>, mTopologicalOrder, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
@@ -129,14 +139,18 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 )");
         }
 
-        GRAPH(EmptyGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
-
+        PMR_GRAPH(RelationGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
+            COMPONENT_GRAPH(
+                (DescID_, ResourceAccessGraph::vertex_descriptor, mDescID)
+            );
+            COMPONENT_BIMAP(PmrUnorderedMap, mVertexMap, DescID_);
         }
 
         STRUCT(Barrier) {
             PUBLIC(
-                (RenderGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
+                (ResourceGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
                 (gfx::BarrierType, mType, gfx::BarrierType::FULL)
+                (gfx::GFXObject*, mBarrier, nullptr)
                 (AccessStatus, mBeginStatus, _)
                 (AccessStatus, mEndStatus, _)
             );
@@ -164,7 +178,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (LayoutGraphData&, mLayoutGraph, _)
                 (boost::container::pmr::memory_resource*, mScratch, nullptr)
                 ((PmrFlatMap<ccstd::pmr::string, ResourceTransition>), mExternalResMap, _)
-                (EmptyGraph, mRelationGraph, _)
+                (RelationGraph, mRelationGraph, _)
             );
             
             PRIVATE(
