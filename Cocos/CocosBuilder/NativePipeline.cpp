@@ -155,16 +155,6 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 );
             }
 
-            STRUCT(ScenePass) {
-                PUBLIC(
-                    (uint32_t, mPriority, 0)
-                    (float, mDepth, 0)
-                    (uint32_t, shaderID, 0)
-                    (uint32_t, passIndex, 0)
-                    (const scene::SubModel*, mSubModel, nullptr)
-                );
-            }
-
             STRUCT(ScenePassQueue, .mFlags = NO_MOVE_NO_COPY) {
                 PUBLIC(
                     (ccstd::pmr::vector<ScenePass>, mQueue, _)
@@ -231,7 +221,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (ccstd::pmr::vector<pipeline::InstancedBuffer*>, mSortedBatches, _)
             );
             MEMBER_FUNCTIONS(R"(
-void add(pipeline::InstancedBuffer *instancedBuffer);
+void add(pipeline::InstancedBuffer &instancedBuffer);
 void sort();
 void uploadBuffers(gfx::CommandBuffer *cmdBuffer) const;
 void recordCommandBuffer(
@@ -240,18 +230,49 @@ void recordCommandBuffer(
     const ccstd::vector<uint32_t> *dynamicOffsets = nullptr) const;
 )");
         }
+        
+        STRUCT(DrawInstance, .mAlignment = 32) {
+            PUBLIC(
+                (const scene::SubModel*, mSubModel, nullptr)
+                (uint32_t, mPriority, 0)
+                (uint32_t, mHash, 0)
+                (float, mDepth, 0)
+                (uint32_t, mShaderID, 0)
+                (uint32_t, mPassIndex, 0)
+            );
+        }
+
+        STRUCT(RenderDrawQueue) {
+            PUBLIC(
+                (ccstd::pmr::vector<DrawInstance>, mInstances, _)
+            );
+            MEMBER_FUNCTIONS(R"(
+void add(const scene::Model& model, float depth, uint32_t subModelIdx, uint32_t passIdx);
+void sortOpaqueOrCutout();
+void sortTransparent();
+void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
+    gfx::RenderPass *renderPass, gfx::CommandBuffer *cmdBuffer,
+    uint32_t subpassIndex) const;
+)");
+        }
 
         STRUCT(NativeRenderQueue, .mFlags = NO_COPY) {
             PUBLIC(
-                (SceneFlags, mSceneFlags, SceneFlags::NONE)
                 //(ccstd::pmr::vector<RenderObject>, mRenderObjects, _)
-                (RenderInstancingQueue, mInstancingQueue, _)
+                (RenderDrawQueue, mOpaqueQueue, _)
+                (RenderDrawQueue, mTransparentQueue, _)
+                (RenderInstancingQueue, mOpaqueInstancingQueue, _)
+                (RenderInstancingQueue, mTransparentInstancingQueue, _)
+                (SceneFlags, mSceneFlags, SceneFlags::NONE)
                 //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
                 //(ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
                 //(ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
                 //((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
             );
             CNTR(mSceneFlags);
+            MEMBER_FUNCTIONS(R"(
+void sort();
+)");
         }
 
         STRUCT(DefaultSceneVisitor) {
