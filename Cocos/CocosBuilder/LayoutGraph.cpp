@@ -44,8 +44,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 )",
-        .mTypescriptInclude = R"(import { ccclass } from '../../core/data/decorators';
-import { OutputArchive, InputArchive } from './archive';
+        .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
 )"
 // import { equalObjectArray, equalValueArray, equalObjectMap, equalValueMap } from './utils';
@@ -235,7 +234,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
             );
         }
 
-        PMR_GRAPH(LayoutGraphData, _, _, .mFlags = NO_COPY | DECORATOR) {
+        PMR_GRAPH(LayoutGraphData, _, _, .mFlags = NO_COPY) {
             NAMED_GRAPH(Name_);
             ALIAS_REFERENCE_GRAPH();
             ADDRESSABLE_GRAPH(mPathIndex);
