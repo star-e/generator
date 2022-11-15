@@ -36,6 +36,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
     const ModuleBuilder& builder, std::string_view scope,
     SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch) {
     const auto& g = builder.mSyntaxGraph;
     auto name = g.getTypescriptTypename(vertID, scratch, scratch);
@@ -91,7 +92,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (currScope.mCount++)
                 oss << "\n";
 
-            auto content = generateGraph(builder, s, vertID, name, scratch);
+            auto content = generateGraph(builder, s, vertID, name, imports, scratch);
             copyString(oss, space, content);
         }, 
         [&](const Struct& s) {

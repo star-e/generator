@@ -31,6 +31,8 @@ namespace Cocos::Meta {
 
 std::pmr::string generateGraph(const ModuleBuilder& builder,
     const Graph& s, uint32_t vertID,
-    std::string_view name, std::pmr::memory_resource* scratch);
+    std::string_view name,
+    std::pmr::set<std::pmr::string>& imports,
+    std::pmr::memory_resource* scratch);
 
 }

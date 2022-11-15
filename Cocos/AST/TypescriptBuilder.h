@@ -34,6 +34,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
     const ModuleBuilder& builder, std::string_view scope,
     SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch);
 
 void outputMembers(std::ostream& oss, std::pmr::string& space,

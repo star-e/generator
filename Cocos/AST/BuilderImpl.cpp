@@ -1484,6 +1484,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         CodegenContext codegen(scratch);
         codegen.mScopes.emplace_back("Struct");
 
+        std::pmr::set<std::pmr::string> graphImports(scratch);
         {
             outputComment(oss);
 
@@ -1538,7 +1539,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             const auto& typeModulePath = get(g.modulePaths, g, vertID);
             if (typeModulePath != modulePath)
                 continue;
-            outputTypescript(oss, space, codegen, * this, "", vertID, scratch);
+            outputTypescript(oss, space, codegen, *this, "", vertID, graphImports, scratch);
         }
 
         if (features & Features::Serialization) {

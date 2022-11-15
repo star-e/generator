@@ -36,6 +36,7 @@ namespace Cocos::Meta {
 namespace {
 
 constexpr bool gThrow = true;
+constexpr bool gImpl = true;
 
 std::pmr::string generatePushIndicenceList(const Graph& g,
     std::string_view el, std::string_view outEdgeType,
@@ -198,14 +199,20 @@ void outputRemoveOutEdge(std::ostream& oss, std::pmr::string& space,
 
 void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph& s,
     bool bReferenceGraph,
+    std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch) {
     {
         auto source = s.getTypescriptVertexDereference("u", scratch);
         OSS << "const source = " << source << ";\n";
         if (s.needEdgeList() && !bReferenceGraph) {
             OSS << "// remove all edges from edge list\n";
-            OSS << "impl.removeAllEdgesFromList(this._edges, source."
-                << s.getTypescriptOutEdgeList(bReferenceGraph) << ", v);\n";
+            if (gImpl) {
+                OSS << "impl.removeAllEdgesFromList(this._edges, source.";
+            } else {
+                OSS << "removeAllEdgesFromList(this._edges, source.";
+                imports.emplace("removeAllEdgesFromList");
+            }
+            oss << s.getTypescriptOutEdgeList(bReferenceGraph) << ", v);\n";
         }
         OSS << "// remove out edges of u\n";
         if (true) {
@@ -366,12 +373,19 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
     std::string_view vertexName,
     std::string_view outEdgeType,
     std::string_view outRefType,
-    bool bVectorVertexDescriptor, std::pmr::memory_resource* scratch) {
+    bool bVectorVertexDescriptor,
+    std::pmr::set<std::pmr::string>& imports,
+    std::pmr::memory_resource* scratch) {
     const auto& g = builder.mSyntaxGraph;
 
     OSS << "export class " << vertexName;
     if (!bVectorVertexDescriptor) {
-        oss << " implements impl.Vertex";
+        if (gImpl) {
+            oss << " implements impl.Vertex";
+        } else {
+            imports.emplace("Vertex");
+            oss << " implements Vertex";
+        }
     }
     oss << " {\n";
     {
@@ -481,11 +495,17 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
 
 void outputGraphEdge(std::ostream& oss, std::pmr::string& space,
     const Graph& s, std::string_view vertexDescType,
-    std::string_view edgeType, std::string_view edgeProperty) {
+    std::string_view edgeType, std::string_view edgeProperty,
+    std::pmr::set<std::pmr::string>& imports) {
     Expects(!edgeProperty.empty());
 
     OSS << "class " << edgeType;
-    oss << " implements impl.Edge";
+    if (gImpl) {
+        oss << " implements impl.Edge";
+    } else {
+        imports.emplace("Edge");
+        oss << " implements Edge";
+    }
     oss << " {\n";
     {
         INDENT();
@@ -512,6 +532,7 @@ void outputGraphEdge(std::ostream& oss, std::pmr::string& space,
 
 std::pmr::string generateGraph(const ModuleBuilder& builder,
     const Graph& s, SyntaxGraph::vertex_descriptor vertID, std::string_view name,
+    std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch) {
     const auto& g = builder.mSyntaxGraph;
 
@@ -536,23 +557,62 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
     std::string_view inEdgeIter;
 
     if (s.mEdgeProperty.empty()) {
-        outEdgeType = "impl.OutE";
-        outEdgeIter = "impl.OutEI";
-        inEdgeIter = "impl.InEI";
+        if (gImpl) {
+            outEdgeType = "impl.OutE";
+            outEdgeIter = "impl.OutEI";
+            inEdgeIter = "impl.InEI";
+        } else {
+            outEdgeType = "OutE";
+            outEdgeIter = "OutEI";
+            inEdgeIter = "InEI";
+            imports.emplace("OutE");
+            imports.emplace("OutEI");
+            imports.emplace("InEI");
+        }
     } else {
-        outEdgeType = "impl.OutEP";
-        outEdgeIter = "impl.OutEPI";
-        inEdgeIter = "impl.InEPI";
+        if (gImpl) {
+            outEdgeType = "impl.OutEP";
+            outEdgeIter = "impl.OutEPI";
+            inEdgeIter = "impl.InEPI";
+        } else {
+            outEdgeType = "OutEP";
+            outEdgeIter = "OutEPI";
+            inEdgeIter = "InEPI";
+            imports.emplace("OutEP");
+            imports.emplace("OutEPI");
+            imports.emplace("InEPI");
+        }
     }
 
-    std::string_view outRefType = "impl.OutE";
-    std::string_view outRefIter = "impl.OutEI";
-    std::string_view inRefIter = "impl.InEI";
+    std::string_view outRefType;
+    std::string_view outRefIter;
+    std::string_view inRefIter;
+    if (gImpl) {
+        outRefType = "impl.OutE";
+        outRefIter = "impl.OutEI";
+        inRefIter = "impl.InEI";
+    } else {
+        outRefType = "OutE";
+        outRefIter = "OutEI";
+        inRefIter = "InEI";
+    }
 
     if (s.isAliasGraph() && !s.mEdgeProperty.empty()) {
-        outRefType = "impl.OutEP";
-        outRefIter = "impl.OutEPI";
-        inRefIter = "impl.InEPI";
+        if (gImpl) {
+            outRefType = "impl.OutEP";
+            outRefIter = "impl.OutEPI";
+            inRefIter = "impl.InEPI";
+        } else {
+            outRefType = "OutEP";
+            outRefIter = "OutEPI";
+            inRefIter = "InEPI";
+        }
+    }
+
+    if (!gImpl) {
+        imports.emplace(outRefType);
+        imports.emplace(outRefIter);
+        imports.emplace(inRefIter);
     }
 
     const bool bVectorVertexDescriptor = holds_alternative<Vector_>(s.mVertexListType);
@@ -576,7 +636,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
     if (true) { // Vertex
         outputGraphVertex(oss, space, builder, s, name, vertexDescType,
             vertexName, outEdgeType, outRefType,
-            bVectorVertexDescriptor, scratch);
+            bVectorVertexDescriptor, imports, scratch);
     }
 
     std::pmr::string edgeType(name, scratch);
@@ -584,7 +644,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
     if (s.needEdgeList()) { // Edge
         oss << "\n";
-        outputGraphEdge(oss, space, s, vertexDescType, edgeType, edgeProperty);
+        outputGraphEdge(oss, space, s, vertexDescType, edgeType, edgeProperty, imports);
     }
 
     if (s.hasProperties()) { // PropertyMap
@@ -598,8 +658,13 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 : value;
             Expects(mapName.back() != '_');
 
-            OSS << "export class " << name << mapName << "Map"
-                << " implements impl.PropertyMap {\n";
+            OSS << "export class " << name << mapName << "Map";
+            if (gImpl) {
+                oss << " implements impl.PropertyMap {\n";
+            } else {
+                oss << " implements PropertyMap {\n";
+                imports.emplace("PropertyMap");
+            }
             {
                 INDENT();
                 if (!container.empty() && s.isVector()) {
@@ -722,46 +787,101 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         oss << name;
     }
     if (constraints.mConcepts.empty()) {
-        oss << " implements impl.BidirectionalGraph\n";
+        if (gImpl) {
+            oss << " implements impl.BidirectionalGraph\n";
+        } else {
+            oss << " implements BidirectionalGraph\n";
+            imports.emplace("BidirectionalGraph");
+        }
     } else {
         oss << "\n";
         INDENT();
-        oss << "implements impl.BidirectionalGraph\n";
+        if (gImpl) {
+            oss << "implements impl.BidirectionalGraph\n";
+        } else {
+            oss << "implements BidirectionalGraph\n";
+            imports.emplace("BidirectionalGraph");
+        }
     }
     {
         if (!constraints.mConcepts.empty()) {
             space.append("    ");
         }
-        OSS << ", impl.AdjacencyGraph\n";
-        OSS << ", impl.VertexListGraph\n";
-        OSS << ", impl.MutableGraph";
+        if (gImpl) {
+            OSS << ", impl.AdjacencyGraph\n";
+            OSS << ", impl.VertexListGraph\n";
+            OSS << ", impl.MutableGraph";
+        } else {
+            OSS << ", AdjacencyGraph\n";
+            OSS << ", VertexListGraph\n";
+            OSS << ", MutableGraph";
+            imports.emplace("AdjacencyGraph");
+            imports.emplace("VertexListGraph");
+            imports.emplace("MutableGraph");
+        }
+
         if (s.hasProperties()) {
             oss << "\n";
-            OSS << ", impl.PropertyGraph";
+            if (gImpl) {
+                OSS << ", impl.PropertyGraph";
+            } else {
+                OSS << ", PropertyGraph";
+                imports.emplace("PropertyGraph");
+            }
         }
         if (s.mNamed) {
             oss << "\n";
-            OSS << ", impl.NamedGraph";
+            if (gImpl) {
+                OSS << ", impl.NamedGraph";
+            } else {
+                OSS << ", NamedGraph";
+                imports.emplace("NamedGraph");
+            }
         }
         if (!s.mComponents.empty()) {
             oss << "\n";
-            OSS << ", impl.ComponentGraph";
+            if (gImpl) {
+                OSS << ", impl.ComponentGraph";
+            } else {
+                OSS << ", ComponentGraph";
+                imports.emplace("ComponentGraph");
+            }
         }
         if (s.isPolymorphic()) {
             oss << "\n";
-            OSS << ", impl.PolymorphicGraph";
+            if (gImpl) {
+                OSS << ", impl.PolymorphicGraph";
+            } else {
+                OSS << ", PolymorphicGraph";
+                imports.emplace("PolymorphicGraph");
+            }
         }
         if (s.isReference()) {
             oss << "\n";
-            OSS << ", impl.ReferenceGraph";
+            if (gImpl) {
+                OSS << ", impl.ReferenceGraph";
+            } else {
+                OSS << ", ReferenceGraph";
+                imports.emplace("ReferenceGraph");
+            }
         }
         if (s.isMutableReference()) {
             oss << "\n";
-            OSS << ", impl.MutableReferenceGraph";
+            if (gImpl) {
+                OSS << ", impl.MutableReferenceGraph";
+            } else {
+                OSS << ", MutableReferenceGraph";
+                imports.emplace("MutableReferenceGraph");
+            }
         }
         if (s.isAddressable()) {
             oss << "\n";
-            OSS << ", impl.AddressableGraph";
+            if (gImpl) {
+                OSS << ", impl.AddressableGraph";
+            } else {
+                OSS << ", AddressableGraph";
+                imports.emplace("AddressableGraph");
+            }
         }
         if (!s.mVertexMaps.empty()) {
             Expects(s.mVertexMaps.size() == 1);
@@ -769,7 +889,12 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             const auto keyID = locate(map.mKeyType, g);
             const auto keyType = g.getTypescriptTypename(keyID, scratch, scratch);
             oss << "\n";
-            OSS << ", impl.UuidGraph<" << keyType << ">";
+            if (gImpl) {
+                OSS << ", impl.UuidGraph<" << keyType << ">";
+            } else {
+                OSS << ", UuidGraph<" << keyType << ">";
+                imports.emplace("UuidGraph");
+            }
         }
         if (!constraints.mConcepts.empty()) {
             space.resize(space.size() - 4);
@@ -786,22 +911,46 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             outputNullVertex(oss, space, s, vertexDescType);
 
             // Edge
-            if (s.mEdgeProperty.empty()) {
-                OSS << "// type edge_descriptor = impl.ED;\n";
+            if (gImpl) {
+                if (s.mEdgeProperty.empty()) {
+                    OSS << "// type edge_descriptor = impl.ED;\n";
+                } else {
+                    OSS << "// type edge_descriptor = impl.EPD;\n";
+                }
+                // Directional
+                OSS << "readonly directed_category: impl.directional = impl.directional.bidirectional;\n";
+
+                // Edge parallel
+                OSS << "readonly edge_parallel_category: impl.parallel = impl.parallel.allow;\n";
+
+                // Traversal
+                OSS << "readonly traversal_category: impl.traversal = impl.traversal.incidence\n";
+                OSS << "    | impl.traversal.bidirectional\n";
+                OSS << "    | impl.traversal.adjacency\n";
+                OSS << "    | impl.traversal.vertex_list;\n";
             } else {
-                OSS << "// type edge_descriptor = impl.EPD;\n";
+                if (s.mEdgeProperty.empty()) {
+                    OSS << "// type edge_descriptor = ED;\n";
+                    imports.emplace("ED");
+                } else {
+                    OSS << "// type edge_descriptor = EPD;\n";
+                    imports.emplace("EPD");
+                }
+                // Directional
+                OSS << "readonly directed_category: directional = directional.bidirectional;\n";
+                imports.emplace("directional");
+
+                // Edge parallel
+                OSS << "readonly edge_parallel_category: parallel = parallel.allow;\n";
+                imports.emplace("parallel");
+
+                // Traversal
+                OSS << "readonly traversal_category: traversal = traversal.incidence\n";
+                OSS << "    | traversal.bidirectional\n";
+                OSS << "    | traversal.adjacency\n";
+                OSS << "    | traversal.vertex_list;\n";
+                imports.emplace("traversal");
             }
-            // Directional
-            OSS << "readonly directed_category: impl.directional = impl.directional.bidirectional;\n";
-
-            // Edge parallel
-            OSS << "readonly edge_parallel_category: impl.parallel = impl.parallel.allow;\n";
-
-            // Traversal
-            OSS << "readonly traversal_category: impl.traversal = impl.traversal.incidence\n";
-            OSS << "    | impl.traversal.bidirectional\n";
-            OSS << "    | impl.traversal.adjacency\n";
-            OSS << "    | impl.traversal.vertex_list;\n";
         } // Graph Basics
 
         if (true) { // IncidenceGraph
@@ -918,9 +1067,19 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// AdjacencyGraph\n";
             if (s.mEdgeProperty.empty()) {
-                adjIter = "impl.AdjI";
+                if (gImpl) {
+                    adjIter = "impl.AdjI";
+                } else {
+                    adjIter = "AdjI";
+                    imports.emplace("AdjI");
+                }
             } else {
-                adjIter = "impl.AdjPI";
+                if (gImpl) {
+                    adjIter = "impl.AdjPI";
+                } else {
+                    adjIter = "AdjPI";
+                    imports.emplace("AdjPI");
+                }
             }
             OSS << "// type adjacency_iterator = " << adjIter << ";\n";
 
@@ -1381,12 +1540,23 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     {
                         INDENT();
                         OSS << "const vert = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
-                        OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
-                        OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
-                        if (s.isReference() && !s.isAliasGraph()) {
-                            OSS << "// ReferenceGraph (Separated)\n";
-                            OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(true) << ", u);\n";
-                            OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(true) << ", u);\n";
+                        if (gImpl) {
+                            OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
+                            OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
+                            if (s.isReference() && !s.isAliasGraph()) {
+                                OSS << "// ReferenceGraph (Separated)\n";
+                                OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(true) << ", u);\n";
+                                OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(true) << ", u);\n";
+                            }
+                        } else {
+                            OSS << "reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
+                            OSS << "reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
+                            if (s.isReference() && !s.isAliasGraph()) {
+                                OSS << "// ReferenceGraph (Separated)\n";
+                                OSS << "reindexEdgeList(vert." << s.getTypescriptOutEdgeList(true) << ", u);\n";
+                                OSS << "reindexEdgeList(vert." << s.getTypescriptInEdgeList(true) << ", u);\n";
+                            }
+                            imports.emplace("reindexEdgeList");
                         }
                     }
                     OSS << "}\n";
@@ -1442,7 +1612,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "removeEdges (u: " << vertexDescType << ", v: " << vertexDescType << "): void {\n";
             {
                 INDENT();
-                outputRemoveEdges(oss, space, s, false, scratch);
+                outputRemoveEdges(oss, space, s, false, imports, scratch);
             }
             OSS << "}\n";
 
@@ -2089,7 +2259,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 if (s.isAliasGraph()) {
                     OSS << "return this.removeEdges(u, v);\n";
                 } else {
-                    outputRemoveEdges(oss, space, s, true, scratch);
+                    outputRemoveEdges(oss, space, s, true, imports, scratch);
                 }
             }
             OSS << "}\n";
@@ -2173,7 +2343,13 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "addressable (absPath: string): boolean {\n";
             {
                 INDENT();
-                OSS << "return impl.findRelative(this, " << s.getTypescriptNullVertex() << ", absPath) as "
+                if (gImpl) {
+                    OSS << "return impl.findRelative(this, ";
+                } else {
+                    imports.emplace("findRelative");
+                    OSS << "return findRelative(this, ";
+                }
+                oss << s.getTypescriptNullVertex() << ", absPath) as "
                     << vertexDescType << " !== " << s.getTypescriptNullVertex() << ";\n";
             }
             OSS << "}\n";
@@ -2181,7 +2357,13 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "locate (absPath: string): " << vertexDescType << " {\n";
             {
                 INDENT();
-                OSS << "return impl.findRelative(this, " << s.getTypescriptNullVertex() << ", absPath) as "
+                if (gImpl) {
+                    OSS << "return impl.findRelative(this, ";
+                } else {
+                    imports.emplace("findRelative");
+                    OSS << "return findRelative(this, ";
+                }
+                oss << s.getTypescriptNullVertex() << ", absPath) as "
                     << vertexDescType << ";\n";
             }
             OSS << "}\n";
@@ -2195,15 +2377,25 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             {
                 INDENT();
-                OSS << "return impl.findRelative(this, start, path) as "
-                    << nullableVertexDescType << ";\n";
+                if (gImpl) {
+                    OSS << "return impl.findRelative(this, start, path) as ";
+                } else {
+                    imports.emplace("findRelative");
+                    OSS << "return findRelative(this, start, path) as ";
+                }
+                oss << nullableVertexDescType << ";\n";
             }
             OSS << "}\n";
 
             OSS << "path (v: " << vertexDescType << "): string {\n";
             {
                 INDENT();
-                OSS << "return impl.getPath(this, v);\n";
+                if (gImpl) {
+                    OSS << "return impl.getPath(this, v);\n";
+                } else {
+                    imports.emplace("getPath");
+                    OSS << "return getPath(this, v);\n";
+                }
             }
             OSS << "}\n";
         }
