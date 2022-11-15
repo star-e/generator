@@ -1485,16 +1485,8 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         codegen.mScopes.emplace_back("Struct");
 
         std::pmr::set<std::pmr::string> graphImports(scratch);
+        int count = 0;
         {
-            outputComment(oss);
-
-            OSS << "/* eslint-disable max-len */\n";
-            int count = 0;
-            if (g.moduleHasGraph(modulePath)) {
-                ++count;
-                OSS << "import * as impl from './graph';\n";
-            }
-
             auto imported = g.getImportedTypes(modulePath, scratch);
             for (const auto& m : imported) {
                 const auto targetID = locate(m.first, mModuleGraph);
@@ -1603,7 +1595,27 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         }
 
         codegen.mScopes.pop_back();
-        updateFile(filename, oss.str());
+
+        pmr_ostringstream oss2(std::ios_base::out, scratch);
+        outputComment(oss2);
+        oss2 << "/* eslint-disable max-len */\n";
+        if (graphImports.empty()) {
+            if (g.moduleHasGraph(modulePath)) {
+                oss2 << "import * as impl from './graph';\n";
+            }
+        } else {
+            oss2 << "import { ";
+            int count = 0;
+            for (const auto& name : graphImports) {
+                if (count++) {
+                    oss2 << ", ";
+                }
+                oss2 << name;
+            }
+            oss2 << " } from './graph';\n";
+        }
+        copyString(oss2, oss.str());
+        updateFile(filename, oss2.str());
     }
 
     if (features & Features::Serialization) {

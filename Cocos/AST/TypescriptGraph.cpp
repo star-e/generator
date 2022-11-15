@@ -36,7 +36,6 @@ namespace Cocos::Meta {
 namespace {
 
 constexpr bool gThrow = true;
-constexpr bool gImpl = true;
 
 std::pmr::string generatePushIndicenceList(const Graph& g,
     std::string_view el, std::string_view outEdgeType,
@@ -2494,6 +2493,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             s.mConstructors, s.mMethods, scratch);
     }
     OSS << "}\n";
+
+    if (gImpl) {
+        Ensures(imports.empty());
+    }
 
     return oss.str();
 }

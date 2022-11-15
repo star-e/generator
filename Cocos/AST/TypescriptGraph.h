@@ -29,6 +29,8 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+constexpr bool gImpl = false;
+
 std::pmr::string generateGraph(const ModuleBuilder& builder,
     const Graph& s, uint32_t vertID,
     std::string_view name,

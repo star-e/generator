@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "SyntaxTypes.h"
 #include "SyntaxGraphs.h"
 #include "SyntaxUtils.h"
+#include "TypescriptGraph.h"
 
 namespace Cocos::Meta {
 
@@ -2041,9 +2042,17 @@ std::pmr::string Graph::getTypescriptVertexDescriptorType(
 
 std::string_view Graph::getTypescriptEdgeDescriptorType() const {
     if (mEdgeProperty.empty()) {
-        return "impl.ED";
+        if (gImpl) {
+            return "impl.ED";
+        } else {
+            return "ED";
+        }
     } else {
-        return "impl.EPD";
+        if (gImpl) {
+            return "impl.EPD";
+        } else {
+            return "EPD";
+        }
     }
 }
 
@@ -2051,7 +2060,11 @@ std::string_view Graph::getTypescriptReferenceDescriptorType() const {
     if (isAliasGraph()) {
         return getTypescriptEdgeDescriptorType();
     } else {
-        return "impl.ED";
+        if (gImpl) {
+            return "impl.ED";
+        } else {
+            return "ED";
+        }
     }
 }
 
