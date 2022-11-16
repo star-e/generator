@@ -279,7 +279,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
     OSS << "}\n";
 
     oss << "\n";
-    OSS << "interface " << name << "ValueType {\n";
+    OSS << "export interface " << name << "ValueType {\n";
     {
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
@@ -306,7 +306,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
 
     oss << "\n";
     if (s.mPolymorphic.mConcepts.size() > 4) {
-        OSS << "type " << name << "Object = ";
+        OSS << "export type " << name << "Object = ";
         for (uint32_t count = 0; const auto& c : s.mPolymorphic.mConcepts) {
             if (count++) {
                 oss << "\n";
@@ -317,7 +317,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
         }
         oss << ";\n";
     } else {
-        OSS << "type " << name << "Object = ";
+        OSS << "export type " << name << "Object = ";
         for (uint32_t count = 0; const auto& c : s.mPolymorphic.mConcepts) {
             if (count++) {
                 oss << " | ";
@@ -343,7 +343,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
     OSS << "}\n";
 
     oss << "\n";
-    OSS << "interface " << name << "ComponentType {\n";
+    OSS << "export interface " << name << "ComponentType {\n";
     {
         INDENT();
         for (const auto& c : s.mComponents) {
@@ -354,7 +354,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
     OSS << "}\n";
 
     oss << "\n";
-    OSS << "interface " << name << "ComponentPropertyMap {\n";
+    OSS << "export interface " << name << "ComponentPropertyMap {\n";
     {
         INDENT();
         for (const auto& c : s.mComponents) {
