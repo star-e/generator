@@ -284,6 +284,8 @@ virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, 
 virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 
 virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
+virtual void updateRenderTarget(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
+virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 
 virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
