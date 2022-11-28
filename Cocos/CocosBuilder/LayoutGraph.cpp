@@ -141,8 +141,8 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 (NameLocalID, mDescriptorID, _)
                 (uint32_t, mCount, 1)
             );
-            CNTR(mDescriptorID);
             CNTR(mDescriptorID, mCount);
+            CNTR(mDescriptorID);
         }
 
         STRUCT(DescriptorBlockData) {
