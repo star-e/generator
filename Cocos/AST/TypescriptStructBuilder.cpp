@@ -181,6 +181,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                     oss << ": ";
                     oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
                     oss << ";\n";
+                } else {
+                    oss << "readonly " << methodName;
+                    oss << ": ";
+                    oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+                    oss << ";\n";
                 }
                 break;
                 //oss << "get " << methodName << " (";

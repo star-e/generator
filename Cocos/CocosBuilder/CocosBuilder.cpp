@@ -71,7 +71,7 @@ int main() {
         buildRenderInterface(builder, Fwd | Types | Typescripts | Interface | ToJs);
 
         // web
-        buildWebPipeline(builder, Typescripts);
+        buildWebTypes(builder, Typescripts);
 
         // native
         if (false) {
@@ -114,9 +114,7 @@ int main() {
         builder.outputModule("FGDispatcher", files);
 
         // web
-        if (false) {
-            builder.outputModule("WebPipeline", files);
-        }
+        builder.outputModule("WebTypes", files);
 
         // native
         if (false) {

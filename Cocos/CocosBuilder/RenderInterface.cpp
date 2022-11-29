@@ -69,7 +69,7 @@ using namespace cc::render;
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
-        .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData" },
+        .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData", "Assets" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {
@@ -269,6 +269,20 @@ virtual void reserveDescriptorBlock(uint32_t nodeID, const DescriptorBlockIndex&
 virtual int compile() = 0;
 
 virtual ccstd::string print() const = 0;
+)");
+        }
+
+        INTERFACE(ProgramProxy) {
+            PUBLIC_METHODS(R"(
+[[getter]] virtual const ccstd::string& getName() const noexcept = 0;
+[[getter]] virtual const ccstd::string& getVariantName() const noexcept = 0;
+)");
+        }
+
+        INTERFACE(ProgramLibrary) {
+            PUBLIC_METHODS(R"(
+virtual void addEffect(EffectAsset* effectAsset) = 0;
+virtual ProgramProxy* getProgramVariant(uint32_t phaseID, const ccstd::string& variantName) const = 0;
 )");
         }
 

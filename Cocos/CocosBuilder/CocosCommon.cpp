@@ -191,6 +191,16 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(ProgramLib,
+        .mTypescriptFolder = "cocos/render-scene/core",
+        .mTypescriptFilePrefix = "program-lib", ) {
+        NAMESPACE(cc) {
+            NAMESPACE(render) {
+                IMPORT_CLASS(IProgramInfo);
+            }
+        }
+    }
+
     MODULE(Gfx,
         .mFolder = "cocos/renderer/gfx-base",
         .mFilePrefix = "GFXDef-common.h",

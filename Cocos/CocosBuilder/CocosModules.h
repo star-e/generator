@@ -14,7 +14,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features);
 void buildRenderCompiler(ModuleBuilder& builder, Features features);
 
 // Web
-void buildWebPipeline(ModuleBuilder& builder, Features features);
+void buildWebTypes(ModuleBuilder& builder, Features features);
 
 // Native
 void buildNativePipeline(ModuleBuilder& builder, Features features);

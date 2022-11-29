@@ -30,20 +30,37 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
-void buildWebPipeline(ModuleBuilder& builder, Features features) {
-    MODULE(WebPipeline,
+// clang-format off
+
+void buildWebTypes(ModuleBuilder& builder, Features features) {
+    MODULE(WebTypes,
         .mTypescriptFolder = "cocos/rendering/custom",
-        .mTypescriptFilePrefix = "web-pipeline-impl",
-        .mRequires = { "RenderInterface" },
+        .mTypescriptFilePrefix = "web-types",
+        .mRequires = { "RenderInterface", "LayoutGraph" },
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
-        // Web implementations:
 
-        STRUCT(WebImplExample) {
+        STRUCT(ProgramInfo) {
             PUBLIC(
-                (std::pmr::string, mName, _)
+                (IProgramInfo, mProgramInfo, _)
+                (gfx::ShaderInfo, mShaderInfo, _)
             );
+            CNTR_NO_DEFAULT(mProgramInfo, mShaderInfo);
+        }
+
+        STRUCT(ProgramGroup) {
+            PUBLIC(
+                ((PmrTransparentMap<ccstd::pmr::string, ProgramInfo>), mPrograms, _)
+            );
+        }
+
+        STRUCT(ProgramLibraryData) {
+            PUBLIC(
+                (LayoutGraphData*, mLayoutGraph, _)
+                ((PmrFlatMap<uint32_t, ProgramGroup>), mPhases, _)
+            );
+            CNTR_NO_DEFAULT(mLayoutGraph);
         }
 
         NAMESPACE_END(render);

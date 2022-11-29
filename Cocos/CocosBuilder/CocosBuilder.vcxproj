@@ -250,7 +250,7 @@
     <ClCompile Include="RenderExecutor.cpp" />
     <ClCompile Include="RenderGraph.cpp" />
     <ClCompile Include="RenderInterface.cpp" />
-    <ClCompile Include="WebPipeline.cpp" />
+    <ClCompile Include="WebTypes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CocosModules.h" />
