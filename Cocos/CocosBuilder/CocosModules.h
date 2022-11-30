@@ -11,6 +11,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features);
 
 void buildArchiveInterface(ModuleBuilder& builder, Features features);
 void buildRenderInterface(ModuleBuilder& builder, Features features);
+void buildPrivateInterface(ModuleBuilder& builder, Features features);
 void buildRenderCompiler(ModuleBuilder& builder, Features features);
 
 // Web

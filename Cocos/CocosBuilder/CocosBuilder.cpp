@@ -69,6 +69,7 @@ int main() {
         // build render compiler (native)
         buildArchiveInterface(builder, Fwd | Types | Typescripts | Interface);
         buildRenderInterface(builder, Fwd | Types | Typescripts | Interface | ToJs);
+        buildPrivateInterface(builder, Fwd | Types | Typescripts | Interface);
 
         // web
         buildWebTypes(builder, Typescripts);
@@ -110,6 +111,7 @@ int main() {
         builder.outputModule("RenderGraph", files);
         builder.outputModule("ArchiveInterface", files);
         builder.outputModule("RenderInterface", files);
+        builder.outputModule("PrivateInterface", files);
 
         builder.outputModule("FGDispatcher", files);
 

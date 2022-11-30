@@ -272,19 +272,6 @@ virtual ccstd::string print() const = 0;
 )");
         }
 
-        INTERFACE(ProgramProxy) {
-            PUBLIC_METHODS(R"(
-[[getter]] virtual const ccstd::string& getName() const noexcept = 0;
-)");
-        }
-
-        INTERFACE(ProgramLibrary) {
-            PUBLIC_METHODS(R"(
-virtual void addEffect(EffectAsset* effectAsset) = 0;
-[[optional]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, const MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) const = 0;
-)");
-        }
-
         INTERFACE(Pipeline) {
             INHERITS(PipelineRuntime);
             PUBLIC_METHODS(R"(
@@ -323,6 +310,43 @@ virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipel
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
 static Pipeline *createPipeline();
+)");
+        }
+
+        NAMESPACE_END(render);
+        NAMESPACE_END(cc);
+    }
+}
+
+void buildPrivateInterface(ModuleBuilder& builder, Features features) {
+    MODULE(PrivateInterface,
+        .mFolder = "cocos/renderer/pipeline/custom",
+        .mFilePrefix = "Private",
+        .mToJsFilename = "",
+        .mToJsPrefix = "",
+        .mToJsNamespace = "",
+        .mToJsCppHeaders = "",
+        .mToJsUsingNamespace = "",
+        .mToJsConfigs = "",
+        .mTypescriptFolder = "cocos/rendering/custom",
+        .mTypescriptFilePrefix = "private",
+        .mRequires = { "RenderInterface" },
+        .mHeader = R"(
+)") {
+        NAMESPACE_BEG(cc);
+        NAMESPACE_BEG(render);
+
+        INTERFACE(ProgramProxy) {
+            PUBLIC_METHODS(R"(
+[[getter]] virtual const ccstd::string& getName() const noexcept = 0;
+)");
+        }
+
+        INTERFACE(ProgramLibrary) {
+            PUBLIC_METHODS(R"(
+virtual void addEffect(EffectAsset* effectAsset) = 0;
+virtual ccstd::pmr::string getKey(uint32_t phaseID, const ccstd::pmr::string& programName, const MacroRecord& defines) const = 0;
+[[optional]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, const MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) const = 0;
 )");
         }
 
