@@ -36,6 +36,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         PROJECT_TS(IntrusivePtr, _);
     }
     MODULE(PassUtils,
+        .mFolder = "cocos/renderer/core",
+        .mFilePrefix = "PassUtils.h",
         .mTypescriptFolder = "cocos/render-scene/core",
         .mTypescriptFilePrefix = "pass-utils",
     ) {

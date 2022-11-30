@@ -45,13 +45,22 @@ void buildWebTypes(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (IProgramInfo, mProgramInfo, _)
                 (gfx::ShaderInfo, mShaderInfo, _)
+                (std::pmr::vector<gfx::Attribute>, mAttributes, _)
             );
             CNTR_NO_DEFAULT(mProgramInfo, mShaderInfo);
         }
 
+        STRUCT(ProgramHost) {
+            PUBLIC(
+                (gfx::Shader, mProgram, _)
+            );
+            CNTR_NO_DEFAULT(mProgram);
+        }
+
         STRUCT(ProgramGroup) {
             PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, ProgramInfo>), mPrograms, _)
+                ((PmrUnorderedMap<ccstd::pmr::string, ProgramInfo>), mProgramInfos, _)
+                ((PmrUnorderedMap<ccstd::pmr::string, ProgramHost>), mProgramHosts, _)
             );
         }
 

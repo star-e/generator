@@ -1469,7 +1469,11 @@ std::pmr::string CppStructBuilder::generateDispatchMethods(const Method& m) cons
             outputParam(*this, oss, param);
             oss << param.name();
         }
-        oss << ") {\n";
+        oss << ")";
+        if (m.mConst) {
+            oss << " const";
+        }
+        oss << " {\n";
         {
             INDENT();
             if (!m.mReturnType.isVoid()) {

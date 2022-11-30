@@ -69,7 +69,7 @@ using namespace cc::render;
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
-        .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData", "Assets" },
+        .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData", "Assets", "PassUtils" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {
@@ -275,14 +275,13 @@ virtual ccstd::string print() const = 0;
         INTERFACE(ProgramProxy) {
             PUBLIC_METHODS(R"(
 [[getter]] virtual const ccstd::string& getName() const noexcept = 0;
-[[getter]] virtual const ccstd::string& getVariantName() const noexcept = 0;
 )");
         }
 
         INTERFACE(ProgramLibrary) {
             PUBLIC_METHODS(R"(
 virtual void addEffect(EffectAsset* effectAsset) = 0;
-virtual ProgramProxy* getProgramVariant(uint32_t phaseID, const ccstd::string& variantName) const = 0;
+[[optional]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, const MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) const = 0;
 )");
         }
 
