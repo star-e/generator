@@ -194,11 +194,14 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     }
 
     MODULE(ProgramLib,
+        .mFolder = "cocos/renderer/core",
+        .mFilePrefix = "ProgramLib.h",
         .mTypescriptFolder = "cocos/render-scene/core",
         .mTypescriptFilePrefix = "program-lib", ) {
         NAMESPACE(cc) {
             NAMESPACE(render) {
                 IMPORT_CLASS(IProgramInfo);
+                IMPORT_CLASS(ITemplateInfo);
             }
         }
     }

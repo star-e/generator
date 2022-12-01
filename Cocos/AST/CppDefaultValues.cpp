@@ -46,6 +46,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
     VALUE(char32_t);
     VALUE(wchar_t);
 
+    VALUE(unsigned);
     VALUE(size_t);
 
     VALUE(int8_t);
@@ -165,6 +166,8 @@ void addCppDefaultValues(ModuleBuilder& builder) {
 
         IMPORT_PMR_CLASS(PmrString, .mFlags = JSB);
         PMR_CONTAINER(PmrList);
+
+        MAP(Record);
 
         MAP(TransparentMap);
         MAP(TransparentMultiMap);

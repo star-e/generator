@@ -330,7 +330,7 @@ void buildPrivateInterface(ModuleBuilder& builder, Features features) {
         .mToJsConfigs = "",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "private",
-        .mRequires = { "RenderInterface" },
+        .mRequires = { "RenderInterface", "ProgramLib" },
         .mHeader = R"(
 )") {
         NAMESPACE_BEG(cc);
@@ -339,6 +339,7 @@ void buildPrivateInterface(ModuleBuilder& builder, Features features) {
         INTERFACE(ProgramProxy) {
             PUBLIC_METHODS(R"(
 [[getter]] virtual const ccstd::string& getName() const noexcept = 0;
+[[getter]] virtual gfx::Shader* getShader() const noexcept = 0;
 )");
         }
 
@@ -346,7 +347,13 @@ void buildPrivateInterface(ModuleBuilder& builder, Features features) {
             PUBLIC_METHODS(R"(
 virtual void addEffect(EffectAsset* effectAsset) = 0;
 virtual ccstd::pmr::string getKey(uint32_t phaseID, const ccstd::pmr::string& programName, const MacroRecord& defines) const = 0;
+virtual const gfx::PipelineLayout& getPipelineLayout(uint32_t phaseID) const = 0;
+virtual const gfx::DescriptorSetLayout& getMaterialDescriptorSetLayout(uint32_t phaseID) const = 0;
+virtual const gfx::DescriptorSetLayout& getLocalDescriptorSetLayout(uint32_t phaseID) const = 0;
+virtual const IProgramInfo& getProgramInfo(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
 [[optional]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, const MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) const = 0;
+virtual const ccstd::pmr::vector<unsigned>& getBlockSizes(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
+virtual const Record<ccstd::string, uint32_t>& getHandleMap(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
 )");
         }
 
