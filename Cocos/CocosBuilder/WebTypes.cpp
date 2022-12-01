@@ -45,9 +45,12 @@ void buildWebTypes(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (IProgramInfo, mProgramInfo, _)
                 (gfx::ShaderInfo, mShaderInfo, _)
-                (std::pmr::vector<gfx::Attribute>, mAttributes, _)
+                (ccstd::pmr::vector<gfx::Attribute>, mAttributes, _)
+                (ccstd::pmr::vector<unsigned>, mBlockSizes, _)
+                ((Record<ccstd::string, uint32_t>), mHandleMap, _)
             );
-            CNTR_NO_DEFAULT(mProgramInfo, mShaderInfo);
+            TS_INIT(mHandleMap, {});
+            CNTR_NO_DEFAULT(mProgramInfo, mShaderInfo, mAttributes, mBlockSizes, mHandleMap);
         }
 
         STRUCT(ProgramHost) {

@@ -351,6 +351,7 @@ virtual const gfx::PipelineLayout& getPipelineLayout(uint32_t phaseID) const = 0
 virtual const gfx::DescriptorSetLayout& getMaterialDescriptorSetLayout(uint32_t phaseID) const = 0;
 virtual const gfx::DescriptorSetLayout& getLocalDescriptorSetLayout(uint32_t phaseID) const = 0;
 virtual const IProgramInfo& getProgramInfo(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
+virtual const gfx::ShaderInfo& getShaderInfo(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
 [[optional]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, const MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) const = 0;
 virtual const ccstd::pmr::vector<unsigned>& getBlockSizes(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
 virtual const Record<ccstd::string, uint32_t>& getHandleMap(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;

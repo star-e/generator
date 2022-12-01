@@ -43,6 +43,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mRequires = { "Gfx", "RenderCommon" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
+#include "cocos/renderer/gfx-base/GFXPipelineLayout.h"
 )",
         .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
@@ -231,6 +232,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 (ccstd::pmr::string, mRootSignature, _)
                 (ccstd::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
                 ((PmrTransparentMap<ccstd::pmr::string, uint32_t>), mShaderIndex, _)
+                ([[optional]] IntrusivePtr<gfx::PipelineLayout>, mPipelineLayout, _)
             );
         }
 
