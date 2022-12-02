@@ -140,9 +140,12 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
         STRUCT(DescriptorData) {
             PUBLIC(
                 (NameLocalID, mDescriptorID, _)
+                (gfx::Type, mType, gfx::Type::UNKNOWN)
                 (uint32_t, mCount, 1)
             );
-            CNTR(mDescriptorID, mCount);
+            TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mDescriptorID, mType, mCount);
+            CNTR(mDescriptorID, mType);
             CNTR(mDescriptorID);
         }
 
