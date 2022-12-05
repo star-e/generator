@@ -261,6 +261,10 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 ((PmrFlatMap<ccstd::pmr::string, uint32_t>), mShaderLayoutIndex, _)
                 ((PmrFlatMap<ccstd::pmr::string, EffectData>), mEffects, _)
             );
+            PUBLIC(
+                (ccstd::pmr::string, mConstantMacros, _)
+            );
+            MEMBER_FLAGS(mConstantMacros, NO_SERIALIZATION);
         }
         NAMESPACE_END(render);
         NAMESPACE_END(cc);

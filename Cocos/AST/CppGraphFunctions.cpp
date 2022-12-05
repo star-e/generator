@@ -4056,7 +4056,7 @@ void outputVectorGraphSave(std::ostream& oss, std::pmr::string& space,
     Expects(s.isAliasGraph());
 
     for (const auto& m : s.mMembers) {
-        if (m.mFlags & IMPL_DETAIL) {
+        if (m.mFlags & (IMPL_DETAIL | NO_SERIALIZATION)) {
             continue;
         }
         OSS << "save(ar, g." << m.getMemberName() << ");\n";
@@ -4201,7 +4201,7 @@ void outputVectorGraphLoad(std::ostream& oss, std::pmr::string& space,
     Expects(s.isAliasGraph());
 
     for (const auto& m : s.mMembers) {
-        if (m.mFlags & IMPL_DETAIL) {
+        if (m.mFlags & (IMPL_DETAIL | NO_SERIALIZATION)) {
             continue;
         }
         OSS << "load(ar, g." << m.getMemberName() << ");\n";
