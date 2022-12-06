@@ -170,7 +170,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 ((ccstd::pmr::unordered_map<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            CNTR(mSlot, mCapacity);
+            CNTR(mSlot, mCapacity, mDescriptorBlocks, mUniformBlocks);
         }
 
         STRUCT(DescriptorSetData, .mFlags = NO_COPY) {

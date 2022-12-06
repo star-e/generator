@@ -48,7 +48,6 @@ void buildWebTypes(ModuleBuilder& builder, Features features) {
                 (ccstd::pmr::vector<gfx::Attribute>, mAttributes, _)
                 (ccstd::pmr::vector<unsigned>, mBlockSizes, _)
                 ((Record<ccstd::string, uint32_t>), mHandleMap, _)
-                ((PmrFlatMap<UpdateFrequency, IntrusivePtr<gfx::DescriptorSetLayout>>), mDescriptorSets, _)
             );
             TS_INIT(mHandleMap, {});
             CNTR_NO_DEFAULT(mProgramInfo, mShaderInfo, mAttributes, mBlockSizes, mHandleMap);
