@@ -110,7 +110,7 @@ virtual bool destroy() noexcept = 0;
 virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 
 [[getter]] virtual gfx::Device* getDevice() const = 0;
-[[skip]] virtual const MacroRecord &getMacros() const = 0;
+[[getter]] virtual const MacroRecord &getMacros() const = 0;
 [[getter]] virtual pipeline::GlobalDSManager *getGlobalDSManager() const = 0;
 [[getter]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout() const = 0;
 [[getter]] virtual gfx::DescriptorSet *getDescriptorSet() const = 0;
@@ -141,9 +141,6 @@ virtual void onGlobalPipelineStateChanged() = 0;
 
 [[skip]] virtual void resetRenderQueue(bool reset) = 0;
 [[skip]] virtual bool isRenderQueueReset() const = 0;
-)");
-            TS_FUNCTIONS(R"(
-readonly macros: MacroRecord;
 )");
         }
 
