@@ -219,6 +219,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
         STRUCT(ShaderProgramData, .mFlags = NO_COPY) {
             PUBLIC(
                 (PipelineLayoutData, mLayout, _)
+                ([[optional]] IntrusivePtr<gfx::PipelineLayout>, mPipelineLayout, _)
             );
         }
 
