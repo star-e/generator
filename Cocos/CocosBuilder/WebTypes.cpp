@@ -72,6 +72,7 @@ void buildWebTypes(ModuleBuilder& builder, Features features) {
                 (LayoutGraphData*, mLayoutGraph, _)
                 ((PmrFlatMap<uint32_t, ProgramGroup>), mPhases, _)
                 (bool, mMergeHighFrequency, false)
+                (bool, mFixedLocal, true)
             );
             CNTR_NO_DEFAULT(mLayoutGraph);
         }
