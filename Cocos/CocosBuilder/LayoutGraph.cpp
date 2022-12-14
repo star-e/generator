@@ -130,7 +130,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
 
         //-----------------------------------------------------------
         // Descriptor
-        STRUCT(NameLocalID, .mTrivial = true, .mFlags = HASH_COMBINE | EQUAL) {
+        STRUCT(NameLocalID, .mTrivial = true, .mFlags = HASH_COMBINE | EQUAL | LESS) {
             PUBLIC(
                 (uint32_t, mValue, 0xFFFFFFFF)
             );
@@ -168,9 +168,10 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 (uint32_t, mCapacity, 0)
                 (ccstd::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
                 ((ccstd::pmr::unordered_map<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
+                ((PmrFlatMap<NameLocalID, uint32_t>), mBindingMap, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            CNTR(mSlot, mCapacity, mDescriptorBlocks, mUniformBlocks);
+            CNTR(mSlot, mCapacity, mDescriptorBlocks, mUniformBlocks, mBindingMap);
         }
 
         STRUCT(DescriptorSetData, .mFlags = NO_COPY) {

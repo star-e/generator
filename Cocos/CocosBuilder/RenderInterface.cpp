@@ -69,7 +69,8 @@ using namespace cc::render;
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
-        .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData", "Assets", "PassUtils" },
+        .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData",
+            "Assets", "PassUtils" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 
 namespace cc {
@@ -306,6 +307,8 @@ virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipel
 
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
+static void init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
+static void destroy();
 static Pipeline *createPipeline();
 )");
         }
@@ -353,6 +356,10 @@ virtual const gfx::ShaderInfo& getShaderInfo(uint32_t phaseID, const ccstd::pmr:
 [[optional]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, const MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) const = 0;
 virtual const ccstd::pmr::vector<unsigned>& getBlockSizes(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
 virtual const Record<ccstd::string, uint32_t>& getHandleMap(uint32_t phaseID, const ccstd::pmr::string& programName) const = 0;
+
+virtual uint32_t getProgramID(uint32_t phaseID, const ccstd::pmr::string& programName) = 0;
+virtual uint32_t getDescriptorNameID(const ccstd::pmr::string& name) = 0;
+virtual const ccstd::pmr::string& getDescriptorName(uint32_t nameID) = 0;
 )");
         }
 
