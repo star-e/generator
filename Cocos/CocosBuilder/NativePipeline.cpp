@@ -36,7 +36,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "LayoutGraph", "RenderGraph", "InstancedBuffer" },
+        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "InstancedBuffer" },
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
@@ -332,6 +332,21 @@ ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
 
 public:
 )");
+        }
+
+        STRUCT(NativeProgramLibrary) {
+            INHERITS(ProgramLibrary);
+            PUBLIC(
+                (LayoutGraphData, mLayoutGraph, _)
+            );
+        }
+
+        STRUCT(NativeRenderingModule) {
+            INHERITS(RenderingModule);
+            PUBLIC(
+                (std::shared_ptr<NativeProgramLibrary>, mProgramLibrary, _)
+            );
+            CNTR(mProgramLibrary);
         }
 
         NAMESPACE_END(render);

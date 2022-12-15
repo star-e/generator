@@ -94,12 +94,14 @@ int main() {
     // output files
     {
         // manually added
-        files.emplace("cocos/renderer/pipeline/custom/RenderInterfaceImpl.cpp");
-        files.emplace("cocos/renderer/pipeline/custom/NativeLayoutGraphImpl.cpp");
-        files.emplace("cocos/renderer/pipeline/custom/NativePipelineImpl.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeFactory.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeLayoutGraph.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativePipeline.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraph.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderQueue.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeProgramLibrary.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeRenderingModule.cpp");
 
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);

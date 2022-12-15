@@ -305,10 +305,17 @@ virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipel
 )");
         }
 
+        INTERFACE(RenderingModule) {
+            PUBLIC_METHODS(R"(
+virtual uint32_t getPassID(const ccstd::string& name) const = 0;
+virtual uint32_t getPhaseID(uint32_t passID, const ccstd::string& name) const = 0;
+)");
+        }
+
         CLASS(Factory) {
             MEMBER_FUNCTIONS(R"(
-static void init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
-static void destroy();
+static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
+static void destroy(RenderingModule* renderingModule) noexcept;
 static Pipeline *createPipeline();
 )");
         }
