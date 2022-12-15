@@ -102,6 +102,8 @@ int main() {
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderQueue.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeProgramLibrary.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderingModule.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/LayoutGraphUtils.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/LayoutGraphUtils.h");
 
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);

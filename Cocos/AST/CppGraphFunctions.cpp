@@ -3779,9 +3779,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                         OSS << "auto pathName = getPath(u, g);\n";
                     }
                     if (s.mAddressableConcept.mUtf8) {
-                        OSS << "auto iter     = g." << member << ".find(std::u8string_view(pathName));\n";
+                        OSS << "auto iter = g." << member << ".find(std::u8string_view{pathName});\n";
                     } else {
-                        OSS << "auto iter     = g." << member << ".find(std::string_view(pathName));\n";
+                        OSS << "auto iter = g." << member << ".find(std::string_view{pathName});\n";
                     }
                     OSS << "CC_EXPECTS(iter != g." << member << ".end());\n";
                     OSS << "g." << member << ".erase(iter);\n";
