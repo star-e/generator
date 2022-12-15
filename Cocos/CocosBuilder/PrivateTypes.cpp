@@ -39,6 +39,10 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "web-types",
         .mRequires = { "RenderInterface", "LayoutGraph", "ProgramLib" },
+        .mHeader = R"(#include "cocos/base/std/hash/hash.h"
+#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
+#include "cocos/renderer/gfx-base/GFXRenderPass.h"
+)"
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
@@ -64,8 +68,8 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
 
         STRUCT(ProgramGroup) {
             PUBLIC(
-                ((PmrUnorderedMap<ccstd::pmr::string, ProgramInfo>), mProgramInfos, _)
-                ((PmrUnorderedMap<ccstd::pmr::string, ProgramHost>), mProgramHosts, _)
+                ((PmrFlatMap<ccstd::pmr::string, ProgramInfo>), mProgramInfos, _)
+                ((PmrFlatMap<ccstd::pmr::string, ProgramHost>), mProgramHosts, _)
             );
         }
 

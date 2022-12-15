@@ -1225,7 +1225,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include <boost/graph/properties.hpp>\n";
                 OSS << "#include <boost/range/irange.hpp>\n";
                 OSS << "#include \"cocos/base/std/container/vector.h\"\n";
-                OSS << "#include \"cocos/renderer/pipeline/custom/GraphTypes.h\"\n";
+                OSS << "#include \"cocos/renderer/pipeline/custom/details/GraphTypes.h\"\n";
             }
             if (g.moduleHasMap(modulePath, "/ccstd/pmr/map")) {
                 OSS << "#include \"base/std/container/map.h\"\n";
@@ -1244,7 +1244,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasMap(modulePath, "/cc/UnorderedStringMultiMap")
                 || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMap")
                 || g.moduleHasMap(modulePath, "/cc/PmrUnorderedStringMultiMap")) {
-                OSS << "#include \"cocos/renderer/pipeline/custom/Map.h\"\n";
+                OSS << "#include \"cocos/renderer/pipeline/custom/details/Map.h\"\n";
             }
             if (g.moduleHasContainer(modulePath, "/cc/TransparentSet")
                 || g.moduleHasContainer(modulePath, "/cc/TransparentMultiSet")
@@ -1260,7 +1260,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasContainer(modulePath, "/cc/UnorderedStringMultiSet")
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringSet")
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringMultiSet")) {
-                OSS << "#include \"cocos/renderer/pipeline/custom/Set.h\"\n";
+                OSS << "#include \"cocos/renderer/pipeline/custom/details/Set.h\"\n";
             }
             if (g.moduleHasType(modulePath, "/ccstd/pmr/string")) {
                 OSS << "#include \"cocos/base/std/container/string.h\"\n";
@@ -1312,9 +1312,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
         OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
-        oss << "#include \"cocos/renderer/pipeline/custom/GraphImpl.h\"\n";
-        oss << "#include \"cocos/renderer/pipeline/custom/Overload.h\"\n";
-        oss << "#include \"cocos/renderer/pipeline/custom/PathUtils.h\"\n";
+        oss << "#include \"cocos/renderer/pipeline/custom/details/GraphImpl.h\"\n";
+        oss << "#include \"cocos/renderer/pipeline/custom/details/Overload.h\"\n";
+        oss << "#include \"cocos/renderer/pipeline/custom/details/PathUtils.h\"\n";
         oss << "#include <tuple>\n";
         oss << "#include <string_view>\n";
 
@@ -1433,7 +1433,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             OSS << "// clang-format off\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Jsb.h\"\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
-            OSS << "#include \"cocos/renderer/pipeline/custom/JsbConversion.h\"\n";
+            OSS << "#include \"cocos/renderer/pipeline/custom/details/JsbConversion.h\"\n";
             copyString(oss, space, m.mJsbHeaders);
             copyString(oss, generateJsbConversions_cpp(*this, moduleID));
             oss << "\n";
@@ -1638,11 +1638,11 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             }
         }
         if (features & Features::Graphs && g.moduleHasGraphSerialization(modulePath)) {
-            OSS << "#include <" << m.mFolder << "/" << m.mFilePrefix << "Graphs.h>\n";
+            OSS << "#include \"" << m.mFolder << "/" << m.mFilePrefix << "Graphs.h\"\n";
         }
         OSS << "#include \"" << ccFolder << "/ArchiveTypes.h\"\n";
-        OSS << "#include \"" << ccFolder << "/SerializationUtils.h\"\n";
-        OSS << "#include \"" << ccFolder << "/Range.h\"\n";
+        OSS << "#include \"" << ccFolder << "/details/SerializationUtils.h\"\n";
+        OSS << "#include \"" << ccFolder << "/details/Range.h\"\n";
         copyString(oss, generateSerialization_h(mProjectName, mSyntaxGraph,
             mModuleGraph, modulePath, false, scratch, scratch));
         updateFile(filename, reorderIncludes(oss.str(), scratch));

@@ -48,7 +48,6 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 #include "cocos/math/Geometry.h"
-#include "cocos/renderer/pipeline/custom/Set.h"
 #include "cocos/core/assets/Material.h"
 )",
 //        .mTypescriptInclude = R"(import { equalObjectArray, equalValueArray, equalObjectMap, equalValueMap } from './utils';
