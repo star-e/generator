@@ -36,7 +36,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "InstancedBuffer" },
+        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "InstancedBuffer", "PrivateTypes" },
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
@@ -338,6 +338,9 @@ public:
             INHERITS(ProgramLibrary);
             PUBLIC(
                 (LayoutGraphData, mLayoutGraph, _)
+                ((PmrFlatMap<uint32_t, ProgramGroup>), mPhases, _)
+                (bool, mMergeHighFrequency, false)
+                (bool, mFixedLocal, true)
             );
         }
 

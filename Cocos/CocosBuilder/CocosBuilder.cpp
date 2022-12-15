@@ -72,7 +72,7 @@ int main() {
         buildPrivateInterface(builder, Fwd | Types | Typescripts | Interface);
 
         // web
-        buildWebTypes(builder, Typescripts);
+        buildPrivateTypes(builder, Fwd | Types | Typescripts);
 
         // native
         if (false) {
@@ -117,8 +117,8 @@ int main() {
 
         builder.outputModule("FGDispatcher", files);
 
-        // web
-        builder.outputModule("WebTypes", files);
+        // private
+        builder.outputModule("PrivateTypes", files);
 
         // native
         if (false) {

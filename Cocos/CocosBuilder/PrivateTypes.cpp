@@ -32,11 +32,13 @@ namespace Cocos::Meta {
 
 // clang-format off
 
-void buildWebTypes(ModuleBuilder& builder, Features features) {
-    MODULE(WebTypes,
+void buildPrivateTypes(ModuleBuilder& builder, Features features) {
+    MODULE(PrivateTypes,
+        .mFolder = "cocos/renderer/pipeline/custom",
+        .mFilePrefix = "Native",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "web-types",
-        .mRequires = { "RenderInterface", "LayoutGraph" },
+        .mRequires = { "RenderInterface", "LayoutGraph", "ProgramLib" },
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
@@ -55,7 +57,7 @@ void buildWebTypes(ModuleBuilder& builder, Features features) {
 
         STRUCT(ProgramHost) {
             PUBLIC(
-                (gfx::Shader, mProgram, _)
+                (IntrusivePtr<gfx::Shader>, mProgram, _)
             );
             CNTR_NO_DEFAULT(mProgram);
         }
@@ -65,16 +67,6 @@ void buildWebTypes(ModuleBuilder& builder, Features features) {
                 ((PmrUnorderedMap<ccstd::pmr::string, ProgramInfo>), mProgramInfos, _)
                 ((PmrUnorderedMap<ccstd::pmr::string, ProgramHost>), mProgramHosts, _)
             );
-        }
-
-        STRUCT(ProgramLibraryData) {
-            PUBLIC(
-                (LayoutGraphData*, mLayoutGraph, _)
-                ((PmrFlatMap<uint32_t, ProgramGroup>), mPhases, _)
-                (bool, mMergeHighFrequency, false)
-                (bool, mFixedLocal, true)
-            );
-            CNTR_NO_DEFAULT(mLayoutGraph);
         }
 
         NAMESPACE_END(render);

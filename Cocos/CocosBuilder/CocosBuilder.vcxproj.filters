@@ -18,7 +18,7 @@
     <ClCompile Include="RenderInterface.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
-    <ClCompile Include="WebTypes.cpp">
+    <ClCompile Include="PrivateTypes.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
     <ClCompile Include="NativePipeline.cpp">
