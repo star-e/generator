@@ -247,7 +247,7 @@ void unmount(uint64_t completedFenceValue);
 
         TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Present_, Clear_, Viewport_);
 
-        STRUCT(ClearView, .mFlags = JSB | PMR_DEFAULT) {
+        STRUCT(ClearView, .mFlags = PMR_DEFAULT) {
             PUBLIC(
                 (ccstd::pmr::string, mSlotName, _)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
