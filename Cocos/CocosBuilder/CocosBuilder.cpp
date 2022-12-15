@@ -55,15 +55,15 @@ int main() {
 
         // build cocos common
         buildCocosCommon(builder,
-            Fwd | Types | Names | Reflection | Typescripts);
+            Fwd | Types | Names | Typescripts);
 
         // build render pipeline
         buildRenderCommon(builder,
-            Fwd | Types | Names | Reflection | Typescripts | Jsb | Serialization);
+            Fwd | Types | Names | Typescripts | Jsb | Serialization);
         buildLayoutGraph(builder,
-            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb | Serialization);
+            Fwd | Types | Names | Graphs | Typescripts | Jsb | Serialization);
         buildRenderGraph(builder,
-            Fwd | Types | Names | Reflection | Graphs | Typescripts | Jsb);
+            Fwd | Types | Names | Graphs | Typescripts | Jsb);
         buildFGDispatcher(builder, Types | Graphs);
 
         // build render compiler (native)
@@ -76,7 +76,7 @@ int main() {
 
         // native
         if (false) {
-            buildRenderCompiler(builder, Fwd | Types | Names | Reflection | Graphs);
+            buildRenderCompiler(builder, Fwd | Types | Names | Graphs);
         }
         buildNativePipeline(builder, Fwd | Types | Graphs);
 
@@ -84,7 +84,7 @@ int main() {
         if (false) {
             buildExecutorExample(builder, Typescripts | Jsb);
             buildRenderExample(builder,
-                Fwd | Types | Names | Reflection | Graphs);
+                Fwd | Types | Names | Graphs);
         }
     }
 
