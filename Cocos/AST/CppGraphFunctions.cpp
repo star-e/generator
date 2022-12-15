@@ -375,7 +375,7 @@ std::pmr::string removePolymorphicType(const SyntaxGraph& g, const CppGraphBuild
                         oss << "\n";
                         if (c.isVector()) {
                             OSS << "g." << g.getMemberName(c.mMemberName, true) << ".erase(g."
-                                << g.getMemberName(c.mMemberName, true) << ".begin() + std::ptrdiff_t(h.value));\n";
+                                << g.getMemberName(c.mMemberName, true) << ".begin() + static_cast<std::ptrdiff_t>(h.value));\n";
                             OSS << "if (h.value == g." << g.getMemberName(c.mMemberName, true) << ".size()) {\n";
                             OSS << "    return;\n";
                             OSS << "}\n";
@@ -510,7 +510,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                         for (const auto& c : s.mComponents) {
                             const auto& member = g.getMemberName(c.mMemberName, true);
                             if (s.isVector()) {
-                                OSS << "g." << member << ".erase(g." << member << ".begin() + std::ptrdiff_t(u));\n";
+                                OSS << "g." << member << ".erase(g." << member << ".begin() + static_cast<std::ptrdiff_t>(u));\n";
                             } else {
                                 auto iterName = getParameterPrefix(c.mMemberName, scratch) + "Iter";
                                 OSS << "g." << member << ".erase(" << iterName << ");\n";
