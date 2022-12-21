@@ -339,9 +339,16 @@ public:
             PUBLIC(
                 (LayoutGraphData, mLayoutGraph, _)
                 ((PmrFlatMap<uint32_t, ProgramGroup>), mPhases, _)
+                (boost::container::pmr::unsynchronized_pool_resource, mUnsycPool, _)
                 (bool, mMergeHighFrequency, false)
                 (bool, mFixedLocal, true)
+                (IntrusivePtr<gfx::DescriptorSetLayout>, mEmptyDescriptorSetLayout, _)
+                (IntrusivePtr<gfx::PipelineLayout>, mEmptyPipelineLayout, _)
             );
+            MEMBER_FUNCTIONS(R"(
+void init(gfx::Device* device);
+void destroy();
+)");
         }
 
         STRUCT(NativeRenderingModule) {
