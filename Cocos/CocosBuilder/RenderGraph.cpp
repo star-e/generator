@@ -217,6 +217,8 @@ void unmount(uint64_t completedFenceValue);
                 (uint32_t, mWidth, 0)
                 (uint32_t, mHeight, 0)
                 (gfx::Viewport, mViewport, _)
+                (ccstd::pmr::string, mVersionName, _)
+                (uint64_t, mVersion, 0)
             );
             MEMBER_FLAGS(mViewport, NOT_ELEMENT);
         }
