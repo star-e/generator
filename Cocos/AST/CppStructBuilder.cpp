@@ -894,10 +894,12 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     OSS << api << name << "(" << name << "&& rhs, const allocator_type& alloc);\n";
                     break;
                 case ImplEnum::Delete:
-                    if (sFormat) {
-                        OSS << name << "(" << name << "&& rhs)      = delete;\n";
-                    } else {
-                        OSS << name << "(" << name << "&& rhs) = delete;\n";
+                    if (traits.mFlags & NO_MOVE_NO_COPY) {
+                        if (sFormat) {
+                            OSS << name << "(" << name << "&& rhs)      = delete;\n";
+                        } else {
+                            OSS << name << "(" << name << "&& rhs) = delete;\n";
+                        }
                     }
                     break;
                 case ImplEnum::None:
@@ -1058,8 +1060,8 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
             case ImplEnum::Inline:
             case ImplEnum::Separated:
                 if (traits.mInterface) {
-                    if (bDerived) {
-                        // do nothing
+                    if (bDerived && !g.hasConcreteBase(vertID)) {
+                        // noop
                     } else {
                         if (sFormat)
                             oss << "\n";
@@ -1067,7 +1069,15 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                             // defaulted dtor is defined in cpp
                             OSS << api << "virtual ~" << name << "() noexcept = 0;\n";
                         } else {
-                            OSS << "virtual ~" << name << "() noexcept = default;\n";
+                            OSS;
+                            if (!bDerived) {
+                                oss << "virtual ";
+                            }
+                            oss << "~" << name << "() noexcept";
+                            if (bDerived) {
+                                oss << " override";
+                            }
+                            oss << " = default;\n";
                         }
                     }
                 } else {

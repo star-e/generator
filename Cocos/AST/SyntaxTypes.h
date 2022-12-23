@@ -1125,6 +1125,9 @@ struct SyntaxGraph {
 
     // struct
     bool isDerived(vertex_descriptor vertID) const noexcept;
+    bool hasNoMoveBase(vertex_descriptor vertID) const noexcept;
+    bool hasNoCopyBase(vertex_descriptor vertID) const noexcept;
+    bool hasConcreteBase(vertex_descriptor vertID) const noexcept;
     ImplEnum needDefaultCntr(vertex_descriptor vertID) const noexcept;
     ImplEnum needMoveCntr(vertex_descriptor vertID) const noexcept;
     ImplEnum needCopyCntr(vertex_descriptor vertID) const noexcept;

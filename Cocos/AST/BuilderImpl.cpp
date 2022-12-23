@@ -485,7 +485,6 @@ void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID, std::stri
     auto baseID = g.lookupType(mCurrentScope, adlPath, scratch);
     Expects(baseID != g.null_vertex());
     const auto& baseTraits = get(g.traits, g, baseID);
-    Expects(baseTraits.mInterface);
     auto& inherits = get(g.inherits, g, vertID);
 
     auto typePath = g.getTypePath(baseID, g.get_allocator().resource());

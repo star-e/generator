@@ -34,6 +34,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
     NAMESPACE(cc) {
         CONTAINER(IntrusivePtr, .mFlags = JSB);
         PROJECT_TS(IntrusivePtr, _);
+        CLASS(RefCounted, .mFlags = IMPL_DETAIL);
     }
     MODULE(PassUtils,
         .mFolder = "cocos/renderer/core",

@@ -334,6 +334,14 @@ public:
 )");
         }
 
+        STRUCT(NativeProgramProxy) {
+            INHERITS(ProgramProxy);
+            PUBLIC(
+                (IntrusivePtr<gfx::Shader>, mShader, _)
+            );
+            CNTR(mShader);
+        }
+
         STRUCT(NativeProgramLibrary) {
             INHERITS(ProgramLibrary);
             PUBLIC(

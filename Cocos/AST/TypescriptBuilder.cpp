@@ -110,6 +110,10 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             const auto& inherits = get(g.inherits, g, vertID);
             for (int count = 0; const auto& conceptPath : inherits.mBases) {
                 auto superID = locate(conceptPath, g);
+                const auto& traits = get(g.traits, g, superID);
+                if (traits.mFlags & IMPL_DETAIL) {
+                    continue;
+                }
                 const auto& name = get(g.names, g, superID);
                 if (count++ == 0) {
                     oss << " extends ";

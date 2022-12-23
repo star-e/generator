@@ -344,6 +344,7 @@ void buildPrivateInterface(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(render);
 
         INTERFACE(ProgramProxy) {
+            INHERITS(RefCounted);
             PUBLIC_METHODS(R"(
 [[getter]] virtual const ccstd::string& getName() const noexcept = 0;
 [[getter]] virtual gfx::Shader* getShader() const noexcept = 0;

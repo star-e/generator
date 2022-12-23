@@ -368,6 +368,52 @@ bool SyntaxGraph::isDerived(vertex_descriptor vertID) const noexcept {
     return !get(g.inherits, g, vertID).mBases.empty();
 }
 
+bool SyntaxGraph::hasNoMoveBase(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& bases = get(g.inherits, g, vertID).mBases;
+    for (const auto& base : bases) {
+        auto baseID = locate(base, g);
+        if (g.hasNoMoveBase(baseID)) {
+            return true;
+        }
+        const auto& traits = get(g.traits, g, baseID);
+        if (traits.mFlags & NO_MOVE_NO_COPY) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool SyntaxGraph::hasNoCopyBase(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& bases = get(g.inherits, g, vertID).mBases;
+    for (const auto& base : bases) {
+        auto baseID = locate(base, g);
+        if (g.hasNoCopyBase(baseID)) {
+            return true;
+        }
+        const auto& traits = get(g.traits, g, baseID);
+        if (traits.mFlags & (NO_MOVE_NO_COPY | NO_COPY)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool SyntaxGraph::hasConcreteBase(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& bases = get(g.inherits, g, vertID).mBases;
+    for (const auto& base : bases) {
+        auto baseID = locate(base, g);
+        if (g.hasConcreteBase(baseID)) {
+            return true;
+        }
+        const auto& traits = get(g.traits, g, baseID);
+        return !traits.mInterface;
+    }
+    return false;
+}
+
 ImplEnum SyntaxGraph::needDefaultCntr(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     const auto& traits = get(g.traits, g, vertID);
@@ -439,17 +485,13 @@ ImplEnum SyntaxGraph::needMoveCntr(vertex_descriptor vertID) const noexcept {
     } else if (traits.mFlags & GenerationFlags::NO_COPY) {
         bNeedMove = true;
     }
-
-    if (bDerived) {
-        bNeedDeleteMove = true;
+    
+    if (g.hasNoMoveBase(vertID)) {
+        return ImplEnum::None;
     }
 
     if (bNeedDeleteMove) {
-        if (bDerived) {
-            return ImplEnum::None;
-        } else {
-            return ImplEnum::Delete;
-        }
+        return ImplEnum::Delete;
     } else {
         if (bNeedMove) {
             if (bPmr) {
@@ -488,16 +530,12 @@ ImplEnum SyntaxGraph::needCopyCntr(vertex_descriptor vertID) const noexcept {
         bNeedCopy = true;
     }
 
-    if (bDerived) {
-        bNeedDeleteCopy = true;
+    if (g.hasNoCopyBase(vertID)) {
+        return ImplEnum::None;
     }
 
     if (bNeedDeleteCopy) {
-        if (bDerived) {
-            return ImplEnum::None;
-        } else {
-            return ImplEnum::Delete;
-        }
+        return ImplEnum::Delete;
     } else {
         if (bNeedCopy) {
             if (bPmr) {
