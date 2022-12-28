@@ -218,6 +218,9 @@ bool SyntaxGraph::isNoexcept(vertex_descriptor vertID) const noexcept {
                 if (!g.isNoexcept(memberID))
                     bThrow = true;
             }
+            if (g.hasConcreteBase(vertID)) {
+                bThrow = true;
+            }
             return !bThrow;
         },
         [&](const Instance& s) {
