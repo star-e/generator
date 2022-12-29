@@ -4126,53 +4126,56 @@ void outputVectorGraphLoad(std::ostream& oss, std::pmr::string& space,
             OSS << "load(ar, " << tagVar << ");\n";
         }
         if (s.isPolymorphic()) {
-            OSS << "switch(id) {\n";
-            for (uint32_t conceptID = 0;  const auto& c : s.mPolymorphic.mConcepts) {
-                OSS << "case " << conceptID++ << ": {\n";
-                {
-                    INDENT();
-                    auto typeID = locate(c.mValue, g);
-                    auto typeName = g.getDependentCppName(ns, typeID, scratch, scratch);
-                    OSS << typeName << " val";
-                    if (g.isPmr(typeID)) {
-                        oss << "(g.get_allocator());\n";
-                    } else {
-                        oss << ";\n";
-                    }
-                    OSS << "load(ar, val);\n";
-                    uint32_t count = 0;
-                    OSS << "addVertex(";
-                    for (const auto& c : s.mComponents) {
-                        auto componentID = locate(c.mValuePath, g);
-                        auto componentName = getTagVariableName(c.mName, scratch);
+            OSS << "switch (id) {\n";
+            {
+                INDENT();
+                for (uint32_t conceptID = 0; const auto& c : s.mPolymorphic.mConcepts) {
+                    OSS << "case " << conceptID++ << ": {\n";
+                    {
+                        INDENT();
+                        auto typeID = locate(c.mValue, g);
+                        auto typeName = g.getDependentCppName(ns, typeID, scratch, scratch);
+                        OSS << typeName << " val";
+                        if (g.isPmr(typeID)) {
+                            oss << "(g.get_allocator());\n";
+                        } else {
+                            oss << ";\n";
+                        }
+                        OSS << "load(ar, val);\n";
+                        uint32_t count = 0;
+                        OSS << "addVertex(";
+                        for (const auto& c : s.mComponents) {
+                            auto componentID = locate(c.mValuePath, g);
+                            auto componentName = getTagVariableName(c.mName, scratch);
+                            if (count++) {
+                                oss << ", ";
+                            }
+                            if (g.isValueType(componentID)) {
+                                oss << componentName;
+                            } else {
+                                oss << "std::move(" << componentName << ")";
+                            }
+                        }
                         if (count++) {
                             oss << ", ";
                         }
-                        if (g.isValueType(componentID)) {
-                            oss << componentName;
+                        if (g.isValueType(typeID)) {
+                            oss << "val";
                         } else {
-                            oss << "std::move(" << componentName << ")";
+                            oss << "std::move(val)";
                         }
+                        oss << ", g";
+                        if (s.isAddressable()) {
+                            oss << ", u";
+                        }
+                        oss << ");\n";
+                        OSS << "break;\n";
                     }
-                    if (count++) {
-                        oss << ", ";
-                    }
-                    if (g.isValueType(typeID)) {
-                        oss << "val";
-                    } else {
-                        oss << "std::move(val)";
-                    }
-                    oss << ", g";
-                    if (s.isAddressable()) {
-                        oss << ", u";
-                    }
-                    oss << ");\n";
-                    OSS << "break;\n";
+                    OSS << "}\n";
                 }
-                OSS << "}\n";
+                OSS << "default:\n";
+                OSS << "    throw std::runtime_error(\"load graph failed\");\n";
             }
-            OSS << "default:\n";
-            OSS << "    throw std::runtime_error(\"load graph failed\");\n";
             OSS << "}\n";
         } else {
             uint32_t count = 0;
