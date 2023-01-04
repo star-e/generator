@@ -166,6 +166,8 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
             PUBLIC(
                 (uint32_t, mSlot, 0xFFFFFFFF)
                 (uint32_t, mCapacity, 0)
+                (uint32_t, mUniformBlockCapacity, 0)
+                (uint32_t, mSamplerTextureCapacity, 0)
                 (ccstd::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
                 ((ccstd::pmr::unordered_map<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
                 ((PmrFlatMap<NameLocalID, uint32_t>), mBindingMap, _)
