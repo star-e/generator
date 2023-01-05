@@ -38,7 +38,7 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "Native",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "web-types",
-        .mRequires = { "RenderInterface", "LayoutGraph", "ProgramLib" },
+        .mRequires = { "RenderInterface", "LayoutGraph", "ProgramLib", "PrivateInterface" },
         .mHeader = R"(#include "cocos/base/std/hash/hash.h"
 #include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
@@ -59,17 +59,10 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
             CNTR_NO_DEFAULT(mProgramInfo, mShaderInfo, mAttributes, mBlockSizes, mHandleMap);
         }
 
-        STRUCT(ProgramHost) {
-            PUBLIC(
-                (IntrusivePtr<gfx::Shader>, mProgram, _)
-            );
-            CNTR_NO_DEFAULT(mProgram);
-        }
-
         STRUCT(ProgramGroup) {
             PUBLIC(
                 ((PmrFlatMap<ccstd::pmr::string, ProgramInfo>), mProgramInfos, _)
-                ((PmrFlatMap<ccstd::pmr::string, ProgramHost>), mProgramHosts, _)
+                ((PmrFlatMap<ccstd::pmr::string, IntrusivePtr<ProgramProxy>>), mProgramProxies, _)
             );
         }
 

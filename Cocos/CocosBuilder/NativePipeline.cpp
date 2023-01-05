@@ -341,7 +341,7 @@ public:
             );
             CNTR(mShader);
         }
-
+        
         STRUCT(NativeProgramLibrary) {
             INHERITS(ProgramLibrary);
             PUBLIC(
@@ -352,6 +352,7 @@ public:
                 (bool, mFixedLocal, true)
                 (IntrusivePtr<gfx::DescriptorSetLayout>, mEmptyDescriptorSetLayout, _)
                 (IntrusivePtr<gfx::PipelineLayout>, mEmptyPipelineLayout, _)
+                (PipelineRuntime*, mPipeline, nullptr)
             );
             MEMBER_FUNCTIONS(R"(
 void init(gfx::Device* device);
