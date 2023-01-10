@@ -39,6 +39,7 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(char, number);
     PROJECT_TS(char8_t, number);
 
+    PROJECT_TS(signed, number);
     PROJECT_TS(unsigned, number);
     PROJECT_TS(size_t, number);
 

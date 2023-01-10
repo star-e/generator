@@ -46,6 +46,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
     VALUE(char32_t);
     VALUE(wchar_t);
 
+    VALUE(signed);
     VALUE(unsigned);
     VALUE(size_t);
 
