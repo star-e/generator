@@ -61,7 +61,7 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
 
         STRUCT(ProgramGroup) {
             PUBLIC(
-                ((PmrFlatMap<ccstd::pmr::string, ProgramInfo>), mProgramInfos, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ProgramInfo>), mProgramInfos, _)
                 ((PmrFlatMap<ccstd::pmr::string, IntrusivePtr<ProgramProxy>>), mProgramProxies, _)
             );
         }
