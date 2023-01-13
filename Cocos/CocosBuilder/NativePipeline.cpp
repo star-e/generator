@@ -297,10 +297,31 @@ void sort();
             );
         }
 
+        STRUCT(BufferPool, .mFlags = NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mCurrentBuffers, _)
+                (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mFreeBuffers, _)
+            );
+        }
+
+        STRUCT(UniformBlockResource, .mFlags = NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<char>, mData, _)
+                (BufferPool, mBufferPool, _)
+            );
+        }
+
+        STRUCT(LayoutGraphNodeResource, .mFlags = NO_COPY) {
+            PUBLIC(
+                ((PmrFlatMap<NameLocalID, UniformBlockResource>), mUniformBuffers, _)
+            );
+        }
+
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
+                ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
                 //(ccstd::pmr::vector<PmrUniquePtr<NativeRenderQueue>>, mFreeRenderQueues, _)
                 //(ccstd::pmr::vector<PmrUniquePtr<RenderInstancePack>>, mFreeInstancePacks, _)
                 (uint64_t, mNextFenceValue, 0)
@@ -309,7 +330,7 @@ void sort();
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
 )");
         }
-        
+
         STRUCT(NativeProgramLibrary) {
             INHERITS(ProgramLibrary);
             PUBLIC(
