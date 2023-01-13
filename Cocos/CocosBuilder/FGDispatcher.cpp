@@ -175,7 +175,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (ResourceAccessGraph, mResourceAccessGraph, _)
                 (ResourceGraph&, mResourceGraph, _)
                 (const RenderGraph&, mGraph, _)
-                (LayoutGraphData&, mLayoutGraph, _)
+                (const LayoutGraphData&, mLayoutGraph, _)
                 (boost::container::pmr::memory_resource*, mScratch, nullptr)
                 ((PmrFlatMap<ccstd::pmr::string, ResourceTransition>), mExternalResMap, _)
                 (RelationGraph, mRelationGraph, _)

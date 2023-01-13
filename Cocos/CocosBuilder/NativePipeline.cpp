@@ -57,22 +57,24 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         STRUCT(NativeRasterQueueBuilder) {
             INHERITS(RasterQueueBuilder);
             PUBLIC(
+                (const PipelineRuntime*, mPipelineRuntime, nullptr)
                 (RenderGraph*, mRenderGraph, nullptr)
                 (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (uint32_t, mQueueID, RenderGraph::null_vertex())
             );
-            CNTR(mRenderGraph, mQueueID, mLayoutGraph);
+            CNTR(mPipelineRuntime, mRenderGraph, mQueueID, mLayoutGraph);
         }
 
         STRUCT(NativeRasterPassBuilder) {
             INHERITS(RasterPassBuilder);
             PUBLIC(
+                (const PipelineRuntime*, mPipelineRuntime, nullptr)
                 (RenderGraph*, mRenderGraph, nullptr)
                 (const LayoutGraphData*, mLayoutGraph, nullptr)
                 (uint32_t, mPassID, RenderGraph::null_vertex())
                 (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
-            CNTR(mRenderGraph, mPassID, mLayoutGraph, mLayoutID);
+            CNTR(mPipelineRuntime, mRenderGraph, mPassID, mLayoutGraph, mLayoutID);
         }
 
         STRUCT(NativeComputeQueueBuilder) {
@@ -307,6 +309,24 @@ void sort();
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
 )");
         }
+        
+        STRUCT(NativeProgramLibrary) {
+            INHERITS(ProgramLibrary);
+            PUBLIC(
+                (LayoutGraphData, mLayoutGraph, _)
+                ((PmrFlatMap<uint32_t, ProgramGroup>), mPhases, _)
+                (boost::container::pmr::unsynchronized_pool_resource, mUnsycPool, _)
+                (bool, mMergeHighFrequency, false)
+                (bool, mFixedLocal, true)
+                (IntrusivePtr<gfx::DescriptorSetLayout>, mEmptyDescriptorSetLayout, _)
+                (IntrusivePtr<gfx::PipelineLayout>, mEmptyPipelineLayout, _)
+                (PipelineRuntime*, mPipeline, nullptr)
+            );
+            MEMBER_FUNCTIONS(R"(
+void init(gfx::Device* device);
+void destroy();
+)");
+        }
 
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
@@ -317,11 +337,13 @@ void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
                 (MacroRecord, mMacros, _)
                 (ccstd::string, mConstantMacros, _)
                 (std::unique_ptr<pipeline::GlobalDSManager>, mGlobalDSManager, _)
+                (ccstd::pmr::string, mName, _)
+                (NativeProgramLibrary*, mProgramLibrary, _)
                 (scene::Model*, mProfiler, nullptr)
                 (LightingMode, mLightingMode, LightingMode::DEFAULT)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
                 (NativeRenderContext, mNativeContext, _)
-                (LayoutGraphData, mLayoutGraph, _)
+                (LayoutGraphData, mDummyLayoutGraph, _)
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
             );
@@ -340,24 +362,6 @@ public:
                 (IntrusivePtr<gfx::Shader>, mShader, _)
             );
             CNTR(mShader);
-        }
-        
-        STRUCT(NativeProgramLibrary) {
-            INHERITS(ProgramLibrary);
-            PUBLIC(
-                (LayoutGraphData, mLayoutGraph, _)
-                ((PmrFlatMap<uint32_t, ProgramGroup>), mPhases, _)
-                (boost::container::pmr::unsynchronized_pool_resource, mUnsycPool, _)
-                (bool, mMergeHighFrequency, false)
-                (bool, mFixedLocal, true)
-                (IntrusivePtr<gfx::DescriptorSetLayout>, mEmptyDescriptorSetLayout, _)
-                (IntrusivePtr<gfx::PipelineLayout>, mEmptyPipelineLayout, _)
-                (PipelineRuntime*, mPipeline, nullptr)
-            );
-            MEMBER_FUNCTIONS(R"(
-void init(gfx::Device* device);
-void destroy();
-)");
         }
 
         STRUCT(NativeRenderingModule) {
