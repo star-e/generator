@@ -299,26 +299,53 @@ void sort();
 
         STRUCT(BufferPool, .mFlags = NO_COPY) {
             PUBLIC(
+                (gfx::Device*, mDevice, nullptr)
+                (uint32_t, mBufferSize, 0)
                 (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mCurrentBuffers, _)
                 (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mFreeBuffers, _)
             );
+            MEMBER_FUNCTIONS(R"(void init(gfx::Device* deviceIn, uint32_t sz);
+void syncResources();
+gfx::Buffer* allocateBuffer();
+)");
+            CNTR(mDevice, mBufferSize);
+        }
+
+        STRUCT(DescriptorSetPool, .mFlags = NO_COPY) {
+            PUBLIC(
+                (gfx::Device*, mDevice, nullptr)
+                (IntrusivePtr<gfx::DescriptorSetLayout>, mSetLayout, _)
+                (ccstd::pmr::vector<IntrusivePtr<gfx::DescriptorSet>>, mCurrentDescriptorSets, _)
+                (ccstd::pmr::vector<IntrusivePtr<gfx::DescriptorSet>>, mFreeDescriptorSets, _)
+            );
+            MEMBER_FUNCTIONS(R"(void init(gfx::Device* deviceIn, IntrusivePtr<gfx::DescriptorSetLayout> layout);
+void syncDescriptorSets();
+const gfx::DescriptorSet& getCurrentDescriptorSet() const;
+gfx::DescriptorSet& getCurrentDescriptorSet();
+gfx::DescriptorSet* allocateDescriptorSet();
+)");
+            CNTR(mDevice, mSetLayout);
         }
 
         STRUCT(UniformBlockResource, .mFlags = NO_COPY) {
             PUBLIC(
-                (ccstd::pmr::vector<char>, mData, _)
+                (ccstd::pmr::vector<char>, mCpuBuffer, _)
                 (BufferPool, mBufferPool, _)
             );
+            MEMBER_FUNCTIONS(R"(void init(gfx::Device* deviceIn, uint32_t sz);
+)");
         }
 
         STRUCT(LayoutGraphNodeResource, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrFlatMap<NameLocalID, UniformBlockResource>), mUniformBuffers, _)
+                (DescriptorSetPool, mDescriptorSetPool, _)
             );
         }
 
-        STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY) {
+        STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
+                (std::unique_ptr<gfx::DefaultResource>, mDefaultResource, _)
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
@@ -329,6 +356,7 @@ void sort();
             MEMBER_FUNCTIONS(R"(
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
 )");
+            CNTR(mDefaultResource);
         }
 
         STRUCT(NativeProgramLibrary) {
@@ -391,6 +419,15 @@ public:
                 (std::shared_ptr<NativeProgramLibrary>, mProgramLibrary, _)
             );
             CNTR(mProgramLibrary);
+        }
+
+        STRUCT(NativeSetter, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
+            INHERITS(Setter);
+            PUBLIC(
+                (const LayoutGraphData&, mLayoutGraph, _)
+                (RenderData&, mRenderData, _)
+            );
+            CNTR(mLayoutGraph, mRenderData);
         }
 
         NAMESPACE_END(render);

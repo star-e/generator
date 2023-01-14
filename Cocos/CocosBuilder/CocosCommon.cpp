@@ -362,6 +362,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
 
                 IMPORT_CLASS(GlobalBarrier);
                 IMPORT_CLASS(TextureBarrier);
+
+                IMPORT_CLASS(DefaultResource);
             } // namespace gfx
         } // namespace cc
         PROJECT_TS(std::unique_ptr<cc::gfx::Buffer>, Buffer);
