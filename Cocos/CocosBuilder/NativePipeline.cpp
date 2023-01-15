@@ -370,9 +370,10 @@ void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
                 (IntrusivePtr<gfx::DescriptorSetLayout>, mEmptyDescriptorSetLayout, _)
                 (IntrusivePtr<gfx::PipelineLayout>, mEmptyPipelineLayout, _)
                 (PipelineRuntime*, mPipeline, nullptr)
+                (gfx::Device*, mDevice, nullptr)
             );
             MEMBER_FUNCTIONS(R"(
-void init(gfx::Device* device);
+void init(gfx::Device* deviceIn);
 void destroy();
 )");
         }
@@ -428,6 +429,13 @@ public:
                 (RenderData&, mRenderData, _)
             );
             CNTR(mLayoutGraph, mRenderData);
+            MEMBER_FUNCTIONS(R"(
+void setVec4ArraySize(const ccstd::string& name, uint32_t sz);
+void setVec4ArrayElem(const ccstd::string& name, const cc::Vec4& vec, uint32_t id);
+
+void setMat4ArraySize(const ccstd::string& name, uint32_t sz);
+void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t id);
+)");
         }
 
         NAMESPACE_END(render);
