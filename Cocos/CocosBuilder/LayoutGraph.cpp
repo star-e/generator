@@ -266,7 +266,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 ((PmrFlatMap<ccstd::pmr::string, EffectData>), mEffects, _)
             );
             PUBLIC(
-                (ccstd::pmr::string, mConstantMacros, _)
+                (ccstd::string, mConstantMacros, _)
             );
             MEMBER_FLAGS(mConstantMacros, NO_SERIALIZATION);
         }

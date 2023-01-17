@@ -147,6 +147,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (float, mClearDepth, 0)
                 (uint8_t, mClearStencil, 0)
                 (int32_t, mRefCount, 1)
+                (uint32_t, mHash, 0)
             );
         }
         
