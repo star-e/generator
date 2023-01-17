@@ -120,6 +120,9 @@ bool hasSideEffects() const noexcept {
                 (uint64_t, mFenceValue, 0)
             );
             CNTR(mTexture);
+            MEMBER_FUNCTIONS(R"(
+bool checkResource(const ResourceDesc &desc) const;
+)");
         }
 
         STRUCT(ManagedResource) {

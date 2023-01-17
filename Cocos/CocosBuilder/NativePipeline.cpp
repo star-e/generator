@@ -340,8 +340,18 @@ gfx::DescriptorSet* allocateDescriptorSet();
         STRUCT(LayoutGraphNodeResource, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrFlatMap<NameLocalID, UniformBlockResource>), mUniformBuffers, _)
-                (DescriptorSetPool, mDescriptorSetPool, _)
+                (DescriptorSetPool, mPerPassDescriptorSetPool, _)
+                ((PmrTransparentMap<ccstd::pmr::string, DescriptorSetPool>), mProgramDescriptorSetPool, _)
             );
+        }
+
+        STRUCT(QuadResource) {
+            PUBLIC(
+                (IntrusivePtr<gfx::Buffer>, mQuadVB, _)
+                (IntrusivePtr<gfx::Buffer>, mQuadIB, _)
+                (IntrusivePtr<gfx::InputAssembler>, mQuadIA, _)
+            );
+            CNTR(mQuadVB, mQuadIB, mQuadIA);
         }
 
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
@@ -350,6 +360,7 @@ gfx::DescriptorSet* allocateDescriptorSet();
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
+                (QuadResource, mFullscreedQuad, _)
                 //(ccstd::pmr::vector<PmrUniquePtr<NativeRenderQueue>>, mFreeRenderQueues, _)
                 //(ccstd::pmr::vector<PmrUniquePtr<RenderInstancePack>>, mFreeInstancePacks, _)
                 (uint64_t, mNextFenceValue, 0)
