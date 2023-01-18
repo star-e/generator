@@ -337,12 +337,23 @@ gfx::DescriptorSet* allocateDescriptorSet();
 )");
         }
 
+        STRUCT(ProgramResource, .mFlags = NO_COPY) {
+            PUBLIC(
+                ((ccstd::pmr::unordered_map<NameLocalID, UniformBlockResource>), mUniformBuffers, _)
+                (DescriptorSetPool, mDescriptorSetPool, _)
+            );
+            MEMBER_FUNCTIONS(R"(void syncResources() noexcept;
+)");
+        }
+
         STRUCT(LayoutGraphNodeResource, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrFlatMap<NameLocalID, UniformBlockResource>), mUniformBuffers, _)
-                (DescriptorSetPool, mPerPassDescriptorSetPool, _)
-                ((PmrTransparentMap<ccstd::pmr::string, DescriptorSetPool>), mProgramDescriptorSetPool, _)
+                (DescriptorSetPool, mDescriptorSetPool, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ProgramResource>), mProgramResources, _)
             );
+            MEMBER_FUNCTIONS(R"(void syncResources() noexcept;
+)");
         }
 
         STRUCT(QuadResource) {
@@ -360,9 +371,7 @@ gfx::DescriptorSet* allocateDescriptorSet();
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
-                (QuadResource, mFullscreedQuad, _)
-                //(ccstd::pmr::vector<PmrUniquePtr<NativeRenderQueue>>, mFreeRenderQueues, _)
-                //(ccstd::pmr::vector<PmrUniquePtr<RenderInstancePack>>, mFreeInstancePacks, _)
+                (QuadResource, mFullscreenQuad, _)
                 (uint64_t, mNextFenceValue, 0)
             );
             MEMBER_FUNCTIONS(R"(
@@ -379,6 +388,8 @@ void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
                 (boost::container::pmr::unsynchronized_pool_resource, mUnsycPool, _)
                 (bool, mMergeHighFrequency, false)
                 (bool, mFixedLocal, true)
+                (DescriptorSetLayoutData, mLocalLayoutData, _)
+                (IntrusivePtr<gfx::DescriptorSetLayout>, mLocalDescriptorSetLayout, _)
                 (IntrusivePtr<gfx::DescriptorSetLayout>, mEmptyDescriptorSetLayout, _)
                 (IntrusivePtr<gfx::PipelineLayout>, mEmptyPipelineLayout, _)
                 (PipelineRuntime*, mPipeline, nullptr)
