@@ -145,8 +145,10 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
                 (gfx::StoreOp, mStoreOp, gfx::StoreOp::STORE)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
                 (gfx::Color, mClearColor, _)
+                (uint32_t, mSlotID, 0)
             );
             builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
+            builder.setMemberFlags(vertID, "mSlotID", NOT_ELEMENT);
             TS_INIT(mAccessType, AccessType.WRITE);
             TS_INIT(mLoadOp, LoadOp.LOAD);
             TS_INIT(mStoreOp, StoreOp.STORE);

@@ -302,14 +302,17 @@ void sort();
             PUBLIC(
                 (gfx::Device*, mDevice, nullptr)
                 (uint32_t, mBufferSize, 0)
+                (bool, mDynamic, false)
                 (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mCurrentBuffers, _)
+                (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mCurrentBufferViews, _)
                 (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mFreeBuffers, _)
+                (ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>, mFreeBufferViews, _)
             );
-            MEMBER_FUNCTIONS(R"(void init(gfx::Device* deviceIn, uint32_t sz);
+            MEMBER_FUNCTIONS(R"(void init(gfx::Device* deviceIn, uint32_t sz, bool bDynamic);
 void syncResources();
 gfx::Buffer* allocateBuffer();
 )");
-            CNTR(mDevice, mBufferSize);
+            CNTR(mDevice, mBufferSize, mDynamic);
         }
 
         STRUCT(DescriptorSetPool, .mFlags = NO_COPY) {
@@ -333,7 +336,8 @@ gfx::DescriptorSet* allocateDescriptorSet();
                 (ccstd::pmr::vector<char>, mCpuBuffer, _)
                 (BufferPool, mBufferPool, _)
             );
-            MEMBER_FUNCTIONS(R"(void init(gfx::Device* deviceIn, uint32_t sz);
+            MEMBER_FUNCTIONS(R"(void init(gfx::Device* deviceIn, uint32_t sz, bool bDynamic);
+gfx::Buffer* createFromCpuBuffer();
 )");
         }
 
@@ -397,6 +401,7 @@ void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
             );
             MEMBER_FUNCTIONS(R"(
 void init(gfx::Device* deviceIn);
+void setPipeline(PipelineRuntime* pipelineIn);
 void destroy();
 )");
         }
