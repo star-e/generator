@@ -39,8 +39,8 @@ int main() {
     std::pmr::memory_resource* scratch = &pool;
 
     // output folder
-    std::filesystem::path typescriptFolder = "../../../engine";
-    std::filesystem::path cppFolder = "../../../engine/native";
+    std::filesystem::path typescriptFolder = "../../../cocos-engine";
+    std::filesystem::path cppFolder = "../../../cocos-engine/native";
 
     ModuleBuilder builder("cc", cppFolder, typescriptFolder, scratch, scratch);
     builder.init();
