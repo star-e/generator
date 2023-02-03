@@ -45,13 +45,15 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        STRUCT(NativeLayoutGraphBuilder) {
-            INHERITS(LayoutGraphBuilder);
-            PUBLIC(
-                (gfx::Device*, mDevice, nullptr)
-                (LayoutGraphData*, mData, nullptr)
-            );
-            CNTR(mDevice, mData);
+        if (false) {
+            STRUCT(NativeLayoutGraphBuilder) {
+                INHERITS(LayoutGraphBuilder);
+                PUBLIC(
+                    (gfx::Device*, mDevice, nullptr)
+                    (LayoutGraphData*, mData, nullptr)
+                );
+                CNTR(mDevice, mData);
+            }
         }
 
         STRUCT(NativeRasterQueueBuilder) {
@@ -421,7 +423,6 @@ void destroy();
                 (LightingMode, mLightingMode, LightingMode::DEFAULT)
                 (IntrusivePtr<pipeline::PipelineSceneData>, mPipelineSceneData, _)
                 (NativeRenderContext, mNativeContext, _)
-                (LayoutGraphData, mDummyLayoutGraph, _)
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
             );

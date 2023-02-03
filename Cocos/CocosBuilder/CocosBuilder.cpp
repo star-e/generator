@@ -95,7 +95,6 @@ int main() {
     {
         // manually added
         files.emplace("cocos/renderer/pipeline/custom/NativeFactory.cpp");
-        files.emplace("cocos/renderer/pipeline/custom/NativeLayoutGraph.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativePipeline.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraph.cpp");
