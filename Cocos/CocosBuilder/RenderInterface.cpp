@@ -190,6 +190,8 @@ virtual void addComputeView(const ccstd::string& name, const ComputeView& view) 
 virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
+[[getter]] virtual bool getShowStatistics() const = 0;
+[[setter]] virtual void setShowStatistics(bool enable) = 0;
 )");
         }
 

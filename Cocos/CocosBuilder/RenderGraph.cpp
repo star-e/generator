@@ -223,8 +223,10 @@ gfx::Texture* getTexture(vertex_descriptor resID);
                 (gfx::Viewport, mViewport, _)
                 (ccstd::pmr::string, mVersionName, _)
                 (uint64_t, mVersion, 0)
+                (bool, mShowStatistics, false)
             );
             MEMBER_FLAGS(mViewport, NOT_ELEMENT);
+            MEMBER_FLAGS(mShowStatistics, NOT_ELEMENT);
         }
 
         STRUCT(ComputePass) {
