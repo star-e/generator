@@ -227,6 +227,7 @@ gfx::Texture* getTexture(vertex_descriptor resID);
             );
             MEMBER_FLAGS(mViewport, NOT_ELEMENT);
             MEMBER_FLAGS(mShowStatistics, NOT_ELEMENT);
+            MEMBER_FLAGS(mVersion, NOT_ELEMENT);
         }
 
         STRUCT(ComputePass) {

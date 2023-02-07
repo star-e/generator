@@ -150,9 +150,10 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 (uint8_t, mClearStencil, 0)
                 (int32_t, mRefCount, 1)
                 (uint32_t, mHash, 0)
+                (uint64_t, mVersion, 0)
             );
         }
-        
+
         if (false) {
             STRUCT(ScenePassHandle, .mFlags = LESS) {
                 PUBLIC(
@@ -166,7 +167,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 );
             }
 
-            STRUCT(RenderInstance, .mAlignment = 64) {
+            STRUCT(RenderInstance/*, .mAlignment = 64*/) {
                 PUBLIC(
                     (uint32_t, mCount, 0)
                     (uint32_t, mCapacity, 0)
@@ -211,7 +212,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
                 );
             }
             
-            STRUCT(RenderObject, .mAlignment = 16) {
+            STRUCT(RenderObject/*, .mAlignment = 16*/) {
                 PUBLIC(
                     (const scene::Model*, mModel, nullptr)
                     (float, mDepth, 0.0F)
@@ -236,7 +237,7 @@ void recordCommandBuffer(
 )");
         }
         
-        STRUCT(DrawInstance, .mAlignment = 32) {
+        STRUCT(DrawInstance/*, .mAlignment = 32*/) {
             PUBLIC(
                 (const scene::SubModel*, mSubModel, nullptr)
                 (uint32_t, mPriority, 0)
@@ -269,12 +270,13 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
                 (RenderInstancingQueue, mOpaqueInstancingQueue, _)
                 (RenderInstancingQueue, mTransparentInstancingQueue, _)
                 (SceneFlags, mSceneFlags, SceneFlags::NONE)
+                (uint32_t, mLayoutPassID, 0xFFFFFFFF)
                 //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
                 //(ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
                 //(ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
                 //((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
             );
-            CNTR(mSceneFlags);
+            CNTR(mSceneFlags, mLayoutPassID);
             MEMBER_FUNCTIONS(R"(
 void sort();
 )");
@@ -412,6 +414,7 @@ void destroy();
             INHERITS(Pipeline);
             PUBLIC(
                 (boost::container::pmr::unsynchronized_pool_resource, mUnsyncPool, _)
+                //(boost::container::pmr::synchronized_pool_resource, mSyncPool, _)
                 (gfx::Device*, mDevice, nullptr)
                 (gfx::Swapchain*, mSwapchain, nullptr)
                 (MacroRecord, mMacros, _)
