@@ -45,6 +45,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXBuffer.h"
 #include "cocos/renderer/gfx-base/GFXTexture.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
+#include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 #include "cocos/math/Geometry.h"
@@ -131,6 +132,53 @@ bool checkResource(const ResourceDesc &desc) const;
             );
         }
 
+        STRUCT(RasterSubpass) {
+            PUBLIC(
+                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+            );
+        }
+
+        PMR_GRAPH(SubpassGraph, _, _) {
+            NAMED_GRAPH(Name_);
+            COMPONENT_GRAPH(
+                (Name_, ccstd::pmr::string, mNames)
+                (Subpass_, RasterSubpass, mSubpasses)
+            );
+        }
+
+        STRUCT(RasterPass, .mFlags = EQUAL | HASH_COMBINE) {
+            PUBLIC(
+                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                (SubpassGraph, mSubpassGraph, _)
+                (uint32_t, mWidth, 0)
+                (uint32_t, mHeight, 0)
+                (gfx::Viewport, mViewport, _)
+                (ccstd::pmr::string, mVersionName, _)
+                (uint64_t, mVersion, 0)
+                (bool, mShowStatistics, false)
+            );
+            MEMBER_FLAGS(mViewport, NOT_ELEMENT);
+            MEMBER_FLAGS(mVersion, NOT_ELEMENT);
+            MEMBER_FLAGS(mShowStatistics, NOT_ELEMENT);
+        }
+                
+        STRUCT(PersistentRenderPassAndFramebuffer) {
+            PUBLIC(
+                (IntrusivePtr<gfx::RenderPass>, mRenderPass, _)
+                (IntrusivePtr<gfx::Framebuffer>, mFramebuffer, _)
+                (ccstd::pmr::vector<gfx::Color>, mClearColors, _)
+                (float, mClearDepth, 0)
+                (uint8_t, mClearStencil, 0)
+                (int32_t, mRefCount, 1)
+                (uint32_t, mHash, 0)
+                (uint64_t, mVersion, 0)
+            );
+            CNTR_NO_DEFAULT(mRenderPass, mFramebuffer);
+        }
+        PROJECT_TS(IntrusivePtr<gfx::RenderPass>, RenderPass);
+
         TAGS((_), Managed_, ManagedBuffer_, ManagedTexture_, PersistentBuffer_, PersistentTexture_,
             Framebuffer_, Swapchain_, Sampler_);
 
@@ -154,6 +202,7 @@ bool checkResource(const ResourceDesc &desc) const;
                 (Swapchain_, RenderSwapchain, mSwapchains)
             );
             PUBLIC(
+                ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
                 (uint64_t, mNextFenceValue, 0)
                 (uint64_t, mVersion, 0)
             );
@@ -164,6 +213,10 @@ gfx::Texture* getTexture(vertex_descriptor resID);
 )");
         }
 
+        PROJECT_TS(
+            (ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>),
+            (Map<string, PersistentRenderPassAndFramebuffer>)
+        );
         PROJECT_TS(IntrusivePtr<gfx::Buffer>, Buffer);
         PROJECT_TS(IntrusivePtr<gfx::Texture>, Texture);
         PROJECT_TS(IntrusivePtr<gfx::Framebuffer>, Framebuffer);
@@ -198,37 +251,6 @@ gfx::Texture* getTexture(vertex_descriptor resID);
         //        (ccstd::pmr::string, mValue, "")
         //    );
         //}
-        STRUCT(RasterSubpass) {
-            PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
-                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
-            );
-        }
-
-        PMR_GRAPH(SubpassGraph, _, _) {
-            NAMED_GRAPH(Name_);
-            COMPONENT_GRAPH(
-                (Name_, ccstd::pmr::string, mNames)
-                (Subpass_, RasterSubpass, mSubpasses)
-            );
-        }
-
-        STRUCT(RasterPass, .mFlags = EQUAL | HASH_COMBINE) {
-            PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
-                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
-                (SubpassGraph, mSubpassGraph, _)
-                (uint32_t, mWidth, 0)
-                (uint32_t, mHeight, 0)
-                (gfx::Viewport, mViewport, _)
-                (ccstd::pmr::string, mVersionName, _)
-                (uint64_t, mVersion, 0)
-                (bool, mShowStatistics, false)
-            );
-            MEMBER_FLAGS(mViewport, NOT_ELEMENT);
-            MEMBER_FLAGS(mShowStatistics, NOT_ELEMENT);
-            MEMBER_FLAGS(mVersion, NOT_ELEMENT);
-        }
 
         STRUCT(ComputePass) {
             PUBLIC(
