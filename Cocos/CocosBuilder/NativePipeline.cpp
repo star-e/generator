@@ -363,7 +363,6 @@ gfx::Buffer* createFromCpuBuffer();
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
                 (std::unique_ptr<gfx::DefaultResource>, mDefaultResource, _)
-                ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
                 (QuadResource, mFullscreenQuad, _)

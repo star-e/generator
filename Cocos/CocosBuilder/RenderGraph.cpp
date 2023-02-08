@@ -95,6 +95,7 @@ bool hasSideEffects() const noexcept {
                 ([[optional]] gfx::Swapchain*, mSwapchain, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
+                (uint32_t, mGeneration, 0xFFFFFFFF)
             );
             TS_INIT(mSwapchain, null);
             CNTR_NO_DEFAULT(mSwapchain);
@@ -160,10 +161,11 @@ bool checkResource(const ResourceDesc &desc) const;
                 (bool, mShowStatistics, false)
             );
             MEMBER_FLAGS(mViewport, NOT_ELEMENT);
+            MEMBER_FLAGS(mVersionName, NOT_ELEMENT);
             MEMBER_FLAGS(mVersion, NOT_ELEMENT);
             MEMBER_FLAGS(mShowStatistics, NOT_ELEMENT);
         }
-                
+
         STRUCT(PersistentRenderPassAndFramebuffer) {
             PUBLIC(
                 (IntrusivePtr<gfx::RenderPass>, mRenderPass, _)
@@ -171,9 +173,6 @@ bool checkResource(const ResourceDesc &desc) const;
                 (ccstd::pmr::vector<gfx::Color>, mClearColors, _)
                 (float, mClearDepth, 0)
                 (uint8_t, mClearStencil, 0)
-                (int32_t, mRefCount, 1)
-                (uint32_t, mHash, 0)
-                (uint64_t, mVersion, 0)
             );
             CNTR_NO_DEFAULT(mRenderPass, mFramebuffer);
         }
@@ -182,7 +181,7 @@ bool checkResource(const ResourceDesc &desc) const;
         TAGS((_), Managed_, ManagedBuffer_, ManagedTexture_, PersistentBuffer_, PersistentTexture_,
             Framebuffer_, Swapchain_, Sampler_);
 
-        PMR_GRAPH(ResourceGraph, _, _) {
+        PMR_GRAPH(ResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             NAMED_GRAPH(Name_);
             COMPONENT_GRAPH(
                 (Name_, ccstd::pmr::string, mNames)
@@ -207,9 +206,11 @@ bool checkResource(const ResourceDesc &desc) const;
                 (uint64_t, mVersion, 0)
             );
             MEMBER_FUNCTIONS(R"(
+void validateSwapchains();
 void mount(gfx::Device* device, vertex_descriptor vertID);
 void unmount(uint64_t completedFenceValue);
 gfx::Texture* getTexture(vertex_descriptor resID);
+void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 )");
         }
 
