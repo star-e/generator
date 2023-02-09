@@ -414,6 +414,7 @@ void destroy();
                 (NativeRenderContext, mNativeContext, _)
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
+                (PipelineStatistics, mStatistics, _)
             );
             MEMBER_FUNCTIONS(R"(
 void executeRenderGraph(const RenderGraph& rg);

@@ -292,6 +292,22 @@ bool isWrite() const {
                 mTargetFirstSlice, mTargetPlaneSlice);
         }
 
+        STRUCT(PipelineStatistics) {
+            PUBLIC(
+                (uint32_t, mNumRenderPasses, 0)
+                (uint32_t, mNumManagedTextures, 0)
+                (uint32_t, mTotalManagedTextures, 0)
+                (uint32_t, mNumUploadBuffers, 0)
+                (uint32_t, mNumUploadBufferViews, 0)
+                (uint32_t, mNumFreeUploadBuffers, 0)
+                (uint32_t, mNumFreeUploadBufferViews, 0)
+                (uint32_t, mNumDescriptorSets, 0)
+                (uint32_t, mNumFreeDescriptorSets, 0)
+                (uint32_t, mNumInstancingBuffers, 0)
+                (uint32_t, mNumInstancingUniformBlocks, 0)
+            );
+        }
+
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     } // module CoreRender
