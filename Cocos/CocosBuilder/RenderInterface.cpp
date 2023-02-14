@@ -66,6 +66,10 @@ using namespace cc;
 using namespace cc::render;
 )",
         .mToJsConfigs = R"(%module_macro(CC_USE_GEOMETRY_RENDERER) cc::render::PipelineRuntime::geometryRenderer;
+
+// ----- Release Returned Cpp Object in GC Section ------
+%release_returned_cpp_object_in_gc(cc::render::Pipeline::addRasterPass);
+%release_returned_cpp_object_in_gc(cc::render::RasterPassBuilder::addQueue);
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
