@@ -291,9 +291,9 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
         STRUCT(RenderQueue) {
             PUBLIC(
                 (QueueHint, mHint, QueueHint::RENDER_OPAQUE)
+                (uint32_t, mPhaseID, 0xFFFFFFFF)
             );
-            TS_INIT(mHint, QueueHint.RENDER_OPAQUE);
-            CNTR(mHint);
+            CNTR(mHint, mPhaseID);
         }
 
         STRUCT(SceneData) {

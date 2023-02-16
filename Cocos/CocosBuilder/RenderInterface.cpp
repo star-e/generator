@@ -191,7 +191,7 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
             PUBLIC_METHODS(R"(
 virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
-virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
@@ -211,7 +211,7 @@ virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX
             PUBLIC_METHODS(R"(
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueueBuilder *addQueue() = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
 )");
         }
 
