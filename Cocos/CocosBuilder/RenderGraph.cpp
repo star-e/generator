@@ -309,12 +309,13 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
         STRUCT(Dispatch) {
             PUBLIC(
-                (ccstd::pmr::string, mShader, _)
+                ([[optional]] IntrusivePtr<cc::Material>, mMaterial, _)
+                (uint32_t, mPassID, 0)
                 (uint32_t, mThreadGroupCountX, 0)
                 (uint32_t, mThreadGroupCountY, 0)
                 (uint32_t, mThreadGroupCountZ, 0)
             );
-            CNTR(mShader, mThreadGroupCountX, mThreadGroupCountY, mThreadGroupCountZ);
+            CNTR_NO_DEFAULT(mMaterial, mPassID, mThreadGroupCountX, mThreadGroupCountY, mThreadGroupCountZ);
         }
 
         STRUCT(Blit) {

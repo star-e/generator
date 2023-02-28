@@ -202,7 +202,7 @@ virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
         INTERFACE(ComputeQueueBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addDispatch(const ccstd::string& shader, uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
+virtual void addDispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, cc::Material *material = nullptr, uint32_t passID = 0) = 0;
 )");
         }
 
