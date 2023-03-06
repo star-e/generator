@@ -429,8 +429,10 @@ public:
             INHERITS(ProgramProxy);
             PUBLIC(
                 (IntrusivePtr<gfx::Shader>, mShader, _)
+                (IntrusivePtr<gfx::PipelineState>, mPipelineState, _)
             );
             CNTR(mShader);
+            CNTR(mShader, mPipelineState);
         }
 
         STRUCT(NativeRenderingModule) {
