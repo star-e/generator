@@ -4013,7 +4013,7 @@ void outputVectorGraphSave(std::ostream& oss, std::pmr::string& space,
     if (!s.mComponents.empty()) {
         for (const auto& c : s.mComponents) {
             auto tagVar = getTagVariableName(c.mName, scratch);
-            OSS << "const auto " << tagVar << "Map = get(Graph::" << convertTag(c.mName) << ", g);\n";
+            OSS << "const auto " << tagVar << "Map = get(Graph::" << convertTag(c.mName) << "Tag{}, g);\n";
         }
     }
     OSS << "for (const auto& v : makeRange(vertices(g))) {\n";
@@ -4089,7 +4089,7 @@ void outputVectorGraphLoad(std::ostream& oss, std::pmr::string& space,
     if (!s.mComponents.empty()) {
         for (const auto& c : s.mComponents) {
             auto tagVar = getTagVariableName(c.mName, scratch);
-            OSS << "const auto " << tagVar << "Map = get(Graph::" << convertTag(c.mName) << ", g);\n";
+            OSS << "const auto " << tagVar << "Map = get(Graph::" << convertTag(c.mName) << "Tag{}, g);\n";
         }
     }
     OSS << "for (SizeT v = 0; v != numVertices; ++v) {\n";

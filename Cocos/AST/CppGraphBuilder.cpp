@@ -1640,8 +1640,11 @@ std::pmr::string CppGraphBuilder::generateTags_h() const {
     oss << "\n";
     int count = 0;
     for (const auto& c : s.mComponents) {
-        OSS << "struct " << getTagType(c.mName) << " {\n";
-        OSS << "} static constexpr " << convertTag(c.mName) << "{}; // NOLINT\n";
+        if (false) {
+            OSS << "struct " << getTagType(c.mName) << " {\n";
+            OSS << "} static constexpr " << convertTag(c.mName) << "{}; // NOLINT\n";
+        }
+        OSS << "struct " << getTagType(c.mName) << " {};\n";
         ++count;
     }
     oss << "\n";

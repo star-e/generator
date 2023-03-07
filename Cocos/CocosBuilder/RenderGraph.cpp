@@ -133,7 +133,7 @@ bool checkResource(const ResourceDesc &desc) const;
             );
         }
 
-        STRUCT(RasterSubpass) {
+        STRUCT(Subpass) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
@@ -144,7 +144,21 @@ bool checkResource(const ResourceDesc &desc) const;
             NAMED_GRAPH(Name_);
             COMPONENT_GRAPH(
                 (Name_, ccstd::pmr::string, mNames)
-                (Subpass_, RasterSubpass, mSubpasses)
+                (Subpass_, Subpass, mSubpasses)
+            );
+        }
+
+        STRUCT(RasterSubpass) {
+            PUBLIC(
+                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+            );
+        }
+
+        STRUCT(ComputeSubpass) {
+            PUBLIC(
+                ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
@@ -364,6 +378,8 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
             POLYMORPHIC_GRAPH(
                 (Raster_, RasterPass, mRasterPasses)
+                //(RasterSubpass_, RasterSubpass, mRasterSubpasses)
+                //(ComputeSubpass_, ComputeSubpass, mComputeSubpasses)
                 (Compute_, ComputePass, mComputePasses)
                 (Copy_, CopyPass, mCopyPasses)
                 (Move_, MovePass, mMovePasses)

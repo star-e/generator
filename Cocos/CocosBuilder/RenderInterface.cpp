@@ -186,14 +186,13 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 )");
         }
 
-        INTERFACE(RasterPassBuilder) {
+        INTERFACE(RasterSubpassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
-virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 )");
@@ -203,6 +202,31 @@ virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addDispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, cc::Material *material = nullptr, uint32_t passID = 0) = 0;
+)");
+        }
+
+        INTERFACE(ComputeSubpassBuilder) {
+            INHERITS(Setter);
+            PUBLIC_METHODS(R"(
+virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
+virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
+)");
+        }
+
+        INTERFACE(RasterPassBuilder) {
+            INHERITS(Setter);
+            PUBLIC_METHODS(R"(
+virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
+virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
+virtual RasterSubpassBuilder *addRasterSubpass(const ccstd::string& layoutName = "") = 0;
+virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName = "") = 0;
+virtual void setViewport(const gfx::Viewport &viewport) = 0;
+virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
+[[getter]] virtual bool getShowStatistics() const = 0;
+[[setter]] virtual void setShowStatistics(bool enable) = 0;
 )");
         }
 
