@@ -68,7 +68,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             ENUMS(CONSTANTS, CBV, UAV, SRV, TABLE, SSV);
         }
 
-        TAGS((_), Raster_, Compute_, Copy_, Move_, Raytrace_);
+        TAGS((_), Raster_, RasterSubpass_, ComputeSubpass_, Compute_, Copy_, Move_, Raytrace_);
 
         ENUM_CLASS(ResourceResidency) {
             ENUMS(MANAGED, MEMORYLESS, PERSISTENT, EXTERNAL, BACKBUFFER);

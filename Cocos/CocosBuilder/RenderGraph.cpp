@@ -365,8 +365,8 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
             POLYMORPHIC_GRAPH(
                 (Raster_, RasterPass, mRasterPasses)
-                //(RasterSubpass_, RasterSubpass, mRasterSubpasses)
-                //(ComputeSubpass_, ComputeSubpass, mComputeSubpasses)
+                (RasterSubpass_, RasterSubpass, mRasterSubpasses)
+                (ComputeSubpass_, ComputeSubpass, mComputeSubpasses)
                 (Compute_, ComputePass, mComputePasses)
                 (Copy_, CopyPass, mCopyPasses)
                 (Move_, MovePass, mMovePasses)
