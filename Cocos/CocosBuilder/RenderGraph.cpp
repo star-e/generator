@@ -152,6 +152,7 @@ bool checkResource(const ResourceDesc &desc) const;
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                (gfx::Viewport, mViewport, _)
                 (bool, mShowStatistics, false)
             );
         }

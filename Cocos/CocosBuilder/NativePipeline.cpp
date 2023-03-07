@@ -67,6 +67,30 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             CNTR(mPipelineRuntime, mRenderGraph, mQueueID, mLayoutGraph);
         }
 
+        STRUCT(NativeRasterSubpassBuilder) {
+            INHERITS(RasterSubpassBuilder);
+            PUBLIC(
+                (const PipelineRuntime*, mPipelineRuntime, nullptr)
+                (RenderGraph*, mRenderGraph, nullptr)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
+                (uint32_t, mSubpassID, RenderGraph::null_vertex())
+                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
+            );
+            CNTR(mPipelineRuntime, mRenderGraph, mSubpassID, mLayoutGraph, mLayoutID);
+        }
+
+        STRUCT(NativeComputeSubpassBuilder) {
+            INHERITS(ComputeSubpassBuilder);
+            PUBLIC(
+                (const PipelineRuntime*, mPipelineRuntime, nullptr)
+                (RenderGraph*, mRenderGraph, nullptr)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
+                (uint32_t, mSubpassID, RenderGraph::null_vertex())
+                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
+            );
+            CNTR(mPipelineRuntime, mRenderGraph, mSubpassID, mLayoutGraph, mLayoutID);
+        }
+
         STRUCT(NativeRasterPassBuilder) {
             INHERITS(RasterPassBuilder);
             PUBLIC(
