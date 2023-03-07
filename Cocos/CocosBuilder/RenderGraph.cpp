@@ -292,7 +292,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             );
         }
 
-        TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Present_, Clear_, Viewport_);
+        TAGS((_), Queue_, Scene_, Dispatch_, Blit_, Clear_, Viewport_);
 
         STRUCT(ClearView, .mFlags = PMR_DEFAULT) {
             PUBLIC(
@@ -343,20 +343,6 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             CNTR_NO_DEFAULT(mMaterial, mPassID, mSceneFlags, mCamera);
         }
 
-        STRUCT(Present) {
-            PUBLIC(
-                (uint32_t, mSyncInterval, 0)
-                (uint32_t, mFlags, 0)
-            );
-            CNTR(mSyncInterval, mFlags);
-        }
-
-        STRUCT(PresentPass) {
-            PUBLIC(
-                ((PmrTransparentMap<ccstd::pmr::string, Present>), mPresents, _)
-            );
-        }
-
         STRUCT(RenderData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((PmrUnorderedMap<uint32_t, ccstd::pmr::vector<char>>), mConstants, _)
@@ -384,7 +370,6 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (Compute_, ComputePass, mComputePasses)
                 (Copy_, CopyPass, mCopyPasses)
                 (Move_, MovePass, mMovePasses)
-                (Present_, PresentPass, mPresentPasses)
                 (Raytrace_, RaytracePass, mRaytracePasses)
                 (Queue_, RenderQueue, mRenderQueues)
                 (Scene_, SceneData, mScenes)
