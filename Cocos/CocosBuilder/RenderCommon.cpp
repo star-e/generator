@@ -130,7 +130,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
 
         // RenderGraph
         ENUM_CLASS(AttachmentType) {
-            ENUMS(RENDER_TARGET, DEPTH_STENCIL);
+            ENUMS(RENDER_TARGET, DEPTH_STENCIL, SHADING_RATE);
         }
         ENUM_CLASS(AccessType) {
             ENUMS(READ, READ_WRITE, WRITE);
