@@ -310,6 +310,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (uint32_t, mPhaseID, 0xFFFFFFFF)
             );
             CNTR(mHint, mPhaseID);
+            CNTR(mPhaseID);
         }
 
         STRUCT(SceneData) {
