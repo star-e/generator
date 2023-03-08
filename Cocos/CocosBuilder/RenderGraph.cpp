@@ -148,20 +148,24 @@ bool checkResource(const ResourceDesc &desc) const;
             );
         }
 
-        STRUCT(RasterSubpass) {
+        STRUCT(RasterSubpass, .mFlags = NO_DEFAULT_CNTR) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                (uint32_t, mSubpassID, 0xFFFFFFFF)
                 (gfx::Viewport, mViewport, _)
                 (bool, mShowStatistics, false)
             );
+            CNTR_NO_DEFAULT(mSubpassID);
         }
 
-        STRUCT(ComputeSubpass) {
+        STRUCT(ComputeSubpass, .mFlags = NO_DEFAULT_CNTR) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                (uint32_t, mSubpassID, 0xFFFFFFFF)
             );
+            CNTR_NO_DEFAULT(mSubpassID);
         }
 
         STRUCT(RasterPass, .mFlags = EQUAL | HASH_COMBINE) {
