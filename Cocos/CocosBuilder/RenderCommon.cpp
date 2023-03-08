@@ -136,7 +136,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             ENUMS(READ, READ_WRITE, WRITE);
         }
 
-        STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT) {
+        STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mSlotName, _)
                 (AccessType, mAccessType, AccessType::WRITE)
@@ -160,7 +160,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             ENUMS(FLOAT_TYPE, INT_TYPE);
         }
 
-        STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT) {
+        STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
                 (AccessType, mAccessType, AccessType::READ)
@@ -181,7 +181,7 @@ bool isWrite() const {
             CNTR(mName, mAccessType, mClearFlags, mClearColor, mClearValueType);
         }
 
-        STRUCT(LightInfo, .mFlags = JSB) {
+        STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<scene::Light>, mLight, _)
                 (uint32_t, mLevel, 0)
@@ -259,7 +259,7 @@ bool isWrite() const {
         }
 
         // RenderGraph
-        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB) {
+        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mSource, _)
                 (ccstd::pmr::string, mTarget, _)
@@ -277,7 +277,7 @@ bool isWrite() const {
                 mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
         }
 
-        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB) {
+        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mSource, _)
                 (ccstd::pmr::string, mTarget, _)

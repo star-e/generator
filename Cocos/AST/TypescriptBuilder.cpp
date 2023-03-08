@@ -125,7 +125,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             oss << " {\n";
             {
                 INDENT();
-                if (traits.mFlags & POOL_OBJECT) {
+                if (false && (traits.mFlags & POOL_OBJECT)) {
                     OSS << "private static _pool: " << name << "[] = [];\n";
                     OSS << "static create (): " << name << " {\n";
                     {
@@ -136,7 +136,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                         OSS << "return new " << name << "();\n";
                     }
                     OSS << "}\n";
-                    OSS << "disassemble (): void {\b";
+                    OSS << "disassemble (): void {\n";
                     {
                         INDENT();
                         outputDisassembleMembers(oss, space, builder, g, vertID, s.mMembers, scratch);

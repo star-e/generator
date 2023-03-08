@@ -1827,6 +1827,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
     auto* scratch = mScratch;
     const auto& g = *this;
     const auto& ts = get(g.typescripts, g, vertID);
+    const auto& traits = get(g.traits, g, vertID);
 
     if (!tsDefaultValue.empty())
         return std::pmr::string(tsDefaultValue, scratch);
@@ -1888,9 +1889,14 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
         } else if (ts.mName == "BigUint64Array") {
             oss << "new BigUint64Array(" << initial << ")";
         } else {
-            oss << "new ";
-            oss << g.getTypescriptTypename(vertID, scratch, scratch);
-            oss << "(" << initial << ")";
+            if (traits.mFlags & POOL_OBJECT) {
+                oss << g.getTypescriptTypename(vertID, scratch, scratch)
+                    << ".create()";
+            } else {
+                oss << "new ";
+                oss << g.getTypescriptTypename(vertID, scratch, scratch);
+                oss << "(" << initial << ")";
+            }
         }
     };
 

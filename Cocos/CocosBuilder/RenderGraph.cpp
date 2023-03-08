@@ -57,7 +57,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        STRUCT(ResourceDesc) {
+        STRUCT(ResourceDesc, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 (ResourceDimension, mDimension, _)
                 (uint32_t, mAlignment, 0)
@@ -76,7 +76,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
             TS_INIT(mFlags, ResourceFlags.NONE);
         }
 
-        STRUCT(ResourceTraits) {
+        STRUCT(ResourceTraits, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 (ResourceResidency, mResidency, _)
             );
@@ -90,25 +90,24 @@ bool hasSideEffects() const noexcept {
 )");
         }
 
-        STRUCT(RenderSwapchain) {
+        STRUCT(RenderSwapchain, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 ([[optional]] gfx::Swapchain*, mSwapchain, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
                 (uint32_t, mGeneration, 0xFFFFFFFF)
             );
-            TS_INIT(mSwapchain, null);
-            CNTR_NO_DEFAULT(mSwapchain);
+            CNTR(mSwapchain);
         }
 
-        STRUCT(ResourceStates) {
+        STRUCT(ResourceStates, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 (gfx::AccessFlagBit, mStates, gfx::AccessFlagBit::NONE)
             );
             TS_INIT(mStates, AccessFlagBit.NONE);
         }
 
-        STRUCT(ManagedBuffer) {
+        STRUCT(ManagedBuffer, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
                 (uint64_t, mFenceValue, 0)
@@ -116,7 +115,7 @@ bool hasSideEffects() const noexcept {
             CNTR(mBuffer);
         }
 
-        STRUCT(ManagedTexture) {
+        STRUCT(ManagedTexture, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<gfx::Texture>, mTexture, _)
                 (uint64_t, mFenceValue, 0)
@@ -127,7 +126,7 @@ bool checkResource(const ResourceDesc &desc) const;
 )");
         }
 
-        STRUCT(ManagedResource) {
+        STRUCT(ManagedResource, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 (uint32_t, mUnused, 0)
             );

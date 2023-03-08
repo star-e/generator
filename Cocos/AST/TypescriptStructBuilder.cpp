@@ -56,11 +56,21 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
         if (g.isPoolObject(memberID)) {
             if (g.isInstantiation(memberID)) {
                 OSS << "// disassemble container\n";
+            } else {
+                OSS << "// this." << g.getMemberName(m.mMemberName, m.mPublic)
+                    << " is value object, do not disassemble\n";
             }
         } else {
             if (g.isTypescriptValueType(memberID)) {
-                oss << builder.getTypedMemberName(m, m.mPublic);
+                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic);
                 oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n"; 
+            } else {
+                if (m.mTypescriptOptional) {
+                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << " = null;\n";
+                } else {
+                    OSS << "// this." << g.getMemberName(m.mMemberName, m.mPublic)
+                        << " is object, should initialize\n";
+                }
             }
         }
     }
