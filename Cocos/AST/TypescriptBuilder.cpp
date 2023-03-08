@@ -125,6 +125,25 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             oss << " {\n";
             {
                 INDENT();
+                if (traits.mFlags & POOL_OBJECT) {
+                    OSS << "private static _pool: " << name << "[] = [];\n";
+                    OSS << "static create (): " << name << " {\n";
+                    {
+                        INDENT();
+                        OSS << "if (" << name << "._pool.length) {\n";
+                        OSS << "    return " << name << "._pool.pop()!;\n";
+                        OSS << "}\n";
+                        OSS << "return new " << name << "();\n";
+                    }
+                    OSS << "}\n";
+                    OSS << "disassemble (): void {\b";
+                    {
+                        INDENT();
+                        outputDisassembleMembers(oss, space, builder, g, vertID, s.mMembers, scratch);
+                        OSS << name << "._pool.push(this);\n";
+                    }
+                    OSS << "}\n";
+                }
                 outputMembers(oss, space, builder, g, vertID,
                     inherits.mBases, s.mMembers,
                     s.mTypescriptFunctions, s.mConstructors, s.mMethods, scratch);

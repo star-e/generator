@@ -32,6 +32,40 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
+    const ModuleBuilder& builder,
+    const SyntaxGraph& g,
+    const SyntaxGraph::vertex_descriptor vertID,
+    const std::pmr::vector<Member>& members,
+    std::pmr::memory_resource* scratch) {
+    const auto& traits = get(g.traits, g, vertID);
+    const int maxParams = 4;
+    const auto& name = g.getTypescriptTypename(vertID, scratch, scratch);
+
+    for (const auto& m : members) {
+        if (m.mFlags & IMPL_DETAIL)
+            continue;
+
+        auto path = m.mTypePath;
+        Expects(!path.empty());
+        Expects(path.front() == '/');
+        Expects(validateTypename(path));
+        auto memberID = locate(path, g);
+        Ensures(memberID != g.null_vertex());
+
+        if (g.isPoolObject(memberID)) {
+            if (g.isInstantiation(memberID)) {
+                OSS << "// disassemble container\n";
+            }
+        } else {
+            if (g.isTypescriptValueType(memberID)) {
+                oss << builder.getTypedMemberName(m, m.mPublic);
+                oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n"; 
+            }
+        }
+    }
+}
+
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const SyntaxGraph& g,

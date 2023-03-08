@@ -57,6 +57,7 @@ enum GenerationFlags : uint64_t {
     DECORATOR = 1 << 20,
     NOT_ELEMENT = 1 << 21,
     STRING_KEY = 1 << 22,
+    POOL_OBJECT = 1 << 23,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -1120,6 +1121,7 @@ struct SyntaxGraph {
     bool isUtf8(vertex_descriptor vertID) const noexcept;
     bool isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept;
     bool isOptional(vertex_descriptor vertID) const noexcept;
+    bool isPoolObject(vertex_descriptor vertID) const noexcept;
     bool isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
     bool isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
 

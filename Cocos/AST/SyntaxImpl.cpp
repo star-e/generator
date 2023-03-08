@@ -307,6 +307,79 @@ bool SyntaxGraph::isOptional(vertex_descriptor vertID) const noexcept {
     return false;
 }
 
+bool SyntaxGraph::isPoolObject(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+    if (traits.mFlags & POOL_OBJECT)
+        return true;
+
+    auto checkStruct = [&](const Composition_ auto& s) {
+        bool bPoolObject = false;
+        for (const auto& m : s.mMembers) {
+            auto memberID = locate(m.mTypePath, g);
+            if (memberID == vertID)
+                continue;
+
+            if (m.mPointer || m.mReference) {
+                Expects(false);
+                continue;
+            }
+
+            if (g.isPoolObject(memberID)) {
+                bPoolObject = true;   
+            }
+        }
+        return bPoolObject;
+    };
+
+    return visit_vertex(
+        vertID, g,
+        [&](const Struct& s) {
+            return checkStruct(s);
+        },
+        [&](const Graph& s) {
+            bool bPoolObject = checkStruct(s);
+            for (const auto& c : s.mComponents) {
+                auto componentID = locate(c.mValuePath, g);
+                Expects(componentID != vertID);
+                if (g.isPoolObject(componentID))
+                    bPoolObject = true;
+            }
+            for (const auto& c : s.mPolymorphic.mConcepts) {
+                auto objectID = locate(c.mValue, g);
+                Expects(objectID != vertID);
+                if (g.isPoolObject(objectID))
+                    bPoolObject = true;
+            }
+            return bPoolObject;
+        },
+        [&](const Instance& s) {
+            const auto optionalID = locate("/std/optional", g);
+            auto templateID = locate(s.mTemplate, g);
+
+            if (s.mTemplate == "/std/shared_ptr"
+                || s.mTemplate == "/std/weak_ptr")
+                return false;
+
+            if (templateID == optionalID) {
+                Expects(s.mParameters.size() == 1);
+                auto parameterID = locate(s.mParameters.front(), g);
+                return g.isPoolObject(parameterID);
+            }
+
+            for (const auto& typePath : s.mParameters) {
+                auto paramID = locate(typePath, g);
+                if (g.isPoolObject(paramID)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
 bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept {
     const auto& g = *this;
     const auto& modulePath = get(g.modulePaths, g, vertID);

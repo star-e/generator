@@ -37,6 +37,13 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch);
 
+void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
+    const ModuleBuilder& builder,
+    const SyntaxGraph& g,
+    const SyntaxGraph::vertex_descriptor vertID,
+    const std::pmr::vector<Member>& members,
+    std::pmr::memory_resource* scratch);
+
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const SyntaxGraph& g,
