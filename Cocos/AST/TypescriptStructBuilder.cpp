@@ -32,6 +32,55 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+void outputContainer(std::ostream& oss, std::pmr::string& space,
+    SyntaxGraph::vertex_descriptor paramID,
+    const SyntaxGraph& g,
+    int level) {
+    if (g.isTypescriptMap(paramID)) {
+        OSS << "for (const [k" << level << ", v" << level << " of ";
+        if (level == 1) {
+            oss << "v";
+        } else {
+            oss << "v" << level - 1;
+        }
+        oss << ") {\n";
+        {
+            INDENT();
+            const auto& inst = get<Instance>(paramID, g);
+            const auto& paramPath = inst.mParameters.at(1);
+            const auto paramID = locate(paramPath, g);
+            if (g.isInstantiation(paramID)) {
+                outputContainer(oss, space, paramID, g, level + 1);
+            } else {
+                OSS << "v" << level << ".disassemble();\n";
+            }
+        }
+        OSS << "}\n";
+    } else if (g.isTypescriptArray(paramID, g.get_allocator().resource())) {
+        OSS << "for (const v" << level << " of ";
+        if (level == 1) {
+            oss << "v";
+        } else {
+            oss << "v" << level - 1;
+        }
+        oss << ") {\n";
+        {
+            INDENT();
+            const auto& inst = get<Instance>(paramID, g);
+            const auto& paramPath = inst.mParameters.at(0);
+            const auto paramID = locate(paramPath, g);
+            if (g.isInstantiation(paramID)) {
+                outputContainer(oss, space, paramID, g, level + 1);
+            } else {
+                OSS << "v" << level << ".disassemble();\n";
+            }
+        }
+        OSS << "}\n";
+    } else {
+        Expects(false);
+    }
+}
+
 void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const SyntaxGraph& g,
@@ -53,22 +102,54 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
         auto memberID = locate(path, g);
         Ensures(memberID != g.null_vertex());
 
+        auto memberName = "this." + g.getMemberName(m.mMemberName, m.mPublic);
+
         if (g.isPoolObject(memberID)) {
             if (g.isInstantiation(memberID)) {
-                OSS << "// disassemble container\n";
+                const auto& inst = get<Instance>(memberID, g);
+                if (g.isTypescriptMap(memberID)) {
+                    OSS << "for (const [_, v] of " << memberName << ") {\n";
+                    {
+                        INDENT();
+                        const auto& paramPath = inst.mParameters.at(1);
+                        const auto paramID = locate(paramPath, g);
+                        if (g.isInstantiation(paramID)) {
+                            outputContainer(oss, space, paramID, g, 1);
+                        } else {
+                            OSS << "v.disassemble();\n";
+                        }
+                    }
+                    OSS << "}\n";
+                    OSS << memberName << ".clear();\n";
+                } else if (g.isTypescriptArray(memberID, scratch)) {
+                    OSS << "for (const v of " << memberName << ") {\n";
+                    {
+                        INDENT();
+                        const auto& paramPath = inst.mParameters.at(0);
+                        const auto paramID = locate(paramPath, g);
+                        if (g.isInstantiation(paramID)) {
+                            outputContainer(oss, space, paramID, g, 1);
+                        } else {
+                            OSS << "v.disassemble();\n";
+                        }
+                    }
+                    OSS << "}\n";
+                    OSS << memberName << ".length = 0;\n";
+                } else {
+                    OSS << "// disassemble container\n";
+                }
             } else {
-                OSS << "// this." << g.getMemberName(m.mMemberName, m.mPublic)
-                    << " is value object, do not disassemble\n";
+                OSS << "// " << memberName << " is value object, do not disassemble\n";
             }
         } else {
             if (g.isTypescriptValueType(memberID)) {
-                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic);
+                OSS << memberName;
                 oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n"; 
             } else {
                 if (m.mTypescriptOptional) {
-                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << " = null;\n";
+                    OSS << memberName << " = null;\n";
                 } else {
-                    OSS << "// this." << g.getMemberName(m.mMemberName, m.mPublic)
+                    OSS << "// " << memberName
                         << " is object, should initialize\n";
                 }
             }
@@ -131,7 +212,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
             }
         };
-        OSS << "constructor (";
+        OSS;
+        //if (traits.mFlags & POOL_OBJECT) {
+        //    oss << "private: ";
+        //}
+        oss << "constructor (";
         if (!inherits.empty()) {
             Expects(inherits.size() == 1);
             const auto& base = inherits.front();

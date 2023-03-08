@@ -132,14 +132,14 @@ bool checkResource(const ResourceDesc &desc) const;
             );
         }
 
-        STRUCT(Subpass) {
+        STRUCT(Subpass, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
             );
         }
 
-        PMR_GRAPH(SubpassGraph, _, _) {
+        PMR_GRAPH(SubpassGraph, _, _, .mFlags = POOL_OBJECT) {
             NAMED_GRAPH(Name_);
             COMPONENT_GRAPH(
                 (Name_, ccstd::pmr::string, mNames)
