@@ -76,6 +76,7 @@ using namespace cc::render;
         .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData",
             "Assets", "PassUtils" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
+#include "cocos/core/ArrayBuffer.h"
 
 namespace cc {
 
@@ -165,6 +166,7 @@ virtual void setColor(const ccstd::string& name, const gfx::Color& color) = 0;
 virtual void setVec4(const ccstd::string& name, const cc::Vec4& vec) = 0;
 virtual void setVec2(const ccstd::string& name, const cc::Vec2& vec) = 0;
 virtual void setFloat(const ccstd::string& name, float v) = 0;
+virtual void setArrayBuffer(const ccstd::string& name, const ArrayBuffer* arrayBuffer) = 0;
 
 virtual void setBuffer(const ccstd::string& name, gfx::Buffer* buffer) = 0;
 virtual void setTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
