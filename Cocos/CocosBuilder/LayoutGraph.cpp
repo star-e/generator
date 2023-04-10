@@ -169,7 +169,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 (uint32_t, mUniformBlockCapacity, 0)
                 (uint32_t, mSamplerTextureCapacity, 0)
                 (ccstd::pmr::vector<DescriptorBlockData>, mDescriptorBlocks, _)
-                ((ccstd::pmr::unordered_map<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
+                ((PmrUnorderedMap<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
                 ((PmrFlatMap<NameLocalID, uint32_t>), mBindingMap, _)
             );
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
@@ -230,7 +230,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
         // Descriptor Layout Graph
         STRUCT(RenderStageData, .mFlags = NO_COPY) {
             PUBLIC(
-                ((ccstd::pmr::unordered_map<NameLocalID, gfx::ShaderStageFlagBit>), mDescriptorVisibility, _)
+                ((PmrUnorderedMap<NameLocalID, gfx::ShaderStageFlagBit>), mDescriptorVisibility, _)
             );
         }
 

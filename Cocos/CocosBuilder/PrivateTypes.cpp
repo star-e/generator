@@ -53,7 +53,7 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
                 (gfx::ShaderInfo, mShaderInfo, _)
                 (ccstd::pmr::vector<gfx::Attribute>, mAttributes, _)
                 (ccstd::vector<signed>, mBlockSizes, _)
-                ((Record<ccstd::string, uint32_t>), mHandleMap, _)
+                ((ccstd::unordered_map<ccstd::string, uint32_t>), mHandleMap, _)
             );
             TS_INIT(mHandleMap, {});
             CNTR_NO_DEFAULT(mProgramInfo, mShaderInfo, mAttributes, mBlockSizes, mHandleMap);
