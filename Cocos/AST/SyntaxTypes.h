@@ -1108,6 +1108,7 @@ struct SyntaxGraph {
 
     bool isNamespace(std::string_view typePath) const noexcept;
     bool isInterface(vertex_descriptor vertID) const noexcept;
+    bool isIntrusivePtr(vertex_descriptor vertID) const noexcept;
     bool isValueType(vertex_descriptor vertID) const noexcept;
     bool isInstantiation(vertex_descriptor vertID) const noexcept;
     bool isInstanceDependent(vertex_descriptor vertID) const noexcept;

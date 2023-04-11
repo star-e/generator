@@ -70,6 +70,23 @@ bool SyntaxGraph::isInterface(vertex_descriptor vertID) const noexcept {
     return traits.mInterface;
 }
 
+bool SyntaxGraph::isIntrusivePtr(vertex_descriptor vertID) const noexcept {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    if (g.isInstantiation(vertID)) {
+        auto typePath = g.getTypePath(vertID, scratch);
+        std::pmr::string container(scratch);
+        std::pmr::vector<std::pmr::string> parameters(scratch);
+        extractTemplate(typePath, container, parameters);
+
+        if (container == "/cc/IntrusivePtr") {
+            Expects(parameters.size() == 1);
+            return true;
+        }
+    }
+    return false;
+}
+
 bool SyntaxGraph::isValueType(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     if (holds_tag<Value_>(vertID, g)

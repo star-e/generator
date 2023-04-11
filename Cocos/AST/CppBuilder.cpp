@@ -1184,6 +1184,10 @@ std::pmr::string generateTypes_h(std::string_view projectName,
                                 if (m.mFlags & NOT_ELEMENT) {
                                     continue;
                                 }
+                                const auto memberID = locate(m.mTypePath, g);
+                                if (g.isIntrusivePtr(memberID)) {
+                                    continue;
+                                }
                                 OSS << "hash_combine(seed, val." << m.getMemberName() << ");\n";
                             }
                             OSS << "return seed;\n";
