@@ -8,6 +8,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features);
 void buildLayoutGraph(ModuleBuilder& builder, Features features);
 void buildRenderCommon(ModuleBuilder& builder, Features features);
 void buildRenderGraph(ModuleBuilder& builder, Features features);
+void buildCustomization(ModuleBuilder& builder, Features features);
 
 void buildArchiveInterface(ModuleBuilder& builder, Features features);
 void buildRenderInterface(ModuleBuilder& builder, Features features);

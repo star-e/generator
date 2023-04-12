@@ -1861,6 +1861,17 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
     boost::algorithm::replace_all(initial1, "::", ".");
     boost::algorithm::replace_all(initial1, "/", ".");
 
+    {
+        auto pos = initial1.rfind('.');
+        if (pos != initial1.npos) {
+            Expects(pos != 0);
+            pos = initial1.rfind('.', pos - 1);
+            if (pos != initial1.npos) {
+                initial1 = initial1.substr(pos + 1);
+            }
+        }
+    }
+
     std::string_view initial = initial1;
 
     pmr_ostringstream oss(std::ios_base::out, scratch);

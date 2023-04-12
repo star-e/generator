@@ -36,6 +36,9 @@
     <ClCompile Include="RenderExecutor.cpp">
       <Filter>Examples</Filter>
     </ClCompile>
+    <ClCompile Include="NativeCustomization.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

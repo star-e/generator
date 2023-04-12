@@ -235,6 +235,7 @@
     <ClCompile Include="CocosCommon.cpp" />
     <ClCompile Include="FGDispatcher.cpp" />
     <ClCompile Include="LayoutGraph.cpp" />
+    <ClCompile Include="NativeCustomization.cpp" />
     <ClCompile Include="NativePipeline.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

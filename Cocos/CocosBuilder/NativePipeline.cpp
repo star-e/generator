@@ -36,7 +36,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "InstancedBuffer", "PrivateTypes" },
+        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "Customization", "InstancedBuffer", "PrivateTypes" },
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"

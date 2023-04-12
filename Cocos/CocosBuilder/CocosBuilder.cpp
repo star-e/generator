@@ -65,6 +65,7 @@ int main() {
         buildRenderGraph(builder,
             Fwd | Types | Graphs | Typescripts);
         buildFGDispatcher(builder, Types | Graphs);
+        buildCustomization(builder, Fwd | Types);
 
         // build render compiler (native)
         buildArchiveInterface(builder, Fwd | Types | Typescripts | Interface);
@@ -116,6 +117,7 @@ int main() {
 
         // render graph
         builder.outputModule("RenderGraph", files);
+        builder.outputModule("Customization", files);
         builder.outputModule("ArchiveInterface", files);
         builder.outputModule("RenderInterface", files);
         builder.outputModule("PrivateInterface", files);
