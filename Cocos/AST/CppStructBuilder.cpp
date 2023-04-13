@@ -1517,10 +1517,11 @@ std::pmr::string CppStructBuilder::generateDispatchMethods(const Method& m) cons
     return oss.str();
 }
 
-std::pmr::string CppStructBuilder::generateMethod(const Method& m,
+void CppStructBuilder::generateMethod(
+    std::ostream& oss, std::pmr::string& space,
+    const Method& m,
     bool bOverride, bool bDefaultParam) const {
     auto scratch = get_allocator().resource();
-    pmr_ostringstream oss(std::ios_base::out, scratch);
 
     bool bEnableDefaultParam = false;
 
@@ -1529,10 +1530,18 @@ std::pmr::string CppStructBuilder::generateMethod(const Method& m,
     auto name = get(g.names, g, vertID);
     const auto& traits = get(g.traits, g, vertID);
 
-    if (!bOverride && m.mVirtual) {
-        oss << "virtual ";
+    if (m.mDeprecated) {
+        OSS << "/**\n";
+        OSS << " * @deprecated method will be removed in 3.8.0\n";
+        OSS << " */\n";
     }
 
+    if (!bOverride && m.mVirtual) {
+        OSS << "virtual ";
+    } else {
+        OSS;
+    }
+    
     outputParam(*this, oss, m.mReturnType);
 
     oss << m.mFunctionName << "(";
@@ -1565,7 +1574,6 @@ std::pmr::string CppStructBuilder::generateMethod(const Method& m,
     if (bOverride && m.mVirtual) {
         oss << " override";
     }
-    return oss.str();
 }
 
 }

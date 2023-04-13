@@ -591,7 +591,8 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                         if (count++ == 0) {
                             oss << "\n";
                         }
-                        OSS << cpp.generateMethod(m, true) << ";\n";
+                        cpp.generateMethod(oss, space, m, true);
+                        oss << ";\n";
                     }
 
                     for (const auto& func : s.mMemberFunctions) {
@@ -675,7 +676,8 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             oss << "\n";
         }
         for (const Method& m : s.mMethods) {
-            OSS << cpp.generateMethod(m, false, true) << ";\n";
+            cpp.generateMethod(oss, space, m, false, true);
+            oss << ";\n";
         }
         for (const Method& m : s.mMethods) {
             copyString(oss, space, cpp.generateDispatchMethods(m));

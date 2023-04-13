@@ -371,6 +371,7 @@ struct Method {
     bool mSetter = false;
     bool mOptional = false;
     bool mSkip = false;
+    bool mDeprecated = false;
 };
 
 struct Constructor {

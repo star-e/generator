@@ -133,6 +133,10 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
         method.mOptional = true;
     }
 
+    if (boost::algorithm::contains(function, "[[deprecated]]")) {
+        method.mDeprecated = true;
+    }
+
     // skip attributes
     {
         int count = 0;

@@ -191,8 +191,8 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
         INTERFACE(RasterSubpassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
-virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
+[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
@@ -210,8 +210,8 @@ virtual void addDispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY,
         INTERFACE(ComputeSubpassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
-virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
+[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
 )");
@@ -220,8 +220,8 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
         INTERFACE(RasterPassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
-virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
+[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
 virtual RasterSubpassBuilder *addRasterSubpass(const ccstd::string& layoutName = "") = 0;
 virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName = "") = 0;
@@ -235,7 +235,7 @@ virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
         INTERFACE(ComputePassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
 )");

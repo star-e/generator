@@ -293,6 +293,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         }
         int32_t numParams = static_cast<int32_t>(method.mParameters.size());
         for (; numParams >= 0; --numParams) {
+            if (method.mDeprecated) {
+                OSS << "/**\n";
+                OSS << " * @deprecated method will be removed in 3.8.0\n";
+                OSS << " */\n";
+            }
             OSS;
             if (!method.mPure) {
                 oss << "public ";
