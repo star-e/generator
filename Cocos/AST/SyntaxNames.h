@@ -38,6 +38,7 @@ inline const char* getName(const Namespace& v) noexcept { return "Namespace"; }
 inline const char* getName(const Define& v) noexcept { return "Define"; }
 inline const char* getName(const Concept& v) noexcept { return "Concept"; }
 inline const char* getName(const Constraints& v) noexcept { return "Constraints"; }
+inline const char* getName(const Base& v) noexcept { return "Base"; }
 inline const char* getName(const Inherits& v) noexcept { return "Inherits"; }
 inline const char* getName(const Alias& v) noexcept { return "Alias"; }
 inline const char* getName(const Traits& v) noexcept { return "Traits"; }

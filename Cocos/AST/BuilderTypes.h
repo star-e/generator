@@ -426,7 +426,7 @@ struct ModuleBuilder {
 
     TypeHandle addStruct(std::string_view name, Traits traits = {});
 
-    void addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view name);
+    void addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view name, bool bVirtual = false);
 
     Member& addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
         std::string_view adlPath, std::string_view memberName,

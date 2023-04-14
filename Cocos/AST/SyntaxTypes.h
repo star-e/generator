@@ -168,6 +168,28 @@ struct Constraints {
     std::pmr::vector<std::pmr::string> mConcepts;
 };
 
+struct Base {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mTypePath.get_allocator().resource());
+    }
+
+    Base(const allocator_type& alloc);
+    Base(std::string_view typePath, const allocator_type& alloc);
+    Base(std::string_view typePath, bool virtualBase, const allocator_type& alloc);
+    Base(Base&& rhs, const allocator_type& alloc);
+    Base(Base const& rhs, const allocator_type& alloc);
+
+    Base(Base&& rhs) = default;
+    Base(Base const& rhs) = delete;
+    Base& operator=(Base&& rhs) = default;
+    Base& operator=(Base const& rhs) = default;
+    ~Base() noexcept;
+
+    std::pmr::string mTypePath;
+    bool mVirtualBase = false;
+};
+
 struct Inherits {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
@@ -184,7 +206,7 @@ struct Inherits {
     Inherits& operator=(Inherits const& rhs) = default;
     ~Inherits() noexcept;
 
-    std::pmr::vector<std::pmr::string> mBases;
+    std::pmr::vector<Base> mBases;
 };
 
 struct Alias {
@@ -215,6 +237,7 @@ struct Traits {
     bool mNoexcept = true;
     bool mUnknown = false;
     bool mTrivial = false;
+    bool mFinal = true;
     GenerationFlags mFlags = {};
     uint32_t mAlignment = 0;
 };
@@ -1171,6 +1194,7 @@ struct SyntaxGraph {
     bool hasString(vertex_descriptor vertID) const noexcept;
     bool hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept;
     bool hasHeader(vertex_descriptor vertID) const noexcept;
+    bool hasVirtualInheritance(vertex_descriptor vertID) const noexcept;
     bool hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept;
     bool hasConsecutiveParameters(vertex_descriptor vertID, const Constructor& cntr) const noexcept;
 

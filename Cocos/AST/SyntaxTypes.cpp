@@ -83,6 +83,26 @@ Constraints::Constraints(Constraints const& rhs, const allocator_type& alloc)
 
 Constraints::~Constraints() noexcept = default;
 
+Base::Base(const allocator_type& alloc)
+    : mTypePath(alloc) {}
+
+Base::Base(std::string_view typePath, const allocator_type& alloc)
+    : mTypePath(std::move(typePath), alloc) {}
+
+Base::Base(std::string_view typePath, bool virtualBase, const allocator_type& alloc)
+    : mTypePath(std::move(typePath), alloc)
+    , mVirtualBase(std::move(virtualBase)) {}
+
+Base::Base(Base&& rhs, const allocator_type& alloc)
+    : mTypePath(std::move(rhs.mTypePath), alloc)
+    , mVirtualBase(std::move(rhs.mVirtualBase)) {}
+
+Base::Base(Base const& rhs, const allocator_type& alloc)
+    : mTypePath(rhs.mTypePath, alloc)
+    , mVirtualBase(rhs.mVirtualBase) {}
+
+Base::~Base() noexcept = default;
+
 Inherits::Inherits(const allocator_type& alloc) noexcept
     : mBases(alloc) {}
 

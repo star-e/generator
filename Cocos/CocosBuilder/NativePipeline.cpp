@@ -467,7 +467,7 @@ public:
             CNTR(mProgramLibrary);
         }
 
-        STRUCT(NativeSetter, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
+        STRUCT(NativeSetter, .mFinal = false, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             INHERITS(Setter);
             PUBLIC(
                 (const LayoutGraphData&, mLayoutGraph, _)

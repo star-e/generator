@@ -57,6 +57,7 @@ struct Namespace;
 struct Define;
 struct Concept;
 struct Constraints;
+struct Base;
 struct Inherits;
 struct Alias;
 struct Traits;

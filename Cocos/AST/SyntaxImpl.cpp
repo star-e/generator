@@ -465,7 +465,7 @@ bool SyntaxGraph::hasNoMoveBase(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     const auto& bases = get(g.inherits, g, vertID).mBases;
     for (const auto& base : bases) {
-        auto baseID = locate(base, g);
+        auto baseID = locate(base.mTypePath, g);
         if (g.hasNoMoveBase(baseID)) {
             return true;
         }
@@ -481,7 +481,7 @@ bool SyntaxGraph::hasNoCopyBase(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     const auto& bases = get(g.inherits, g, vertID).mBases;
     for (const auto& base : bases) {
-        auto baseID = locate(base, g);
+        auto baseID = locate(base.mTypePath, g);
         if (g.hasNoCopyBase(baseID)) {
             return true;
         }
@@ -497,7 +497,7 @@ bool SyntaxGraph::hasConcreteBase(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     const auto& bases = get(g.inherits, g, vertID).mBases;
     for (const auto& base : bases) {
-        auto baseID = locate(base, g);
+        auto baseID = locate(base.mTypePath, g);
         if (g.hasConcreteBase(baseID)) {
             return true;
         }
@@ -761,6 +761,28 @@ bool SyntaxGraph::hasHeader(vertex_descriptor vertID) const noexcept {
         });
 }
 
+bool SyntaxGraph::hasVirtualInheritance(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+    const auto& bases = get(g.inherits, g, vertID).mBases;
+
+    bool hasVirtual = false;
+
+    // has special bases
+    for (const auto& base : bases) {
+        const auto baseID = locate(base.mTypePath, g);
+        if (baseID == vertID)
+            continue;
+
+        if (base.mVirtualBase) {
+            hasVirtual = true;
+            break;
+        }
+        hasVirtual |= g.hasVirtualInheritance(baseID);
+    }
+    return hasVirtual;
+}
+
 bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept {
     if (vertID == typeID)
         return true;
@@ -907,11 +929,11 @@ SyntaxGraph::vertex_descriptor SyntaxGraph::getFirstMemberUtf8(vertex_descriptor
 namespace {
 
 void collectBasesImpl(const SyntaxGraph& g,
-    const std::pmr::vector<std::pmr::string>& bases,
+    const std::pmr::vector<Base>& bases,
     std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
     std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
     for (const auto& base : bases) {
-        auto baseID = locate(base, g);
+        auto baseID = locate(base.mTypePath, g);
         auto& childBases = get(g.inherits, g, baseID).mBases;
         collectBasesImpl(g, childBases, baseIDs, results);
         if (!baseIDs.contains(baseID)) {
@@ -922,11 +944,11 @@ void collectBasesImpl(const SyntaxGraph& g,
 }
 
 void collectOverridedImpl(const SyntaxGraph& g,
-    const std::pmr::vector<std::pmr::string>& bases,
+    const std::pmr::vector<Base>& bases,
     std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
     std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
     for (const auto& base : bases) {
-        auto baseID = locate(base, g);
+        auto baseID = locate(base.mTypePath, g);
         auto& bases = get(g.inherits, g, baseID).mBases;
         if (!g.isInterface(baseID)) {
             collectBasesImpl(g, bases, baseIDs, results);

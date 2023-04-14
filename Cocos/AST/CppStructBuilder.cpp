@@ -480,7 +480,7 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
     uint32_t count = 0;
 
     for (const auto& base : bases) {
-        auto baseID = locate(base, g);
+        auto baseID = locate(base.mTypePath, g);
         const auto& traits = get(g.traits, g, baseID);
         if (!(traits.mFlags & NO_DEFAULT_CNTR))
             continue;
@@ -1303,7 +1303,7 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
     {
         const auto& bases = get(g.inherits, g, vertID).mBases;
         for (const auto& base : bases) {
-            auto baseID = locate(base, g);
+            auto baseID = locate(base.mTypePath, g);
             const auto& traits = get(g.traits, g, baseID);
             if (!(traits.mFlags & NO_DEFAULT_CNTR))
                 continue;

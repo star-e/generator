@@ -500,11 +500,11 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
 namespace {
 
 void collectBases(const SyntaxGraph& g,
-    const std::pmr::vector<std::pmr::string>& bases,
+    const std::pmr::vector<Base>& bases,
     std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
     std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
     for (const auto& base : bases) {
-        auto baseID = locate(base, g);
+        auto baseID = locate(base.mTypePath, g);
         auto& childBases = get(g.inherits, g, baseID).mBases;
         collectBases(g, childBases, baseIDs, results);
         if (!baseIDs.contains(baseID)) {
@@ -809,15 +809,22 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 // Inheritance not implemented yet
                 const auto& inherits = get(g.inherits, g, vertID);
                 for (int count = 0; const auto& base : inherits.mBases) {
-
                     if (count++ == 0) {
-                        if (!traits.mInterface)
+                        if (!traits.mInterface && traits.mFinal)
                             oss << " final";
-                        oss << " : public ";
+                        oss << " :";
+                        if (base.mVirtualBase) {
+                            oss << " virtual";
+                        }
+                        oss << " public ";
                     } else {
-                        oss << ", public ";
+                        oss << ",";
+                        if (base.mVirtualBase) {
+                            oss << " virtual";
+                        }
+                        oss << " public ";
                     }
-                    oss << cpp.getDependentName(base);
+                    oss << cpp.getDependentName(base.mTypePath);
                 }
 
                 oss << " {";

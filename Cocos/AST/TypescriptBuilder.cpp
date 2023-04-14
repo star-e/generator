@@ -108,15 +108,23 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 oss << " class " << name;
             }
             const auto& inherits = get(g.inherits, g, vertID);
-            for (int count = 0; const auto& conceptPath : inherits.mBases) {
-                auto superID = locate(conceptPath, g);
+            for (int count = 0; const auto& base : inherits.mBases) {
+                auto superID = locate(base.mTypePath, g);
                 const auto& traits = get(g.traits, g, superID);
                 if (traits.mFlags & IMPL_DETAIL) {
                     continue;
                 }
                 const auto& name = get(g.names, g, superID);
                 if (count++ == 0) {
-                    oss << " extends ";
+                    if (traits.mInterface) {
+                        oss << " extends ";
+                    } else {
+                        if (base.mVirtualBase) {
+                            oss << " implements ";
+                        } else {
+                            oss << " extends ";
+                        }
+                    }
                 } else {
                     oss << ", ";
                 }
@@ -144,8 +152,13 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                     }
                     OSS << "}\n";
                 }
+                std::pmr::vector<std::pmr::string> bases(scratch);
+                bases.reserve(inherits.mBases.size());
+                for (const auto& base : inherits.mBases) {
+                    bases.emplace_back(base.mTypePath);
+                }
                 outputMembers(oss, space, builder, g, vertID,
-                    inherits.mBases, s.mMembers,
+                    bases, s.mMembers,
                     s.mTypescriptFunctions, s.mConstructors, s.mMethods, scratch);
             }
             OSS << "}\n";
