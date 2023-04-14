@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "BuilderTypes.h"
 #include "SyntaxGraphs.h"
 #include "SyntaxUtils.h"
+#include "BuilderUtils.h"
 
 namespace Cocos::Meta {
 
@@ -1530,11 +1531,7 @@ void CppStructBuilder::generateMethod(
     auto name = get(g.names, g, vertID);
     const auto& traits = get(g.traits, g, vertID);
 
-    if (m.mDeprecated) {
-        OSS << "/**\n";
-        OSS << " * @deprecated method will be removed in 3.8.0\n";
-        OSS << " */\n";
-    }
+    outputDoc(oss, space, m.mFlags);
 
     if (!bOverride && m.mVirtual) {
         OSS << "virtual ";

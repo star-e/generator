@@ -256,6 +256,7 @@
     <ClInclude Include="BuilderFwd.h" />
     <ClInclude Include="BuilderMacros.h" />
     <ClInclude Include="BuilderTypes.h" />
+    <ClInclude Include="BuilderUtils.h" />
     <ClInclude Include="CppBuilder.h" />
     <ClInclude Include="CppDefaultValues.h" />
     <ClInclude Include="CppMethod.h" />
@@ -278,6 +279,7 @@
   <ItemGroup>
     <ClCompile Include="BuilderImpl.cpp" />
     <ClCompile Include="BuilderTypes.cpp" />
+    <ClCompile Include="BuilderUtils.cpp" />
     <ClCompile Include="CppBuilder.cpp" />
     <ClCompile Include="CppDefaultValues.cpp" />
     <ClCompile Include="CppMethod.cpp" />

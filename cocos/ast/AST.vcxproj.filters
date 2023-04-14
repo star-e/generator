@@ -110,6 +110,9 @@
     <ClInclude Include="SwigConfig.h">
       <Filter>2.Builder</Filter>
     </ClInclude>
+    <ClInclude Include="BuilderUtils.h">
+      <Filter>2.Builder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SyntaxReflection.cpp">
@@ -173,6 +176,9 @@
       <Filter>2.Builder</Filter>
     </ClCompile>
     <ClCompile Include="CppSerialization.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="BuilderUtils.cpp">
       <Filter>2.Builder</Filter>
     </ClCompile>
   </ItemGroup>

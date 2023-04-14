@@ -134,7 +134,11 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
     }
 
     if (boost::algorithm::contains(function, "[[deprecated]]")) {
-        method.mDeprecated = true;
+        method.mFlags |= Doc::Deprecated;
+    }
+
+    if (boost::algorithm::contains(function, "[[beta]]")) {
+        method.mFlags |= Doc::Beta;
     }
 
     // skip attributes

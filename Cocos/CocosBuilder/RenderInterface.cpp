@@ -191,10 +191,12 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
         INTERFACE(RasterSubpassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addOutputRenderTarget(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
-virtual void addOutputDepthStencil(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
+[[beta]] virtual void addRenderTarget(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
+[[beta]] virtual void addDepthStencil(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
+[[beta]] virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
-[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
@@ -213,10 +215,11 @@ virtual void addDispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY,
         INTERFACE(ComputeSubpassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addOutputRenderTarget(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
-virtual void addOutputDepthStencil(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
+[[beta]] virtual void addRenderTarget(const ccstd::string& name, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
-[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
@@ -226,8 +229,11 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
         INTERFACE(RasterPassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addOutputRenderTarget(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
-virtual void addOutputDepthStencil(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
+[[beta]] virtual void addRenderTarget(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
+[[beta]] virtual void addDepthStencil(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
+[[beta]] virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
 [[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
@@ -244,6 +250,10 @@ virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
         INTERFACE(ComputePassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
+[[beta]] virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
@@ -305,7 +315,7 @@ virtual void endSetup() = 0;
 
 virtual bool containsResource(const ccstd::string& name) const = 0;
 [[deprecated]] virtual uint32_t addRenderTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
-virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
+[[beta]] virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 [[deprecated]] virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
 
 virtual uint32_t addStorageBuffer(const ccstd::string& name, gfx::Format format, uint32_t size, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
@@ -327,7 +337,7 @@ virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
 virtual MovePassBuilder *addMovePass() = 0;
 virtual CopyPassBuilder *addCopyPass() = 0;
 
-virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
+[[deprecated]] virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
         }

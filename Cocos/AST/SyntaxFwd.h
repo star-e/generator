@@ -66,6 +66,9 @@ struct Enum;
 struct Tag;
 struct Member;
 struct Parameter;
+
+enum class Doc : uint32_t;
+
 struct Method;
 struct Constructor;
 struct Struct;

@@ -343,6 +343,37 @@ struct Parameter {
     bool mOptional = false;
 };
 
+enum class Doc : uint32_t {
+    None = 0,
+    Deprecated = 1 << 0,
+    Beta = 1 << 1,
+    Experimental = 1 << 2,
+};
+
+constexpr Doc operator|(const Doc lhs, const Doc rhs) noexcept {
+    return (Doc)((uint32_t)lhs | (uint32_t)rhs);
+}
+
+constexpr Doc operator&(const Doc lhs, const Doc rhs) noexcept {
+    return (Doc)((uint32_t)lhs & (uint32_t)rhs);
+}
+
+constexpr Doc& operator|=(Doc& lhs, const Doc rhs) noexcept {
+    return lhs = lhs | rhs;
+}
+
+constexpr Doc& operator&=(Doc& lhs, const Doc rhs) noexcept {
+    return lhs = lhs & rhs;
+}
+
+constexpr bool operator!(Doc e) noexcept {
+    return e == static_cast<Doc>(0);
+}
+
+constexpr bool any(Doc e) noexcept {
+    return !!e;
+}
+
 struct Method {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
@@ -371,7 +402,7 @@ struct Method {
     bool mSetter = false;
     bool mOptional = false;
     bool mSkip = false;
-    bool mDeprecated = false;
+    Doc mFlags = Doc::None;
 };
 
 struct Constructor {
