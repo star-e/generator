@@ -129,6 +129,9 @@ builder.addEnumElement(vertID, \
 builder.addConstructor(vertID, {\
 BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) }, true)
 
+#define CNTR_EMPTY() \
+builder.addConstructor(vertID, {}, true)
+
 #define CNTR_NO_DEFAULT(...) \
 builder.addConstructor(vertID, {\
 BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) }, false)
@@ -166,10 +169,15 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
         builder.syntax().propagate(vertID), \
         vertID = SyntaxGraph::null_vertex())
 
-// Struct
-#define INHERITS(NAME) \
-builder.addInherits(vertID, BOOST_PP_STRINGIZE(NAME))
+// Inheritance
+#define INHERITS_ELEM(r, VIRTUAL, i, C) builder.addInherits(vertID, BOOST_PP_STRINGIZE(C), VIRTUAL);
+#define INHERITS(...) \
+    BOOST_PP_SEQ_FOR_EACH_I(INHERITS_ELEM, false, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
 
+#define VIRTUAL_INHERITS(...) \
+    BOOST_PP_SEQ_FOR_EACH_I(INHERITS_ELEM, true, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
+
+// Struct
 #define STRUCT_MEMBER(r, COND, i, MEMBER) \
 builder.addMember(vertID, COND,\
     BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(3, 0, MEMBER)), \

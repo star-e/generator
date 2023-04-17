@@ -1433,6 +1433,7 @@ struct ModuleInfo {
     std::vector<std::string> mRequires;
     std::string mHeader;
     std::string mTypescriptInclude;
+    std::string mTail;
 };
 
 struct ModuleGraph {

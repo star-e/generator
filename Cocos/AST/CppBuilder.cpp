@@ -810,8 +810,9 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 const auto& inherits = get(g.inherits, g, vertID);
                 for (int count = 0; const auto& base : inherits.mBases) {
                     if (count++ == 0) {
-                        if (!traits.mInterface && traits.mFinal)
+                        if (!traits.mInterface && traits.mFinal) {
                             oss << " final";
+                        }
                         oss << " :";
                         if (base.mVirtualBase) {
                             oss << " virtual";
@@ -827,17 +828,10 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                     oss << cpp.getDependentName(base.mTypePath);
                 }
 
-                oss << " {";
-                auto pos = name.find('_');
-                if (pos != name.npos && pos != 0 && pos != name.size() - 1) {
-                    oss << " // NOLINT";
-                }
+                oss << " {\n";
                 if (traits.mClass) {
-                    oss << "\npublic:";
+                    oss << "public:\n";
                 }
-                if (num_children(vertID, g) || !s.mMembers.empty() || g.hasHeader(vertID))
-                    oss << "\n";
-
                 space.append("    ");
             },
             [&](const Graph&) {

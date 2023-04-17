@@ -482,18 +482,23 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
     for (const auto& base : bases) {
         auto baseID = locate(base.mTypePath, g);
         const auto& traits = get(g.traits, g, baseID);
-        if (!(traits.mFlags & NO_DEFAULT_CNTR))
-            continue;
-
+        if (!g.isPmr(baseID)) {
+            if (!(traits.mFlags & NO_DEFAULT_CNTR))
+                continue;
+        }
+        const auto baseName = g.getDependentCppName(cpp.mCurrentNamespace, baseID, scratch, scratch);
         bool bSkip = false;
         visit_vertex(
             baseID, g,
             [&](const Composition_ auto& s) {
-                if (s.mConstructors.empty()) {
+                if (s.mConstructors.empty() && !g.isPmr(baseID)) {
                     bSkip = true;
+                    return true;
                 }
+                return false;
             },
             [&](const auto&) {
+                return false;
             });
 
         if (bSkip)
@@ -501,16 +506,20 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
 
         bool bPmr = g.isPmr(baseID);
         if (count++) {
-            oss << ",\n";
-            OSS << "  ";
+            oss << "\n";
+            OSS << ", ";
         } else {
             OSS << ": ";
         }
         visit_vertex(
             baseID, g,
             [&](const Composition_ auto& s) {
-                Expects(s.mConstructors.size() == 1);
-                oss << cpp.generateConstructorCall(baseID, s.mConstructors.front());
+                if (s.mConstructors.empty()) {
+                    oss << baseName << "(alloc)";
+                } else {
+                    Expects(s.mConstructors.size() == 1);
+                    oss << cpp.generateConstructorCall(baseID, s.mConstructors.front());
+                }
             },
             [&](const auto&) {
             });
@@ -1379,12 +1388,21 @@ std::pmr::string CppStructBuilder::generateConstructorCall(
                     oss << ", ";
                 const auto& m = s.mMembers.at(k);
                 auto memberID = locate(m.mTypePath, g);
+                const auto& memberTraits = get(g.traits, g, memberID);
                 if (m.mTypePath == "/std/pmr/string") {
                     oss << "std::move(" << getParameterName(m.mMemberName, scratch) << ")";
                 } else if (m.mTypePath == "/std/pmr/u8string") {
                     oss << "std::move(" << getParameterName(m.mMemberName, scratch) << ")";
                 } else {
-                    if (m.mPointer || m.mReference) {
+                    bool bCopyParam = false;
+                    if (m.mReference || m.mPointer) {
+                        bCopyParam = true;
+                    } else if (g.isValueType(memberID)) {
+                        bCopyParam = true;
+                    } else if (memberTraits.mTrivial) {
+                        bCopyParam = true;
+                    }
+                    if (bCopyParam) {
                         oss << getParameterName(m.mMemberName, scratch);
                     } else {
                         oss << "std::move(" << getParameterName(m.mMemberName, scratch) << ")";

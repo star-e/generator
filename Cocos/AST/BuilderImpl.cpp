@@ -1275,6 +1275,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             copyString(oss, generateTypes_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
             oss << "\n";
             OSS << "// clang-format on\n";
+            if (!moduleInfo.mTail.empty()) {
+                copyCppString(oss, space, moduleInfo.mTail);
+            }
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
 

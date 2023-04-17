@@ -158,7 +158,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
         }
 
         INTERFACE(Setter) {
-            INHERITS(RenderNode);
+            VIRTUAL_INHERITS(RenderNode);
             PUBLIC_METHODS(R"(
 virtual void setMat4(const ccstd::string& name, const cc::Mat4& mat) = 0;
 virtual void setQuaternion(const ccstd::string& name, const cc::Quaternion& quat) = 0;
@@ -177,7 +177,7 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
         }
 
         INTERFACE(RasterQueueBuilder) {
-            INHERITS(Setter);
+            VIRTUAL_INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
@@ -356,8 +356,7 @@ virtual uint32_t getPhaseID(uint32_t passID, const ccstd::string& name) const = 
         }
 
         CLASS(Factory) {
-            MEMBER_FUNCTIONS(R"(
-static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
+            MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
 static void destroy(RenderingModule* renderingModule) noexcept;
 static Pipeline *createPipeline();
 )");

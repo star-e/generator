@@ -40,8 +40,17 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
-)"
-    ) {
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4250)
+#endif
+)",
+        .mTail = R"(
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+)" ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
@@ -56,15 +65,48 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             }
         }
 
-        STRUCT(NativeRasterQueueBuilder) {
-            INHERITS(RasterQueueBuilder);
+        STRUCT(NativeRenderNode, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
+            VIRTUAL_INHERITS(RenderNode);
             PUBLIC(
                 (const PipelineRuntime*, mPipelineRuntime, nullptr)
                 (RenderGraph*, mRenderGraph, nullptr)
-                (const LayoutGraphData*, mLayoutGraph, nullptr)
-                (uint32_t, mQueueID, RenderGraph::null_vertex())
+                (uint32_t, mNodeID, RenderGraph::null_vertex())
             );
-            CNTR(mPipelineRuntime, mRenderGraph, mQueueID, mLayoutGraph);
+            CNTR(mPipelineRuntime, mRenderGraph, mNodeID);
+        }
+
+        STRUCT(NativeSetter, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
+            VIRTUAL_INHERITS(Setter);
+            INHERITS(NativeRenderNode)
+            PUBLIC(
+                //(const LayoutGraphData&, mLayoutGraph, _)
+                //(RenderData&, mRenderData, _)
+                //(const PipelineRuntime*, mPipelineRuntime, nullptr)
+                //(RenderGraph*, mRenderGraph, nullptr)
+                (const LayoutGraphData*, mLayoutGraph, nullptr)
+                //(uint32_t, mNodeID, RenderGraph::null_vertex())
+            );
+            //CNTR(mPipelineRuntime, mRenderGraph, mLayoutGraph, mNodeID);
+            MEMBER_FUNCTIONS(R"(
+void setVec4ArraySize(const ccstd::string& name, uint32_t sz);
+void setVec4ArrayElem(const ccstd::string& name, const cc::Vec4& vec, uint32_t id);
+
+void setMat4ArraySize(const ccstd::string& name, uint32_t sz);
+void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t id);
+)");
+            CNTR(mLayoutGraph);
+        }
+
+        STRUCT(NativeRasterQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(RasterQueueBuilder, NativeSetter);
+            CNTR_EMPTY();
+            //PUBLIC(
+            //    (const PipelineRuntime*, mPipelineRuntime, nullptr)
+            //    (RenderGraph*, mRenderGraph, nullptr)
+            //    (const LayoutGraphData*, mLayoutGraph, nullptr)
+            //    (uint32_t, mQueueID, RenderGraph::null_vertex())
+            //);
+            //CNTR(mPipelineRuntime, mRenderGraph, mQueueID, mLayoutGraph);
         }
 
         STRUCT(NativeRasterSubpassBuilder) {
@@ -465,22 +507,6 @@ public:
                 (std::shared_ptr<NativeProgramLibrary>, mProgramLibrary, _)
             );
             CNTR(mProgramLibrary);
-        }
-
-        STRUCT(NativeSetter, .mFinal = false, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
-            INHERITS(Setter);
-            PUBLIC(
-                (const LayoutGraphData&, mLayoutGraph, _)
-                (RenderData&, mRenderData, _)
-            );
-            CNTR(mLayoutGraph, mRenderData);
-            MEMBER_FUNCTIONS(R"(
-void setVec4ArraySize(const ccstd::string& name, uint32_t sz);
-void setVec4ArrayElem(const ccstd::string& name, const cc::Vec4& vec, uint32_t id);
-
-void setMat4ArraySize(const ccstd::string& name, uint32_t sz);
-void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t id);
-)");
         }
 
         NAMESPACE_END(render);
