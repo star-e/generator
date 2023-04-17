@@ -122,22 +122,14 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             CNTR_EMPTY();
         }
 
-        STRUCT(NativeMovePassBuilder) {
-            INHERITS(MovePassBuilder);
-            PUBLIC(
-                (RenderGraph*, mRenderGraph, nullptr)
-                (uint32_t, mPassID, RenderGraph::null_vertex())
-            );
-            CNTR(mRenderGraph, mPassID);
+        STRUCT(NativeMovePassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(MovePassBuilder, NativeRenderNode);
+            CNTR_EMPTY();
         }
 
-        STRUCT(NativeCopyPassBuilder) {
-            INHERITS(CopyPassBuilder);
-            PUBLIC(
-                (RenderGraph*, mRenderGraph, nullptr)
-                (uint32_t, mPassID, RenderGraph::null_vertex())
-            );
-            CNTR(mRenderGraph, mPassID);
+        STRUCT(NativeCopyPassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(CopyPassBuilder, NativeRenderNode);
+            CNTR_EMPTY();
         }
 
         STRUCT(NativeSceneTransversal) {
