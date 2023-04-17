@@ -66,7 +66,6 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         }
 
         STRUCT(NativeRenderNode, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
-            //VIRTUAL_INHERITS(RenderNode);
             IMPLEMENTS(RenderNode);
             PUBLIC(
                 (const PipelineRuntime*, mPipelineRuntime, nullptr)
@@ -77,18 +76,11 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         }
 
         STRUCT(NativeSetter, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
-            //VIRTUAL_INHERITS(Setter);
             INHERITS(NativeRenderNode)
             IMPLEMENTS(Setter);
             PUBLIC(
-                //(const LayoutGraphData&, mLayoutGraph, _)
-                //(RenderData&, mRenderData, _)
-                //(const PipelineRuntime*, mPipelineRuntime, nullptr)
-                //(RenderGraph*, mRenderGraph, nullptr)
                 (const LayoutGraphData*, mLayoutGraph, nullptr)
-                //(uint32_t, mNodeID, RenderGraph::null_vertex())
             );
-            //CNTR(mPipelineRuntime, mRenderGraph, mLayoutGraph, mNodeID);
             MEMBER_FUNCTIONS(R"(
 void setVec4ArraySize(const ccstd::string& name, uint32_t sz);
 void setVec4ArrayElem(const ccstd::string& name, const cc::Vec4& vec, uint32_t id);
@@ -102,25 +94,14 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
         STRUCT(NativeRasterQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
             INHERITS(RasterQueueBuilder, NativeSetter);
             CNTR_EMPTY();
-            //PUBLIC(
-            //    (const PipelineRuntime*, mPipelineRuntime, nullptr)
-            //    (RenderGraph*, mRenderGraph, nullptr)
-            //    (const LayoutGraphData*, mLayoutGraph, nullptr)
-            //    (uint32_t, mQueueID, RenderGraph::null_vertex())
-            //);
-            //CNTR(mPipelineRuntime, mRenderGraph, mQueueID, mLayoutGraph);
         }
 
-        STRUCT(NativeRasterSubpassBuilder) {
-            INHERITS(RasterSubpassBuilder);
+        STRUCT(NativeRasterSubpassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(RasterSubpassBuilder, NativeSetter);
             PUBLIC(
-                (const PipelineRuntime*, mPipelineRuntime, nullptr)
-                (RenderGraph*, mRenderGraph, nullptr)
-                (const LayoutGraphData*, mLayoutGraph, nullptr)
-                (uint32_t, mSubpassID, RenderGraph::null_vertex())
                 (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
-            CNTR(mPipelineRuntime, mRenderGraph, mSubpassID, mLayoutGraph, mLayoutID);
+            CNTR(mLayoutID);
         }
 
         STRUCT(NativeComputeSubpassBuilder) {
