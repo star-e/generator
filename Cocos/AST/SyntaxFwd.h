@@ -72,6 +72,7 @@ enum class Doc : uint32_t;
 
 struct Method;
 struct Constructor;
+struct BaseConstructor;
 struct Struct;
 struct Variant;
 struct Namespace_;

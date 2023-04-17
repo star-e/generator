@@ -869,6 +869,50 @@ bool SyntaxGraph::hasConsecutiveParameters(
         });
 }
 
+std::pmr::vector<BaseConstructor> SyntaxGraph::getBaseConstructors(vertex_descriptor vertID) const {
+    const auto& g = *this;
+    std::pmr::vector<BaseConstructor> results(get_allocator());
+    const auto& bases = get(g.inherits, g, vertID).mBases;
+    for (const auto& base : bases) {
+        const auto baseID = locate(base.mTypePath, g);
+        Expects(g.isComposition(baseID));
+        BaseConstructor cntr(get_allocator());
+        {
+            auto baseCntrs = getBaseConstructors(baseID);
+            cntr.mBaseID = baseID;
+            for (auto& baseCntr : baseCntrs) {
+                for (auto& param : baseCntr.mParameters) {
+                    cntr.mParameters.emplace_back(std::move(param));
+                }
+            }
+        }
+        visit_vertex(
+            baseID, g,
+            [&](const Composition_ auto& s) {
+                if (!s.mConstructors.empty()) {
+                    Expects(s.mConstructors.size() == 1);
+                    for (const auto& k : s.mConstructors.front().mIndices) {
+                        const auto& m = s.mMembers.at(k);
+                        Parameter param(get_allocator());
+                        param.mTypePath = m.mTypePath;
+                        param.mName = getParameterName(m.mMemberName, get_allocator().resource());
+                        param.mConst = m.mConst;
+                        param.mPointer = m.mPointer;
+                        param.mReference = m.mReference;
+                        cntr.mParameters.emplace_back(param);
+                    }
+                }
+            },
+            [&](const auto&) {
+            });
+
+        if (!cntr.mParameters.empty()) {
+            results.emplace_back(std::move(cntr));
+        }
+    }
+    return results;
+}
+
 SyntaxGraph::vertex_descriptor SyntaxGraph::getMemberType(
     vertex_descriptor vertID, std::string_view member) const noexcept {
     const auto& g = *this;

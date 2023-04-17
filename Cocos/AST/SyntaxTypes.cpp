@@ -280,6 +280,19 @@ Constructor::Constructor(Constructor const& rhs, const allocator_type& alloc)
 
 Constructor::~Constructor() noexcept = default;
 
+BaseConstructor::BaseConstructor(const allocator_type& alloc) noexcept
+    : mParameters(alloc) {}
+
+BaseConstructor::BaseConstructor(BaseConstructor&& rhs, const allocator_type& alloc)
+    : mParameters(std::move(rhs.mParameters), alloc)
+    , mBaseID(std::move(rhs.mBaseID)) {}
+
+BaseConstructor::BaseConstructor(BaseConstructor const& rhs, const allocator_type& alloc)
+    : mParameters(rhs.mParameters, alloc)
+    , mBaseID(rhs.mBaseID) {}
+
+BaseConstructor::~BaseConstructor() noexcept = default;
+
 Struct::Struct(const allocator_type& alloc) noexcept
     : mMembers(alloc)
     , mConstructors(alloc)

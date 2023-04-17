@@ -448,6 +448,26 @@ struct Constructor {
     bool mHasDefault = false;
 };
 
+struct BaseConstructor {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mParameters.get_allocator().resource());
+    }
+
+    BaseConstructor(const allocator_type& alloc) noexcept;
+    BaseConstructor(BaseConstructor&& rhs, const allocator_type& alloc);
+    BaseConstructor(BaseConstructor const& rhs, const allocator_type& alloc);
+
+    BaseConstructor(BaseConstructor&& rhs) = default;
+    BaseConstructor(BaseConstructor const& rhs) = delete;
+    BaseConstructor& operator=(BaseConstructor&& rhs) = default;
+    BaseConstructor& operator=(BaseConstructor const& rhs) = default;
+    ~BaseConstructor() noexcept;
+
+    std::pmr::vector<Parameter> mParameters;
+    uint32_t mBaseID = 0;
+};
+
 struct Struct {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
@@ -1197,6 +1217,7 @@ struct SyntaxGraph {
     bool hasVirtualInheritance(vertex_descriptor vertID) const noexcept;
     bool hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept;
     bool hasConsecutiveParameters(vertex_descriptor vertID, const Constructor& cntr) const noexcept;
+    std::pmr::vector<BaseConstructor> getBaseConstructors(vertex_descriptor vertID) const;
 
     vertex_descriptor getMemberType(vertex_descriptor vertID, std::string_view member) const noexcept;
     vertex_descriptor getFirstMemberString(vertex_descriptor vertID) const noexcept;

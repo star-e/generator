@@ -479,50 +479,45 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
 
     uint32_t count = 0;
 
-    for (const auto& base : bases) {
-        auto baseID = locate(base.mTypePath, g);
-        const auto& traits = get(g.traits, g, baseID);
-        if (!g.isPmr(baseID)) {
-            if (!(traits.mFlags & NO_DEFAULT_CNTR))
-                continue;
-        }
-        const auto baseName = g.getDependentCppName(cpp.mCurrentNamespace, baseID, scratch, scratch);
-        bool bSkip = false;
-        visit_vertex(
-            baseID, g,
-            [&](const Composition_ auto& s) {
-                if (s.mConstructors.empty() && !g.isPmr(baseID)) {
-                    bSkip = true;
-                    return true;
+    auto baseCntrs = g.getBaseConstructors(vertID);
+    if (!baseCntrs.empty()) {
+        for (const auto& baseCntr : baseCntrs) {
+            const auto baseID = baseCntr.mBaseID;
+            const auto baseName = g.getDependentCppName(
+                cpp.mCurrentNamespace, baseID, scratch, scratch);
+            bool bPmr = g.isPmr(baseID);
+            if (count++) {
+                oss << "\n";
+                OSS << ", ";
+            } else {
+                OSS << ": ";
+            }
+            oss << baseName << "(";
+            {
+                int count = 0;
+                for (const auto& param : baseCntr.mParameters) {
+                    const auto paramID = locate(param.mTypePath, g);
+                    const auto& paramTraits = get(g.traits, g, paramID);
+                    if (count++) {
+                        oss << ", ";
+                    }
+                    bool bCopyParam = false;
+                    if (param.mReference || param.mPointer) {
+                        bCopyParam = true;
+                    } else if (g.isValueType(paramID)) {
+                        bCopyParam = true;
+                    } else if (paramTraits.mTrivial) {
+                        bCopyParam = true;
+                    }
+                    if (bCopyParam) {
+                        oss << param.mName;
+                    } else {
+                        oss << "std::move(" << param.mName << ")";
+                    }
                 }
-                return false;
-            },
-            [&](const auto&) {
-                return false;
-            });
-
-        if (bSkip)
-            continue;
-
-        bool bPmr = g.isPmr(baseID);
-        if (count++) {
-            oss << "\n";
-            OSS << ", ";
-        } else {
-            OSS << ": ";
+            }
+            oss << ")";
         }
-        visit_vertex(
-            baseID, g,
-            [&](const Composition_ auto& s) {
-                if (s.mConstructors.empty()) {
-                    oss << baseName << "(alloc)";
-                } else {
-                    Expects(s.mConstructors.size() == 1);
-                    oss << cpp.generateConstructorCall(baseID, s.mConstructors.front());
-                }
-            },
-            [&](const auto&) {
-            });
     }
 
     for (uint32_t i = 0; const auto& m : s.mMembers) {
@@ -1310,23 +1305,30 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
 
     oss << name << "(";
     {
-        const auto& bases = get(g.inherits, g, vertID).mBases;
-        for (const auto& base : bases) {
-            auto baseID = locate(base.mTypePath, g);
-            const auto& traits = get(g.traits, g, baseID);
-            if (!(traits.mFlags & NO_DEFAULT_CNTR))
-                continue;
+        auto baseCntrs = g.getBaseConstructors(vertID);
+        if (!baseCntrs.empty()) {
+            for (const auto& baseCntr : baseCntrs) {
+                const auto baseID = baseCntr.mBaseID;
+                for (const auto& param : baseCntr.mParameters) {
+                    const auto paramID = locate(param.mTypePath, g);
+                    auto name = g.getDependentName(mCurrentNamespace, paramID, scratch, scratch);
 
-            bool bSkip = false;
-            visit_vertex(
-                baseID, g,
-                [&](const Composition_ auto& s) {
-                    Expects(!s.mConstructors.empty());
-                    Expects(s.mConstructors.size() == 1);
-                    generateCntrParameters(s, s.mConstructors.front());
-                },
-                [&](const auto&) {
-                });
+                    if (count++) {
+                        oss << ", ";
+                    }
+                    if (param.mConst) {
+                        oss << "const ";
+                    }
+                    oss << getCppPath(name, scratch);
+                    if (param.mPointer) {
+                        oss << "*";
+                    }
+                    if (param.mReference) {
+                        oss << "&";
+                    }
+                    oss << " " << param.mName;
+                }
+            }
         }
     }
 
