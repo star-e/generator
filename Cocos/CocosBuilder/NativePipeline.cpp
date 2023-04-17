@@ -80,6 +80,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
             IMPLEMENTS(Setter);
             PUBLIC(
                 (const LayoutGraphData*, mLayoutGraph, nullptr)
+                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
             );
             MEMBER_FUNCTIONS(R"(
 void setVec4ArraySize(const ccstd::string& name, uint32_t sz);
@@ -88,7 +89,7 @@ void setVec4ArrayElem(const ccstd::string& name, const cc::Vec4& vec, uint32_t i
 void setMat4ArraySize(const ccstd::string& name, uint32_t sz);
 void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t id);
 )");
-            CNTR(mLayoutGraph);
+            CNTR(mLayoutGraph, mLayoutID);
         }
 
         STRUCT(NativeRasterQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
@@ -98,55 +99,27 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
 
         STRUCT(NativeRasterSubpassBuilder, .mFlags = NO_DEFAULT_CNTR) {
             INHERITS(RasterSubpassBuilder, NativeSetter);
-            PUBLIC(
-                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
-            );
-            CNTR(mLayoutID);
+            CNTR_EMPTY();
         }
 
-        STRUCT(NativeComputeSubpassBuilder) {
-            INHERITS(ComputeSubpassBuilder);
-            PUBLIC(
-                (const PipelineRuntime*, mPipelineRuntime, nullptr)
-                (RenderGraph*, mRenderGraph, nullptr)
-                (const LayoutGraphData*, mLayoutGraph, nullptr)
-                (uint32_t, mSubpassID, RenderGraph::null_vertex())
-                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
-            );
-            CNTR(mPipelineRuntime, mRenderGraph, mSubpassID, mLayoutGraph, mLayoutID);
+        STRUCT(NativeComputeSubpassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(ComputeSubpassBuilder, NativeSetter);
+            CNTR_EMPTY();
         }
 
-        STRUCT(NativeRasterPassBuilder) {
-            INHERITS(RasterPassBuilder);
-            PUBLIC(
-                (const PipelineRuntime*, mPipelineRuntime, nullptr)
-                (RenderGraph*, mRenderGraph, nullptr)
-                (const LayoutGraphData*, mLayoutGraph, nullptr)
-                (uint32_t, mPassID, RenderGraph::null_vertex())
-                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
-            );
-            CNTR(mPipelineRuntime, mRenderGraph, mPassID, mLayoutGraph, mLayoutID);
+        STRUCT(NativeRasterPassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(RasterPassBuilder, NativeSetter);
+            CNTR_EMPTY();
         }
 
-        STRUCT(NativeComputeQueueBuilder) {
-            INHERITS(ComputeQueueBuilder);
-            PUBLIC(
-                (RenderGraph*, mRenderGraph, nullptr)
-                (const LayoutGraphData*, mLayoutGraph, nullptr)
-                (uint32_t, mQueueID, RenderGraph::null_vertex())
-            );
-            CNTR(mRenderGraph, mQueueID, mLayoutGraph);
+        STRUCT(NativeComputeQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(ComputeQueueBuilder, NativeSetter);
+            CNTR_EMPTY();
         }
 
-        STRUCT(NativeComputePassBuilder) {
-            INHERITS(ComputePassBuilder);
-            PUBLIC(
-                (RenderGraph*, mRenderGraph, nullptr)
-                (const LayoutGraphData*, mLayoutGraph, nullptr)
-                (uint32_t, mPassID, RenderGraph::null_vertex())
-                (uint32_t, mLayoutID, LayoutGraphData::null_vertex())
-            );
-            CNTR(mRenderGraph, mPassID, mLayoutGraph, mLayoutID);
+        STRUCT(NativeComputePassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(ComputePassBuilder, NativeSetter);
+            CNTR_EMPTY();
         }
 
         STRUCT(NativeMovePassBuilder) {
