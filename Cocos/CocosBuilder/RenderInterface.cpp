@@ -158,7 +158,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
         }
 
         INTERFACE(Setter) {
-            VIRTUAL_INHERITS(RenderNode);
+            INHERITS(RenderNode);
             PUBLIC_METHODS(R"(
 virtual void setMat4(const ccstd::string& name, const cc::Mat4& mat) = 0;
 virtual void setQuaternion(const ccstd::string& name, const cc::Quaternion& quat) = 0;
@@ -177,7 +177,7 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
         }
 
         INTERFACE(RasterQueueBuilder) {
-            VIRTUAL_INHERITS(Setter);
+            INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags = SceneFlags::NONE) = 0;

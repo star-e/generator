@@ -1541,7 +1541,9 @@ std::pmr::string CppStructBuilder::generateDispatchMethods(const Method& m) cons
 void CppStructBuilder::generateMethod(
     std::ostream& oss, std::pmr::string& space,
     const Method& m,
-    bool bOverride, bool bDefaultParam) const {
+    bool bOverride,
+    bool bImplements,
+    bool bDefaultParam) const {
     auto scratch = get_allocator().resource();
 
     bool bEnableDefaultParam = false;
@@ -1589,7 +1591,11 @@ void CppStructBuilder::generateMethod(
         oss << " = 0";
     }
     if (bOverride && m.mVirtual) {
-        oss << " override";
+        if (bImplements) {
+            oss << " /*implements*/";
+        } else {
+            oss << " override";
+        }
     }
 }
 

@@ -83,7 +83,7 @@ struct CppStructBuilder {
     std::pmr::string generateConstructorBody(const Constructor& cntr) const;
     std::pmr::string generateConstructorCall(SyntaxGraph::vertex_descriptor vertID, const Constructor& cntr) const;
     std::pmr::string generateMemberFunctions(std::pmr::string& space) const;
-    void generateMethod(std::ostream& oss, std::pmr::string& space, const Method& method, bool bOverride, bool bDefaultParam = false) const;
+    void generateMethod(std::ostream& oss, std::pmr::string& space, const Method& method, bool bOverride, bool bImplements, bool bDefaultParam = false) const;
     std::pmr::string generateDispatchMethods(const Method& method) const;
 
     const SyntaxGraph* mSyntaxGraph = nullptr;
@@ -426,7 +426,7 @@ struct ModuleBuilder {
 
     TypeHandle addStruct(std::string_view name, Traits traits = {});
 
-    void addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view name, bool bVirtual = false);
+    void addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view name, bool bVirtual = false, bool bImplements = false);
 
     Member& addMember(SyntaxGraph::vertex_descriptor vertID, bool bPublic,
         std::string_view adlPath, std::string_view memberName,

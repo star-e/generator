@@ -66,7 +66,8 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         }
 
         STRUCT(NativeRenderNode, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
-            VIRTUAL_INHERITS(RenderNode);
+            //VIRTUAL_INHERITS(RenderNode);
+            IMPLEMENTS(RenderNode);
             PUBLIC(
                 (const PipelineRuntime*, mPipelineRuntime, nullptr)
                 (RenderGraph*, mRenderGraph, nullptr)
@@ -76,8 +77,9 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         }
 
         STRUCT(NativeSetter, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
-            VIRTUAL_INHERITS(Setter);
+            //VIRTUAL_INHERITS(Setter);
             INHERITS(NativeRenderNode)
+            IMPLEMENTS(Setter);
             PUBLIC(
                 //(const LayoutGraphData&, mLayoutGraph, _)
                 //(RenderData&, mRenderData, _)

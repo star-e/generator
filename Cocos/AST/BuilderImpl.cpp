@@ -475,7 +475,8 @@ TypeHandle ModuleBuilder::addStruct(std::string_view name, Traits traits) {
     return appendTypePath(*this, name, vertID);
 }
 
-void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID, std::string_view type, bool bVirtual) {
+void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view type, bool bVirtual, bool bImplements) {
     auto& g = mSyntaxGraph;
     auto scratch = get_allocator().resource();
 
@@ -488,7 +489,7 @@ void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID, std::stri
     auto& inherits = get(g.inherits, g, vertID);
 
     auto typePath = g.getTypePath(baseID, g.get_allocator().resource());
-    inherits.mBases.emplace_back(std::move(typePath), bVirtual);
+    inherits.mBases.emplace_back(std::move(typePath), bVirtual, bImplements);
     auto& traits = get(g.traits, g, vertID);
     traits.mClass = true;
 }

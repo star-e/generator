@@ -502,14 +502,17 @@ namespace {
 void collectBases(const SyntaxGraph& g,
     const std::pmr::vector<Base>& bases,
     std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
-    std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
+    std::pmr::vector<std::pair<SyntaxGraph::vertex_descriptor, bool>>& results) {
     for (const auto& base : bases) {
         auto baseID = locate(base.mTypePath, g);
         auto& childBases = get(g.inherits, g, baseID).mBases;
         collectBases(g, childBases, baseIDs, results);
         if (!baseIDs.contains(baseID)) {
             baseIDs.emplace(baseID);
-            results.emplace_back(baseID);
+            results.emplace_back(std::pair{
+                baseID,
+                base.mImplements,
+            });
         }
     }
 }
@@ -570,11 +573,12 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
         mPrevType = type;
     };
 
-    void outputOverride(CppStructBuilder& cpp, const SyntaxGraph& g,
-        const std::pmr::vector<SyntaxGraph::vertex_descriptor>& baseIDs,
+    void outputOverride(
+        CppStructBuilder& cpp, const SyntaxGraph& g,
+        const std::pmr::vector<std::pair<SyntaxGraph::vertex_descriptor, bool>>& baseIDs,
         const std::pmr::set<SyntaxGraph::vertex_descriptor>& overrided) {
         auto apiDLL = mAPI;
-        for (const auto baseID : baseIDs) {
+        for (const auto [baseID, bImplements] : baseIDs) {
             if (overrided.contains(baseID))
                 continue;
             const auto& baseTraits = get(g.traits, g, baseID);
@@ -591,7 +595,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                         if (count++ == 0) {
                             oss << "\n";
                         }
-                        cpp.generateMethod(oss, space, m, true);
+                        cpp.generateMethod(oss, space, m, true, bImplements);
                         oss << ";\n";
                     }
 
@@ -608,10 +612,12 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                                 pos = str.find("}");
                             }
                             auto pos0 = str.rfind(")", pos);
-                            auto pos1 = str.find("=", pos0);
+                            auto pos1 = str.find(" =", pos0);
 
                             if (pos1 != str.npos && pos1 < pos) {
-                                str.replace(pos1, pos - pos1, "override");
+                                if (!bImplements) {
+                                    str.replace(pos1, pos - pos1, " override");
+                                }
                             }
                         }
                         boost::algorithm::replace_all(str, "virtual ", apiDLL);
@@ -665,7 +671,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
         // virtual functions
         if (!traits.mInterface) {
             std::pmr::set<SyntaxGraph::vertex_descriptor> bases(scratch);
-            std::pmr::vector<SyntaxGraph::vertex_descriptor> results(scratch);
+            std::pmr::vector<std::pair<SyntaxGraph::vertex_descriptor, bool>> results(scratch);
             collectBases(g, inherits.mBases, bases, results);
             auto overrided = g.collectOverrided(vertID);
             outputOverride(cpp, g, results, overrided);
@@ -676,7 +682,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             oss << "\n";
         }
         for (const Method& m : s.mMethods) {
-            cpp.generateMethod(oss, space, m, false, true);
+            cpp.generateMethod(oss, space, m, false, false, true);
             oss << ";\n";
         }
         for (const Method& m : s.mMethods) {
@@ -809,6 +815,9 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 // Inheritance not implemented yet
                 const auto& inherits = get(g.inherits, g, vertID);
                 for (int count = 0; const auto& base : inherits.mBases) {
+                    if (base.mImplements) {
+                        continue;
+                    }
                     if (count++ == 0) {
                         if (!traits.mInterface && traits.mFinal) {
                             oss << " final";

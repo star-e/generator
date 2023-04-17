@@ -93,13 +93,20 @@ Base::Base(std::string_view typePath, bool virtualBase, const allocator_type& al
     : mTypePath(std::move(typePath), alloc)
     , mVirtualBase(std::move(virtualBase)) {}
 
+Base::Base(std::string_view typePath, bool virtualBase, bool implements, const allocator_type& alloc)
+    : mTypePath(std::move(typePath), alloc)
+    , mVirtualBase(std::move(virtualBase))
+    , mImplements(std::move(implements)) {}
+
 Base::Base(Base&& rhs, const allocator_type& alloc)
     : mTypePath(std::move(rhs.mTypePath), alloc)
-    , mVirtualBase(std::move(rhs.mVirtualBase)) {}
+    , mVirtualBase(std::move(rhs.mVirtualBase))
+    , mImplements(std::move(rhs.mImplements)) {}
 
 Base::Base(Base const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
-    , mVirtualBase(rhs.mVirtualBase) {}
+    , mVirtualBase(rhs.mVirtualBase)
+    , mImplements(rhs.mImplements) {}
 
 Base::~Base() noexcept = default;
 

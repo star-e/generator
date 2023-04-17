@@ -177,6 +177,7 @@ struct Base {
     Base(const allocator_type& alloc);
     Base(std::string_view typePath, const allocator_type& alloc);
     Base(std::string_view typePath, bool virtualBase, const allocator_type& alloc);
+    Base(std::string_view typePath, bool virtualBase, bool implements, const allocator_type& alloc);
     Base(Base&& rhs, const allocator_type& alloc);
     Base(Base const& rhs, const allocator_type& alloc);
 
@@ -188,6 +189,7 @@ struct Base {
 
     std::pmr::string mTypePath;
     bool mVirtualBase = false;
+    bool mImplements = false;
 };
 
 struct Inherits {

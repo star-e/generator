@@ -177,6 +177,14 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
 #define VIRTUAL_INHERITS(...) \
     BOOST_PP_SEQ_FOR_EACH_I(INHERITS_ELEM, true, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
 
+// Implements
+#define IMPLEMENTS_ELEM(r, VIRTUAL, i, C) builder.addInherits(vertID, BOOST_PP_STRINGIZE(C), false, true);
+#define IMPLEMENTS(...) \
+    BOOST_PP_SEQ_FOR_EACH_I(IMPLEMENTS_ELEM, false, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
+
+#define VIRTUAL_IMPLEMENTS(...) \
+    BOOST_PP_SEQ_FOR_EACH_I(IMPLEMENTS_ELEM, true, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
+
 // Struct
 #define STRUCT_MEMBER(r, COND, i, MEMBER) \
 builder.addMember(vertID, COND,\
