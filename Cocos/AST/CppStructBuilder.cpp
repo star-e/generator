@@ -1553,7 +1553,9 @@ void CppStructBuilder::generateMethod(
     auto name = get(g.names, g, vertID);
     const auto& traits = get(g.traits, g, vertID);
 
-    outputDoc(oss, space, m.mFlags);
+    if (!bOverride) {
+        outputDoc(oss, space, m.mFlags);
+    }
 
     if (!bOverride && m.mVirtual) {
         OSS << "virtual ";

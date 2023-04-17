@@ -1187,6 +1187,7 @@ struct SyntaxGraph {
     bool isInterface(vertex_descriptor vertID) const noexcept;
     bool isIntrusivePtr(vertex_descriptor vertID) const noexcept;
     bool isValueType(vertex_descriptor vertID) const noexcept;
+    bool isValueType(const Parameter& param) const;
     bool isInstantiation(vertex_descriptor vertID) const noexcept;
     bool isInstanceDependent(vertex_descriptor vertID) const noexcept;
     bool isTag(vertex_descriptor vertID) const noexcept;

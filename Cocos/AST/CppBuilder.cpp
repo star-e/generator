@@ -500,19 +500,27 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
 namespace {
 
 void collectBases(const SyntaxGraph& g,
+    SyntaxGraph::vertex_descriptor vertID,
     const std::pmr::vector<Base>& bases,
-    std::pmr::set<SyntaxGraph::vertex_descriptor>& baseIDs,
-    std::pmr::vector<std::pair<SyntaxGraph::vertex_descriptor, bool>>& results) {
+    std::pmr::map<SyntaxGraph::vertex_descriptor, SyntaxGraph::vertex_descriptor>& baseIDs,
+    std::pmr::vector<SyntaxGraph::vertex_descriptor>& results) {
     for (const auto& base : bases) {
         auto baseID = locate(base.mTypePath, g);
+        // populate all bases
         auto& childBases = get(g.inherits, g, baseID).mBases;
-        collectBases(g, childBases, baseIDs, results);
-        if (!baseIDs.contains(baseID)) {
-            baseIDs.emplace(baseID);
-            results.emplace_back(std::pair{
-                baseID,
-                base.mImplements,
-            });
+        collectBases(g, baseID, childBases, baseIDs, results);
+
+        // add current base
+        auto iter = baseIDs.find(baseID);
+        if (iter == baseIDs.end()) {
+            bool added = false;
+            std::tie(iter, added) = baseIDs.emplace(baseID, SyntaxGraph::null_vertex());
+            Ensures(added);
+            results.emplace_back(baseID);    
+        }
+        if (base.mImplements) {
+            Expects(iter->second == SyntaxGraph::null_vertex());
+            iter->second = vertID;
         }
     }
 }
@@ -575,12 +583,16 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
 
     void outputOverride(
         CppStructBuilder& cpp, const SyntaxGraph& g,
-        const std::pmr::vector<std::pair<SyntaxGraph::vertex_descriptor, bool>>& baseIDs,
+        const std::pmr::vector<SyntaxGraph::vertex_descriptor>& baseIDs,
+        const std::pmr::map<SyntaxGraph::vertex_descriptor, SyntaxGraph::vertex_descriptor>& bases,
         const std::pmr::set<SyntaxGraph::vertex_descriptor>& overrided) {
         auto apiDLL = mAPI;
-        for (const auto [baseID, bImplements] : baseIDs) {
-            if (overrided.contains(baseID))
+        for (const auto baseID : baseIDs) {
+            if (overrided.contains(baseID)) {
                 continue;
+            }
+            const auto implID = bases.at(baseID);
+            bool bImplements = implID != SyntaxGraph::null_vertex();
             const auto& baseTraits = get(g.traits, g, baseID);
             visit_vertex(
                 baseID, g,
@@ -595,6 +607,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                         if (count++ == 0) {
                             oss << "\n";
                         }
+                        
                         cpp.generateMethod(oss, space, m, true, bImplements);
                         oss << ";\n";
                     }
@@ -625,6 +638,69 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                         boost::algorithm::replace_all(str, "[[sender]] ", apiDLL);
                         boost::algorithm::replace_all(str, "[[dll]] ", apiDLL);
                         copyCppString(oss, space, str);
+                    }
+                },
+                [&](const auto&) {
+                });
+        }
+    }
+
+    void outputOverrideUsingImplements(
+        CppStructBuilder& cpp, const SyntaxGraph& g,
+        SyntaxGraph::vertex_descriptor vertID,
+        const std::pmr::vector<SyntaxGraph::vertex_descriptor>& baseIDs,
+        const std::pmr::map<SyntaxGraph::vertex_descriptor, SyntaxGraph::vertex_descriptor>& bases,
+        const std::pmr::set<SyntaxGraph::vertex_descriptor>& overrided) {
+        auto apiDLL = mAPI;
+        auto ns = g.getNamespace(vertID, scratch);
+        for (const auto baseID : baseIDs) {
+            if (!overrided.contains(baseID)) {
+                continue;
+            }
+            const auto implID = bases.at(baseID);
+            if (implID == SyntaxGraph::null_vertex()) {
+                continue;
+            }
+
+            const auto& baseTraits = get(g.traits, g, baseID);
+            const auto name = g.getDependentCppName(ns, implID, scratch, scratch);
+            visit_vertex(
+                baseID, g,
+                [&](const Composition_ auto& s) {
+                    if (!baseTraits.mInterface)
+                        return;
+                    
+                    int count = 0;
+                    for (const Method& m : s.mMethods) {
+                        if (!m.mPure)
+                            continue;
+                        if (count++ == 0) {
+                            oss << "\n";
+                        }
+                        cpp.generateMethod(oss, space, m, true, false);
+                        oss << " {\n";
+                        {
+                            INDENT();
+                            if (m.mReturnType.isVoid()) {
+                                OSS;
+                            } else {
+                                OSS << "return ";
+                            }
+                            oss << name << "::" << m.mFunctionName << "(";
+                            int count = 0;
+                            for (const auto& param : m.mParameters) {
+                                if (count++) {
+                                    oss << ", ";
+                                }
+                                if (g.isValueType(param)) {
+                                    oss << param.mName;
+                                } else {
+                                    oss << "std::move(" << param.mName << ")";
+                                }
+                            }
+                            oss << ");\n";
+                        }
+                        OSS << "}\n";
                     }
                 },
                 [&](const auto&) {
@@ -670,11 +746,14 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
 
         // virtual functions
         if (!traits.mInterface) {
-            std::pmr::set<SyntaxGraph::vertex_descriptor> bases(scratch);
-            std::pmr::vector<std::pair<SyntaxGraph::vertex_descriptor, bool>> results(scratch);
-            collectBases(g, inherits.mBases, bases, results);
+            std::pmr::map<SyntaxGraph::vertex_descriptor, SyntaxGraph::vertex_descriptor> bases(scratch);
+            std::pmr::vector<SyntaxGraph::vertex_descriptor> results(scratch);
+            collectBases(g, vertID, inherits.mBases, bases, results);
             auto overrided = g.collectOverrided(vertID);
-            outputOverride(cpp, g, results, overrided);
+            if (traits.mFinal) {
+                outputOverrideUsingImplements(cpp, g, vertID, results, bases, overrided);
+            }
+            outputOverride(cpp, g, results, bases, overrided);
         }
 
         // public methods

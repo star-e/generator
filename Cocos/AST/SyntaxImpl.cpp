@@ -94,6 +94,10 @@ bool SyntaxGraph::isValueType(vertex_descriptor vertID) const noexcept {
         || isTag(vertID)) {
         return true;
     }
+    const auto& traits = get(g.traits, g, vertID);
+    if (traits.mTrivial) {
+        return true;
+    }
     if (holds_tag<Alias_>(vertID, g)) {
         const auto& alias = get<Alias>(vertID, g);
         if (!alias.mTypePath.empty()) {
@@ -104,6 +108,14 @@ bool SyntaxGraph::isValueType(vertex_descriptor vertID) const noexcept {
         }
     }
     return false;
+}
+
+bool SyntaxGraph::isValueType(const Parameter& param) const {
+    if (param.mPointer || param.mReference) {
+        return true;
+    }
+    const auto paramID = locate(param.mTypePath, *this);
+    return isValueType(paramID);
 }
 
 bool SyntaxGraph::isInstantiation(vertex_descriptor vertID) const noexcept {
