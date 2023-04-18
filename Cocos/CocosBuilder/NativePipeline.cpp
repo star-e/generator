@@ -412,6 +412,7 @@ void destroy();
 
         STRUCT(PipelineCustomization) {
             PUBLIC(
+                (std::shared_ptr<CustomPipelineContext>, mCurrentContext, _)
                 ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomPipelineContext>>), mContexts, _)
                 ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomRenderPass>>), mRenderPasses, _)
                 ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomRenderSubpass>>), mRenderSubpasses, _)
@@ -445,6 +446,17 @@ void destroy();
             );
             MEMBER_FUNCTIONS(R"(
 void executeRenderGraph(const RenderGraph& rg);
+
+void addCustomContext(std::string_view name, std::shared_ptr<CustomPipelineContext> ptr);
+void addCustomRenderPass(std::string_view name, std::shared_ptr<CustomRenderPass> ptr);
+void addCustomRenderSubpass(std::string_view name, std::shared_ptr<CustomRenderSubpass> ptr);
+void addCustomComputeSubpass(std::string_view name, std::shared_ptr<CustomComputeSubpass> ptr);
+void addCustomComputePass(std::string_view name, std::shared_ptr<CustomComputePass> ptr);
+void addCustomRenderQueue(std::string_view name, std::shared_ptr<CustomRenderQueue> ptr);
+void addCustomRenderCommand(std::string_view name, std::shared_ptr<CustomRenderCommand> ptr);
+
+void setCustomContext(std::string_view name);
+
 private:
 ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
 

@@ -57,7 +57,7 @@ virtual void destroy() noexcept = 0;
 
         STRUCT(CustomRenderGraphContext) {
             PUBLIC(
-                (IntrusivePtr<CustomPipelineContext>, mPipelineContext, _)
+                (std::shared_ptr<CustomPipelineContext>, mPipelineContext, _)
                 (const RenderGraph*, mRenderGraph, nullptr)
             );
         }
