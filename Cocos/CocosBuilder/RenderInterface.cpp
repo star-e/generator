@@ -186,6 +186,7 @@ virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFla
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
+virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
         }
 

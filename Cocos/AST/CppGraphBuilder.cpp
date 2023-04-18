@@ -1005,16 +1005,16 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
         } else {
             if (isU8String) {
                 if (bPmr) {
-                    OSS << (bConst ? "const " : "") << "std::pmr::u8string&,\n";
-                    OSS << (bConst ? "const " : "") << "std::pmr::u8string " << component << "::*";
+                    OSS << (bConst ? "const " : "") << "ccstd::pmr::u8string&,\n";
+                    OSS << (bConst ? "const " : "") << "ccstd::pmr::u8string " << component << "::*";
                 } else {
                     OSS << (bConst ? "const " : "") << "std::u8string&,\n";
                     OSS << (bConst ? "const " : "") << "std::u8string " << component << "::*";
                 }
             } else {
                 if (bPmr) {
-                    OSS << (bConst ? "const " : "") << "std::pmr::string&,\n";
-                    OSS << (bConst ? "const " : "") << "std::pmr::string " << component << "::*";
+                    OSS << (bConst ? "const " : "") << "ccstd::pmr::string&,\n";
+                    OSS << (bConst ? "const " : "") << "ccstd::pmr::string " << component << "::*";
                 } else {
                     OSS << (bConst ? "const " : "") << "std::string&,\n";
                     OSS << (bConst ? "const " : "") << "std::string " << component << "::*";
