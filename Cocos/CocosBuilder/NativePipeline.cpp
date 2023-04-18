@@ -410,6 +410,18 @@ void destroy();
 )");
         }
 
+        STRUCT(PipelineCustomization) {
+            PUBLIC(
+                ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomPipelineContext>>), mContexts, _)
+                ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomRenderPass>>), mRenderPasses, _)
+                ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomRenderSubpass>>), mRenderSubpasses, _)
+                ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomComputeSubpass>>), mComputeSubpasses, _)
+                ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomComputePass>>), mComputePasses, _)
+                ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomRenderQueue>>), mRenderQueues, _)
+                ((PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomRenderCommand>>), mRenderCommands, _)
+            );
+        }
+
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
             PUBLIC(
@@ -429,6 +441,7 @@ void destroy();
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
                 (PipelineStatistics, mStatistics, _)
+                (PipelineCustomization, mCustom, _)
             );
             MEMBER_FUNCTIONS(R"(
 void executeRenderGraph(const RenderGraph& rg);

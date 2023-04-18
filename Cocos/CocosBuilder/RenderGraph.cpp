@@ -355,6 +355,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Buffer>>), mBuffers, _)
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Texture>>), mTextures, _)
                 ((PmrUnorderedMap<uint32_t, ObserverPtr<gfx::Sampler>>), mSamplers, _)
+                (ccstd::pmr::string, mCustom, _)
             );
         }
 

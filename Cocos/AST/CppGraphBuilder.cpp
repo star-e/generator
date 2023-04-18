@@ -951,15 +951,18 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
     bool bPmr = false;
 
     if (stringPath == "std::string"
-        || stringPath == "std::pmr::string") {
+        || stringPath == "std::pmr::string"
+        || stringPath == "ccstd::pmr::string") {
         isString = true;
-        if (stringPath == "std::pmr::string")
+        if (stringPath == "std::pmr::string" || stringPath == "ccstd::pmr::string")
             bPmr = true;
     } else if (stringPath == "std::u8string"
-        || stringPath == "std::pmr::u8string") {
+        || stringPath == "std::pmr::u8string"
+        || stringPath == "ccstd::u8string"
+        || stringPath == "ccstd::pmr::u8string") {
         isString = true;
         isU8String = true;
-        if (stringPath == "std::pmr::u8string")
+        if (stringPath == "std::pmr::u8string" || stringPath == "ccstd::pmr::u8string")
             bPmr = true;
     }
 

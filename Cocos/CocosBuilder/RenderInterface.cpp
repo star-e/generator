@@ -74,7 +74,7 @@ using namespace cc::render;
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData",
-            "Assets", "PassUtils" },
+            "Assets", "PassUtils", "Customization" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 #include "cocos/core/ArrayBuffer.h"
 
@@ -154,6 +154,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
             PUBLIC_METHODS(R"(
 [[getter]] virtual ccstd::string getName() const = 0;
 [[setter]] virtual void setName(const ccstd::string& name) = 0;
+virtual void setCustomBehavior(const ccstd::string& name) = 0;
 )");
         }
 
