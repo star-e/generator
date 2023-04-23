@@ -312,7 +312,9 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             PUBLIC(
                 (QueueHint, mHint, QueueHint::RENDER_OPAQUE)
                 (uint32_t, mPhaseID, 0xFFFFFFFF)
+                ([[optional]] gfx::Viewport, mViewport, _)
             );
+            TS_INIT(mViewport, null);
             CNTR(mHint, mPhaseID);
             CNTR(mPhaseID);
         }

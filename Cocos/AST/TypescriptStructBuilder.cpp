@@ -400,7 +400,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             oss << "private ";
         }
         bool bTypscriptPointer = g.isTypescriptPointer(memberID);
-        if (!m.mPointer && !bTypscriptPointer && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
+        if (!m.mPointer && !bTypscriptPointer && !m.mTypescriptOptional && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         } else if (bTypscriptPointer) {
             oss << "/*refcount*/ ";
