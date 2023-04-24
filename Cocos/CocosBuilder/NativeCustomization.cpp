@@ -59,6 +59,7 @@ virtual void destroy() noexcept = 0;
             PUBLIC(
                 (std::shared_ptr<CustomPipelineContext>, mPipelineContext, _)
                 (const RenderGraph*, mRenderGraph, nullptr)
+                (gfx::CommandBuffer*, mPrimaryCommandBuffer, nullptr)
             );
         }
 
