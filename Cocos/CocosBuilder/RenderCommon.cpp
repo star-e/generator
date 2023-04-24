@@ -147,6 +147,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
                 (gfx::Color, mClearColor, _)
                 (uint32_t, mSlotID, 0)
+                (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
             );
             builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
             builder.setMemberFlags(vertID, "mSlotID", NOT_ELEMENT);
@@ -154,7 +155,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             TS_INIT(mLoadOp, LoadOp.LOAD);
             TS_INIT(mStoreOp, StoreOp.STORE);
             TS_INIT(mClearFlags, ClearFlagBit.ALL);
-            CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor);
+            CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor, mShaderStageFlags);
         }
 
         ENUM_CLASS(ClearValueType) {
@@ -168,6 +169,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
                 (gfx::Color, mClearColor, _)
                 (ClearValueType, mClearValueType, ClearValueType::FLOAT_TYPE)
+                (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
             );
             builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
             MEMBER_FUNCTIONS(R"(
@@ -179,7 +181,7 @@ bool isWrite() const {
 }
 )");
             TS_INIT(mClearFlags, ClearFlagBit.NONE);
-            CNTR(mName, mAccessType, mClearFlags, mClearColor, mClearValueType);
+            CNTR(mName, mAccessType, mClearFlags, mClearColor, mClearValueType, mShaderStageFlags);
         }
 
         STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {
