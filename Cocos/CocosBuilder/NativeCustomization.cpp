@@ -51,6 +51,8 @@ virtual std::string_view getName() const noexcept = 0;
         INTERFACE(CustomPipelineContext) {
             INHERITS(Customization);
             PUBLIC_METHODS(R"(
+virtual IntrusivePtr<gfx::Buffer> createCustomBuffer(std::string_view type, const gfx::BufferInfo &info) = 0;
+virtual IntrusivePtr<gfx::Texture> createCustomTexture(std::string_view type, const gfx::TextureInfo &info) = 0;
 virtual void destroy() noexcept = 0;
 )");
         }
