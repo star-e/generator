@@ -175,14 +175,14 @@ virtual void setReadWriteBuffer(const ccstd::string& name, gfx::Buffer* buffer) 
 virtual void setReadWriteTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
 
-virtual void setCamera(const scene::Camera& camera) = 0;
+virtual void setCamera(const scene::Camera* camera) = 0;
 )");
         }
 
         INTERFACE(RasterQueueBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+[[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addScene(const scene::RenderScene *scene, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
@@ -234,24 +234,32 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
 )");
         }
 
-        INTERFACE(RasterPassBuilder) {
+        INTERFACE(BasicRenderPassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 [[beta]] virtual void addRenderTarget(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
 [[beta]] virtual void addDepthStencil(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
 [[beta]] virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
-[[beta]] virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
-[[beta]] virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
 [[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+
 virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
-virtual RasterSubpassBuilder *addRasterSubpass(const ccstd::string& layoutName = "") = 0;
-virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName = "") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
+[[beta]] virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
+)");
+        }
+
+        INTERFACE(RasterPassBuilder) {
+            INHERITS(BasicRenderPassBuilder);
+            PUBLIC_METHODS(R"(
+[[beta]] virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+[[beta]] virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+
+virtual RasterSubpassBuilder *addRasterSubpass(const ccstd::string& layoutName = "") = 0;
+virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName = "") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
@@ -319,7 +327,7 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 )");
         }
 
-        INTERFACE(Pipeline) {
+        INTERFACE(BasicPipeline) {
             INHERITS(PipelineRuntime);
             PUBLIC_METHODS(R"(
 virtual void beginSetup() = 0;
@@ -330,30 +338,39 @@ virtual bool containsResource(const ccstd::string& name) const = 0;
 virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
 virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
 
-virtual uint32_t addStorageBuffer(const ccstd::string& name, gfx::Format format, uint32_t size, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
-virtual uint32_t addStorageTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
-virtual uint32_t addShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 
 [[beta]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
 [[beta]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;
 
-virtual void updateStorageBuffer(const ccstd::string& name, uint32_t size, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 virtual void updateRenderTarget(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
-virtual void updateStorageTexture(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
-virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height) = 0;
 
 virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
+
 virtual RasterPassBuilder *addRasterPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
-virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
 virtual MovePassBuilder *addMovePass() = 0;
 virtual CopyPassBuilder *addCopyPass() = 0;
 
 [[deprecated]] virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+)");
+        }
+
+        INTERFACE(Pipeline) {
+            INHERITS(BasicPipeline);
+            PUBLIC_METHODS(R"(
+virtual uint32_t addStorageBuffer(const ccstd::string& name, gfx::Format format, uint32_t size, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
+virtual uint32_t addStorageTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
+virtual uint32_t addShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
+
+virtual void updateStorageBuffer(const ccstd::string& name, uint32_t size, gfx::Format format = gfx::Format::UNKNOWN) = 0;
+virtual void updateStorageTexture(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
+virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height) = 0;
+
+virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
 )");
         }
 
