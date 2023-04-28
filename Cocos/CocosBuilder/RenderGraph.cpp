@@ -325,7 +325,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 ([[optional]] scene::Camera*, mCamera, nullptr)
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
-                (ccstd::pmr::vector<ccstd::pmr::string>, mScenes, _)
+                (ccstd::pmr::vector<const scene::RenderScene *>, mScenes, _)
             );
             CNTR(mName, mFlags, mLight);
         }

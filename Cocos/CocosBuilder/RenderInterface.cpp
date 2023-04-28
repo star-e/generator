@@ -181,7 +181,7 @@ virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
-virtual void addScene(const ccstd::string& name, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+virtual void addScene(const scene::RenderScene *scene, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
