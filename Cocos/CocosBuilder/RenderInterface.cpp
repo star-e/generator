@@ -174,6 +174,8 @@ virtual void setTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 virtual void setReadWriteBuffer(const ccstd::string& name, gfx::Buffer* buffer) = 0;
 virtual void setReadWriteTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
+
+virtual void setCamera(const scene::Camera& camera) = 0;
 )");
         }
 
