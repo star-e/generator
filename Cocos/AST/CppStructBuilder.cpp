@@ -1543,7 +1543,8 @@ void CppStructBuilder::generateMethod(
     const Method& m,
     bool bOverride,
     bool bImplements,
-    bool bDefaultParam) const {
+    bool bDefaultParam,
+    bool bPure) const {
     auto scratch = get_allocator().resource();
 
     bool bEnableDefaultParam = false;
@@ -1589,15 +1590,15 @@ void CppStructBuilder::generateMethod(
     if (m.mNoexcept) {
         oss << " noexcept";
     }
-    if (!bOverride && m.mPure) {
-        oss << " = 0";
-    }
     if (bOverride && m.mVirtual) {
         if (bImplements) {
             oss << " /*implements*/";
         } else {
             oss << " override";
         }
+    }
+    if ((!bOverride && m.mPure) || bPure) {
+        oss << " = 0";
     }
 }
 

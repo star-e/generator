@@ -602,12 +602,16 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
 
                     int count = 0;
                     for (const Method& m : s.mMethods) {
-                        if (!m.mPure)
+                        if (!m.mPure) {
                             continue;
+                        }
+                        if (m.mCovariant) {
+                            continue;
+                        }
                         if (count++ == 0) {
                             oss << "\n";
                         }
-                        
+
                         cpp.generateMethod(oss, space, m, true, bImplements);
                         oss << ";\n";
                     }
@@ -745,6 +749,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
         }
 
         // virtual functions
+        std::pmr::set<std::pmr::string> covariants(scratch);
         if (!traits.mInterface) {
             std::pmr::map<SyntaxGraph::vertex_descriptor, SyntaxGraph::vertex_descriptor> bases(scratch);
             std::pmr::vector<SyntaxGraph::vertex_descriptor> results(scratch);
@@ -754,6 +759,31 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 outputOverrideUsingImplements(cpp, g, vertID, results, bases, overrided);
             }
             outputOverride(cpp, g, results, bases, overrided);
+        } else {
+            std::pmr::map<SyntaxGraph::vertex_descriptor, SyntaxGraph::vertex_descriptor> bases(scratch);
+            std::pmr::vector<SyntaxGraph::vertex_descriptor> results(scratch);
+            collectBases(g, vertID, inherits.mBases, bases, results);
+            for (const auto [baseID, implID] : bases) {
+                const auto& baseTraits = get(g.traits, g, baseID);
+                visit_vertex(
+                    baseID, g,
+                    [&](const Composition_ auto& s) {
+                        if (!baseTraits.mInterface)
+                            return;
+
+                        int count = 0;
+                        for (const Method& m : s.mMethods) {
+                            if (!m.mPure) {
+                                continue;
+                            }
+                            if (m.mCovariant) {
+                                covariants.emplace(m.mFunctionName);
+                            }
+                        }
+                    },
+                    [&](const auto&) {
+                    });
+            }
         }
 
         // public methods
@@ -761,10 +791,18 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             oss << "\n";
         }
         for (const Method& m : s.mMethods) {
-            cpp.generateMethod(oss, space, m, false, false, true);
+            if (covariants.contains(m.mFunctionName)) {
+                cpp.generateMethod(oss, space, m, true, false, false, true);
+                oss << " /* covariant */";
+            } else {
+                cpp.generateMethod(oss, space, m, false, false, true);
+            }
             oss << ";\n";
         }
         for (const Method& m : s.mMethods) {
+            if (covariants.contains(m.mFunctionName)) {
+                continue;
+            }
             copyString(oss, space, cpp.generateDispatchMethods(m));
         }
 

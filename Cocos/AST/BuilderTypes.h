@@ -83,7 +83,7 @@ struct CppStructBuilder {
     std::pmr::string generateConstructorBody(const Constructor& cntr) const;
     std::pmr::string generateConstructorCall(SyntaxGraph::vertex_descriptor vertID, const Constructor& cntr) const;
     std::pmr::string generateMemberFunctions(std::pmr::string& space) const;
-    void generateMethod(std::ostream& oss, std::pmr::string& space, const Method& method, bool bOverride, bool bImplements, bool bDefaultParam = false) const;
+    void generateMethod(std::ostream& oss, std::pmr::string& space, const Method& method, bool bOverride, bool bImplements, bool bDefaultParam = false, bool bPure = false) const;
     std::pmr::string generateDispatchMethods(const Method& method) const;
 
     const SyntaxGraph* mSyntaxGraph = nullptr;

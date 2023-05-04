@@ -255,6 +255,7 @@ Method::Method(Method&& rhs, const allocator_type& alloc)
     , mSetter(std::move(rhs.mSetter))
     , mOptional(std::move(rhs.mOptional))
     , mSkip(std::move(rhs.mSkip))
+    , mCovariant(std::move(rhs.mCovariant))
     , mFlags(std::move(rhs.mFlags)) {}
 
 Method::Method(Method const& rhs, const allocator_type& alloc)
@@ -270,6 +271,7 @@ Method::Method(Method const& rhs, const allocator_type& alloc)
     , mSetter(rhs.mSetter)
     , mOptional(rhs.mOptional)
     , mSkip(rhs.mSkip)
+    , mCovariant(rhs.mCovariant)
     , mFlags(rhs.mFlags) {}
 
 Method::~Method() noexcept = default;

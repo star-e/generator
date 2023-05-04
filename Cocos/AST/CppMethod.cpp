@@ -133,6 +133,10 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
         method.mOptional = true;
     }
 
+    if (boost::algorithm::contains(function, "[[covariant]]")) {
+        method.mCovariant = true;
+    }
+
     if (boost::algorithm::contains(function, "[[deprecated]]")) {
         method.mFlags |= Doc::Deprecated;
     }
