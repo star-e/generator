@@ -159,7 +159,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
         }
 
         ENUM_CLASS(ClearValueType) {
-            ENUMS(FLOAT_TYPE, INT_TYPE);
+            ENUMS(NONE, FLOAT_TYPE, INT_TYPE);
         }
 
         STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
@@ -168,7 +168,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
                 (AccessType, mAccessType, AccessType::READ)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
                 (gfx::Color, mClearColor, _)
-                (ClearValueType, mClearValueType, ClearValueType::FLOAT_TYPE)
+                (ClearValueType, mClearValueType, ClearValueType::NONE)
                 (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
             );
             builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
