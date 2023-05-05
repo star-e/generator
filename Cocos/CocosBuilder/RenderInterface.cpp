@@ -341,9 +341,6 @@ virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* 
 virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 
-[[beta]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
-[[beta]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;
-
 virtual void updateRenderTarget(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 
@@ -354,7 +351,6 @@ virtual void endFrame() = 0;
 virtual MovePassBuilder *addMovePass() = 0;
 virtual CopyPassBuilder *addCopyPass() = 0;
 
-[[deprecated]] virtual SceneTransversal *createSceneTransversal(const scene::Camera *camera, const scene::RenderScene *scene) = 0;
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
         }
@@ -372,6 +368,9 @@ virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width,
 
 virtual RasterPassBuilder *addRasterPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
 virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
+
+[[beta]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
+[[beta]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;
 )");
         }
 

@@ -6,7 +6,7 @@ void outputDoc(std::ostream& oss, std::pmr::string& space, Doc flags) {
     if (any(flags)) {
         OSS << "/**\n";
         if (any(flags & Doc::Beta)) {
-            OSS << " * @beta method's name might change\n";
+            OSS << " * @beta function signature might change\n";
         }
         if (any(flags & Doc::Experimental)) {
             OSS << " * @experimental\n";
