@@ -162,7 +162,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             ENUMS(NONE, FLOAT_TYPE, INT_TYPE);
         }
 
-        STRUCT(ClearValue, .mFlags = JSB) {
+        STRUCT(ClearValue, .mFlags = VALUE_OBJECT | JSB) {
             PUBLIC(
                 (double, mX, 0)
                 (double, mY, 0)

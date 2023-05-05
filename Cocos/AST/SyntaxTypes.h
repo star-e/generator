@@ -58,6 +58,7 @@ enum GenerationFlags : uint64_t {
     NOT_ELEMENT = 1 << 21,
     STRING_KEY = 1 << 22,
     POOL_OBJECT = 1 << 23,
+    VALUE_OBJECT = 1 << 24,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {

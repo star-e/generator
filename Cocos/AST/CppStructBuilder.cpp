@@ -508,6 +508,8 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
                         bCopyParam = true;
                     } else if (paramTraits.mTrivial) {
                         bCopyParam = true;
+                    } else if (paramTraits.mFlags & VALUE_OBJECT) {
+                        bCopyParam = true;
                     }
                     if (bCopyParam) {
                         oss << param.mName;
@@ -532,6 +534,8 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
             Expects(!bPmr);
             bCopyParam = true;
         } else if (memberTraits.mTrivial) {
+            bCopyParam = true;
+        } else if (memberTraits.mFlags & VALUE_OBJECT) {
             bCopyParam = true;
         }
         bool isParam = false;
@@ -632,6 +636,8 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
             Expects(!bPmr);
             bCopyParam = true;
         } else if (memberTraits.mTrivial) {
+            bCopyParam = true;
+        } else if (memberTraits.mFlags & VALUE_OBJECT) {
             bCopyParam = true;
         }
 
@@ -1402,6 +1408,8 @@ std::pmr::string CppStructBuilder::generateConstructorCall(
                     } else if (g.isValueType(memberID)) {
                         bCopyParam = true;
                     } else if (memberTraits.mTrivial) {
+                        bCopyParam = true;
+                    } else if (m.mFlags & VALUE_OBJECT) {
                         bCopyParam = true;
                     }
                     if (bCopyParam) {
