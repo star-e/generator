@@ -162,16 +162,26 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             ENUMS(NONE, FLOAT_TYPE, INT_TYPE);
         }
 
+        STRUCT(ClearValue, .mFlags = JSB) {
+            PUBLIC(
+                (double, mX, 0)
+                (double, mY, 0)
+                (double, mZ, 0)
+                (double, mW, 0)
+            );
+            CNTR(mX, mY, mZ, mW);
+        }
+
         STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
                 (AccessType, mAccessType, AccessType::READ)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
-                (gfx::Color, mClearColor, _)
                 (ClearValueType, mClearValueType, ClearValueType::NONE)
+                (ClearValue, mClearValue, _)
                 (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
             );
-            builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
+            builder.setMemberFlags(vertID, "mClearValue", NOT_ELEMENT);
             MEMBER_FUNCTIONS(R"(
 bool isRead() const {
     return accessType != AccessType::WRITE;
@@ -181,7 +191,7 @@ bool isWrite() const {
 }
 )");
             TS_INIT(mClearFlags, ClearFlagBit.NONE);
-            CNTR(mName, mAccessType, mClearFlags, mClearColor, mClearValueType, mShaderStageFlags);
+            CNTR(mName, mAccessType, mClearFlags, mClearValueType, mClearValue, mShaderStageFlags);
         }
 
         STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {
