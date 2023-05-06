@@ -327,9 +327,14 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 )");
         }
 
+        ENUM_CLASS(PipelineType) {
+            ENUMS(BASIC, STANDARD);
+        }
+
         INTERFACE(BasicPipeline) {
             INHERITS(PipelineRuntime);
             PUBLIC_METHODS(R"(
+[[getter]] virtual PipelineType getPipelineType() const = 0;
 virtual void beginSetup() = 0;
 virtual void endSetup() = 0;
 
@@ -376,7 +381,7 @@ virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
 
         INTERFACE(PipelineBuilder) {
             PUBLIC_METHODS(R"(
-virtual void setup(const ccstd::vector<scene::Camera*>& cameras, Pipeline* pipeline) = 0;
+virtual void setup(const ccstd::vector<scene::Camera*>& cameras, BasicPipeline* pipeline) = 0;
 )");
         }
 
