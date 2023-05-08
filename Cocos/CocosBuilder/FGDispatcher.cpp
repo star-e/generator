@@ -106,6 +106,21 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(LayoutAccess) {
+            PUBLIC(
+                (gfx::AccessFlagBit, mPrevAccess, gfx::AccessFlagBit::NONE)
+                (gfx::AccessFlagBit, mNextAccess, gfx::AccessFlagBit::NONE)
+            );
+        }
+
+        STRUCT(FGRenderPassInfo) {
+            PUBLIC(
+                (std::vector<LayoutAccess>, mColorAccesses, _)
+                (LayoutAccess, mDsAccess, _)
+                (gfx::RenderPassInfo, mRpInfo, _)
+            );
+        }
+
         PMR_GRAPH(ResourceAccessGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
@@ -116,6 +131,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
                 ((PmrFlatMap<ccstd::pmr::string, ResourceLifeRecord>), mResourceLifeRecord, _)
                 (ccstd::pmr::vector<ResourceAccessGraph::vertex_descriptor>, mTopologicalOrder, _)
+                ((PmrFlatMap<ResourceAccessGraph::vertex_descriptor, FGRenderPassInfo>), mRpInfos, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
@@ -193,7 +209,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
             
             MEMBER_FUNCTIONS(R"(
-using BarrierMap = FlatMap<ResourceAccessGraph::vertex_descriptor, BarrierNode>;
+using BarrierMap = PmrMap<ResourceAccessGraph::vertex_descriptor, BarrierNode>;
 
 void enablePassReorder(bool enable);
 
