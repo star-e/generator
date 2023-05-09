@@ -177,11 +177,13 @@ bool checkResource(const ResourceDesc &desc) const;
                 (gfx::Viewport, mViewport, _)
                 (ccstd::pmr::string, mVersionName, _)
                 (uint64_t, mVersion, 0)
+                (uint64_t, mHashValue, 0)
                 (bool, mShowStatistics, false)
             );
             MEMBER_FLAGS(mViewport, NOT_ELEMENT);
             MEMBER_FLAGS(mVersionName, NOT_ELEMENT);
             MEMBER_FLAGS(mVersion, NOT_ELEMENT);
+            MEMBER_FLAGS(mHashValue, NOT_ELEMENT);
             MEMBER_FLAGS(mShowStatistics, NOT_ELEMENT);
         }
 
