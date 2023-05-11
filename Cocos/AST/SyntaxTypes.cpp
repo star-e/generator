@@ -143,12 +143,14 @@ EnumValue::EnumValue(const allocator_type& alloc) noexcept
 EnumValue::EnumValue(EnumValue&& rhs, const allocator_type& alloc)
     : mName(std::move(rhs.mName), alloc)
     , mValue(std::move(rhs.mValue), alloc)
-    , mReflectionName(std::move(rhs.mReflectionName), alloc) {}
+    , mReflectionName(std::move(rhs.mReflectionName), alloc)
+    , mExport(std::move(rhs.mExport)) {}
 
 EnumValue::EnumValue(EnumValue const& rhs, const allocator_type& alloc)
     : mName(rhs.mName, alloc)
     , mValue(rhs.mValue, alloc)
-    , mReflectionName(rhs.mReflectionName, alloc) {}
+    , mReflectionName(rhs.mReflectionName, alloc)
+    , mExport(rhs.mExport) {}
 
 EnumValue::~EnumValue() noexcept = default;
 

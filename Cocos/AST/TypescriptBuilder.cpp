@@ -61,6 +61,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             {
                 INDENT();
                 for (const auto& v : e.mValues) {
+                    if (!v.mExport) {
+                        continue;
+                    }
                     OSS << v.mName;
                     if (!v.mValue.empty()) {
                         oss << " = " << v.mValue;

@@ -421,6 +421,7 @@ struct ModuleBuilder {
     void addEnumElement(SyntaxGraph::vertex_descriptor vertID,
         std::string_view name, std::string_view value);
     void setEnumUnderlyingType(SyntaxGraph::vertex_descriptor vertID, std::string_view type);
+    void setEnumMemberExport(SyntaxGraph::vertex_descriptor vertID, std::string_view name, bool bExport);
     SyntaxGraph::vertex_descriptor addTag(std::string_view name, bool bEntity = true,
         std::initializer_list<std::string_view> concepts = {});
 

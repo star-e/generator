@@ -414,6 +414,19 @@ void ModuleBuilder::setEnumUnderlyingType(SyntaxGraph::vertex_descriptor vertID,
     e.mUnderlyingType = type;
 }
 
+void ModuleBuilder::setEnumMemberExport(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view name, bool bExport) {
+    auto& g = mSyntaxGraph;
+    Expects(holds_tag<Enum_>(vertID, g));
+    auto& e = get_by_tag<Enum_>(vertID, g);
+
+    for (auto& member : e.mValues) {
+        if (member.mName == name) {
+            member.mExport = bExport;
+        }
+    }
+}
+
 SyntaxGraph::vertex_descriptor ModuleBuilder::addTag(std::string_view name, bool bEntity,
     std::initializer_list<std::string_view> concepts) {
     auto& g = mSyntaxGraph;

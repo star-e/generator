@@ -133,9 +133,36 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
         ENUM_CLASS(AttachmentType) {
             ENUMS(RENDER_TARGET, DEPTH_STENCIL, SHADING_RATE);
         }
+
         ENUM_CLASS(AccessType) {
             ENUMS(READ, READ_WRITE, WRITE);
         }
+
+        //FLAG_CLASS(AccessType) {
+        //    FLAGS(
+        //        (NONE, 0)
+        //        (READ, 1 << 0)
+        //        (WRITE, 1 << 1)
+        //        (INPUT, 1 << 2)
+        //        (SHADER, 1 << 3)
+        //        (READ_WRITE, READ | WRITE)
+        //    );
+        //    builder.setEnumMemberExport(vertID, "INPUT", false);
+        //    builder.setEnumMemberExport(vertID, "SHADER", false);
+        //}
+
+        //FLAG_CLASS(DepthStencilAccessType) {
+        //    UNDERLYING_TYPE(uint32_t);
+        //    FLAGS(
+        //        (NONE, 0)
+        //        (TEST, 1 << 0)
+        //        (WRITE, 1 << 1)
+        //        (INPUT, 1 << 2)
+        //        (SHADER, 1 << 3)
+        //        (TEST_WRITE, READ | WRITE)
+        //    );
+        //    builder.setEnumMemberExport(vertID, "SHADER", false);
+        //}
 
         STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
             PUBLIC(
