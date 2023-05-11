@@ -42,13 +42,13 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4250)
+    #pragma warning(push)
+    #pragma warning(disable: 4250)
 #endif
 )",
         .mTail = R"(
 #ifdef _MSC_VER
-#pragma warning(pop)
+    #pragma warning(pop)
 #endif
 )" ) {
         NAMESPACE_BEG(cc);
@@ -92,13 +92,13 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             CNTR(mLayoutGraph, mLayoutID);
         }
 
-        STRUCT(NativeRasterQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(RasterQueueBuilder, NativeSetter);
+        STRUCT(NativeRenderQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(RenderQueueBuilder, NativeSetter);
             CNTR_EMPTY();
         }
 
-        STRUCT(NativeRasterSubpassBuilder, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(RasterSubpassBuilder, NativeSetter);
+        STRUCT(NativeRenderSubpassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(RenderSubpassBuilder, NativeSetter);
             CNTR_EMPTY();
         }
 
@@ -107,8 +107,8 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             CNTR_EMPTY();
         }
 
-        STRUCT(NativeRasterPassBuilder, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(RasterPassBuilder, NativeSetter);
+        STRUCT(NativeRenderPassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(RenderPassBuilder, NativeSetter);
             CNTR_EMPTY();
         }
 

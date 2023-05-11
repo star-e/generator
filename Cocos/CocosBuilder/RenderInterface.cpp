@@ -68,8 +68,8 @@ using namespace cc::render;
         .mToJsConfigs = R"(%module_macro(CC_USE_GEOMETRY_RENDERER) cc::render::PipelineRuntime::geometryRenderer;
 
 // ----- Release Returned Cpp Object in GC Section ------
-%release_returned_cpp_object_in_gc(cc::render::Pipeline::addRasterPass);
-%release_returned_cpp_object_in_gc(cc::render::RasterPassBuilder::addQueue);
+%release_returned_cpp_object_in_gc(cc::render::Pipeline::addRenderPass);
+%release_returned_cpp_object_in_gc(cc::render::RenderPassBuilder::addQueue);
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
@@ -179,7 +179,7 @@ virtual void setCamera(const scene::Camera* camera) = 0;
 )");
         }
 
-        INTERFACE(RasterQueueBuilder) {
+        INTERFACE(RenderQueueBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
@@ -192,7 +192,7 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 )");
         }
 
-        INTERFACE(RasterSubpassBuilder) {
+        INTERFACE(RenderSubpassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
@@ -203,7 +203,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 
@@ -244,7 +244,7 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 [[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual RasterQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
@@ -252,13 +252,13 @@ virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 )");
         }
 
-        INTERFACE(RasterPassBuilder) {
+        INTERFACE(RenderPassBuilder) {
             INHERITS(BasicRenderPassBuilder);
             PUBLIC_METHODS(R"(
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 
-virtual RasterSubpassBuilder *addRasterSubpass(const ccstd::string& layoutName = "") = 0;
+virtual RenderSubpassBuilder *addRenderSubpass(const ccstd::string& layoutName = "") = 0;
 virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName = "") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
@@ -352,7 +352,7 @@ virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint3
 virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
 
-[[covariant]] virtual BasicRenderPassBuilder *addRasterPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
+[[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
 virtual MovePassBuilder *addMovePass() = 0;
 virtual CopyPassBuilder *addCopyPass() = 0;
 
@@ -371,7 +371,7 @@ virtual void updateStorageBuffer(const ccstd::string& name, uint32_t size, gfx::
 virtual void updateStorageTexture(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height) = 0;
 
-virtual RasterPassBuilder *addRasterPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
+virtual RenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
 virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
 
 [[beta]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
