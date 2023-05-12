@@ -129,8 +129,13 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
         method.mSetter = true;
     }
 
-    if (boost::algorithm::contains(function, "[[optional]]")) {
-        method.mOptional = true;
+    {
+        auto pos = function.find('(');
+        Expects(pos != function.npos);
+        auto function2 = function.substr(0, pos);
+        if (boost::algorithm::contains(function2, "[[optional]]")) {
+            method.mOptional = true;
+        }
     }
 
     if (boost::algorithm::contains(function, "[[covariant]]")) {

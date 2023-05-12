@@ -51,7 +51,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
     MODULE(RenderInterface,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "RenderInterface",
-        .mToJsFilename = "renderer.i",
+        .mToJsFilename = "render.i",
         .mToJsPrefix = "render",
         .mToJsNamespace = "render",
         .mToJsCppHeaders = R"(#include "bindings/auto/jsb_render_auto.h"
@@ -197,7 +197,7 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
 virtual void addDepthStencil(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr) = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 
@@ -222,7 +222,7 @@ virtual void addDispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY,
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, const ccstd::string& slotName) = 0;
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr) = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 
@@ -239,7 +239,7 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
 virtual void addDepthStencil(const ccstd::string& name, const ccstd::string& slotName, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr) = 0;
 
 [[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
@@ -268,7 +268,7 @@ virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName
         INTERFACE(ComputePassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr) = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 
