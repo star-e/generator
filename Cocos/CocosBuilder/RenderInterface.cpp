@@ -2,6 +2,8 @@
 #include <Cocos/AST/DSL.h>
 #include <Cocos/AST/SyntaxGraphs.h>
 
+// clang-format off
+
 namespace Cocos::Meta {
 
 void buildArchiveInterface(ModuleBuilder& builder, Features features) {
@@ -331,10 +333,27 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
             ENUMS(BASIC, STANDARD);
         }
 
+        FLAG_CLASS(SubpassCapabilities) {
+            UNDERLYING_TYPE(uint32_t);
+            FLAGS(
+                (NONE, 0)
+                (INPUT_DEPTH_STENCIL, 1 << 0)
+                (INPUT_COLOR, 1 << 1)
+                (INPUT_COLOR_MRT, 1 << 2)
+            );
+        }
+
+        STRUCT(PipelineCapabilities) {
+            PUBLIC(
+                (SubpassCapabilities, mSubpass, SubpassCapabilities::NONE)
+            );
+        }
+
         INTERFACE(BasicPipeline) {
             INHERITS(PipelineRuntime);
             PUBLIC_METHODS(R"(
 [[getter]] virtual PipelineType getPipelineType() const = 0;
+[[getter]] virtual PipelineCapabilities getPipelineCapabilities() const = 0;
 virtual void beginSetup() = 0;
 virtual void endSetup() = 0;
 
