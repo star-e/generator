@@ -292,68 +292,53 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             ++methodID;
             continue;
         }
-        int32_t numParams = static_cast<int32_t>(method.mParameters.size());
-        for (; numParams >= 0; --numParams) {
-            outputDoc(oss, space, method.mFlags);
-            OSS;
-            if (!method.mPure) {
-                oss << "public ";
-            }
-            if (method.mGetter) {
-                auto methodName = method.mFunctionName.substr(3);
-                methodName = camelToVariable(methodName, scratch);
-                if (methodID + 1 < methods.size()) {
-                    const auto& nextMethod = methods[methodID + 1];
-                    if (nextMethod.mSetter) {
-                        oss << methodName;
-                    } else {
-                        oss << "readonly " << methodName;
-                    }
-                    oss << ": ";
-                    oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
-                    oss << ";\n";
+
+        outputDoc(oss, space, method.mFlags);
+        OSS;
+        if (!method.mPure) {
+            oss << "public ";
+        }
+        if (method.mGetter) {
+            auto methodName = method.mFunctionName.substr(3);
+            methodName = camelToVariable(methodName, scratch);
+            if (methodID + 1 < methods.size()) {
+                const auto& nextMethod = methods[methodID + 1];
+                if (nextMethod.mSetter) {
+                    oss << methodName;
                 } else {
                     oss << "readonly " << methodName;
-                    oss << ": ";
-                    oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
-                    oss << ";\n";
                 }
-                break;
-                //oss << "get " << methodName << " (";
-            } else if (method.mSetter) {
-                auto methodName = method.mFunctionName.substr(3);
-                methodName = camelToVariable(methodName, scratch);
-                oss << "set " << methodName << " (";
+                oss << ": ";
+                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+                oss << ";\n";
             } else {
-                oss << method.mFunctionName << " (";
+                oss << "readonly " << methodName;
+                oss << ": ";
+                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+                oss << ";\n";
             }
-            bool bHasDefaultParams = false;
-            for (int32_t count = 0; const auto& param : method.mParameters) {
-                if (param.mName.back() == '_') {
-                    if (bHasDefaultParams && count + 1 == method.mParameters.size()) {
-                        oss << "*/";
-                    }
-                    continue;
-                }
-                if (count == numParams) {
-                    oss << "/*";
-                    bHasDefaultParams = true;
-                }
-                if (count++) {
-                    oss << ", ";
-                }
-                auto paramID = locate(param.mTypePath, g);
-                if (count > numParams) {
-                    oss << g.getTypescriptInitialValue(
-                        paramID, "", param.mDefaultValue, param.mPointer);
-                } else {
-                    oss << param.name();
-                    oss << ": " << g.getTypedParameterName(param, true, true, param.mOptional);
-                }
-                if (bHasDefaultParams && count == method.mParameters.size()) {
-                    oss << "*/";
-                }
+        } else if (method.mSetter) {
+            auto methodName = method.mFunctionName.substr(3);
+            methodName = camelToVariable(methodName, scratch);
+            oss << "set " << methodName << " (";
+        } else {
+            oss << method.mFunctionName << " (";
+        }
+        for (int32_t count = 0; const auto& param : method.mParameters) {
+            if (param.mName.back() == '_') {
+                continue;
             }
+            if (count++) {
+                oss << ", ";
+            }
+            auto paramID = locate(param.mTypePath, g);
+            oss << param.name();
+            if (!param.mDefaultValue.empty()) {
+                oss << "?";
+            }
+            oss << ": " << g.getTypedParameterName(param, true, true, param.mOptional);
+        }
+        if (!method.mGetter) {
             oss << ")";
             if (!method.mSetter) {
                 oss << ": ";
@@ -364,9 +349,6 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 oss << " /*const*/";
             }
             oss << "\n";
-
-            if (numParams > 0 && method.mParameters[numParams - 1].mDefaultValue.empty())
-                break;
         }
         ++methodID;
     }
