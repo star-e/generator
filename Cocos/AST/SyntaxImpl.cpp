@@ -1172,7 +1172,12 @@ std::pmr::string SyntaxGraph::getTypePath(
         }
         Expects(!(bConst && bVolatile));
         bool bReference = false;
-        if (removeCvRefPointer.ends_with("&")) {
+        bool bRvalueRenference = false;
+        if (removeCvRefPointer.ends_with("&&")) {
+            removeCvRefPointer = removeCvRefPointer.substr(0, removeCvRefPointer.size() - 2);
+            bRvalueRenference = true;
+            bReference = true;
+        } else if (removeCvRefPointer.ends_with("&")) {
             removeCvRefPointer = removeCvRefPointer.substr(0, removeCvRefPointer.size() - 1);
             bReference = true;
         }
@@ -1195,7 +1200,9 @@ std::pmr::string SyntaxGraph::getTypePath(
         if (bPointer) {
             result.append("*");
         }
-        if (bReference) {
+        if (bRvalueRenference) {
+            result.append("&&");
+        } else if (bReference) {
             result.append("&");
         }
         return result;

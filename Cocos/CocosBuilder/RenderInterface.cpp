@@ -282,20 +282,6 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
 )");
         }
 
-        INTERFACE(MovePassBuilder) {
-            INHERITS(RenderNode);
-            PUBLIC_METHODS(R"(
-virtual void addPair(const MovePair& pair) = 0;
-)");
-        }
-
-        INTERFACE(CopyPassBuilder) {
-            INHERITS(RenderNode);
-            PUBLIC_METHODS(R"(
-virtual void addPair(const CopyPair& pair) = 0;
-)");
-        }
-
         INTERFACE(SceneVisitor) {
             PUBLIC_METHODS(R"(
 [[getter]] virtual const pipeline::PipelineSceneData* getPipelineSceneData() const = 0;
@@ -372,8 +358,8 @@ virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
 
 [[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
-virtual MovePassBuilder *addMovePass() = 0;
-virtual CopyPassBuilder *addCopyPass() = 0;
+virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
+virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");

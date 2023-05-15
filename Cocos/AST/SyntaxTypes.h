@@ -59,6 +59,7 @@ enum GenerationFlags : uint64_t {
     STRING_KEY = 1 << 22,
     POOL_OBJECT = 1 << 23,
     VALUE_OBJECT = 1 << 24,
+    FORCE_COPY = 1 << 25,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -367,6 +368,7 @@ struct Parameter {
     bool mConst = false;
     bool mPointer = false;
     bool mReference = false;
+    bool mRvalue = false;
     bool mOptional = false;
 };
 

@@ -27,7 +27,11 @@ void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parame
     Ensures(!parameters.empty());
     Ensures(parameters.back() != ' ');
 
-    if (parameters.back() == '&') {
+    if (parameters.ends_with("&&")) {
+        param.mReference = true;
+        param.mRvalue = true;
+        parameters = parameters.substr(0, parameters.size() - 2);
+    } else if (parameters.back() == '&') {
         param.mReference = true;
         parameters = parameters.substr(0, parameters.size() - 1);
     }

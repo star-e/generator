@@ -973,8 +973,8 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     oss << ";\n";
                     break;
                 case ImplEnum::Delete:
-                    if (sFormat && (bNoexcept && needMove != ImplEnum::Delete)) {
-                        OSS << name << "(" << name << " const& rhs)     = delete;\n";
+                    if (traits.mFlags & FORCE_COPY) {
+                        OSS << name << "(" << name << " const& rhs) = default;\n";
                     } else {
                         OSS << name << "(" << name << " const& rhs) = delete;\n";
                     }
@@ -1010,8 +1010,8 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     }
                 }
                 if (needCopy != ImplEnum::None) {
-                    if (sFormat && (bNoexcept && needMove != ImplEnum::Delete)) {
-                        OSS << name << "(" << name << " const& rhs)     = delete;\n";
+                    if (traits.mFlags & FORCE_COPY) {
+                        OSS << name << "(" << name << " const& rhs) = default;\n";
                     } else {
                         OSS << name << "(" << name << " const& rhs) = delete;\n";
                     }
@@ -1059,7 +1059,11 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                 }
                 break;
             case ImplEnum::Delete:
-                OSS << name << "& operator=(" << name << " const& rhs) = delete;\n";
+                if (traits.mFlags & FORCE_COPY) {
+                    OSS << name << "& operator=(" << name << " const& rhs) = default;\n";
+                } else {
+                    OSS << name << "& operator=(" << name << " const& rhs) = delete;\n";
+                }
                 break;
             case ImplEnum::None:
             default:
@@ -1473,6 +1477,9 @@ void outputParam(const CppStructBuilder& builder, std::ostream& oss, const Param
         oss << "*";
     }
     if (p.mReference) {
+        oss << "&";
+    }
+    if (p.mRvalue) {
         oss << "&";
     }
 }

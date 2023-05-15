@@ -299,7 +299,7 @@ bool isWrite() const {
         }
 
         // RenderGraph
-        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
+        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT | FORCE_COPY) {
             PUBLIC(
                 (ccstd::pmr::string, mSource, _)
                 (ccstd::pmr::string, mTarget, _)
@@ -317,7 +317,7 @@ bool isWrite() const {
                 mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
         }
 
-        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
+        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT | FORCE_COPY) {
             PUBLIC(
                 (ccstd::pmr::string, mSource, _)
                 (ccstd::pmr::string, mTarget, _)
