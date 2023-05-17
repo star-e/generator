@@ -338,8 +338,8 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
         INTERFACE(BasicPipeline) {
             INHERITS(PipelineRuntime);
             PUBLIC_METHODS(R"(
-[[getter]] virtual PipelineType getPipelineType() const = 0;
-[[getter]] virtual PipelineCapabilities getPipelineCapabilities() const = 0;
+[[getter]] virtual PipelineType getType() const = 0;
+[[getter]] virtual PipelineCapabilities getCapabilities() const = 0;
 virtual void beginSetup() = 0;
 virtual void endSetup() = 0;
 
@@ -358,7 +358,6 @@ virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
 
 [[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
-virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
@@ -378,6 +377,7 @@ virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width,
 
 virtual RenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
 virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
+virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 
 [[beta]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
 [[beta]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;

@@ -26,6 +26,9 @@ std::pmr::string generateSwigConfig(const ModuleBuilder& builder, uint32_t modul
     OSS << "%module(target_namespace=\"" << m.mToJsNamespace << "\") " << m.mToJsPrefix << "\n";
 
     copyString(oss, space, R"(
+// Disable some swig warnings, find warning number reference here ( https://www.swig.org/Doc4.1/Warnings.html )
+#pragma SWIG nowarn=503,302,401,317,402
+
 // Insert code at the beginning of generated header file (.h)
 %insert(header_file) %{
 #pragma once
