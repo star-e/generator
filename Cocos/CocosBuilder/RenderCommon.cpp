@@ -167,6 +167,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
         STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mSlotName, _)
+                (ccstd::pmr::string, mSlotName1, _)
                 (AccessType, mAccessType, AccessType::WRITE)
                 (AttachmentType, mAttachmentType, _)
                 (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
@@ -183,6 +184,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             TS_INIT(mStoreOp, StoreOp.STORE);
             TS_INIT(mClearFlags, ClearFlagBit.ALL);
             CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor, mShaderStageFlags);
+            CNTR(mSlotName, mSlotName1, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor, mShaderStageFlags);
         }
 
         ENUM_CLASS(ClearValueType) {
@@ -203,6 +205,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             PUBLIC(
                 (ccstd::pmr::string, mName, _)
                 (AccessType, mAccessType, AccessType::READ)
+                (uint32_t, mPlane, 0)
                 (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
                 (ClearValueType, mClearValueType, ClearValueType::NONE)
                 (ClearValue, mClearValue, _)
@@ -219,6 +222,7 @@ bool isWrite() const {
 )");
             TS_INIT(mClearFlags, ClearFlagBit.NONE);
             CNTR(mName, mAccessType, mClearFlags, mClearValueType, mClearValue, mShaderStageFlags);
+            CNTR(mName, mAccessType, mPlane, mClearFlags, mClearValueType, mClearValue, mShaderStageFlags);
         }
 
         STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {
