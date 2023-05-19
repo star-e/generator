@@ -234,9 +234,10 @@ struct Alias {
 };
 
 struct Traits {
-    bool mImport = false;
-    bool mInterface = false;
     bool mClass = false;
+    bool mImport = false;
+    bool mExport = true;
+    bool mInterface = false;
     bool mPmr = false;
     bool mNoexcept = true;
     bool mUnknown = false;

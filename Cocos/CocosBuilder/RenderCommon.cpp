@@ -68,7 +68,7 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             ENUMS(CONSTANTS, CBV, UAV, SRV, TABLE, SSV);
         }
 
-        TAGS((_), RasterPass_, RasterSubpass_, ComputeSubpass_, Compute_, Copy_, Move_, Raytrace_);
+        TAGS((_), RasterPass_, RasterSubpass_, ComputeSubpass_, Compute_, Resolve_, Copy_, Move_, Raytrace_);
 
         ENUM_CLASS(ResourceResidency) {
             ENUMS(MANAGED, MEMORYLESS, PERSISTENT, EXTERNAL, BACKBUFFER);
@@ -303,7 +303,27 @@ bool isWrite() const {
         }
 
         // RenderGraph
-        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT | FORCE_COPY) {
+        FLAG_CLASS(ResolveFlags) {
+            FLAGS(
+                (NONE, 0)
+                (COLOR, 1 << 0)
+                (DEPTH, 1 << 1)
+                (STENCIL, 1 << 2)
+            );
+        }
+
+        STRUCT(ResolvePair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
+            PUBLIC(
+                (ccstd::pmr::string, mSource, _)
+                (ccstd::pmr::string, mTarget, _)
+                (ResolveFlags, mResolveFlags, ResolveFlags::NONE)
+                (gfx::ResolveMode, mMode, gfx::ResolveMode::SAMPLE_ZERO)
+                (gfx::ResolveMode, mMode1, gfx::ResolveMode::SAMPLE_ZERO)
+            );
+            CNTR(mSource, mTarget, mResolveFlags, mMode, mMode1);
+        }
+
+        STRUCT(CopyPair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mSource, _)
                 (ccstd::pmr::string, mTarget, _)
@@ -321,7 +341,7 @@ bool isWrite() const {
                 mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
         }
 
-        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT | FORCE_COPY) {
+        STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
             PUBLIC(
                 (ccstd::pmr::string, mSource, _)
                 (ccstd::pmr::string, mTarget, _)

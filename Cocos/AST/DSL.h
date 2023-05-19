@@ -98,19 +98,19 @@ builder.addEnumElement(vertID, \
 
 #define IMPORT_CLASS(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = true, __VA_ARGS__ }); true)
+        Traits{ .mClass = true, .mImport = true, __VA_ARGS__ }); true)
 
 #define IMPORT_PMR_CLASS(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = true, .mPmr = true, __VA_ARGS__ }); true)
+        Traits{ .mClass = true, .mImport = true, .mPmr = true, __VA_ARGS__ }); true)
 
 #define IMPORT_STRUCT(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = false, __VA_ARGS__ }); true)
+        Traits{ .mClass = false,.mImport = true,  __VA_ARGS__ }); true)
 
 #define IMPORT_PMR_STRUCT(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
-        Traits{ .mImport = true, .mClass = false, .mPmr = true, __VA_ARGS__ }); true)
+        Traits{ .mClass = false, .mImport = true, .mPmr = true, __VA_ARGS__ }); true)
 
 #define STRUCT(NAME, ...) \
     for (auto&& [vertID, mb, path] = builder.addStruct(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); \
@@ -164,7 +164,7 @@ BOOST_PP_SEQ_FOR_EACH_I(CNTR_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__))) },
 // Interface
 #define INTERFACE(NAME, ...) \
     for (auto&& [vertID, mb, path] = builder.addStruct(BOOST_PP_STRINGIZE(NAME), \
-        Traits{ .mInterface = true, .mClass = true, __VA_ARGS__ }); \
+        Traits{ .mClass = true, .mInterface = true, __VA_ARGS__ }); \
         vertID != SyntaxGraph::null_vertex(); \
         builder.syntax().propagate(vertID), \
         vertID = SyntaxGraph::null_vertex())

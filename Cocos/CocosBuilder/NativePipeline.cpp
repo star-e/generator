@@ -92,13 +92,24 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             CNTR(mLayoutGraph, mLayoutID);
         }
 
+        STRUCT(NativeRenderSubpassBuilderImpl, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(NativeSetter)
+            IMPLEMENTS(RenderSubpassBuilder);
+            CNTR_EMPTY();
+        }
+
         STRUCT(NativeRenderQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
             INHERITS(RenderQueueBuilder, NativeSetter);
             CNTR_EMPTY();
         }
 
         STRUCT(NativeRenderSubpassBuilder, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(RenderSubpassBuilder, NativeSetter);
+            INHERITS(RenderSubpassBuilder, NativeRenderSubpassBuilderImpl);
+            CNTR_EMPTY();
+        }
+
+        STRUCT(NativeMultisampleRenderSubpassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(MultisampleRenderSubpassBuilder, NativeRenderSubpassBuilderImpl);
             CNTR_EMPTY();
         }
 

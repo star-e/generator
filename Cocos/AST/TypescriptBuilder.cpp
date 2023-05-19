@@ -47,6 +47,10 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     if (traits.mFlags & IMPL_DETAIL)
         return;
 
+    if (!traits.mExport) {
+        return;
+    }
+
     if (g.isTypescriptData(name))
         return;
 

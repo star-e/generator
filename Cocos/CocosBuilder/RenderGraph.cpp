@@ -151,11 +151,13 @@ bool checkResource(const ResourceDesc &desc) const;
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
-                (uint32_t, mSubpassID, 0xFFFFFFFF)
                 (gfx::Viewport, mViewport, _)
+                (uint32_t, mSubpassID, 0xFFFFFFFF)
+                (uint32_t, mCount, 1)
+                (uint32_t, mQuality, 0)
                 (bool, mShowStatistics, false)
             );
-            CNTR_NO_DEFAULT(mSubpassID);
+            CNTR_NO_DEFAULT(mSubpassID, mCount, mQuality);
         }
 
         STRUCT(ComputeSubpass, .mFlags = NO_DEFAULT_CNTR) {
@@ -174,6 +176,8 @@ bool checkResource(const ResourceDesc &desc) const;
                 (SubpassGraph, mSubpassGraph, _)
                 (uint32_t, mWidth, 0)
                 (uint32_t, mHeight, 0)
+                (uint32_t, mCount, 1)
+                (uint32_t, mQuality, 0)
                 (gfx::Viewport, mViewport, _)
                 (ccstd::pmr::string, mVersionName, _)
                 (uint64_t, mVersion, 0)
@@ -281,6 +285,12 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             );
         }
 
+        STRUCT(ResolvePass) {
+            PUBLIC(
+                (ccstd::pmr::vector<ResolvePair>, mResolvePairs, _)
+            );
+        }
+
         STRUCT(CopyPass) {
             PUBLIC(
                 (ccstd::pmr::vector<CopyPair>, mCopyPairs, _)
@@ -379,6 +389,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (RasterSubpass_, RasterSubpass, mRasterSubpasses)
                 (ComputeSubpass_, ComputeSubpass, mComputeSubpasses)
                 (Compute_, ComputePass, mComputePasses)
+                (Resolve_, ResolvePass, mResolvePasses)
                 (Copy_, CopyPass, mCopyPasses)
                 (Move_, MovePass, mMovePasses)
                 (Raytrace_, RaytracePass, mRaytracePasses)

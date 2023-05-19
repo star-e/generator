@@ -151,6 +151,26 @@ virtual void onGlobalPipelineStateChanged() = 0;
 [[skip]] virtual bool isRenderQueueReset() const = 0;
 )");
         }
+                
+        ENUM_CLASS(PipelineType) {
+            ENUMS(BASIC, STANDARD);
+        }
+
+        FLAG_CLASS(SubpassCapabilities) {
+            UNDERLYING_TYPE(uint32_t);
+            FLAGS(
+                (NONE, 0)
+                (INPUT_DEPTH_STENCIL, 1 << 0)
+                (INPUT_COLOR, 1 << 1)
+                (INPUT_COLOR_MRT, 1 << 2)
+            );
+        }
+
+        STRUCT(PipelineCapabilities) {
+            PUBLIC(
+                (SubpassCapabilities, mSubpass, SubpassCapabilities::NONE)
+            );
+        }
 
         INTERFACE(RenderNode) {
             PUBLIC_METHODS(R"(
@@ -193,6 +213,55 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[beta]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
         }
+        
+        INTERFACE(BasicRenderPassBuilder) {
+            INHERITS(Setter);
+            PUBLIC_METHODS(R"(
+virtual void addRenderTarget(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
+virtual void addDepthStencil(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
+
+[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
+[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
+
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
+virtual void setViewport(const gfx::Viewport &viewport) = 0;
+virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
+[[getter]] virtual bool getShowStatistics() const = 0;
+[[setter]] virtual void setShowStatistics(bool enable) = 0;
+)");
+        }
+
+        INTERFACE(BasicPipeline) {
+            INHERITS(PipelineRuntime);
+            PUBLIC_METHODS(R"(
+[[getter]] virtual PipelineType getType() const = 0;
+[[getter]] virtual PipelineCapabilities getCapabilities() const = 0;
+virtual void beginSetup() = 0;
+virtual void endSetup() = 0;
+
+virtual bool containsResource(const ccstd::string& name) const = 0;
+[[deprecated]] virtual uint32_t addRenderTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
+virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
+virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
+
+virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
+virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
+
+virtual void updateRenderTarget(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
+virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
+
+virtual void beginFrame() = 0;
+virtual void endFrame() = 0;
+
+[[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
+virtual BasicRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& layoutName = "default") = 0;
+virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
+virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
+
+[[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+)");
+        }
 
         INTERFACE(RenderSubpassBuilder) {
             INHERITS(Setter);
@@ -210,6 +279,14 @@ virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccs
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
+)");
+        }
+
+        INTERFACE(MultisampleRenderSubpassBuilder) {
+            INHERITS(RenderSubpassBuilder);
+            PUBLIC_METHODS(R"(
+virtual void resolveRenderTarget(const ccstd::string& source, const ccstd::string& target) = 0;
+virtual void resolveDepthStencil(const ccstd::string& source, const ccstd::string& target, gfx::ResolveMode depthMode = gfx::ResolveMode::SAMPLE_ZERO, gfx::ResolveMode stencilMode = gfx::ResolveMode::SAMPLE_ZERO) = 0;
 )");
         }
 
@@ -236,24 +313,6 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
 )");
         }
 
-        INTERFACE(BasicRenderPassBuilder) {
-            INHERITS(Setter);
-            PUBLIC_METHODS(R"(
-virtual void addRenderTarget(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
-virtual void addDepthStencil(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
-
-[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
-[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
-
-virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
-virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
-[[getter]] virtual bool getShowStatistics() const = 0;
-[[setter]] virtual void setShowStatistics(bool enable) = 0;
-)");
-        }
-
         INTERFACE(RenderPassBuilder) {
             INHERITS(BasicRenderPassBuilder);
             PUBLIC_METHODS(R"(
@@ -261,6 +320,7 @@ virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, 
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 
 virtual RenderSubpassBuilder *addRenderSubpass(const ccstd::string& layoutName = "") = 0;
+virtual MultisampleRenderSubpassBuilder *addMultisampleRenderSubpass(uint32_t count, uint32_t quality, const ccstd::string& layoutName = "") = 0;
 virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName = "") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
@@ -315,55 +375,6 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
 )");
         }
 
-        ENUM_CLASS(PipelineType) {
-            ENUMS(BASIC, STANDARD);
-        }
-
-        FLAG_CLASS(SubpassCapabilities) {
-            UNDERLYING_TYPE(uint32_t);
-            FLAGS(
-                (NONE, 0)
-                (INPUT_DEPTH_STENCIL, 1 << 0)
-                (INPUT_COLOR, 1 << 1)
-                (INPUT_COLOR_MRT, 1 << 2)
-            );
-        }
-
-        STRUCT(PipelineCapabilities) {
-            PUBLIC(
-                (SubpassCapabilities, mSubpass, SubpassCapabilities::NONE)
-            );
-        }
-
-        INTERFACE(BasicPipeline) {
-            INHERITS(PipelineRuntime);
-            PUBLIC_METHODS(R"(
-[[getter]] virtual PipelineType getType() const = 0;
-[[getter]] virtual PipelineCapabilities getCapabilities() const = 0;
-virtual void beginSetup() = 0;
-virtual void endSetup() = 0;
-
-virtual bool containsResource(const ccstd::string& name) const = 0;
-[[deprecated]] virtual uint32_t addRenderTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
-virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
-virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
-
-virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
-virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
-
-virtual void updateRenderTarget(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
-virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
-
-virtual void beginFrame() = 0;
-virtual void endFrame() = 0;
-
-[[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
-virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
-
-[[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
-)");
-        }
-
         INTERFACE(Pipeline) {
             INHERITS(BasicPipeline);
             PUBLIC_METHODS(R"(
@@ -397,7 +408,7 @@ virtual uint32_t getPhaseID(uint32_t passID, const ccstd::string& name) const = 
 )");
         }
 
-        CLASS(Factory) {
+        CLASS(Factory, .mExport = false) {
             MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
 static void destroy(RenderingModule* renderingModule) noexcept;
 static Pipeline *createPipeline();
