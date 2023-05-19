@@ -172,6 +172,20 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(PipelineUBO,
+        .mFolder = "cocos/renderer/pipeline",
+        .mFilePrefix = "PipelineUBO.h",
+        .mTypescriptFolder = "cocos/rendering",
+        .mTypescriptFilePrefix = "pipeline-ubo", ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(pipeline) {
+                IMPORT_CLASS(PipelineUBO);
+            }
+        }
+    }
+
     MODULE(InstancedBuffer,
         .mFolder = "cocos/renderer/pipeline",
         .mFilePrefix = "InstancedBuffer.h") {

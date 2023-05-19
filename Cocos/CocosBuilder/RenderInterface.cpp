@@ -62,6 +62,7 @@ void buildRenderInterface(ModuleBuilder& builder, Features features) {
 #include "bindings/auto/jsb_assets_auto.h"
 #include "renderer/pipeline/GeometryRenderer.h"
 #include "renderer/pipeline/GlobalDescriptorSetManager.h"
+#include "renderer/pipeline/PipelineUBO.h"
 )",
         .mToJsUsingNamespace = R"(
 using namespace cc;
@@ -92,6 +93,7 @@ class Vec2;
 namespace pipeline {
 
 class GlobalDSManager;
+class PipelineUBO;
 class PipelineSceneData;
 class GeometryRenderer;
 
@@ -123,6 +125,7 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout() const = 0;
 [[getter]] virtual gfx::DescriptorSet *getDescriptorSet() const = 0;
 [[getter]] virtual const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers() const = 0;
+[[getter]] virtual pipeline::PipelineUBO *getPipelineUBO() const = 0;
 [[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
 [[getter]] virtual const ccstd::string &getConstantMacros() const = 0;
 [[optional]] [[getter]] virtual scene::Model *getProfiler() const = 0;
