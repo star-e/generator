@@ -174,6 +174,7 @@ bool checkResource(const ResourceDesc &desc) const;
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, uint32_t>), mAttachmentIndexMap, _)
                 (SubpassGraph, mSubpassGraph, _)
                 (uint32_t, mWidth, 0)
                 (uint32_t, mHeight, 0)
@@ -185,6 +186,7 @@ bool checkResource(const ResourceDesc &desc) const;
                 (uint64_t, mHashValue, 0)
                 (bool, mShowStatistics, false)
             );
+            MEMBER_FLAGS(mAttachmentIndexMap, NOT_ELEMENT);
             MEMBER_FLAGS(mViewport, NOT_ELEMENT);
             MEMBER_FLAGS(mVersionName, NOT_ELEMENT);
             MEMBER_FLAGS(mVersion, NOT_ELEMENT);
