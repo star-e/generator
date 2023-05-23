@@ -238,6 +238,7 @@ bool checkResource(const ResourceDesc &desc) const;
 void validateSwapchains();
 void mount(gfx::Device* device, vertex_descriptor vertID);
 void unmount(uint64_t completedFenceValue);
+bool isTexture(vertex_descriptor resID) const noexcept;
 gfx::Texture* getTexture(vertex_descriptor resID);
 gfx::Buffer* getBuffer(vertex_descriptor resID);
 void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
