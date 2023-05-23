@@ -93,6 +93,7 @@ bool hasSideEffects() const noexcept {
         STRUCT(RenderSwapchain, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 ([[optional]] gfx::Swapchain*, mSwapchain, nullptr)
+                ([[optional]] scene::RenderWindow*, mRenderWindow, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
                 (uint32_t, mGeneration, 0xFFFFFFFF)
