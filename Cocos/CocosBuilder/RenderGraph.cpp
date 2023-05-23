@@ -294,9 +294,10 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             );
         }
 
-        STRUCT(CopyPass) {
+        STRUCT(CopyPass, .mFlags = NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::vector<CopyPair>, mCopyPairs, _)
+                (ccstd::pmr::vector<UploadPair>, mUploadPairs, _)
             );
         }
 

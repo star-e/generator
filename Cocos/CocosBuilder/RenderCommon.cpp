@@ -340,6 +340,20 @@ bool isWrite() const {
                 mSourceMostDetailedMip, mSourceFirstSlice, mSourcePlaneSlice,
                 mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
         }
+                
+        STRUCT(UploadPair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT | NO_COPY | NO_SERIALIZATION) {
+            PUBLIC(
+                (ccstd::vector<uint8_t>, mSource, _)
+                (ccstd::pmr::string, mTarget, _)
+                (uint32_t, mMipLevels, 0xFFFFFFFF)
+                (uint32_t, mNumSlices, 0xFFFFFFFF)
+                (uint32_t, mTargetMostDetailedMip, 0)
+                (uint32_t, mTargetFirstSlice, 0)
+                (uint32_t, mTargetPlaneSlice, 0)
+            );
+            CNTR(mSource, mTarget, mMipLevels, mNumSlices,
+                mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
+        }
 
         STRUCT(MovePair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT) {
             PUBLIC(

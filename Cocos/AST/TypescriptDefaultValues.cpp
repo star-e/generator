@@ -76,7 +76,6 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(boost::container::pmr::list, Set);
 
     PROJECT_TS(std::vector<std::byte>, Uint8Array);
-    PROJECT_TS(std::vector<int>, Int32Array);
     PROJECT_TS(std::vector<int8_t>, Int8Array);
     PROJECT_TS(std::vector<int16_t>, Int16Array);
     PROJECT_TS(std::vector<int32_t>, Int32Array);
@@ -87,7 +86,6 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(std::vector<uint64_t>, BigUint64Array);
 
     PROJECT_TS(std::pmr::vector<std::byte>, Uint8Array);
-    PROJECT_TS(std::pmr::vector<int>, Int32Array);
     PROJECT_TS(std::pmr::vector<int8_t>, Int8Array);
     PROJECT_TS(std::pmr::vector<int16_t>, Int16Array);
     PROJECT_TS(std::pmr::vector<int32_t>, Int32Array);
@@ -97,8 +95,17 @@ void projectTypescriptDefaultValues(ModuleBuilder& builder) {
     PROJECT_TS(std::pmr::vector<uint32_t>, Uint32Array);
     PROJECT_TS(std::pmr::vector<uint64_t>, BigUint64Array);
 
+    PROJECT_TS(ccstd::vector<std::byte>, Uint8Array);
+    PROJECT_TS(ccstd::vector<int8_t>, Int8Array);
+    PROJECT_TS(ccstd::vector<int16_t>, Int16Array);
+    PROJECT_TS(ccstd::vector<int32_t>, Int32Array);
+    PROJECT_TS(ccstd::vector<int64_t>, BigInt64Array);
+    PROJECT_TS(ccstd::vector<uint8_t>, Uint8Array);
+    PROJECT_TS(ccstd::vector<uint16_t>, Uint16Array);
+    PROJECT_TS(ccstd::vector<uint32_t>, Uint32Array);
+    PROJECT_TS(ccstd::vector<uint64_t>, BigUint64Array);
+
     PROJECT_TS(ccstd::pmr::vector<std::byte>, Uint8Array);
-    PROJECT_TS(ccstd::pmr::vector<int>, Int32Array);
     PROJECT_TS(ccstd::pmr::vector<int8_t>, Int8Array);
     PROJECT_TS(ccstd::pmr::vector<int16_t>, Int16Array);
     PROJECT_TS(ccstd::pmr::vector<int32_t>, Int32Array);

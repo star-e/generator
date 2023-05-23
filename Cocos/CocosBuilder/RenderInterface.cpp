@@ -269,8 +269,8 @@ virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 virtual void addRenderTarget(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName = "", gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
 virtual void addDepthStencil(const ccstd::string& name, AccessType accessType, const ccstd::string& depthSlotName = "", const ccstd::string& stencilSlotName = "", gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
 virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
-virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
-virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
+virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
@@ -281,6 +281,8 @@ virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccs
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
         }
+//virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
+//virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
 
         INTERFACE(MultisampleRenderSubpassBuilder) {
             INHERITS(RenderSubpassBuilder);
@@ -302,8 +304,8 @@ virtual void addDispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY,
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, const ccstd::string& slotName) = 0;
 virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
-virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
-virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
+virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
@@ -316,8 +318,8 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
         INTERFACE(RenderPassBuilder) {
             INHERITS(BasicRenderPassBuilder);
             PUBLIC_METHODS(R"(
-virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
-virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
+virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
 virtual RenderSubpassBuilder *addRenderSubpass(const ccstd::string& layoutName = "") = 0;
 virtual MultisampleRenderSubpassBuilder *addMultisampleRenderSubpass(uint32_t count, uint32_t quality, const ccstd::string& layoutName = "") = 0;
@@ -331,8 +333,8 @@ virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
-virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
-virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
+virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
@@ -388,6 +390,7 @@ virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width,
 
 virtual RenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
 virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
+virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 
 [[beta]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
@@ -458,7 +461,7 @@ virtual const IProgramInfo& getProgramInfo(uint32_t phaseID, const ccstd::string
 virtual const gfx::ShaderInfo& getShaderInfo(uint32_t phaseID, const ccstd::string& programName) const = 0;
 [[optional]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) = 0;
 [[skip]] virtual gfx::PipelineState* getComputePipelineState(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) = 0;
-virtual const ccstd::vector<int32_t>& getBlockSizes(uint32_t phaseID, const ccstd::string& programName) const = 0;
+virtual const ccstd::vector<int>& getBlockSizes(uint32_t phaseID, const ccstd::string& programName) const = 0;
 virtual const ccstd::unordered_map<ccstd::string, uint32_t>& getHandleMap(uint32_t phaseID, const ccstd::string& programName) const = 0;
 
 virtual uint32_t getProgramID(uint32_t phaseID, const ccstd::pmr::string& programName) = 0;
