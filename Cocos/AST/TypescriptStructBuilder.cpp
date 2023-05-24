@@ -287,6 +287,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     if (false && !methods.empty()) {
         OSS << "// API\n";
     }
+    const auto maxParams2 = 2;
     for (uint32_t methodID = 0; const auto& method : methods) {
         if (method.mSkip || method.mSetter) {
             ++methodID;
@@ -324,13 +325,25 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         } else {
             oss << method.mFunctionName << " (";
         }
+        const bool bChangeLine = method.mParameters.size() > maxParams2
+            || (method.mParameters.size() > (maxParams2 + 1) && method.mParameters.back().mName.back() == '_');
         for (int32_t count = 0; const auto& param : method.mParameters) {
             if (param.mName.back() == '_') {
                 continue;
             }
-            if (count++) {
-                oss << ", ";
+            INDENT();
+            if (bChangeLine) {
+                if (count++) {
+                    oss << ",";
+                }
+                oss << "\n";
+                OSS;
+            } else {
+                if (count++) {
+                    oss << ", ";
+                }            
             }
+
             auto paramID = locate(param.mTypePath, g);
             oss << param.name();
             if (!param.mDefaultValue.empty()) {
