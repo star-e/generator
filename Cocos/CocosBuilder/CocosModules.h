@@ -26,4 +26,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features);
 void buildExecutorExample(ModuleBuilder& builder, Features features);
 void buildRenderExample(ModuleBuilder& builder, Features features);
 
+// Document
+void buildRenderInterfaceDocument(ModuleBuilder& builder);
+
 }

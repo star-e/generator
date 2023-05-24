@@ -1675,6 +1675,35 @@ void ModuleBuilder::addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID
         });
 }
 
+SyntaxGraph::vertex_descriptor ModuleBuilder::addComment(std::string_view name) {
+    auto& g = mSyntaxGraph;
+
+    auto parentID = locate(mCurrentScope, g);
+    Expects(parentID == SyntaxGraph::null_vertex()
+        || holds_tag<Namespace_>(parentID, g)
+        || holds_tag<Struct_>(parentID, g)
+        || holds_tag<Graph_>(parentID, g));
+
+    const auto vertID = locate(parentID, name, g);
+    Expects(vertID != g.null_vertex());
+    return vertID;
+}
+
+void ModuleBuilder::addRemarks(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view language, std::string_view comment) {
+    // TODO:
+}
+
+void ModuleBuilder::addRemarksAsParameter(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view language, std::string_view comment) {
+    // TODO:
+}
+
+void ModuleBuilder::addDefaultValue(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view member, std::string_view comment) {
+    // TODO:
+}
+
 void ModuleBuilder::projectTypescript(std::string_view cpp, std::string_view ts) {
     auto& g = mSyntaxGraph;
     auto scratch = mScratch;
