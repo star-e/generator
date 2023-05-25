@@ -208,10 +208,30 @@ bool checkResource(const ResourceDesc &desc) const;
         PROJECT_TS(IntrusivePtr<gfx::RenderPass>, RenderPass);
 
         TAGS((_), Managed_, ManagedBuffer_, ManagedTexture_, PersistentBuffer_, PersistentTexture_,
-            Framebuffer_, Swapchain_, Sampler_);
+            Framebuffer_, Swapchain_, Sampler_, FormatView_, SubresourceView_);
+
+        STRUCT(FormatView) {
+            PUBLIC(
+                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
+            );
+        }
+
+        STRUCT(SubresourceView) {
+            PUBLIC(
+                ([[optional]] IntrusivePtr<gfx::Texture>, mTextureView, _)
+                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
+                (uint16_t, mIndexOrFirstMipLevel, 0)
+                (uint16_t, mNumMipLevels, 0)
+                (uint16_t, mFirstArraySlice, 0)
+                (uint16_t, mNumArraySlices, 0)
+                (uint16_t, mFirstPlane, 0)
+                (uint16_t, mNumPlanes, 0)
+            );
+        }
 
         PMR_GRAPH(ResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             NAMED_GRAPH(Name_);
+            ALIAS_REFERENCE_GRAPH();
             COMPONENT_GRAPH(
                 (Name_, ccstd::pmr::string, mNames)
                 (Desc_, ResourceDesc, mDescs)
@@ -228,6 +248,8 @@ bool checkResource(const ResourceDesc &desc) const;
                 (PersistentTexture_, IntrusivePtr<gfx::Texture>, mTextures)
                 (Framebuffer_, IntrusivePtr<gfx::Framebuffer>, mFramebuffers)
                 (Swapchain_, RenderSwapchain, mSwapchains)
+                (FormatView_, FormatView, mFormatViews)
+                (SubresourceView_, SubresourceView, mSubresourceViews)
             );
             PUBLIC(
                 ((ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>), mRenderPasses, _)
@@ -239,6 +261,7 @@ void validateSwapchains();
 void mount(gfx::Device* device, vertex_descriptor vertID);
 void unmount(uint64_t completedFenceValue);
 bool isTexture(vertex_descriptor resID) const noexcept;
+bool isTextureView(vertex_descriptor resID) const noexcept;
 gfx::Texture* getTexture(vertex_descriptor resID);
 gfx::Buffer* getBuffer(vertex_descriptor resID);
 void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
