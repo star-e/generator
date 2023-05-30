@@ -105,6 +105,12 @@ class RenderWindow;
 
 } // namespace scene
 
+namespace render {
+
+constexpr bool ENABLE_SUBPASS = false;
+
+} // namespace render
+
 } // namespace cc
 )"
     ) {
@@ -224,7 +230,7 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 [[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
@@ -254,8 +260,8 @@ virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint3
 virtual void beginFrame() = 0;
 virtual void endFrame() = 0;
 
-[[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
-virtual BasicRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& layoutName = "default") = 0;
+[[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& passName = "default") = 0;
+virtual BasicRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& passName = "default") = 0;
 virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
@@ -274,7 +280,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& layoutName = "") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "") = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 
@@ -309,7 +315,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
@@ -321,9 +327,9 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
-virtual RenderSubpassBuilder *addRenderSubpass(const ccstd::string& layoutName = "") = 0;
-virtual MultisampleRenderSubpassBuilder *addMultisampleRenderSubpass(uint32_t count, uint32_t quality, const ccstd::string& layoutName = "") = 0;
-virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& layoutName = "") = 0;
+virtual RenderSubpassBuilder *addRenderSubpass(const ccstd::string& subpassName) = 0;
+virtual MultisampleRenderSubpassBuilder *addMultisampleRenderSubpass(uint32_t count, uint32_t quality, const ccstd::string& subpassName) = 0;
+virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& subpassName = "") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
@@ -338,7 +344,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& layoutName = "") = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
@@ -388,8 +394,8 @@ virtual void updateStorageBuffer(const ccstd::string& name, uint32_t size, gfx::
 virtual void updateStorageTexture(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height) = 0;
 
-virtual RenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& layoutName = "default") = 0;
-virtual ComputePassBuilder *addComputePass(const ccstd::string& layoutName) = 0;
+virtual RenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& passName) = 0;
+virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
 virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 
