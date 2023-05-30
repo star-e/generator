@@ -132,6 +132,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 ((PmrFlatMap<ccstd::pmr::string, ResourceLifeRecord>), mResourceLifeRecord, _)
                 (ccstd::pmr::vector<ResourceAccessGraph::vertex_descriptor>, mTopologicalOrder, _)
                 ((PmrFlatMap<ResourceAccessGraph::vertex_descriptor, FGRenderPassInfo>), mRpInfos, _)
+                ((PmrFlatMap<RenderGraph::vertex_descriptor, uint32_t>), mSubpassIndex, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
@@ -221,6 +222,8 @@ void setParalellWeight(float paralellExecWeight);
 void enableMemoryAliasing(bool enable);
 
 void run();
+
+const ResourceAccessNode& getAttachmentStatus(RenderGraph::vertex_descriptor renderGraphVertID) const;
 
 inline const BarrierMap& getBarriers() const { return barrierMap; }
 
