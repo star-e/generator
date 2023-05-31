@@ -89,6 +89,11 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
             );
         }
 
+        ENUM_CLASS(RenderPassType) {
+            UNDERLYING_TYPE(uint32_t);
+            ENUMS(SINGLE_RENDER_PASS, RENDER_PASS, RENDER_SUBPASS);
+        }
+
         PMR_GRAPH(LayoutGraph, _, _) {
             NAMED_GRAPH(Name_);
             ALIAS_REFERENCE_GRAPH();
@@ -100,7 +105,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
             );
 
             POLYMORPHIC_GRAPH(
-                (RenderStage_, uint32_t, mStages)
+                (RenderStage_, RenderPassType, mStages)
                 (RenderPhase_, RenderPhase, mPhases)
             );
         }

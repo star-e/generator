@@ -272,13 +272,13 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
                 (RenderInstancingQueue, mOpaqueInstancingQueue, _)
                 (RenderInstancingQueue, mTransparentInstancingQueue, _)
                 (SceneFlags, mSceneFlags, SceneFlags::NONE)
-                (uint32_t, mLayoutPassID, 0xFFFFFFFF)
+                (uint32_t, mSubpassOrPassLayoutID, 0xFFFFFFFF)
                 //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
                 //(ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
                 //(ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
                 //((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
             );
-            CNTR(mSceneFlags, mLayoutPassID);
+            CNTR(mSceneFlags, mSubpassOrPassLayoutID);
             MEMBER_FUNCTIONS(R"(
 void sort();
 )");
