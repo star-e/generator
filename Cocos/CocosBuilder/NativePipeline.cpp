@@ -374,14 +374,28 @@ gfx::Buffer* createFromCpuBuffer();
             );
             CNTR(mQuadVB, mQuadIB, mQuadIA);
         }
+        
+        ENUM_CLASS(ResourceType) {
+            ENUMS(STORAGE_BUFFER, STORAGE_IMAGE);
+        }
 
+        STRUCT(SceneResource, .mFlags = NO_COPY) {
+            PUBLIC(
+                ((ccstd::pmr::unordered_map<NameLocalID, ResourceType>), mResourceIndex, _)
+                ((ccstd::pmr::unordered_map<NameLocalID, IntrusivePtr<gfx::Buffer>>), mStorageBuffers, _)
+                ((ccstd::pmr::unordered_map<NameLocalID, IntrusivePtr<gfx::Texture>>), mStorageImages, _)
+            );
+        }
+
+        // Render Context
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
                 (std::unique_ptr<gfx::DefaultResource>, mDefaultResource, _)
+                (uint64_t, mNextFenceValue, 0)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
+                ((ccstd::pmr::unordered_map<const scene::RenderScene*, SceneResource>), mRenderSceneResources, _)
                 (QuadResource, mFullscreenQuad, _)
-                (uint64_t, mNextFenceValue, 0)
             );
             MEMBER_FUNCTIONS(R"(
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
