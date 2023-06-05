@@ -213,6 +213,8 @@ virtual void setCamera(const scene::Camera* camera) = 0;
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addScene(const scene::RenderScene *scene, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+virtual void addSceneCulledByCamera(const scene::RenderScene *scene, SceneFlags sceneFlags, const scene::Camera* camera) = 0;
+virtual void addSceneCulledByLight(const scene::RenderScene *scene, SceneFlags sceneFlags, IntrusivePtr<scene::Light> light) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
@@ -220,7 +222,7 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[beta]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
         }
-        
+
         INTERFACE(BasicRenderPassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(

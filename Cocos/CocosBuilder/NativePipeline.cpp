@@ -388,6 +388,21 @@ gfx::Buffer* createFromCpuBuffer();
         }
 
         // Render Context
+        STRUCT(SceneCullingKey, .mFlags = EQUAL | HASH_COMBINE) {
+            PUBLIC(
+                (const scene::Camera*, mCamera, nullptr)
+                (const scene::Light*, mLight, nullptr)
+            );
+        }
+
+        STRUCT(SceneCulling, .mFlags = NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
+                ((ccstd::pmr::unordered_map<RenderGraph::vertex_descriptor, uint32_t>), mRenderQueueIndex, _)
+                ((ccstd::pmr::unordered_map<const scene::RenderScene*, >))
+            );
+        }
+
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
                 (std::unique_ptr<gfx::DefaultResource>, mDefaultResource, _)
