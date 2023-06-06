@@ -281,6 +281,8 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
             CNTR(mSceneFlags, mSubpassOrPassLayoutID);
             MEMBER_FUNCTIONS(R"(
 void sort();
+void clear() noexcept;
+bool empty() const noexcept;
 )");
         }
 
@@ -388,19 +390,48 @@ gfx::Buffer* createFromCpuBuffer();
         }
 
         // Render Context
-        STRUCT(SceneCullingKey, .mFlags = EQUAL | HASH_COMBINE) {
+        STRUCT(CullingKey, .mFlags = EQUAL | HASH_COMBINE) {
             PUBLIC(
                 (const scene::Camera*, mCamera, nullptr)
                 (const scene::Light*, mLight, nullptr)
             );
         }
 
+        STRUCT(CullingQueries) {
+            PUBLIC(
+                ((ccstd::pmr::unordered_map<CullingKey, uint32_t>), mCulledResultIndex, _)
+            )
+        }
+
+        STRUCT(NativeRenderQueueDesc) {
+            PUBLIC(
+                (uint32_t, mCulledSource, 0xFFFFFFFF)
+                (uint32_t, mRenderQueueTarget, 0xFFFFFFFF)
+                (scene::LightType, mLightType, scene::LightType::UNKNOWN)
+            );
+            CNTR(mCulledSource, mRenderQueueTarget, mLightType);
+        }
+
         STRUCT(SceneCulling, .mFlags = NO_COPY) {
             PUBLIC(
+                ((ccstd::pmr::unordered_map<const scene::RenderScene*, CullingQueries>), mSceneQueries, _)
+                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mCulledResults, _)
                 (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
-                ((ccstd::pmr::unordered_map<RenderGraph::vertex_descriptor, uint32_t>), mRenderQueueIndex, _)
-                ((ccstd::pmr::unordered_map<const scene::RenderScene*, >))
+                ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mSceneQueryIndex, _)
+                (uint32_t, mNumCullingQueries, 0)
+                (uint32_t, mNumRenderQueues, 0)
             );
+            MEMBER_FUNCTIONS(R"(
+void clear() noexcept;
+void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg);
+private:
+uint32_t getOrCreateSceneCullingQuery(const SceneData& sceneData);
+uint32_t createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
+void collectCullingQueries(const RenderGraph& rg, const LayoutGraphData& lg);
+void batchCulling();
+void fillRenderQueues(const RenderGraph& rg);
+public:
+)");
         }
 
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
@@ -411,6 +442,7 @@ gfx::Buffer* createFromCpuBuffer();
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
                 ((ccstd::pmr::unordered_map<const scene::RenderScene*, SceneResource>), mRenderSceneResources, _)
                 (QuadResource, mFullscreenQuad, _)
+                (SceneCulling, mSceneCulling, _)
             );
             MEMBER_FUNCTIONS(R"(
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;

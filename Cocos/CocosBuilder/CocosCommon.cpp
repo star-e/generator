@@ -105,6 +105,16 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(Light,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "Light.h",) {
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_ENUM(LightType);
+            }
+        }
+    }
+
     MODULE(Camera,
         .mFolder = "cocos/scene",
         .mFilePrefix = "Camera.h",
