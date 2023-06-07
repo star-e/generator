@@ -244,7 +244,7 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 [[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
@@ -294,7 +294,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 
@@ -329,7 +329,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "") = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
@@ -360,7 +360,7 @@ virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderSt
 
 [[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "") = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
