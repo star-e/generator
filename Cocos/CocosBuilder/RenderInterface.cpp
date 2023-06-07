@@ -215,7 +215,10 @@ virtual void setReadWriteBuffer(const ccstd::string& name, gfx::Buffer* buffer) 
 virtual void setReadWriteTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
 
-virtual void setCamera(const scene::Camera* camera) = 0;
+virtual void setCameraConstants(const scene::Camera* camera) = 0;
+virtual void setDirectionalLightProjectionConstants(const scene::DirectionalLight* light, uint32_t level) = 0;
+virtual void setSpotLightProjectionConstants(const scene::SpotLight* light) = 0;
+virtual void setShadowMapConstants(const scene::Light* light, uint32_t numLevels = 0) = 0;
 )");
         }
 
@@ -272,6 +275,7 @@ virtual void updateRenderTarget(const ccstd::string& name, uint32_t width, uint3
 virtual void updateDepthStencil(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 
 virtual void beginFrame() = 0;
+virtual void update(const scene::Camera* camera) = 0;
 virtual void endFrame() = 0;
 
 [[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& passName = "default") = 0;
