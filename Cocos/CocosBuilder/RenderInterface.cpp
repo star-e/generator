@@ -70,8 +70,17 @@ using namespace cc::render;
         .mToJsConfigs = R"(%module_macro(CC_USE_GEOMETRY_RENDERER) cc::render::PipelineRuntime::geometryRenderer;
 
 // ----- Release Returned Cpp Object in GC Section ------
+%release_returned_cpp_object_in_gc(cc::render::BasicRenderPassBuilder::addQueue);
+%release_returned_cpp_object_in_gc(cc::render::BasicPipeline::addRenderPass);
+%release_returned_cpp_object_in_gc(cc::render::BasicPipeline::addMultisampleRenderPass);
+%release_returned_cpp_object_in_gc(cc::render::RenderSubpassBuilder::addQueue);
+%release_returned_cpp_object_in_gc(cc::render::ComputeSubpassBuilder::addQueue);
+%release_returned_cpp_object_in_gc(cc::render::RenderPassBuilder::addRenderSubpass);
+%release_returned_cpp_object_in_gc(cc::render::RenderPassBuilder::addMultisampleRenderSubpass);
+%release_returned_cpp_object_in_gc(cc::render::RenderPassBuilder::addComputeSubpass);
+%release_returned_cpp_object_in_gc(cc::render::ComputePassBuilder::addQueue);
 %release_returned_cpp_object_in_gc(cc::render::Pipeline::addRenderPass);
-%release_returned_cpp_object_in_gc(cc::render::RenderPassBuilder::addQueue);
+%release_returned_cpp_object_in_gc(cc::render::Pipeline::addComputePass);
 )",
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
@@ -99,6 +108,8 @@ class GeometryRenderer;
 
 namespace scene {
 
+class DirectionalLight;
+class SpotLight;
 class Model;
 class RenderScene;
 class RenderWindow;
@@ -213,7 +224,8 @@ virtual void setCamera(const scene::Camera* camera) = 0;
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addScene(const scene::Camera* camera, SceneFlags sceneFlags) = 0;
-virtual void addSceneCulledByLight(const scene::Camera* camera, SceneFlags sceneFlags, IntrusivePtr<scene::Light> light) = 0;
+virtual void addSceneCulledByDirectionalLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::DirectionalLight* light, uint32_t level) = 0;
+virtual void addSceneCulledBySpotLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::SpotLight* light) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;

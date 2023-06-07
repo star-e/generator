@@ -394,6 +394,7 @@ gfx::Buffer* createFromCpuBuffer();
             PUBLIC(
                 (const scene::Camera*, mCamera, nullptr)
                 (const scene::Light*, mLight, nullptr)
+                (bool, mCastShadow, false)
             );
         }
 
@@ -423,12 +424,12 @@ gfx::Buffer* createFromCpuBuffer();
             );
             MEMBER_FUNCTIONS(R"(
 void clear() noexcept;
-void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg);
+void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const scene::Model* skyboxModelToSkip);
 private:
 uint32_t getOrCreateSceneCullingQuery(const SceneData& sceneData);
 uint32_t createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
 void collectCullingQueries(const RenderGraph& rg, const LayoutGraphData& lg);
-void batchCulling();
+void batchCulling(const scene::Model* skyboxModelToSkip);
 void fillRenderQueues(const RenderGraph& rg);
 public:
 )");

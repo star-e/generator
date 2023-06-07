@@ -115,6 +115,36 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(DirectionalLight,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "DirectionalLight.h",
+        .mTypescriptFolder = "cocos/render-scene/scene",
+        .mTypescriptFilePrefix = "directional-light",
+    ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(DirectionalLight);
+            }
+        }
+    }
+
+    MODULE(SpotLight,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "SpotLight.h",
+        .mTypescriptFolder = "cocos/render-scene/scene",
+        .mTypescriptFilePrefix = "spot-light",
+    ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(SpotLight);
+            }
+        }
+    }
+
     MODULE(Camera,
         .mFolder = "cocos/scene",
         .mFilePrefix = "Camera.h",

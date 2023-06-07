@@ -364,12 +364,12 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
         STRUCT(SceneData) {
             PUBLIC(
-                ([[optional]] const scene::RenderScene *, mScene, nullptr)
+                ([[optional]] const scene::RenderScene*, mScene, nullptr)
                 ([[optional]] const scene::Camera*, mCamera, nullptr)
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
             );
-            CNTR(mScene, mFlags, mLight);
+            CNTR(mScene, mCamera, mFlags, mLight);
         }
 
         STRUCT(Dispatch) {
