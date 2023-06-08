@@ -12,7 +12,7 @@ void outputDoc(std::ostream& oss, std::pmr::string& space, Doc flags) {
             OSS << " * @experimental\n";
         }
         if (any(flags & Doc::Deprecated)) {
-            OSS << " * @deprecated method will be removed in 3.8.0\n";
+            OSS << " * @deprecated method will be removed in 3.9.0\n";
         }
         OSS << " */\n";
     }
