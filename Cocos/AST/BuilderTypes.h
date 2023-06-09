@@ -435,7 +435,7 @@ struct ModuleBuilder {
         std::string_view comments = {});
 
     void setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
-        std::string_view memberName, GenerationFlags flags, bool bOptional = false);
+        std::string_view memberName, GenerationFlags flags);
 
     void setTypescriptInitValue(SyntaxGraph::vertex_descriptor vertID,
         std::string_view memberName, std::string_view init);

@@ -1873,7 +1873,9 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
                     result.append("<");
                     int count = 0;
                     for (const auto& param : instance.mParameters) {
-                        auto paramID = locate(param, g);
+                        const auto paramTraits = getParameterTraits(param);
+                        const auto paramTypePath = removeCvPointerRef(param);
+                        auto paramID = locate(paramTypePath, g);
                         auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
                         if (count++) {
                             result.append(", ");

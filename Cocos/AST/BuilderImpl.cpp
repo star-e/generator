@@ -602,7 +602,7 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
 }
 
 void ModuleBuilder::setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
-    std::string_view memberName, GenerationFlags flags, bool bOptional) {
+    std::string_view memberName, GenerationFlags flags) {
     auto& g = mSyntaxGraph;
     visit_vertex(
         vertID, g,
@@ -610,7 +610,6 @@ void ModuleBuilder::setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
             for (Member& m : s.mMembers) {
                 if (m.mMemberName == memberName) {
                     m.mFlags = flags;
-                    m.mTypescriptOptional = bOptional;
                     break;
                 }
             }
