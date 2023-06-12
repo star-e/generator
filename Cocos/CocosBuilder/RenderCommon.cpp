@@ -54,7 +54,7 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
 #include "cocos/base/std/container/map.h"
 )",
         .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
-import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './serialization';
+import { saveUniformBlock, loadUniformBlock } from './serialization';
 )"
     ) {
         NAMESPACE_BEG(cc);
@@ -141,91 +141,8 @@ import { saveColor, loadColor, saveUniformBlock, loadUniformBlock } from './seri
             ENUMS(READ, READ_WRITE, WRITE);
         }
 
-        //FLAG_CLASS(AccessType) {
-        //    FLAGS(
-        //        (NONE, 0)
-        //        (READ, 1 << 0)
-        //        (WRITE, 1 << 1)
-        //        (INPUT, 1 << 2)
-        //        (SHADER, 1 << 3)
-        //        (READ_WRITE, READ | WRITE)
-        //    );
-        //    builder.setEnumMemberExport(vertID, "INPUT", false);
-        //    builder.setEnumMemberExport(vertID, "SHADER", false);
-        //}
-
-        //FLAG_CLASS(DepthStencilAccessType) {
-        //    UNDERLYING_TYPE(uint32_t);
-        //    FLAGS(
-        //        (NONE, 0)
-        //        (TEST, 1 << 0)
-        //        (WRITE, 1 << 1)
-        //        (INPUT, 1 << 2)
-        //        (SHADER, 1 << 3)
-        //        (TEST_WRITE, READ | WRITE)
-        //    );
-        //    builder.setEnumMemberExport(vertID, "SHADER", false);
-        //}
-
-        STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
-            PUBLIC(
-                (ccstd::pmr::string, mSlotName, _)
-                (ccstd::pmr::string, mSlotName1, _)
-                (AccessType, mAccessType, AccessType::WRITE)
-                (AttachmentType, mAttachmentType, _)
-                (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
-                (gfx::StoreOp, mStoreOp, gfx::StoreOp::STORE)
-                (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
-                (gfx::Color, mClearColor, _)
-                (uint32_t, mSlotID, 0)
-                (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
-            );
-            builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
-            builder.setMemberFlags(vertID, "mSlotID", NOT_ELEMENT);
-            TS_INIT(mAccessType, AccessType.WRITE);
-            TS_INIT(mLoadOp, LoadOp.LOAD);
-            TS_INIT(mStoreOp, StoreOp.STORE);
-            TS_INIT(mClearFlags, ClearFlagBit.ALL);
-            CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor, mShaderStageFlags);
-            CNTR(mSlotName, mSlotName1, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor, mShaderStageFlags);
-        }
-
         ENUM_CLASS(ClearValueType) {
             ENUMS(NONE, FLOAT_TYPE, INT_TYPE);
-        }
-
-        STRUCT(ClearValue, .mFlags = VALUE_OBJECT | JSB) {
-            PUBLIC(
-                (double, mX, 0)
-                (double, mY, 0)
-                (double, mZ, 0)
-                (double, mW, 0)
-            );
-            CNTR(mX, mY, mZ, mW);
-        }
-
-        STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
-            PUBLIC(
-                (ccstd::pmr::string, mName, _)
-                (AccessType, mAccessType, AccessType::READ)
-                (uint32_t, mPlane, 0)
-                (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
-                (ClearValueType, mClearValueType, ClearValueType::NONE)
-                (ClearValue, mClearValue, _)
-                (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
-            );
-            builder.setMemberFlags(vertID, "mClearValue", NOT_ELEMENT);
-            MEMBER_FUNCTIONS(R"(
-bool isRead() const {
-    return accessType != AccessType::WRITE;
-}
-bool isWrite() const {
-    return accessType != AccessType::READ;
-}
-)");
-            TS_INIT(mClearFlags, ClearFlagBit.NONE);
-            CNTR(mName, mAccessType, mClearFlags, mClearValueType, mClearValue, mShaderStageFlags);
-            CNTR(mName, mAccessType, mPlane, mClearFlags, mClearValueType, mClearValue, mShaderStageFlags);
         }
 
         STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {

@@ -57,6 +57,63 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+        STRUCT(ClearValue, .mFlags = VALUE_OBJECT | JSB) {
+            PUBLIC(
+                (double, mX, 0)
+                (double, mY, 0)
+                (double, mZ, 0)
+                (double, mW, 0)
+            );
+            CNTR(mX, mY, mZ, mW);
+        }
+
+        STRUCT(RasterView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
+            PUBLIC(
+                (ccstd::pmr::string, mSlotName, _)
+                (ccstd::pmr::string, mSlotName1, _)
+                (AccessType, mAccessType, AccessType::WRITE)
+                (AttachmentType, mAttachmentType, _)
+                (gfx::LoadOp, mLoadOp, gfx::LoadOp::LOAD)
+                (gfx::StoreOp, mStoreOp, gfx::StoreOp::STORE)
+                (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::ALL)
+                (gfx::Color, mClearColor, _)
+                (uint32_t, mSlotID, 0)
+                (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
+            );
+            builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
+            builder.setMemberFlags(vertID, "mSlotID", NOT_ELEMENT);
+            TS_INIT(mAccessType, AccessType.WRITE);
+            TS_INIT(mLoadOp, LoadOp.LOAD);
+            TS_INIT(mStoreOp, StoreOp.STORE);
+            TS_INIT(mClearFlags, ClearFlagBit.ALL);
+            CNTR(mSlotName, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor, mShaderStageFlags);
+            CNTR(mSlotName, mSlotName1, mAccessType, mAttachmentType, mLoadOp, mStoreOp, mClearFlags, mClearColor, mShaderStageFlags);
+        }
+
+        STRUCT(ComputeView, .mFlags = JSB | PMR_DEFAULT | POOL_OBJECT) {
+            PUBLIC(
+                (ccstd::pmr::string, mName, _)
+                (AccessType, mAccessType, AccessType::READ)
+                (uint32_t, mPlane, 0)
+                (gfx::ClearFlagBit, mClearFlags, gfx::ClearFlagBit::NONE)
+                (ClearValueType, mClearValueType, ClearValueType::NONE)
+                (ClearValue, mClearValue, _)
+                (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
+            );
+            builder.setMemberFlags(vertID, "mClearValue", NOT_ELEMENT);
+            MEMBER_FUNCTIONS(R"(
+bool isRead() const {
+    return accessType != AccessType::WRITE;
+}
+bool isWrite() const {
+    return accessType != AccessType::READ;
+}
+)");
+            TS_INIT(mClearFlags, ClearFlagBit.NONE);
+            CNTR(mName, mAccessType, mClearFlags, mClearValueType, mClearValue, mShaderStageFlags);
+            CNTR(mName, mAccessType, mPlane, mClearFlags, mClearValueType, mClearValue, mShaderStageFlags);
+        }
+
         STRUCT(ResourceDesc, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 (ResourceDimension, mDimension, _)

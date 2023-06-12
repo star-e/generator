@@ -244,9 +244,6 @@ virtual void addRenderTarget(const ccstd::string& name, gfx::LoadOp loadOp = gfx
 virtual void addDepthStencil(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
 virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
 
-[[deprecated]] virtual void addRasterView(const ccstd::string& name, const RasterView& view) = 0;
-[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
-
 virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
@@ -296,7 +293,6 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
-[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
@@ -331,8 +327,6 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
-[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
-
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
 
 [[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
@@ -361,8 +355,6 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderStageFlagBit flags = gfx::ShaderStageFlagBit::COMPUTE) = 0;
-
-[[deprecated]] virtual void addComputeView(const ccstd::string& name, const ComputeView& view) = 0;
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
 
