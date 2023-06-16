@@ -95,6 +95,25 @@ int main() {
     // output files
     {
         // manually added
+        files.emplace("cocos/renderer/pipeline/custom/details/DebugUtils.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/GraphImpl.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/GraphTypes.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/GraphView.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/GslUtils.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/JsbConversion.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/Map.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/Overload.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/PathUtils.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/Pmr.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/Range.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/SerializationUtils.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/Set.h");
+        files.emplace("cocos/renderer/pipeline/custom/details/Utility.h");
+
+        files.emplace("cocos/renderer/pipeline/custom/BinaryArchive.h");
+        files.emplace("cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeDefaultScene.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeResourceGraph.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeFactory.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativePipeline.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
