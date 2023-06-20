@@ -356,6 +356,8 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (!method.mSetter) {
                 oss << ": ";
                 oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+            } else {
+                oss << ": void";
             }
             oss << ";";
             if (false && method.mConst) {
@@ -718,7 +720,7 @@ std::pmr::string generateGraphSerialization_ts(
     const auto& name = get(g.names, g, vertID);
 
     oss << "\n";
-    OSS << "export function save" << cppName << " (ar: OutputArchive, g: " << cppName << ") {\n";
+    OSS << "export function save" << cppName << " (ar: OutputArchive, g: " << cppName << "): void {\n";
     {
         INDENT();
         OSS << "const numVertices = g.numVertices();\n";
@@ -816,7 +818,7 @@ std::pmr::string generateGraphSerialization_ts(
     oss << "}\n";
 
     oss << "\n";
-    OSS << "export function load" << cppName << " (ar: InputArchive, g: " << cppName << ") {\n";
+    OSS << "export function load" << cppName << " (ar: InputArchive, g: " << cppName << "): void {\n";
     {
         INDENT();
         const auto sizeID = locate("/uint32_t", g);
@@ -990,7 +992,7 @@ std::pmr::string generateSerialization_ts(
                 }
                 numTrival = 0;
                 oss << "\n";
-                oss << "export function save" << cppName << " (ar: OutputArchive, v: " << cppName << ") {\n";
+                oss << "export function save" << cppName << " (ar: OutputArchive, v: " << cppName << "): void {\n";
                 {
                     INDENT();
                     if (nvp) {
@@ -1013,7 +1015,7 @@ std::pmr::string generateSerialization_ts(
                 }
                 oss << "}\n";
                 oss << "\n";
-                oss << "export function load" << cppName << " (ar: InputArchive, v: " << cppName << ") {\n";
+                oss << "export function load" << cppName << " (ar: InputArchive, v: " << cppName << "): void {\n";
                 {
                     INDENT();
                     if (nvp) {

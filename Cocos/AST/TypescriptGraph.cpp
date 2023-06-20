@@ -1509,7 +1509,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                                 const auto& component = g.getMemberName(c.mMemberName, false);
                                 OSS << "const key = this." << component << "[u];\n";
                                 OSS << "this." << g.getMemberName(map.mMemberName, false) << ".delete(key);\n";
-                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".forEach((v) => {\n";
+                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".forEach((v): void => {\n";
                                 {
                                     INDENT();
                                     OSS << "if (v > u) { --v; }\n";
@@ -1845,7 +1845,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     if (g.isTypescriptValueType(componentID)) {
                         if (bNeedNameSetter) {
                             OSS << "set" << convertTag(c.mName) << " (v: " << vertexDescType
-                                << ", value: " << componentType << ") {\n";
+                                << ", value: " << componentType << "): void {\n";
                             {
                                 INDENT();
                                 Expects(c.isValid());
