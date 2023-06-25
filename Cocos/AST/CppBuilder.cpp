@@ -842,6 +842,9 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             vertID, g,
             [&](const Enum& e) {
                 lineBreak();
+                if (!comment.mComment.empty()) {
+                    outputComment(oss, space, comment.mComment);
+                }
                 OSS << "enum ";
                 if (traits.mClass)
                     oss << "class ";

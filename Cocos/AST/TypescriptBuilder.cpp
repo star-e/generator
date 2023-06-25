@@ -42,6 +42,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     const auto& g = builder.mSyntaxGraph;
     auto name = g.getTypescriptTypename(vertID, scratch, scratch);
     const auto& traits = get(g.traits, g, vertID);
+    const auto& comment = get(g.comments, g, vertID);
     if (traits.mImport)
         return;
 
@@ -62,6 +63,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         [&](const Enum& e) {
             if (currScope.mCount++)
                 oss << "\n";
+            if (!comment.mComment.empty()) {
+                outputComment(oss, space, comment.mComment);
+            }
             OSS << "export enum " << name << " {\n";
             {
                 INDENT();
@@ -99,7 +103,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         [&](const Graph& s) {
             if (currScope.mCount++)
                 oss << "\n";
-
+            if (!comment.mComment.empty()) {
+                outputComment(oss, space, comment.mComment);
+            }
             auto content = generateGraph(builder, s, vertID, name, imports, scratch);
             copyString(oss, space, content);
         }, 
@@ -107,7 +113,6 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (currScope.mCount++)
                 oss << "\n";
 
-            const auto& comment = get(g.comments, g, vertID);
             if (!comment.mComment.empty()) {
                 outputComment(oss, space, comment.mComment);
             }
