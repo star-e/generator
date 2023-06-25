@@ -194,7 +194,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
             PUBLIC_METHODS(R"(
 [[getter]] virtual ccstd::string getName() const = 0;
 [[setter]] virtual void setName(const ccstd::string& name) = 0;
-[[beta]] virtual void setCustomBehavior(const ccstd::string& name) = 0;
+[[experimental]] virtual void setCustomBehavior(const ccstd::string& name) = 0;
 )");
         }
 
@@ -229,7 +229,7 @@ virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFla
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-[[beta]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
+[[experimental]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
         }
 
@@ -297,7 +297,7 @@ virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccs
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 
-[[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
+[[experimental]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
         }
 //virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName, ClearValueType clearType = ClearValueType::NONE, const ClearValue& clearValue = {}) = 0;
@@ -328,7 +328,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
 
-[[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
+[[experimental]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
         }
 
@@ -339,11 +339,11 @@ virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, 
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 [[beta]] virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderStageFlagBit flags = gfx::ShaderStageFlagBit::VERTEX | gfx::ShaderStageFlagBit::FRAGMENT) = 0;
 
-virtual RenderSubpassBuilder *addRenderSubpass(const ccstd::string& subpassName) = 0;
-virtual MultisampleRenderSubpassBuilder *addMultisampleRenderSubpass(uint32_t count, uint32_t quality, const ccstd::string& subpassName) = 0;
-virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& subpassName = "") = 0;
+[[beta]] virtual RenderSubpassBuilder *addRenderSubpass(const ccstd::string& subpassName) = 0;
+[[beta]] virtual MultisampleRenderSubpassBuilder *addMultisampleRenderSubpass(uint32_t count, uint32_t quality, const ccstd::string& subpassName) = 0;
+[[experimental]] virtual ComputeSubpassBuilder *addComputeSubpass(const ccstd::string& subpassName = "") = 0;
 
-[[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
+[[experimental]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
         }
 
@@ -357,7 +357,7 @@ virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderSt
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
 
-[[beta]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
+[[experimental]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
         }
 
@@ -410,8 +410,8 @@ virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
 virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 
-[[beta]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
-[[beta]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;
+[[experimental]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
+[[experimental]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;
 )");
         }
 

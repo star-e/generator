@@ -24,13 +24,13 @@ void outputMethodComment(std::ostream& oss, std::pmr::string& space,
     }
     OSS << "/**\n";
     if (any(method.mFlags & Doc::Beta)) {
-        OSS << " * @beta function signature might change\n";
+        OSS << " * @beta Feature is under development\n";
     }
     if (any(method.mFlags & Doc::Experimental)) {
         OSS << " * @experimental\n";
     }
     if (any(method.mFlags & Doc::Deprecated)) {
-        OSS << " * @deprecated method will be removed in 3.9.0\n";
+        OSS << " * @deprecated Method will be removed in 3.9.0\n";
     }
     std::istringstream iss{ std::string{ method.mComment } };
     std::string line;

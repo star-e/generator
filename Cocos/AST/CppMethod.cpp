@@ -154,6 +154,10 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
         method.mFlags |= Doc::Beta;
     }
 
+    if (boost::algorithm::contains(function, "[[experimental]]")) {
+        method.mFlags |= Doc::Experimental;
+    }
+
     // skip attributes
     {
         int count = 0;
