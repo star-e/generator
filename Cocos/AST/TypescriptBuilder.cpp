@@ -105,6 +105,12 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         [&](const Struct& s) {
             if (currScope.mCount++)
                 oss << "\n";
+
+            const auto& comment = get(g.comments, g, vertID);
+            if (!comment.empty()) {
+                outputComment(oss, space, comment);
+            }
+
             if (traits.mFlags & DECORATOR) {
                 OSS << "@ccclass('cc." << name << "')\n";
             }

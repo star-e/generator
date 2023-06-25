@@ -1374,6 +1374,8 @@ struct SyntaxGraph {
     } static constexpr modulePaths = {};
     struct typescripts_ {
     } static constexpr typescripts = {};
+    struct comments_ {
+    } static constexpr comments = {};
 
     // Owners
     std::pmr::vector<object_type> mObjects;
@@ -1386,6 +1388,7 @@ struct SyntaxGraph {
     std::pmr::vector<Inherits> mInherits;
     std::pmr::vector<std::pmr::string> mModulePaths;
     std::pmr::vector<Typescript> mTypescripts;
+    std::pmr::vector<std::pmr::string> mComments;
     // PolymorphicGraph
     std::pmr::vector<Define> mDefines;
     std::pmr::vector<Concept> mConcepts;

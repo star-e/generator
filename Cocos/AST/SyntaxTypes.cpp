@@ -657,6 +657,7 @@ SyntaxGraph::SyntaxGraph(const allocator_type& alloc)
     , mInherits(alloc)
     , mModulePaths(alloc)
     , mTypescripts(alloc)
+    , mComments(alloc)
     , mDefines(alloc)
     , mConcepts(alloc)
     , mAliases(alloc)
@@ -677,6 +678,7 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph&& rhs, const allocator_type& alloc)
     , mInherits(std::move(rhs.mInherits), alloc)
     , mModulePaths(std::move(rhs.mModulePaths), alloc)
     , mTypescripts(std::move(rhs.mTypescripts), alloc)
+    , mComments(std::move(rhs.mComments), alloc)
     , mDefines(std::move(rhs.mDefines), alloc)
     , mConcepts(std::move(rhs.mConcepts), alloc)
     , mAliases(std::move(rhs.mAliases), alloc)
@@ -698,6 +700,7 @@ SyntaxGraph::SyntaxGraph(SyntaxGraph const& rhs, const allocator_type& alloc)
     , mInherits(rhs.mInherits, alloc)
     , mModulePaths(rhs.mModulePaths, alloc)
     , mTypescripts(rhs.mTypescripts, alloc)
+    , mComments(rhs.mComments, alloc)
     , mDefines(rhs.mDefines, alloc)
     , mConcepts(rhs.mConcepts, alloc)
     , mAliases(rhs.mAliases, alloc)
@@ -725,6 +728,7 @@ void SyntaxGraph::reserve(vertices_size_type sz) {
     mInherits.reserve(sz);
     mModulePaths.reserve(sz);
     mTypescripts.reserve(sz);
+    mComments.reserve(sz);
 }
 
 SyntaxGraph::object_type::allocator_type SyntaxGraph::object_type::get_allocator() const noexcept {

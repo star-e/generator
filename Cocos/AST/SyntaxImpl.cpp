@@ -1417,6 +1417,7 @@ void SyntaxGraph::instantiate(std::string_view currentScope, std::string_view de
             std::forward_as_tuple(), // inherits
             std::forward_as_tuple(), // module path
             std::forward_as_tuple(), // typescript
+            std::forward_as_tuple(), // comment
             std::forward_as_tuple(), // polymorphic
             g, parentID);
 

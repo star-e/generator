@@ -87,6 +87,9 @@ int main() {
             buildRenderExample(builder,
                 Fwd | Types | Names | Graphs);
         }
+
+        // comment
+        buildRenderInterfaceDocument(builder);
     }
 
     builder.compile();

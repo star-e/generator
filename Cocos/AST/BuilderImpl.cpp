@@ -123,6 +123,7 @@ ModuleGraph::vertex_descriptor ModuleBuilder::registerType(
                     std::forward_as_tuple(), // inherits
                     std::forward_as_tuple(mCurrentModule), // module path
                     std::forward_as_tuple(), // typescript
+                    std::forward_as_tuple(), // comment
                     std::forward_as_tuple(), // polymorphic
                     g, parentID);
             }
@@ -180,6 +181,7 @@ TypeHandle ModuleBuilder::openNamespace(std::string_view name) {
             std::forward_as_tuple(), // inherits
             std::forward_as_tuple(), // module path
             std::forward_as_tuple(), // typescript
+            std::forward_as_tuple(), // comment
             std::forward_as_tuple(), // polymorphic
             g, parentID);
     }
@@ -217,6 +219,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addDefine(std::string_view name, s
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(content), // polymorphic
         g, g.null_vertex());
 
@@ -248,6 +251,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addConcept(std::string_view name, 
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(superTypePath), // polymorphic
         g, parentID);
 
@@ -280,6 +284,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addAlias(std::string_view name, st
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(std::move(typePath)), // polymorphic
         g, parentID);
 
@@ -299,6 +304,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addContainer(std::string_view name
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
@@ -318,6 +324,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addMap(std::string_view name, Trai
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
@@ -337,6 +344,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addValue(std::string_view name) {
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
@@ -356,6 +364,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addEnum(std::string_view name, Tra
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
@@ -379,6 +388,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addFlag(std::string_view name, Tra
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
@@ -441,6 +451,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addTag(std::string_view name, bool
         std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(Tag{ .mEntity = bEntity }), // polymorphic
         g, parentID);
@@ -481,6 +492,7 @@ TypeHandle ModuleBuilder::addStruct(std::string_view name, Traits traits) {
         std::forward_as_tuple(), // constraints
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // typescript
         std::forward_as_tuple(), // polymorphic
         g, parentID);
@@ -733,6 +745,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addVariant(
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
@@ -775,6 +788,7 @@ TypeHandle ModuleBuilder::addGraph(std::string_view name,
         std::forward_as_tuple(), // inherits
         std::forward_as_tuple(mCurrentModule), // module path
         std::forward_as_tuple(), // typescript
+        std::forward_as_tuple(), // comment
         std::forward_as_tuple(), // polymorphic
         g, parentID);
 
@@ -1674,7 +1688,8 @@ void ModuleBuilder::addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID
         });
 }
 
-SyntaxGraph::vertex_descriptor ModuleBuilder::addComment(std::string_view name) {
+SyntaxGraph::vertex_descriptor ModuleBuilder::addComment(
+    std::string_view name, std::string_view content) {
     auto& g = mSyntaxGraph;
 
     auto parentID = locate(mCurrentScope, g);
@@ -1685,6 +1700,9 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addComment(std::string_view name) 
 
     const auto vertID = locate(parentID, name, g);
     Expects(vertID != g.null_vertex());
+
+    auto& comment = get(g.comments, g, vertID);
+    comment = content;
     return vertID;
 }
 

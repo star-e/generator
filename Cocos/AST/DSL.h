@@ -118,6 +118,11 @@ builder.addEnumElement(vertID, \
         builder.syntax().propagate(vertID), \
         vertID = SyntaxGraph::null_vertex())
 
+#define COMMENT(NAME, ...) \
+    for (auto vertID = builder.addComment(BOOST_PP_STRINGIZE(NAME), __VA_ARGS__); \
+        vertID != SyntaxGraph::null_vertex(); \
+        vertID = SyntaxGraph::null_vertex())
+
 #define CLASS(NAME, ...) STRUCT(NAME, .mClass = true, __VA_ARGS__)
 
 #define MEMBER_FLAGS(MEMBER, ...) \

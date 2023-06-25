@@ -68,4 +68,6 @@ std::pmr::string generateSerialization_ts(
     std::pmr::memory_resource* mr,
     std::pmr::memory_resource* scratch);
 
+void outputComment(std::ostream& oss, std::pmr::string& space, std::string_view comment);
+
 }

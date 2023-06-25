@@ -797,6 +797,25 @@ struct property_map<Cocos::Meta::SyntaxGraph, std::pmr::string Cocos::Meta::Type
     >;
 };
 
+// Vertex Component
+template <>
+struct property_map<Cocos::Meta::SyntaxGraph, Cocos::Meta::SyntaxGraph::comments_> {
+    using const_type = Cocos::Impl::VectorVertexComponentPropertyMap<
+        lvalue_property_map_tag,
+        const Cocos::Meta::SyntaxGraph,
+        const std::pmr::vector<std::pmr::string>,
+        std::pmr::string,
+        const std::pmr::string&
+    >;
+    using type = Cocos::Impl::VectorVertexComponentPropertyMap<
+        lvalue_property_map_tag,
+        Cocos::Meta::SyntaxGraph,
+        std::pmr::vector<std::pmr::string>,
+        std::pmr::string,
+        std::pmr::string&
+    >;
+};
+
 // Vertex Index
 template <>
 struct property_map<Cocos::Meta::ModuleGraph, vertex_index_t> {
@@ -1047,6 +1066,17 @@ template <class T>
 inline typename boost::property_map<SyntaxGraph, T Typescript::*>::type
 get(T Typescript::* memberPointer, SyntaxGraph& g) noexcept {
     return { g.mTypescripts, memberPointer };
+}
+
+// Vertex Component
+inline typename boost::property_map<SyntaxGraph, SyntaxGraph::comments_>::const_type
+get(SyntaxGraph::comments_, const SyntaxGraph& g) noexcept {
+    return { g.mComments };
+}
+
+inline typename boost::property_map<SyntaxGraph, SyntaxGraph::comments_>::type
+get(SyntaxGraph::comments_, SyntaxGraph& g) noexcept {
+    return { g.mComments };
 }
 
 // PolymorphicGraph
@@ -2032,12 +2062,13 @@ inline void remove_vertex(SyntaxGraph::vertex_descriptor u, SyntaxGraph& g) noex
     g.mInherits.erase(g.mInherits.begin() + u);
     g.mModulePaths.erase(g.mModulePaths.begin() + u);
     g.mTypescripts.erase(g.mTypescripts.begin() + u);
+    g.mComments.erase(g.mComments.begin() + u);
 }
 
 // MutablePropertyGraph(Vertex)
-template <class Component0, class Component1, class Component2, class Component3, class Component4, class Component5, class ValueT>
+template <class Component0, class Component1, class Component2, class Component3, class Component4, class Component5, class Component6, class ValueT>
 inline SyntaxGraph::vertex_descriptor
-add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, Component4&& c4, Component5&& c5, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
+add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, Component4&& c4, Component5&& c5, Component6&& c6, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
     auto v = gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mVertices.size());
 
     g.mObjects.emplace_back();
@@ -2050,6 +2081,7 @@ add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, C
     g.mInherits.emplace_back(std::forward<Component3>(c3));
     g.mModulePaths.emplace_back(std::forward<Component4>(c4));
     g.mTypescripts.emplace_back(std::forward<Component5>(c5));
+    g.mComments.emplace_back(std::forward<Component6>(c6));
 
     // PolymorphicGraph
     if constexpr (std::is_same_v<std::remove_cvref_t<ValueT>, Define>) {
@@ -2117,9 +2149,9 @@ add_vertex(Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, C
     return v;
 }
 
-template <class Component0, class Component1, class Component2, class Component3, class Component4, class Component5, class Tag, class ValueT>
+template <class Component0, class Component1, class Component2, class Component3, class Component4, class Component5, class Component6, class Tag, class ValueT>
 inline SyntaxGraph::vertex_descriptor
-add_vertex(Tag, Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, Component4&& c4, Component5&& c5, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
+add_vertex(Tag, Component0&& c0, Component1&& c1, Component2&& c2, Component3&& c3, Component4&& c4, Component5&& c5, Component6&& c6, ValueT&& val, SyntaxGraph& g, SyntaxGraph::vertex_descriptor u = SyntaxGraph::null_vertex()) {
     auto v = gsl::narrow_cast<SyntaxGraph::vertex_descriptor>(g.mVertices.size());
 
     g.mObjects.emplace_back();
@@ -2150,6 +2182,10 @@ add_vertex(Tag, Component0&& c0, Component1&& c1, Component2&& c2, Component3&& 
     std::apply([&]<typename... T>(T&&... args) {
         g.mTypescripts.emplace_back(std::forward<T>(args)...);
     }, std::forward<Component5>(c5));
+
+    std::apply([&]<typename... T>(T&&... args) {
+        g.mComments.emplace_back(std::forward<T>(args)...);
+    }, std::forward<Component6>(c6));
 
     // PolymorphicGraph
     if constexpr (std::is_same_v<std::remove_cvref_t<Tag>, Define_>) {
@@ -2254,6 +2290,7 @@ add_vertex(SyntaxGraph& g, Tag t, std::string_view name, SyntaxGraph::vertex_des
         std::forward_as_tuple(), // mInherits
         std::forward_as_tuple(), // mModulePaths
         std::forward_as_tuple(), // mTypescripts
+        std::forward_as_tuple(), // mComments
         std::forward_as_tuple(), // PolymorphicType
         g, parentID);
 }
@@ -2268,6 +2305,7 @@ add_vertex(SyntaxGraph& g, Tag t, std::pmr::string&& name, SyntaxGraph::vertex_d
         std::forward_as_tuple(), // mInherits
         std::forward_as_tuple(), // mModulePaths
         std::forward_as_tuple(), // mTypescripts
+        std::forward_as_tuple(), // mComments
         std::forward_as_tuple(), // PolymorphicType
         g, parentID);
 }
@@ -2282,6 +2320,7 @@ add_vertex(SyntaxGraph& g, Tag t, const char* name, SyntaxGraph::vertex_descript
         std::forward_as_tuple(), // mInherits
         std::forward_as_tuple(), // mModulePaths
         std::forward_as_tuple(), // mTypescripts
+        std::forward_as_tuple(), // mComments
         std::forward_as_tuple(), // PolymorphicType
         g, parentID);
 }

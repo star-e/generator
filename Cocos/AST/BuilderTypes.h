@@ -476,7 +476,7 @@ struct ModuleBuilder {
     void projectTypescript(std::string_view cpp, std::string_view ts);
     void addTypescriptFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
 
-    SyntaxGraph::vertex_descriptor addComment(std::string_view name);
+    SyntaxGraph::vertex_descriptor addComment(std::string_view name, std::string_view content);
     void addRemarks(SyntaxGraph::vertex_descriptor vertID, std::string_view language, std::string_view comment);
     void addRemarksAsParameter(SyntaxGraph::vertex_descriptor vertID, std::string_view language, std::string_view comment);
     void addDefaultValue(SyntaxGraph::vertex_descriptor vertID, std::string_view member, std::string_view comment);
