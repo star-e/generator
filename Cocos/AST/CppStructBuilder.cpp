@@ -1570,7 +1570,7 @@ void CppStructBuilder::generateMethod(
     const auto& traits = get(g.traits, g, vertID);
 
     if (!bOverride) {
-        outputDoc(oss, space, m.mFlags);
+        outputMethodComment(oss, space, g, vertID, m);
     }
 
     if (!bOverride && m.mVirtual) {

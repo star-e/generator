@@ -303,7 +303,6 @@
     <ClCompile Include="SyntaxUtils.cpp" />
     <ClCompile Include="ToJsBuilder.cpp" />
     <ClCompile Include="TypescriptBuilder.cpp" />
-    <ClCompile Include="TypescriptComment.cpp" />
     <ClCompile Include="TypescriptDefaultValues.cpp" />
     <ClCompile Include="TypescriptGraph.cpp" />
     <ClCompile Include="TypescriptStructBuilder.cpp" />

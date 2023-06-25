@@ -1702,8 +1702,37 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addComment(
     Expects(vertID != g.null_vertex());
 
     auto& comment = get(g.comments, g, vertID);
-    comment = content;
+    comment.mComment = content;
     return vertID;
+}
+
+void ModuleBuilder::addMethodComment(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view methodName,
+    std::string_view content, const std::map<std::string, std::string>& parameters) {
+    auto& g = mSyntaxGraph;
+    Expects(vertID != g.null_vertex());
+    Expects(holds_tag<Struct_>(vertID, g) || holds_tag<Graph_>(vertID, g));
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            for (Method& method : s.mMethods) {
+                if (method.mFunctionName != methodName) {
+                    continue;
+                }
+                method.mComment = content;
+                for (auto&& [paramName, comment] : parameters) {
+                    for (auto& param : method.mParameters) {
+                        if (param.mName != std::string_view{ paramName }) {
+                            continue;
+                        }
+                        param.mComment = comment;
+                    }
+                }
+            }
+        },
+        [&](const auto&) {
+            Expects(false);
+        });
 }
 
 void ModuleBuilder::addRemarks(SyntaxGraph::vertex_descriptor vertID,

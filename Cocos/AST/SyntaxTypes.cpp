@@ -217,12 +217,14 @@ Member::~Member() noexcept = default;
 Parameter::Parameter(const allocator_type& alloc) noexcept
     : mTypePath(alloc)
     , mName(alloc)
-    , mDefaultValue(alloc) {}
+    , mDefaultValue(alloc)
+    , mComment(alloc) {}
 
 Parameter::Parameter(Parameter&& rhs, const allocator_type& alloc)
     : mTypePath(std::move(rhs.mTypePath), alloc)
     , mName(std::move(rhs.mName), alloc)
     , mDefaultValue(std::move(rhs.mDefaultValue), alloc)
+    , mComment(std::move(rhs.mComment), alloc)
     , mConst(std::move(rhs.mConst))
     , mPointer(std::move(rhs.mPointer))
     , mReference(std::move(rhs.mReference))
@@ -233,6 +235,7 @@ Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
     , mName(rhs.mName, alloc)
     , mDefaultValue(rhs.mDefaultValue, alloc)
+    , mComment(rhs.mComment, alloc)
     , mConst(rhs.mConst)
     , mPointer(rhs.mPointer)
     , mReference(rhs.mReference)
@@ -244,12 +247,14 @@ Parameter::~Parameter() noexcept = default;
 Method::Method(const allocator_type& alloc) noexcept
     : mReturnType(alloc)
     , mFunctionName(alloc)
-    , mParameters(alloc) {}
+    , mParameters(alloc)
+    , mComment(alloc) {}
 
 Method::Method(Method&& rhs, const allocator_type& alloc)
     : mReturnType(std::move(rhs.mReturnType), alloc)
     , mFunctionName(std::move(rhs.mFunctionName), alloc)
     , mParameters(std::move(rhs.mParameters), alloc)
+    , mComment(std::move(rhs.mComment), alloc)
     , mVirtual(std::move(rhs.mVirtual))
     , mConst(std::move(rhs.mConst))
     , mNoexcept(std::move(rhs.mNoexcept))
@@ -266,6 +271,7 @@ Method::Method(Method const& rhs, const allocator_type& alloc)
     : mReturnType(rhs.mReturnType, alloc)
     , mFunctionName(rhs.mFunctionName, alloc)
     , mParameters(rhs.mParameters, alloc)
+    , mComment(rhs.mComment, alloc)
     , mVirtual(rhs.mVirtual)
     , mConst(rhs.mConst)
     , mNoexcept(rhs.mNoexcept)
@@ -643,6 +649,20 @@ Typescript::Typescript(Typescript const& rhs, const allocator_type& alloc)
     , mArray(rhs.mArray) {}
 
 Typescript::~Typescript() noexcept = default;
+
+Comment::Comment(const allocator_type& alloc)
+    : mComment(alloc)
+    , mParameterComments(alloc) {}
+
+Comment::Comment(Comment&& rhs, const allocator_type& alloc)
+    : mComment(std::move(rhs.mComment), alloc)
+    , mParameterComments(std::move(rhs.mParameterComments), alloc) {}
+
+Comment::Comment(Comment const& rhs, const allocator_type& alloc)
+    : mComment(rhs.mComment, alloc)
+    , mParameterComments(rhs.mParameterComments, alloc) {}
+
+Comment::~Comment() noexcept = default;
 
 SyntaxGraph::allocator_type SyntaxGraph::get_allocator() const noexcept {
     return allocator_type(mVertices.get_allocator().resource());

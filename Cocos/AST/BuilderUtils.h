@@ -3,6 +3,9 @@
 
 namespace Cocos::Meta {
 
-void outputDoc(std::ostream& oss, std::pmr::string& space, Doc flags);
+void outputComment(std::ostream& oss, std::pmr::string& space, std::string_view comment);
+void outputMethodComment(std::ostream& oss, std::pmr::string& space,
+    const SyntaxGraph& g, const SyntaxGraph::vertex_descriptor vertID,
+    const Method& method);
 
 }

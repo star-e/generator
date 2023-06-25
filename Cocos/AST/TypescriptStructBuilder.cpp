@@ -294,7 +294,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             continue;
         }
 
-        outputDoc(oss, space, method.mFlags);
+        outputMethodComment(oss, space, g, vertID, method);
         OSS;
         if (!method.mPure) {
             oss << "public ";

@@ -803,16 +803,58 @@ struct property_map<Cocos::Meta::SyntaxGraph, Cocos::Meta::SyntaxGraph::comments
     using const_type = Cocos::Impl::VectorVertexComponentPropertyMap<
         lvalue_property_map_tag,
         const Cocos::Meta::SyntaxGraph,
-        const std::pmr::vector<std::pmr::string>,
-        std::pmr::string,
-        const std::pmr::string&
+        const std::pmr::vector<Cocos::Meta::Comment>,
+        Cocos::Meta::Comment,
+        const Cocos::Meta::Comment&
     >;
     using type = Cocos::Impl::VectorVertexComponentPropertyMap<
         lvalue_property_map_tag,
         Cocos::Meta::SyntaxGraph,
-        std::pmr::vector<std::pmr::string>,
-        std::pmr::string,
-        std::pmr::string&
+        std::pmr::vector<Cocos::Meta::Comment>,
+        Cocos::Meta::Comment,
+        Cocos::Meta::Comment&
+    >;
+};
+
+// Vertex ComponentMember
+template <class T>
+struct property_map<Cocos::Meta::SyntaxGraph, T Cocos::Meta::Comment::*> {
+    using const_type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        lvalue_property_map_tag,
+        const Cocos::Meta::SyntaxGraph,
+        const std::pmr::vector<Cocos::Meta::Comment>,
+        T,
+        const T&,
+        T Cocos::Meta::Comment::*
+    >;
+    using type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        lvalue_property_map_tag,
+        Cocos::Meta::SyntaxGraph,
+        std::pmr::vector<Cocos::Meta::Comment>,
+        T,
+        T&,
+        T Cocos::Meta::Comment::*
+    >;
+};
+
+// Vertex ComponentMember(String)
+template <>
+struct property_map<Cocos::Meta::SyntaxGraph, std::pmr::string Cocos::Meta::Comment::*> {
+    using const_type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        read_write_property_map_tag,
+        const Cocos::Meta::SyntaxGraph,
+        const std::pmr::vector<Cocos::Meta::Comment>,
+        std::string_view,
+        const std::pmr::string&,
+        const std::pmr::string Cocos::Meta::Comment::*
+    >;
+    using type = Cocos::Impl::VectorVertexComponentMemberPropertyMap<
+        read_write_property_map_tag,
+        Cocos::Meta::SyntaxGraph,
+        std::pmr::vector<Cocos::Meta::Comment>,
+        std::string_view,
+        std::pmr::string&,
+        std::pmr::string Cocos::Meta::Comment::*
     >;
 };
 
@@ -1077,6 +1119,19 @@ get(SyntaxGraph::comments_, const SyntaxGraph& g) noexcept {
 inline typename boost::property_map<SyntaxGraph, SyntaxGraph::comments_>::type
 get(SyntaxGraph::comments_, SyntaxGraph& g) noexcept {
     return { g.mComments };
+}
+
+// Vertex ComponentMember
+template <class T>
+inline typename boost::property_map<SyntaxGraph, T Comment::*>::const_type
+get(T Comment::* memberPointer, const SyntaxGraph& g) noexcept {
+    return { g.mComments, memberPointer };
+}
+
+template <class T>
+inline typename boost::property_map<SyntaxGraph, T Comment::*>::type
+get(T Comment::* memberPointer, SyntaxGraph& g) noexcept {
+    return { g.mComments, memberPointer };
 }
 
 // PolymorphicGraph

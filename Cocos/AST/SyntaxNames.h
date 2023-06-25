@@ -93,6 +93,7 @@ inline const char* getName(ImplEnum e) noexcept {
     }
     return "";
 }
+inline const char* getName(const Comment& v) noexcept { return "Comment"; }
 inline const char* getName(const SyntaxGraph& v) noexcept { return "SyntaxGraph"; }
 inline const char* getName(const ModuleInfo& v) noexcept { return "ModuleInfo"; }
 inline const char* getName(const ModuleGraph& v) noexcept { return "ModuleGraph"; }

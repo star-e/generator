@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include "SyntaxUtils.h"
 #include "SyntaxGraphs.h"
 #include "TypescriptGraph.h"
+#include "BuilderUtils.h"
 
 namespace Cocos::Meta {
 
@@ -107,8 +108,8 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 oss << "\n";
 
             const auto& comment = get(g.comments, g, vertID);
-            if (!comment.empty()) {
-                outputComment(oss, space, comment);
+            if (!comment.mComment.empty()) {
+                outputComment(oss, space, comment.mComment);
             }
 
             if (traits.mFlags & DECORATOR) {

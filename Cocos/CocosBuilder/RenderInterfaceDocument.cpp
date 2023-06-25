@@ -15,7 +15,10 @@ It is used internally and should not be called directly.
 @zh PipelineRuntime是经典管线以及自定义管线的运行时。
 属于内部实现，用户不应直接调用。
 )") {
-        
+        METHOD_COMMENT(activate, R"(@en activate PipelineRuntime with default swapchain
+@zh 用默认交换链初始化PipelineRuntime
+)");
+
     }
 
     NAMESPACE_END(render);

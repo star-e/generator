@@ -366,6 +366,7 @@ struct Parameter {
     std::pmr::string mTypePath;
     std::pmr::string mName;
     std::pmr::string mDefaultValue;
+    std::pmr::string mComment;
     bool mConst = false;
     bool mPointer = false;
     bool mReference = false;
@@ -423,6 +424,7 @@ struct Method {
     Parameter mReturnType;
     std::pmr::string mFunctionName;
     std::pmr::vector<Parameter> mParameters;
+    std::pmr::string mComment;
     bool mVirtual = false;
     bool mConst = false;
     bool mNoexcept = false;
@@ -1052,6 +1054,26 @@ enum class ImplEnum : uint32_t {
     Delete,
 };
 
+struct Comment {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mComment.get_allocator().resource());
+    }
+
+    Comment(const allocator_type& alloc);
+    Comment(Comment&& rhs, const allocator_type& alloc);
+    Comment(Comment const& rhs, const allocator_type& alloc);
+
+    Comment(Comment&& rhs) = default;
+    Comment(Comment const& rhs) = delete;
+    Comment& operator=(Comment&& rhs) = default;
+    Comment& operator=(Comment const& rhs) = default;
+    ~Comment() noexcept;
+
+    std::pmr::string mComment;
+    PmrMap<std::pmr::string, std::pmr::string> mParameterComments;
+};
+
 struct SyntaxGraph {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept;
@@ -1388,7 +1410,7 @@ struct SyntaxGraph {
     std::pmr::vector<Inherits> mInherits;
     std::pmr::vector<std::pmr::string> mModulePaths;
     std::pmr::vector<Typescript> mTypescripts;
-    std::pmr::vector<std::pmr::string> mComments;
+    std::pmr::vector<Comment> mComments;
     // PolymorphicGraph
     std::pmr::vector<Define> mDefines;
     std::pmr::vector<Concept> mConcepts;

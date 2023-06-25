@@ -123,6 +123,9 @@ builder.addEnumElement(vertID, \
         vertID != SyntaxGraph::null_vertex(); \
         vertID = SyntaxGraph::null_vertex())
 
+#define METHOD_COMMENT(NAME, ...) \
+    builder.addMethodComment(vertID, BOOST_PP_STRINGIZE(NAME), __VA_ARGS__)
+
 #define CLASS(NAME, ...) STRUCT(NAME, .mClass = true, __VA_ARGS__)
 
 #define MEMBER_FLAGS(MEMBER, ...) \
