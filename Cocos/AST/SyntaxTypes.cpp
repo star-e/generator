@@ -138,18 +138,21 @@ Alias::~Alias() noexcept = default;
 EnumValue::EnumValue(const allocator_type& alloc) noexcept
     : mName(alloc)
     , mValue(alloc)
-    , mReflectionName(alloc) {}
+    , mReflectionName(alloc)
+    , mComment(alloc) {}
 
 EnumValue::EnumValue(EnumValue&& rhs, const allocator_type& alloc)
     : mName(std::move(rhs.mName), alloc)
     , mValue(std::move(rhs.mValue), alloc)
     , mReflectionName(std::move(rhs.mReflectionName), alloc)
+    , mComment(std::move(rhs.mComment), alloc)
     , mExport(std::move(rhs.mExport)) {}
 
 EnumValue::EnumValue(EnumValue const& rhs, const allocator_type& alloc)
     : mName(rhs.mName, alloc)
     , mValue(rhs.mValue, alloc)
     , mReflectionName(rhs.mReflectionName, alloc)
+    , mComment(rhs.mComment, alloc)
     , mExport(rhs.mExport) {}
 
 EnumValue::~EnumValue() noexcept = default;

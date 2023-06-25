@@ -859,6 +859,10 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                         maxLength = std::max(maxLength, v.mName.size());
                     }
                     for (const auto& v : e.mValues) {
+                        if (!v.mComment.empty()) {
+                            INDENT();
+                            outputEnumComment(oss, space, g, vertID, v);
+                        }
                         if (v.mValue.empty()) {
                             oss << "    " << v.mName << ",";
                         } else {

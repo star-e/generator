@@ -1701,6 +1701,10 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addComment(
     const auto vertID = locate(parentID, name, g);
     Expects(vertID != g.null_vertex());
 
+    if (content.empty()) {
+        return vertID;
+    }
+
     auto& comment = get(g.comments, g, vertID);
     comment.mComment = content;
     return vertID;
@@ -1728,6 +1732,26 @@ void ModuleBuilder::addMethodComment(SyntaxGraph::vertex_descriptor vertID,
                         param.mComment = comment;
                     }
                 }
+            }
+        },
+        [&](const auto&) {
+            Expects(false);
+        });
+}
+
+void ModuleBuilder::addEnumComment(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view enumName, std::string_view content) {
+    auto& g = mSyntaxGraph;
+    Expects(vertID != g.null_vertex());
+    Expects(holds_tag<Enum_>(vertID, g));
+    visit_vertex(
+        vertID, g,
+        [&](Enum& s) {
+            for (auto& e : s.mValues) {
+                if (e.mName != enumName) {
+                    continue;
+                }
+                e.mComment = content;
             }
         },
         [&](const auto&) {

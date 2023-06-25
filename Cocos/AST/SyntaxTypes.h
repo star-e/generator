@@ -268,6 +268,7 @@ struct EnumValue {
     std::pmr::string mName;
     std::pmr::string mValue;
     std::pmr::string mReflectionName;
+    std::pmr::string mComment;
     bool mExport = true;
 };
 

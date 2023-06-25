@@ -7,5 +7,8 @@ void outputComment(std::ostream& oss, std::pmr::string& space, std::string_view 
 void outputMethodComment(std::ostream& oss, std::pmr::string& space,
     const SyntaxGraph& g, const SyntaxGraph::vertex_descriptor vertID,
     const Method& method);
+void outputEnumComment(std::ostream& oss, std::pmr::string& space,
+    const SyntaxGraph& g, const SyntaxGraph::vertex_descriptor vertID,
+    const EnumValue& e);
 
 }

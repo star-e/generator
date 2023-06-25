@@ -96,9 +96,30 @@ Shading scale affects shading texels per pixel.
 Different types of pipeline have different hardward capabilities and interfaces.
 @zh 管线类型，不同类型的管线具有不同的硬件能力与接口
 )") {
-
+        ENUM_COMMENT(BASIC, R"(@en Basic render pipeline.
+Basic render pipeline is available on all platforms.
+The corresponding interface is {@link BasicPipeline}
+@zh 基础渲染管线，全平台支持。对应接口为 {@link BasicPipeline}
+)");
+        ENUM_COMMENT(STANDARD, R"(@en Standard render pipeline.
+Standard render pipeline supports compute shader and subpass rendering.
+It works well on Tile-based GPUs and is available on all native platforms.
+Vulkan, GLES3 and Metal backends are supported.
+The corresponding interface is {@link Pipeline}
+@zh 标准渲染管线.
+标准渲染管线支持计算着色器(Compute Shader)与次通道渲染(Subpass rendering)。
+能充分利用Tile-based GPU，支持所有原生平台并对移动平台特别优化。
+支持Vulkan、GLES3、Metal图形后端。
+对应接口为{@link Pipeline}
+)");
     } // PipelineType
-    
+
+    COMMENT(BasicPipeline, R"(@en BasicPipeline
+@zh 基础渲染管线
+)") {
+
+    }
+
     NAMESPACE_END(render);
     NAMESPACE_END(cc);
 }

@@ -16,6 +16,12 @@ void outputComment(std::ostream& oss, std::pmr::string& space, std::string_view 
     OSS << " */\n";
 }
 
+void outputEnumComment(std::ostream& oss, std::pmr::string& space,
+    const SyntaxGraph& g, const SyntaxGraph::vertex_descriptor vertID,
+    const EnumValue& e) {
+    outputComment(oss, space, e.mComment);
+}
+
 void outputMethodComment(std::ostream& oss, std::pmr::string& space,
     const SyntaxGraph& g, const SyntaxGraph::vertex_descriptor vertID,
     const Method& method) {

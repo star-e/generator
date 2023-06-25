@@ -73,6 +73,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                     if (!v.mExport) {
                         continue;
                     }
+                    if (!v.mComment.empty()) {
+                        outputEnumComment(oss, space, g, vertID, v);
+                    }
                     OSS << v.mName;
                     if (!v.mValue.empty()) {
                         oss << " = " << v.mValue;
