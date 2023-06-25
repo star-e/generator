@@ -28,6 +28,7 @@ THE SOFTWARE.
 #include "SyntaxGraphs.h"
 #include "SyntaxUtils.h"
 #include <Cocos/GraphView.h>
+#include "BuilderUtils.h"
 
 namespace Cocos::Meta {
 
@@ -831,6 +832,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
 
         const auto& name = get(g.names, g, vertID);
         const auto& traits = get(g.traits, g, vertID);
+        const auto& comment = get(g.comments, g, vertID);
         auto ns = g.getNamespace(vertID, scratch);
         CppStructBuilder cpp(&g, &mModuleGraph, vertID, mModuleID, ns, mProjectName, scratch);
 
@@ -916,6 +918,9 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             },
             [&](const Struct& s) {
                 lineBreak();
+                if (!comment.mComment.empty()) {
+                    outputComment(oss, space, comment.mComment);
+                }
                 CppStructBuilder cpp(&g, &mModuleGraph, vertID, mModuleID, ns, mProjectName, scratch);
                 if (traits.mClass) {
                     OSS << "class ";
@@ -960,8 +965,11 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 }
                 space.append("    ");
             },
-            [&](const Graph&) {
+            [&](const Graph& s) {
                 lineBreak();
+                if (!comment.mComment.empty()) {
+                    outputComment(oss, space, comment.mComment);
+                }
                 CppStructBuilder cpp(&g, &mModuleGraph, vertID, mModuleID, ns, mProjectName, scratch);
                 OSS << "struct ";
 
