@@ -461,6 +461,9 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
                 OSS << "inline const char* getName(" << name << " e) noexcept {\n";
                 OSS << "    switch (e) {\n";
                 for (const auto& e : s.mValues) {
+                    if (e.mAlias) {
+                        continue;
+                    }
                     INDENT();
                     OSS << "    case ";
                     if (traits.mClass) {
@@ -885,6 +888,10 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                         maxLength2 = std::max(maxLength2, v.mValue.size());
                     }
                     for (const auto& v : e.mValues) {
+                        if (!v.mComment.empty()) {
+                            INDENT();
+                            outputEnumComment(oss, space, g, vertID, v);
+                        }
                         oss << "    " << v.mName;
                         if (false && sFormat) {
                             oss << std::pmr::string(maxLength - v.mName.size(), ' ');

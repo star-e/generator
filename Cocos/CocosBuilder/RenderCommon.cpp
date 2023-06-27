@@ -75,7 +75,10 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         }
 
         ENUM_CLASS(QueueHint) {
-            ENUMS(NONE, RENDER_OPAQUE, RENDER_CUTOUT, RENDER_TRANSPARENT);
+            ENUMS(NONE, OPAQUE, MASK, BLEND);
+            builder.addEnumElement(vertID, "RENDER_OPAQUE", "OPAQUE", true);
+            builder.addEnumElement(vertID, "RENDER_CUTOUT", "MASK", true);
+            builder.addEnumElement(vertID, "RENDER_TRANSPARENT", "BLEND", true);
         }
 
         ENUM_CLASS(ResourceDimension) {

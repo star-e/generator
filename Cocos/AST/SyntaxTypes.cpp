@@ -146,14 +146,16 @@ EnumValue::EnumValue(EnumValue&& rhs, const allocator_type& alloc)
     , mValue(std::move(rhs.mValue), alloc)
     , mReflectionName(std::move(rhs.mReflectionName), alloc)
     , mComment(std::move(rhs.mComment), alloc)
-    , mExport(std::move(rhs.mExport)) {}
+    , mExport(std::move(rhs.mExport))
+    , mAlias(std::move(rhs.mAlias)) {}
 
 EnumValue::EnumValue(EnumValue const& rhs, const allocator_type& alloc)
     : mName(rhs.mName, alloc)
     , mValue(rhs.mValue, alloc)
     , mReflectionName(rhs.mReflectionName, alloc)
     , mComment(rhs.mComment, alloc)
-    , mExport(rhs.mExport) {}
+    , mExport(rhs.mExport)
+    , mAlias(rhs.mAlias) {}
 
 EnumValue::~EnumValue() noexcept = default;
 

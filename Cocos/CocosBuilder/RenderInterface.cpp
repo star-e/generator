@@ -246,7 +246,7 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 
 virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
+[[deprecated]] virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 )");
@@ -276,7 +276,7 @@ virtual void endFrame() = 0;
 
 [[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& passName = "default") = 0;
 virtual BasicRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& passName = "default") = 0;
-virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
+[[deprecated]] virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;

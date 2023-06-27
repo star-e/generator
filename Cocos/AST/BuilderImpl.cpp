@@ -401,7 +401,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addFlag(std::string_view name, Tra
 }
 
 void ModuleBuilder::addEnumElement(SyntaxGraph::vertex_descriptor vertID,
-    std::string_view name, std::string_view value) {
+    std::string_view name, std::string_view value, bool bAlias) {
     auto& g = mSyntaxGraph;
     Expects(holds_tag<Enum_>(vertID, g));
 
@@ -412,6 +412,7 @@ void ModuleBuilder::addEnumElement(SyntaxGraph::vertex_descriptor vertID,
     EnumValue v(e.get_allocator());
     v.mName = name;
     v.mValue = value;
+    v.mAlias = bAlias;
     e.mValues.emplace_back(std::move(v));
 }
 

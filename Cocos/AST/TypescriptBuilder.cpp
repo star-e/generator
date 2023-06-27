@@ -92,6 +92,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                     INDENT();
                     OSS << "switch (e) {\n";
                     for (const auto& v : e.mValues) {
+                        if (v.mAlias) {
+                            continue;
+                        }
                         OSS << "case " << name << "." << v.mName << ":\n";
                         INDENT();
                         OSS << "return '" << v.mName << "';\n";
