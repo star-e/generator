@@ -353,7 +353,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
-virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderStageFlagBit flags = gfx::ShaderStageFlagBit::COMPUTE) = 0;
+[[beta]] virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderStageFlagBit flags = gfx::ShaderStageFlagBit::COMPUTE) = 0;
 
 virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
 
@@ -399,7 +399,7 @@ virtual SceneTask* transverse(SceneVisitor *visitor) const = 0;
             PUBLIC_METHODS(R"(
 virtual uint32_t addStorageBuffer(const ccstd::string& name, gfx::Format format, uint32_t size, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 virtual uint32_t addStorageTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
-virtual uint32_t addShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
+[[experimental]] virtual uint32_t addShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 
 virtual void updateStorageBuffer(const ccstd::string& name, uint32_t size, gfx::Format format = gfx::Format::UNKNOWN) = 0;
 virtual void updateStorageTexture(const ccstd::string& name, uint32_t width, uint32_t height, gfx::Format format = gfx::Format::UNKNOWN) = 0;
@@ -407,7 +407,7 @@ virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width,
 
 virtual RenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& passName) = 0;
 virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
-virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
+[[beta]] virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 
 [[experimental]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
