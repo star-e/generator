@@ -10,7 +10,7 @@ void buildRenderInterfaceDocument(ModuleBuilder& builder) {
     NAMESPACE_BEG(cc);
     NAMESPACE_BEG(render);
 
-    COMMENT(PipelineRuntime, R"(@internal
+    COMMENT(PipelineRuntime, R"(@engineInternal
 @en PipelineRuntime is the runtime of both classical and custom pipelines.
 It is used internally and should not be called directly.
 @zh PipelineRuntime是经典管线以及自定义管线的运行时。
@@ -18,12 +18,16 @@ It is used internally and should not be called directly.
 )") {
         METHOD_COMMENT(activate, R"(@en Activate PipelineRuntime with default swapchain
 @zh 用默认交换链初始化PipelineRuntime
+@param swapchain @en Default swapchain @zh 默认的交换链
+@returns Success or not
 )");
         METHOD_COMMENT(destroy, R"(@en Destroy resources of PipelineRuntime
 @zh 销毁PipelineRuntime所持资源
+@returns Success or not
 )");
         METHOD_COMMENT(render, R"(@en Render contents of cameras
 @zh 根据相机进行绘制
+@param cameras @en Camera list @zh 相机列表
 )");
         METHOD_COMMENT(getDevice, R"(@en Get graphics device
 @zh 获得图形设备
@@ -66,26 +70,32 @@ Shading scale affects shading texels per pixel.
         METHOD_COMMENT(getMacroString, R"(@en Get macro as string.
 @zh 根据宏名获得字符串
 @param name @en Name of macro @zh 宏的名字
+@returns String value
 )");
         METHOD_COMMENT(getMacroInt, R"(@en Get macro as integer.
 @zh 根据宏名获得整型
 @param name @en Name of macro @zh 宏的名字
+@returns Integer value
 )");
         METHOD_COMMENT(getMacroBool, R"(@en Get macro as boolean.
 @zh 根据宏名获得布尔值
 @param name @en Name of macro @zh 宏的名字
+@returns Boolean value
 )");
         METHOD_COMMENT(setMacroString, R"(@en Assign string value to macro.
 @zh 给宏赋值字符串
 @param name @en Name of macro @zh 宏的名字
+@param value @en String value @zh 字符串
 )");
         METHOD_COMMENT(setMacroInt, R"(@en Assign integer value to macro.
 @zh 给宏赋值整型
 @param name @en Name of macro @zh 宏的名字
+@param value @en Integer value @zh 整型值
 )");
         METHOD_COMMENT(setMacroBool, R"(@en Assign boolean value to macro.
 @zh 给宏赋值布尔值
 @param name @en Name of macro @zh 宏的名字
+@param value @en Boolean value @zh 布尔值
 )");
         METHOD_COMMENT(onGlobalPipelineStateChanged, R"(@en Trigger pipeline state change event
 @zh 触发管线状态更新事件
@@ -371,17 +381,18 @@ In each frame, user can create a render graph to be executed by the pipeline.
 这些资源一般是可读写的资源。
 用户可以每帧构建一个render graph，然后交由管线执行。
 )") {
-        METHOD_COMMENT(beginSetup, R"(@internal
+        METHOD_COMMENT(beginSetup, R"(@engineInternal
 @en Begin render pipeline setup
 @zh 开始管线构建
 )");
-        METHOD_COMMENT(endSetup, R"(@internal
+        METHOD_COMMENT(endSetup, R"(@engineInternal
 @en End render pipeline setup
 @zh 结束管线构建
 )");
         METHOD_COMMENT(containsResource, R"(@en Check whether the resource has been registered in the pipeline.
 @zh 检查资源是否在管线中已注册
 @param name @en Resource name @zh 资源名字
+@returns Exist or not
 )");
         METHOD_COMMENT(addRenderWindow, R"(@en Add render window to the pipeline.
 @zh 注册渲染窗口(RenderWindow)
@@ -390,6 +401,7 @@ In each frame, user can create a render graph to be executed by the pipeline.
 @param width @en Expected width of the render window @zh 期望的渲染窗口宽度
 @param height @en Expected height of the render window @zh 期望的渲染窗口高度
 @param renderWindow @en The render window to add. @zh 需要注册的渲染窗口
+@returns Resource ID
 )");
         METHOD_COMMENT(updateRenderWindow, R"(@en Update render window information.
 When render window information is updated, such as resized, user should notify the pipeline.
@@ -403,6 +415,7 @@ When render window information is updated, such as resized, user should notify t
 @param width @en Width of the resource @zh 资源的宽度
 @param height @en Height of the resource @zh 资源的高度
 @param residency @en Residency of the resource. @zh 资源的驻留性
+@returns Resource ID
 )");
         METHOD_COMMENT(addDepthStencil, R"(@en Add 2D depth stencil.
 @zh 添加2D深度模板缓冲
@@ -411,6 +424,7 @@ When render window information is updated, such as resized, user should notify t
 @param width @en Width of the resource @zh 资源的宽度
 @param height @en Height of the resource @zh 资源的高度
 @param residency @en Residency of the resource. @zh 资源的驻留性
+@returns Resource ID
 )");
         METHOD_COMMENT(updateRenderTarget, R"(@en Update render target information.
 @zh 更新渲染目标的信息
@@ -426,15 +440,16 @@ When render window information is updated, such as resized, user should notify t
 @param height @en Height of the resource @zh 资源的高度
 @param format @en Format of the resource @zh 资源的格式
 )");
-        METHOD_COMMENT(beginFrame, R"(@internal
+        METHOD_COMMENT(beginFrame, R"(@engineInternal
 @en Begin rendering one frame
 @zh 开始一帧的渲染
 )");
-        METHOD_COMMENT(update, R"(@internal
+        METHOD_COMMENT(update, R"(@engineInternal
 @en Update camera
 @zh 更新相机
+@param camera @en Camera @zh 相机
 )");
-        METHOD_COMMENT(endFrame, R"(@internal
+        METHOD_COMMENT(endFrame, R"(@engineInternal
 @en End rendering one frame
 @zh 结束一帧的渲染
 )");
@@ -443,6 +458,7 @@ When render window information is updated, such as resized, user should notify t
 @param width @en Width of the render pass @zh 渲染通道的宽度
 @param height @en Height of the render pass @zh 渲染通道的高度
 @param passName @en Pass name declared in the effect. Default value is 'default' @zh effect中的pass name，缺省为'default'
+@returns Basic render pass builder
 )");
         METHOD_COMMENT(addMultisampleRenderPass, R"(@en Add multisample render pass
 @zh 添加多重采样渲染通道
@@ -451,6 +467,7 @@ When render window information is updated, such as resized, user should notify t
 @param count @en Sample count @zh 采样数
 @param quality @en Sample quality. Default value is 0 @zh 采样质量，默认值是0
 @param passName @en Pass name declared in the effect. Default value is 'default' @zh effect中的pass name，缺省为'default'
+@returns Multisample basic render pass builder
 )");
         METHOD_COMMENT(addCopyPass, R"(@en Add copy pass.
 The source and target resources:
@@ -471,7 +488,7 @@ Reinterpret copy is not supported.
 
 @param copyPairs @en Array of copy source and target @zh 拷贝来源与目标的数组
 )");
-        METHOD_COMMENT(getDescriptorSetLayout, R"(@internal
+        METHOD_COMMENT(getDescriptorSetLayout, R"(@engineInternal
 )");
     } // BasicPipeline
 
@@ -707,7 +724,7 @@ Call setCustomPipeline to register the pipeline builder
 )");
     }
 
-    COMMENT(RenderingModule, R"(@internal
+    COMMENT(RenderingModule, R"(@engineInternal
 )") {
     }
 
