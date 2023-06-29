@@ -123,6 +123,15 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             CNTR_EMPTY();
         }
 
+        STRUCT(NativeMultisampleRenderPassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(MultisampleRenderPassBuilder, NativeSetter)
+            PUBLIC(
+                (uint32_t, mSubpassID, RenderGraph::null_vertex())
+                (uint32_t, mSubpassLayoutID, RenderGraph::null_vertex())
+            );
+            CNTR(mSubpassID, mSubpassLayoutID);
+        }
+
         STRUCT(NativeComputeQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
             INHERITS(ComputeQueueBuilder, NativeSetter);
             CNTR_EMPTY();

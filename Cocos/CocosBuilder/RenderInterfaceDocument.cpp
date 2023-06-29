@@ -149,8 +149,11 @@ Tile-based GPU可以在像素着色器读取当前像素的值。
         ENUM_COMMENT(INPUT_COLOR_MRT, R"(@en Supports read color values at current pixel.
 @zh 支持读取当前像素任意颜色值
 )");
+        ENUM_COMMENT(HETEROGENEOUS_SAMPLE_COUNT, R"(@en Each subpass has its own sample count.
+@zh 每个Subpass拥有不同的采样数
+)");
     }
-    
+
     COMMENT(PipelineCapabilities, R"(@en Pipeline capabilities.
 The following capabilities are partially supported on different hardware and graphics backends.
 @zh 管线能力。根据硬件与后端，支持的特性会有所不同

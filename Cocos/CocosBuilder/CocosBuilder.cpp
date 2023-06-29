@@ -131,6 +131,7 @@ int main() {
         files.emplace("cocos/renderer/pipeline/custom/NativeUtils.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeUtils.h");
         files.emplace("cocos/renderer/pipeline/custom/NativeSceneCulling.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraphUtils.h");
 
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);

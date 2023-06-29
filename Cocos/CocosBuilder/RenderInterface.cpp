@@ -181,6 +181,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
                 (INPUT_DEPTH_STENCIL, 1 << 0)
                 (INPUT_COLOR, 1 << 1)
                 (INPUT_COLOR_MRT, 1 << 2)
+                (HETEROGENEOUS_SAMPLE_COUNT, 1 << 3)
             );
         }
 
@@ -252,6 +253,14 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 )");
         }
 
+        INTERFACE(BasicMultisampleRenderPassBuilder) {
+            INHERITS(BasicRenderPassBuilder);
+            PUBLIC_METHODS(R"(
+virtual void resolveRenderTarget(const ccstd::string& source, const ccstd::string& target) = 0;
+virtual void resolveDepthStencil(const ccstd::string& source, const ccstd::string& target, gfx::ResolveMode depthMode = gfx::ResolveMode::SAMPLE_ZERO, gfx::ResolveMode stencilMode = gfx::ResolveMode::SAMPLE_ZERO) = 0;
+)");
+        }
+
         INTERFACE(BasicPipeline) {
             INHERITS(PipelineRuntime);
             PUBLIC_METHODS(R"(
@@ -275,7 +284,7 @@ virtual void update(const scene::Camera* camera) = 0;
 virtual void endFrame() = 0;
 
 [[covariant]] virtual BasicRenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& passName = "default") = 0;
-[[beta]] virtual BasicRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& passName = "default") = 0;
+[[beta]] [[covariant]] virtual BasicMultisampleRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& passName = "default") = 0;
 [[deprecated]] virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
@@ -347,6 +356,14 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
 )");
         }
 
+        INTERFACE(MultisampleRenderPassBuilder) {
+            INHERITS(BasicMultisampleRenderPassBuilder);
+            PUBLIC_METHODS(R"(
+virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
+)");
+        }
+
         INTERFACE(ComputePassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
@@ -406,6 +423,7 @@ virtual void updateStorageTexture(const ccstd::string& name, uint32_t width, uin
 virtual void updateShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height) = 0;
 
 virtual RenderPassBuilder *addRenderPass(uint32_t width, uint32_t height, const ccstd::string& passName) = 0;
+virtual MultisampleRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& passName) = 0;
 virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
 [[beta]] virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
