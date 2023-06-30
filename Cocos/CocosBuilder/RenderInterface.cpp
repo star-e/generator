@@ -215,17 +215,20 @@ virtual void setTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 [[deprecated]] virtual void setReadWriteBuffer(const ccstd::string& name, gfx::Buffer* buffer) = 0;
 [[deprecated]] virtual void setReadWriteTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
+virtual void setBuiltinCameraConstants(const scene::Camera* camera) = 0;
+virtual void setBuiltinShadowMapConstants(const scene::DirectionalLight* light) = 0;
+virtual void setBuiltinDirectionalLightViewConstants(const scene::DirectionalLight* light, uint32_t level = 0) = 0;
+virtual void setBuiltinSpotLightViewConstants(const scene::SpotLight* light) = 0;
 )");
         }
-//virtual void setCameraConstants(const scene::Camera* camera) = 0;
-//virtual void setDirectionalLightProjectionConstants(const scene::DirectionalLight* light, uint32_t level) = 0;
-//virtual void setSpotLightProjectionConstants(const scene::SpotLight* light) = 0;
-//virtual void setShadowMapConstants(const scene::Light* light, uint32_t numLevels = 0) = 0;
 
         INTERFACE(RenderQueueBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+virtual void addScene(const scene::Camera* camera, SceneFlags sceneFlags) = 0;
+virtual void addSceneCulledByDirectionalLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::DirectionalLight* light, uint32_t level) = 0;
+virtual void addSceneCulledBySpotLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::SpotLight* light) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
@@ -233,10 +236,6 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[experimental]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
         }
-
-//virtual void addScene(const scene::Camera* camera, SceneFlags sceneFlags) = 0;
-//virtual void addSceneCulledByDirectionalLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::DirectionalLight* light, uint32_t level) = 0;
-//virtual void addSceneCulledBySpotLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::SpotLight* light) = 0;
 
         INTERFACE(BasicRenderPassBuilder) {
             INHERITS(Setter);
