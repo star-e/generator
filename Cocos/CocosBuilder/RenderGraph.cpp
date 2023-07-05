@@ -489,7 +489,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             );
             PUBLIC(
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mIndex, _)
-                //(ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mSortedVertices, _)
+                (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mSortedVertices, _)
             );
             MEMBER_FUNCTIONS(R"(
 ccstd::string print(boost::container::pmr::memory_resource* scratch) const;
