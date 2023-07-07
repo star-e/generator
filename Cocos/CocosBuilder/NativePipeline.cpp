@@ -225,11 +225,14 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
 
         STRUCT(RenderInstancingQueue) {
             PUBLIC(
-                (PmrUnorderedSet<pipeline::InstancedBuffer*>, mBatches, _)
                 (ccstd::pmr::vector<pipeline::InstancedBuffer*>, mSortedBatches, _)
+                ((PmrUnorderedMap<const scene::Pass*, uint32_t>), mPassInstances, _)
+                (ccstd::pmr::vector<IntrusivePtr<pipeline::InstancedBuffer>>, mInstanceBuffers, _)
             );
             MEMBER_FUNCTIONS(R"(
-void add(pipeline::InstancedBuffer &instancedBuffer);
+bool empty() const noexcept;
+void clear();
+void add(const scene::Pass& pass, scene::SubModel& submodel, uint32_t passID);
 void sort();
 void uploadBuffers(gfx::CommandBuffer *cmdBuffer) const;
 void recordCommandBuffer(
@@ -238,7 +241,7 @@ void recordCommandBuffer(
     const ccstd::vector<uint32_t> *dynamicOffsets = nullptr) const;
 )");
         }
-        
+
         STRUCT(DrawInstance/*, .mAlignment = 32*/) {
             PUBLIC(
                 (const scene::SubModel*, mSubModel, nullptr)
