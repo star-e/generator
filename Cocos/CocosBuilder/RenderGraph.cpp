@@ -123,12 +123,12 @@ bool isWrite() const {
                 (uint16_t, mDepthOrArraySize, 0)
                 (uint16_t, mMipLevels, 0)
                 (gfx::Format, mFormat, gfx::Format::UNKNOWN)
-                (gfx::SampleCount, mSampleCount, gfx::SampleCount::ONE)
+                (gfx::SampleCount, mSampleCount, gfx::SampleCount::X1)
                 (gfx::TextureFlagBit, mTextureFlags, gfx::TextureFlagBit::NONE)
                 (ResourceFlags, mFlags, ResourceFlags::NONE)
             );
             TS_INIT(mFormat, Format.UNKNOWN);
-            TS_INIT(mSampleCount, SampleCount.ONE);
+            TS_INIT(mSampleCount, SampleCount.X1);
             TS_INIT(mTextureFlags, TextureFlagBit.NONE);
             TS_INIT(mFlags, ResourceFlags.NONE);
         }
@@ -493,6 +493,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mSortedVertices, _)
             );
             MEMBER_FUNCTIONS(R"(
+vertex_descriptor getPassID(vertex_descriptor nodeID) const;
 ccstd::string print(boost::container::pmr::memory_resource* scratch) const;
 )");
         }

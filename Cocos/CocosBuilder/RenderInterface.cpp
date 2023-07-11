@@ -429,6 +429,8 @@ virtual MultisampleRenderPassBuilder *addMultisampleRenderPass(uint32_t width, u
 virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
 [[beta]] virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
+virtual void addBuiltinGpuCullingPass(const scene::Camera* camera, const std::string& hzbName = "", [[optional]] const scene::Light* light = nullptr) = 0;
+virtual void addBuiltinHzbGenerationPass(const std::string& sourceDepthStencilName, const std::string& targetHzbName) = 0;
 
 [[experimental]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
 [[experimental]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;

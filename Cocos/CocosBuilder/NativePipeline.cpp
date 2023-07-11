@@ -434,6 +434,7 @@ gfx::Buffer* createFromCpuBuffer();
                 ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mSceneQueryIndex, _)
                 (uint32_t, mNumCullingQueries, 0)
                 (uint32_t, mNumRenderQueues, 0)
+                (uint32_t, mGpuCullingPassID, 0xFFFFFFFF)
             );
             MEMBER_FUNCTIONS(R"(
 void clear() noexcept;

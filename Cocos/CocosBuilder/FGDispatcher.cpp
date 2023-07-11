@@ -117,6 +117,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (std::vector<LayoutAccess>, mColorAccesses, _)
                 (LayoutAccess, mDsAccess, _)
+                (LayoutAccess, mDsResolveAccess, _)
                 (gfx::RenderPassInfo, mRpInfo, _)
                 (std::vector<std::string>, mOrderedViews, _)
                 (bool, mNeedResolve, false)
