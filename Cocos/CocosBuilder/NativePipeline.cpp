@@ -142,14 +142,14 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             CNTR_EMPTY();
         }
 
-        STRUCT(NativeSceneTransversal) {
-            INHERITS(SceneTransversal);
-            PUBLIC(
-                (const scene::Camera*, mCamera, nullptr)
-                (const scene::RenderScene*, mScene, nullptr)
-            );
-            CNTR(mCamera, mScene);
-        }
+        //STRUCT(NativeSceneTransversal) {
+        //    INHERITS(SceneTransversal);
+        //    PUBLIC(
+        //        (const scene::Camera*, mCamera, nullptr)
+        //        (const scene::RenderScene*, mScene, nullptr)
+        //    );
+        //    CNTR(mCamera, mScene);
+        //}
 
         //STRUCT(NativeRenderViewDesc) {
         //    PUBLIC(
@@ -298,19 +298,19 @@ bool empty() const noexcept;
 )");
         }
 
-        STRUCT(DefaultSceneVisitor) {
-            INHERITS(SceneVisitor);
-            PUBLIC(
-                (ccstd::pmr::string, mName, _)
-            );
-        }
+        //STRUCT(DefaultSceneVisitor) {
+        //    INHERITS(SceneVisitor);
+        //    PUBLIC(
+        //        (ccstd::pmr::string, mName, _)
+        //    );
+        //}
 
-        STRUCT(DefaultForwardLightingTransversal) {
-            INHERITS(SceneTransversal);
-            PUBLIC(
-                (ccstd::pmr::string, mName, _)
-            );
-        }
+        //STRUCT(DefaultForwardLightingTransversal) {
+        //    INHERITS(SceneTransversal);
+        //    PUBLIC(
+        //        (ccstd::pmr::string, mName, _)
+        //    );
+        //}
         
         STRUCT(ResourceGroup, .mFlags = NO_MOVE_NO_COPY | CUSTOM_DTOR) {
             PUBLIC(

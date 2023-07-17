@@ -392,76 +392,76 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
         if (!bVectorVertexDescriptor) {
             outputNullVertex(oss, space, s, vertexDescType);
         }
-
         if (s.hasProperties()) {
-            int count = 0;
-            OSS << "constructor (";
-            {
-                INDENT();
-                if (s.isPolymorphic()) {
-                    if (count++) {
-                        oss << ",\n";
-                    } else {
-                        oss << "\n";
-                    }
-                    OSS << "readonly id: " << name << "Value,\n";
-                    OSS << "readonly object: " << name << "Object";
-                }
-                if (false && s.mNamed) {
-                    if (count++) {
-                        oss << ",\n";
-                    } else {
-                        oss << "\n";
-                    }
-                    OSS << "readonly name: string";
-                }
-                if (!s.mVertexProperty.empty()) {
-                    if (count++) {
-                        oss << ",\n";
-                    } else {
-                        oss << "\n";
-                    }
-                    OSS << "readonly property: " << s.getTypescriptVertexPropertyType(g, scratch, scratch);
-                }
-                if (s.isComponentInVertex()) {
-                    for (const auto& c : s.mComponents) {
+            if (s.isPolymorphic() || !s.mVertexProperty.empty() || s.isComponentInVertex()) {
+                int count = 0;
+                OSS << "constructor (";
+                {
+                    INDENT();
+                    if (s.isPolymorphic()) {
                         if (count++) {
                             oss << ",\n";
                         } else {
                             oss << "\n";
                         }
-                        OSS << "readonly " << g.getMemberName(c.mMemberName, true);
-                        oss << ": " << c.getTypescriptComponentType(g, scratch, scratch);
+                        OSS << "readonly id: " << name << "Value,\n";
+                        OSS << "readonly object: " << name << "Object";
+                    }
+                    if (false && s.mNamed) {
+                        if (count++) {
+                            oss << ",\n";
+                        } else {
+                            oss << "\n";
+                        }
+                        OSS << "readonly name: string";
+                    }
+                    if (!s.mVertexProperty.empty()) {
+                        if (count++) {
+                            oss << ",\n";
+                        } else {
+                            oss << "\n";
+                        }
+                        OSS << "readonly property: " << s.getTypescriptVertexPropertyType(g, scratch, scratch);
+                    }
+                    if (s.isComponentInVertex()) {
+                        for (const auto& c : s.mComponents) {
+                            if (count++) {
+                                oss << ",\n";
+                            } else {
+                                oss << "\n";
+                            }
+                            OSS << "readonly " << g.getMemberName(c.mMemberName, true);
+                            oss << ": " << c.getTypescriptComponentType(g, scratch, scratch);
+                        }
                     }
                 }
-            }
-            if (count) {
-                oss << ",\n";
-                OSS << ") {\n";
-            } else {
-                oss << ") {\n";
-            }
-            {
-                INDENT();
-                if (s.isPolymorphic()) {
-                    OSS << "this._id = id;\n";
-                    OSS << "this._object = object;\n";
+                if (count) {
+                    oss << ",\n";
+                    OSS << ") {\n";
+                } else {
+                    oss << ") {\n";
                 }
-                if (false && s.mNamed) {
-                    OSS << "this._name = name;\n";
-                }
-                if (!s.mVertexProperty.empty()) {
-                    OSS << "this._property = property;\n";
-                }
-                if (s.isComponentInVertex()) {
-                    for (const auto& c : s.mComponents) {
-                        OSS << "this." << g.getMemberName(c.mMemberName, false)
-                            << " = " << g.getMemberName(c.mMemberName, true) << ";\n";
+                {
+                    INDENT();
+                    if (s.isPolymorphic()) {
+                        OSS << "this._id = id;\n";
+                        OSS << "this._object = object;\n";
+                    }
+                    if (false && s.mNamed) {
+                        OSS << "this._name = name;\n";
+                    }
+                    if (!s.mVertexProperty.empty()) {
+                        OSS << "this._property = property;\n";
+                    }
+                    if (s.isComponentInVertex()) {
+                        for (const auto& c : s.mComponents) {
+                            OSS << "this." << g.getMemberName(c.mMemberName, false)
+                                << " = " << g.getMemberName(c.mMemberName, true) << ";\n";
+                        }
                     }
                 }
+                OSS << "}\n";
             }
-            OSS << "}\n";
-
             if (true) { // IncidenceGraph
                 OSS << "readonly _outEdges: " << outEdgeType << "[] = [];\n";
             }

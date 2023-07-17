@@ -611,12 +611,12 @@ Sample count and quality should match those of the resources.
         addQueue(vertID, true);
     }
     
-    COMMENT(SceneVisitor, R"(@deprecated @en Not used @zh 未使用
-)");
-    COMMENT(SceneTask, R"(@deprecated @en Not used @zh 未使用
-)");
-    COMMENT(SceneTransversal, R"(@deprecated @en Not used @zh 未使用
-)");
+//    COMMENT(SceneVisitor, R"(@deprecated @en Not used @zh 未使用
+//)");
+//    COMMENT(SceneTask, R"(@deprecated @en Not used @zh 未使用
+//)");
+//    COMMENT(SceneTransversal, R"(@deprecated @en Not used @zh 未使用
+//)");
 
     COMMENT(Pipeline, R"(@en Render pipeline.
 @zh 渲染管线

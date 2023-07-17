@@ -115,7 +115,6 @@ int main() {
 
         files.emplace("cocos/renderer/pipeline/custom/BinaryArchive.h");
         files.emplace("cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp");
-        files.emplace("cocos/renderer/pipeline/custom/NativeDefaultScene.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeResourceGraph.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeFactory.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativePipeline.cpp");
