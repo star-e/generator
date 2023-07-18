@@ -251,6 +251,16 @@ void recordCommandBuffer(
 )");
         }
 
+        STRUCT(RenderBatchingQueue) {
+            PUBLIC(
+                (ccstd::pmr::vector<uint32_t>, mBatches, _)
+            );
+            MEMBER_FUNCTIONS(R"(
+static void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera, 
+    gfx::RenderPass *renderPass, gfx::CommandBuffer *cmdBuffer, SceneFlags sceneFlags);
+)");
+        }
+
         STRUCT(DrawInstance/*, .mAlignment = 32*/) {
             PUBLIC(
                 (const scene::SubModel*, mSubModel, nullptr)
@@ -283,6 +293,8 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
                 (RenderDrawQueue, mTransparentQueue, _)
                 (RenderInstancingQueue, mOpaqueInstancingQueue, _)
                 (RenderInstancingQueue, mTransparentInstancingQueue, _)
+                (RenderBatchingQueue, mOpaqueBatchingQueue, _)
+                (RenderBatchingQueue, mTransparentBatchingQueue, _)
                 (SceneFlags, mSceneFlags, SceneFlags::NONE)
                 (uint32_t, mSubpassOrPassLayoutID, 0xFFFFFFFF)
                 //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)

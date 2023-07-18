@@ -261,10 +261,14 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
                 (uint32_t, mTargetMostDetailedMip, 0)
                 (uint32_t, mTargetFirstSlice, 0)
                 (uint32_t, mTargetPlaneSlice, 0)
+                (uint32_t, mSourceOffset, 0)
+                (uint32_t, mTargetOffset, 0)
+                (uint32_t, mBufferSize, 0)
             );
             CNTR(mSource, mTarget, mMipLevels, mNumSlices,
                 mSourceMostDetailedMip, mSourceFirstSlice, mSourcePlaneSlice,
                 mTargetMostDetailedMip, mTargetFirstSlice, mTargetPlaneSlice);
+            CNTR(mSource, mTarget, mSourceOffset, mTargetOffset, mBufferSize);
         }
 
         STRUCT(UploadPair, .mFlags = PMR_DEFAULT | JSB | POOL_OBJECT | NO_COPY | NO_SERIALIZATION) {
