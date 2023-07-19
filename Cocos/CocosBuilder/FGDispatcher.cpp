@@ -61,48 +61,30 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         };
 
-        STRUCT(BufferRange) {
+        STRUCT(ResourceRange) {
             PUBLIC(
-                (uint32_t, mOffset, 0)
-                (uint32_t, mSize, 0)
-            );
-        };
-
-        STRUCT(TextureRange) {
-            PUBLIC(
+                (uint32_t, mWidth, 0)
+                (uint32_t, mHeight, 0)
+                (uint32_t, mDepthOrArraySize, 0)
                 (uint32_t, mFirstSlice, 0)
-                (uint32_t, mNumSlices, 1)
+                (uint32_t, mNumSlices, 0)
                 (uint32_t, mMipLevel, 0)
-                (uint32_t, mLevelCount, 1)
+                (uint32_t, mLevelCount, 0)
+                (uint32_t, mBasePlane, 0)
+                (uint32_t, mPlaneCount, 0)
             );
         };
-        
-        VARIANT(Range, (BufferRange, TextureRange), LESS)
-        VARIANT(ResourceUsage, (gfx::BufferUsageBit, gfx::TextureUsageBit), LESS)
 
         STRUCT(AccessStatus) {
             PUBLIC(
-                (uint32_t, mVertID, 0xFFFFFFFF)
-                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                (gfx::MemoryAccessBit, mAccess, gfx::MemoryAccessBit::NONE)
-                (gfx::PassType, mPassType, gfx::PassType::RASTER)
                 (gfx::AccessFlagBit, mAccessFlag, gfx::AccessFlagBit::NONE)
-                (ResourceUsage, mUsage, _)
-                (Range, mRange, _)
-            );
-        }
-
-        STRUCT(ResourceTransition) {
-            PUBLIC(
-                (AccessStatus, mLastStatus, _)
-                (AccessStatus, mCurrStatus, _)
+                (ResourceRange, mRange, _)
             );
         }
 
         STRUCT(ResourceAccessNode) {
             PUBLIC(
-                (std::vector<AccessStatus>, mAttachmentStatus, _)
-                (ResourceAccessNode*, mNextSubpass, nullptr)
+                ((PmrFlatMap<ccstd::pmr::string, AccessStatus>), mResourceStatus, _)
             );
         }
 
@@ -113,14 +95,43 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(AttachmentInfo) {
+            PUBLIC(
+                (const ccstd::pmr::string&, mParentName, _)
+                (uint32_t, mAttachmentIndex, 0)
+                (uint32_t, mIsResolveView, 0)
+            );
+        };
+
         STRUCT(FGRenderPassInfo) {
             PUBLIC(
                 (std::vector<LayoutAccess>, mColorAccesses, _)
                 (LayoutAccess, mDsAccess, _)
                 (LayoutAccess, mDsResolveAccess, _)
                 (gfx::RenderPassInfo, mRpInfo, _)
-                (std::vector<std::string>, mOrderedViews, _)
-                (bool, mNeedResolve, false)
+                (ccstd::pmr::vector<ccstd::pmr::string>, mOrderedViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, AttachmentInfo>), mViewIndex, _)
+                (uint32_t, mResolveCount, 0)
+                (uint32_t, mUniqueRasterViewCount, 0)
+            );
+        }
+
+        STRUCT(Barrier) {
+            PUBLIC(
+                (ResourceGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
+                (gfx::BarrierType, mType, gfx::BarrierType::FULL)
+                (gfx::GFXObject*, mBarrier, nullptr)
+                (RenderGraph::vertex_descriptor, mBeginVert, 0xFFFFFFFF)
+                (RenderGraph::vertex_descriptor, mEndVert, 0xFFFFFFFF)
+                (AccessStatus, mBeginStatus, _)
+                (AccessStatus, mEndStatus, _)
+            );
+        }
+
+        STRUCT(BarrierNode) {
+            PUBLIC(
+                (std::vector<Barrier>, mFrontBarriers, _)
+                (std::vector<Barrier>, mRearBarriers, _)
             );
         }
 
@@ -131,32 +142,24 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (ResourceAccessGraph::vertex_descriptor, mPresentPassID, 0xFFFFFFFF, "present pass")
                 ((PmrFlatMap<ResourceAccessGraph::vertex_descriptor, LeafStatus>), mLeafPasses, _)
                 ((PmrFlatSet<ResourceAccessGraph::vertex_descriptor>), mCulledPasses, _)
-                ((PmrFlatMap<uint32_t, ResourceTransition>), mAccessRecord, _)
                 ((PmrFlatMap<ccstd::pmr::string, ResourceLifeRecord>), mResourceLifeRecord, _)
                 (ccstd::pmr::vector<ResourceAccessGraph::vertex_descriptor>, mTopologicalOrder, _)
-                ((PmrFlatMap<ResourceAccessGraph::vertex_descriptor, FGRenderPassInfo>), mRpInfos, _)
-                ((PmrFlatMap<RenderGraph::vertex_descriptor, uint32_t>), mSubpassIndex, _)
+                ((PmrTransparentMap<ccstd::pmr::string, PmrFlatMap<uint32_t, AccessStatus>>), mResourceAccess, _)
+
+                ((PmrFlatMap<ccstd::pmr::string, ccstd::pmr::string>), mMovedResource, _)
+                ((PmrFlatMap<ccstd::pmr::string, AccessStatus>), mMovedSourceStatus, _)
+                ((PmrFlatMap<ccstd::pmr::string, AccessStatus>), mMovedTargetStatus, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
-                (AccessNode_, ResourceAccessNode, mAccess)
+                (PassNode_, ResourceAccessNode, mPassResource)
+                (RenderPassInfo_, FGRenderPassInfo, mRpInfo)
+                (Barrier_, BarrierNode, mBarrier)
             );
             COMPONENT_BIMAP(PmrUnorderedMap, mPassIndex, PassID_);
             MEMBER_FUNCTIONS(R"(
-~ResourceAccessGraph() {
-    for (auto& node : access) {
-        auto* resNode = node.nextSubpass;
-        node.nextSubpass = nullptr;
-        while(resNode) {
-            auto* oldResNode = resNode;
-            resNode = resNode->nextSubpass;
-            oldResNode->nextSubpass = nullptr;
-            delete oldResNode;
-        }
-    }
-}
-
-)");
+                LayoutAccess getAccess(ccstd::pmr::string, RenderGraph::vertex_descriptor vertID);
+            )");
         }
 
         PMR_GRAPH(RelationGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
@@ -166,38 +169,23 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             COMPONENT_BIMAP(PmrUnorderedMap, mVertexMap, DescID_);
         }
 
-        STRUCT(Barrier) {
+        STRUCT(RenderingInfo) {
             PUBLIC(
-                (ResourceGraph::vertex_descriptor, mResourceID, 0xFFFFFFFF, "resource ID")
-                (gfx::BarrierType, mType, gfx::BarrierType::FULL)
-                (gfx::GFXObject*, mBarrier, nullptr)
-                (AccessStatus, mBeginStatus, _)
-                (AccessStatus, mEndStatus, _)
+                (gfx::RenderPassInfo, mRenderpassInfo, _)
+                (gfx::FramebufferInfo, mFramebufferInfo, _)
+                (ccstd::pmr::vector<gfx::Color>, mClearColors, _)
+                (float, mClearDepth, 0)
+                (uint8_t, mClearStencil, 0)
             );
-        }
-
-        STRUCT(BarrierPair) {
-            PUBLIC(
-                (std::vector<Barrier>, mFrontBarriers, _)
-                (std::vector<Barrier>, mRearBarriers, _)
-            );
-        }
-
-        STRUCT(BarrierNode) {
-            PUBLIC(
-                (BarrierPair, mBlockBarrier, _)
-                (std::vector<BarrierPair>, mSubpassBarriers, _)
-            );
-        }
+        };
 
         STRUCT(FrameGraphDispatcher, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
                 (ResourceAccessGraph, mResourceAccessGraph, _)
                 (ResourceGraph&, mResourceGraph, _)
-                (const RenderGraph&, mGraph, _)
+                (const RenderGraph&, mRenderGraph, _)
                 (const LayoutGraphData&, mLayoutGraph, _)
                 (boost::container::pmr::memory_resource*, mScratch, nullptr)
-                ((PmrFlatMap<ccstd::pmr::string, ResourceTransition>), mExternalResMap, _)
                 (RelationGraph, mRelationGraph, _)
             );
             
@@ -209,11 +197,10 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (float, mParalellExecWeight, 0.0F)
             );
 
-            CNTR(mResourceGraph, mGraph, mLayoutGraph, mScratch);
+            CNTR(mResourceGraph, mRenderGraph, mLayoutGraph, mScratch);
 
             
             MEMBER_FUNCTIONS(R"(
-using BarrierMap = PmrMap<ResourceAccessGraph::vertex_descriptor, BarrierNode>;
 
 void enablePassReorder(bool enable);
 
@@ -226,11 +213,15 @@ void enableMemoryAliasing(bool enable);
 
 void run();
 
-const ResourceAccessNode& getAttachmentStatus(RenderGraph::vertex_descriptor renderGraphVertID) const;
+const BarrierNode& getBarrier(RenderGraph::vertex_descriptor u) const;
 
-inline const BarrierMap& getBarriers() const { return barrierMap; }
+const ResourceAccessNode& getAccessNode(RenderGraph::vertex_descriptor u) const;
 
-BarrierMap barrierMap;
+const gfx::RenderPassInfo& getRenderPassInfo(RenderGraph::vertex_descriptor u) const;
+    
+RenderingInfo getRenderPassAndFrameBuffer(RenderGraph::vertex_descriptor u, const ResourceGraph& resg) const;
+    
+LayoutAccess getResourceAccess(ResourceGraph::vertex_descriptor r, RenderGraph::vertex_descriptor p) const;
 )");
         }
 
