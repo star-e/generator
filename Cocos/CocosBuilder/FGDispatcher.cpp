@@ -97,7 +97,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(AttachmentInfo) {
             PUBLIC(
-                (const ccstd::pmr::string&, mParentName, _)
+                (ccstd::pmr::string, mParentName, _)
                 (uint32_t, mAttachmentIndex, 0)
                 (uint32_t, mIsResolveView, 0)
             );
