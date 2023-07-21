@@ -88,7 +88,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(LayoutAccess) {
+        STRUCT(LayoutAccess, .mTrivial = true) {
             PUBLIC(
                 (gfx::AccessFlagBit, mPrevAccess, gfx::AccessFlagBit::NONE)
                 (gfx::AccessFlagBit, mNextAccess, gfx::AccessFlagBit::NONE)
