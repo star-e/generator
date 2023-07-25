@@ -146,9 +146,8 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (ccstd::pmr::vector<ResourceAccessGraph::vertex_descriptor>, mTopologicalOrder, _)
                 ((PmrTransparentMap<ccstd::pmr::string, PmrFlatMap<uint32_t, AccessStatus>>), mResourceAccess, _)
 
-                ((PmrFlatMap<ccstd::pmr::string, ccstd::pmr::string>), mMovedResource, _)
+                ((PmrFlatMap<ccstd::pmr::string, ccstd::pmr::vector<ccstd::pmr::string>>), mMovedTarget, _)
                 ((PmrFlatMap<ccstd::pmr::string, AccessStatus>), mMovedSourceStatus, _)
-                ((PmrFlatMap<ccstd::pmr::string, AccessStatus>), mMovedTargetStatus, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)
@@ -222,6 +221,18 @@ const gfx::RenderPassInfo& getRenderPassInfo(RenderGraph::vertex_descriptor u) c
 RenderingInfo getRenderPassAndFrameBuffer(RenderGraph::vertex_descriptor u, const ResourceGraph& resg) const;
     
 LayoutAccess getResourceAccess(ResourceGraph::vertex_descriptor r, RenderGraph::vertex_descriptor p) const;
+
+// those resource been moved point to another resID
+ResourceGraph::vertex_descriptor realResourceID(const ccstd::pmr::string& name) const;
+
+PmrFlatMap<NameLocalID, ResourceGraph::vertex_descriptor> buildDescriptorIndex(
+    const PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>&computeViews,
+    const PmrTransparentMap<ccstd::pmr::string, RasterView>& rasterViews,
+    boost::container::pmr::memory_resource* scratch) const;
+
+PmrFlatMap<NameLocalID, ResourceGraph::vertex_descriptor> buildDescriptorIndex(
+    const PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>&computeViews,
+    boost::container::pmr::memory_resource* scratch) const;
 )");
         }
 
