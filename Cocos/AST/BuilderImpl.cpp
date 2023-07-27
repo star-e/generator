@@ -536,6 +536,13 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
         boost::algorithm::trim(adlPath);
     }
 
+    bool bMutable = false;
+    if (boost::algorithm::contains(adlPath, "mutable ")) {
+        bMutable = true;
+        boost::algorithm::replace_all(adlPath, "mutable ", "");
+        boost::algorithm::trim(adlPath);
+    }
+
     convertTypename(adlPath);
 
     memberName = boost::algorithm::trim_copy(memberName);
@@ -573,6 +580,10 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
                 boost::algorithm::replace_first(typeName, "const ", "");
                 boost::algorithm::replace_first(typeName, " const", "");
                 boost::algorithm::trim(typeName);
+            }
+        } else {
+            if (bMutable) {
+                m.mMutable = true;
             }
         }
 

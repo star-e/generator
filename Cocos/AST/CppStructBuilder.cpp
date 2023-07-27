@@ -252,6 +252,9 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (m.mConst) {
                 oss << "const ";
             }
+            if (m.mMutable) {
+                oss << "mutable ";
+            }
             if (memberID == vertID) {
                 if (traits.mClass) {
                     oss << "class ";

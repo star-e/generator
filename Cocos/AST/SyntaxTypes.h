@@ -323,6 +323,7 @@ struct Member {
     std::pmr::string mDefaultValue;
     std::pmr::string mComments;
     bool mConst = false;
+    bool mMutable = false;
     bool mPointer = false;
     bool mReference = false;
     bool mPublic = true;
