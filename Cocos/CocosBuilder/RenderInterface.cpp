@@ -416,6 +416,7 @@ virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default"
         INTERFACE(Pipeline) {
             INHERITS(BasicPipeline);
             PUBLIC_METHODS(R"(
+[[getter]] virtual bool getIsGPUDrivenEnabled() const = 0;
 virtual uint32_t addStorageBuffer(const ccstd::string& name, gfx::Format format, uint32_t size, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 virtual uint32_t addStorageTexture(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 [[experimental]] virtual uint32_t addShadingRateTexture(const ccstd::string& name, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
@@ -454,7 +455,7 @@ virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name)
         CLASS(Factory, .mExport = false) {
             MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
 static void destroy(RenderingModule* renderingModule) noexcept;
-static Pipeline *createPipeline();
+static Pipeline *createPipeline(bool bEnableGpuDriven);
 )");
         }
 
