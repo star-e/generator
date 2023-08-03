@@ -130,6 +130,20 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(SphereLight,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "SphereLight.h",
+        .mTypescriptFolder = "cocos/render-scene/scene",
+        .mTypescriptFilePrefix = "sphere-light", ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(SphereLight);
+            }
+        }
+    }
+
     MODULE(SpotLight,
         .mFolder = "cocos/scene",
         .mFilePrefix = "SpotLight.h",
@@ -141,6 +155,34 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         NAMESPACE(cc) {
             NAMESPACE(scene) {
                 IMPORT_CLASS(SpotLight);
+            }
+        }
+    }
+
+    MODULE(PointLight,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "PointLight.h",
+        .mTypescriptFolder = "cocos/render-scene/scene",
+        .mTypescriptFilePrefix = "point-light", ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(PointLight);
+            }
+        }
+    }
+
+    MODULE(RangedDirectionalLight,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "RangedDirectionalLight.h",
+        .mTypescriptFolder = "cocos/render-scene/scene",
+        .mTypescriptFilePrefix = "ranged-directional-light", ) {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(RangedDirectionalLight);
             }
         }
     }

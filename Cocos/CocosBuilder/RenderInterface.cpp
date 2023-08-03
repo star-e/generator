@@ -109,7 +109,10 @@ class GeometryRenderer;
 namespace scene {
 
 class DirectionalLight;
+class SphereLight;
 class SpotLight;
+class PointLight;
+class RangedDirectionalLight;
 class Model;
 class RenderScene;
 class RenderWindow;
@@ -217,6 +220,11 @@ virtual void setTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
 virtual void setBuiltinCameraConstants(const scene::Camera* camera) = 0;
 virtual void setBuiltinShadowMapConstants(const scene::DirectionalLight* light) = 0;
+virtual void setBuiltinDirectionalLightConstants(const scene::DirectionalLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinSphereLightConstants(const scene::SphereLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinSpotLightConstants(const scene::SpotLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinPointLightConstants(const scene::PointLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinRangedDirectionalLightConstants(const scene::RangedDirectionalLight* light, const scene::Camera* camera) = 0;
 virtual void setBuiltinDirectionalLightViewConstants(const scene::DirectionalLight* light, uint32_t level = 0) = 0;
 virtual void setBuiltinSpotLightViewConstants(const scene::SpotLight* light) = 0;
 )");
@@ -226,7 +234,7 @@ virtual void setBuiltinSpotLightViewConstants(const scene::SpotLight* light) = 0
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
-virtual void addScene(const scene::Camera* camera, SceneFlags sceneFlags) = 0;
+virtual void addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] const scene::Light* light = nullptr) = 0;
 virtual void addSceneCulledByDirectionalLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::DirectionalLight* light, uint32_t level) = 0;
 virtual void addSceneCulledBySpotLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::SpotLight* light) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
