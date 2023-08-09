@@ -61,24 +61,10 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         };
 
-        STRUCT(ResourceRange) {
-            PUBLIC(
-                (uint32_t, mWidth, 0)
-                (uint32_t, mHeight, 0)
-                (uint32_t, mDepthOrArraySize, 0)
-                (uint32_t, mFirstSlice, 0)
-                (uint32_t, mNumSlices, 0)
-                (uint32_t, mMipLevel, 0)
-                (uint32_t, mLevelCount, 0)
-                (uint32_t, mBasePlane, 0)
-                (uint32_t, mPlaneCount, 0)
-            );
-        };
-
         STRUCT(AccessStatus) {
             PUBLIC(
                 (gfx::AccessFlagBit, mAccessFlag, gfx::AccessFlagBit::NONE)
-                (ResourceRange, mRange, _)
+                (gfx::ResourceRange, mRange, _)
             );
         }
 
@@ -135,6 +121,27 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(SliceNode) {
+            PUBLIC(
+                (bool, mFull, false)
+                (std::vector<uint32_t>, mMips, _)
+            );
+        }
+
+        STRUCT(TextureNode) {
+            PUBLIC(
+                (bool, mFull, false)
+                (std::vector<SliceNode>, mSlices, _)
+            );
+        }
+
+        STRUCT(ResourceNode) {
+            PUBLIC(
+                (bool, mFull, false)
+                (std::vector<TextureNode>, mPlanes, _)
+            );
+        }
+
         PMR_GRAPH(ResourceAccessGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
@@ -146,8 +153,9 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 (ccstd::pmr::vector<ResourceAccessGraph::vertex_descriptor>, mTopologicalOrder, _)
                 ((PmrTransparentMap<ccstd::pmr::string, PmrFlatMap<uint32_t, AccessStatus>>), mResourceAccess, _)
 
-                ((PmrFlatMap<ccstd::pmr::string, ccstd::pmr::vector<ccstd::pmr::string>>), mMovedTarget, _)
+                ((PmrFlatMap<ccstd::pmr::string, PmrFlatMap<ccstd::pmr::string, ccstd::pmr::string>>), mMovedTarget, _)
                 ((PmrFlatMap<ccstd::pmr::string, AccessStatus>), mMovedSourceStatus, _)
+                ((PmrFlatMap<ccstd::pmr::string, ResourceNode>), mMovedTargetStatus, _)
             );
             COMPONENT_GRAPH(
                 (PassID_, RenderGraph::vertex_descriptor, mPassID)

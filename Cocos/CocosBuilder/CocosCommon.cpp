@@ -397,6 +397,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
                 IMPORT_CLASS(SubpassInfo);
                 IMPORT_CLASS(SubpassDependency);
                 IMPORT_CLASS(RenderPassInfo);
+                IMPORT_CLASS(ResourceRange);
                 IMPORT_CLASS(GlobalBarrierInfo);
                 IMPORT_CLASS(TextureBarrierInfo);
                 IMPORT_CLASS(FramebufferInfo);
