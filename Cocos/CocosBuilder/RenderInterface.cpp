@@ -250,7 +250,7 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
 virtual void addDepthStencil(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0xFFFFFFFF) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
 
 virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
@@ -307,7 +307,7 @@ virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName = "", gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
 virtual void addDepthStencil(const ccstd::string& name, AccessType accessType, const ccstd::string& depthSlotName = "", const ccstd::string& stencilSlotName = "", gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0xFFFFFFFF) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
@@ -341,7 +341,7 @@ virtual void addDispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY,
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 virtual void addRenderTarget(const ccstd::string& name, const ccstd::string& slotName) = 0;
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0xFFFFFFFF) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
@@ -377,7 +377,7 @@ virtual void addStorageImage(const ccstd::string& name, AccessType accessType, c
         INTERFACE(ComputePassBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0xFFFFFFFF) = 0;
+virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 [[beta]] virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderStageFlagBit flags = gfx::ShaderStageFlagBit::COMPUTE) = 0;
