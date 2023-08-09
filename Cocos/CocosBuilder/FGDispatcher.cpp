@@ -131,14 +131,14 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         STRUCT(TextureNode) {
             PUBLIC(
                 (bool, mFull, false)
-                (std::vector<uint32_t>, mSlices, _)
+                (std::vector<SliceNode>, mSlices, _)
             );
         }
 
         STRUCT(ResourceNode) {
             PUBLIC(
                 (bool, mFull, false)
-                (std::vector<uint32_t>, mPlanes, _)
+                (std::vector<TextureNode>, mPlanes, _)
             );
         }
 
