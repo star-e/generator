@@ -91,7 +91,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(FGRenderPassInfo) {
             PUBLIC(
-                (std::vector<LayoutAccess>, mColorAccesses, _)
+                (ccstd::vector<LayoutAccess>, mColorAccesses, _)
                 (LayoutAccess, mDsAccess, _)
                 (LayoutAccess, mDsResolveAccess, _)
                 (gfx::RenderPassInfo, mRpInfo, _)
@@ -116,29 +116,29 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
 
         STRUCT(BarrierNode) {
             PUBLIC(
-                (std::vector<Barrier>, mFrontBarriers, _)
-                (std::vector<Barrier>, mRearBarriers, _)
+                (ccstd::vector<Barrier>, mFrontBarriers, _)
+                (ccstd::vector<Barrier>, mRearBarriers, _)
             );
         }
 
         STRUCT(SliceNode) {
             PUBLIC(
                 (bool, mFull, false)
-                (std::vector<uint32_t>, mMips, _)
+                (ccstd::vector<uint32_t>, mMips, _)
             );
         }
 
         STRUCT(TextureNode) {
             PUBLIC(
                 (bool, mFull, false)
-                (std::vector<SliceNode>, mSlices, _)
+                (ccstd::vector<SliceNode>, mSlices, _)
             );
         }
 
         STRUCT(ResourceNode) {
             PUBLIC(
                 (bool, mFull, false)
-                (std::vector<TextureNode>, mPlanes, _)
+                (ccstd::vector<TextureNode>, mPlanes, _)
             );
         }
 
