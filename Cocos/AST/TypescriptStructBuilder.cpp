@@ -191,13 +191,30 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
             }
         };
-
-        auto outputParams = [&](const Constructor& cntr, const std::pmr::vector<Member>& members) {
+        auto needAssign = [&](const Member& m, uint32_t memberID) {
+            return g.isTypescriptValueType(memberID)
+                || m.mTypescriptOptional
+                || g.isTypescriptPointer(memberID);
+        };
+        auto outputParams = [&](const Constructor& cntr, const std::pmr::vector<Member>& members, bool bReset = false) {
             for (const auto& id : cntr.mIndices) {
                 for (uint32_t i = 0; const auto& m : members) {
                     if (i == id) {
-                        outputComma();
                         auto memberID = locate(m.mTypePath, g);
+
+                        bool bSkip = bReset
+                            && (!needAssign(m, memberID)
+                                || g.isTypescriptTypedArray(memberID)
+                                || g.isTypescriptArray(memberID, scratch)
+                                || g.isTypescriptMap(memberID)
+                                || g.isTypescriptSet(memberID));
+
+                        if (bSkip) {
+                            ++i;
+                            continue;
+                        }
+                        outputComma();
+
                         auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
                         if (cntr.mHasDefault) {
                             oss << builder.getTypedMemberName(m, true);
@@ -213,36 +230,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
             }
         };
-        OSS;
-        //if (traits.mFlags & POOL_OBJECT) {
-        //    oss << "private: ";
-        //}
-        oss << "constructor (";
-        if (!inherits.empty()) {
-            Expects(inherits.size() == 1);
-            const auto& base = inherits.front();
-            auto baseID = locate(base, g);
-            visit_vertex(
-                baseID, g,
-                [&](const Composition_ auto& s) {
-                    if (s.mConstructors.empty()) {
-                        return;
-                    }
-                    outputParams(s.mConstructors.front(), s.mMembers);
-                },
-                [&](const auto&) {
-                });
-        }
-        outputParams(cntr, members);
-
-        if (bChangeLine) {
-            OSS << ") {\n";
-        } else {
-            oss << ") {\n";
-        }
-        {
-            INDENT();
+        { // constructor
+            OSS;
+            // if (traits.mFlags & POOL_OBJECT) {
+            //     oss << "private: ";
+            // }
+            oss << "constructor (";
             if (!inherits.empty()) {
+                Expects(inherits.size() == 1);
                 const auto& base = inherits.front();
                 auto baseID = locate(base, g);
                 visit_vertex(
@@ -251,37 +246,163 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         if (s.mConstructors.empty()) {
                             return;
                         }
-                        const auto& cntr = s.mConstructors.front();
-                        const auto& members = s.mMembers;
-                        OSS << "super(";
-                        for (int count = 0; const auto& id : cntr.mIndices) {
-                            for (uint32_t i = 0; const auto& m : members) {
-                                if (i == id) {
-                                    auto memberID = locate(m.mTypePath, g);
-                                    if (count++)
-                                        oss << ", ";
-                                    oss << g.getMemberName(m.mMemberName, true);
-                                }
-                            }
-                        }
-                        oss << ");\n";
+                        outputParams(s.mConstructors.front(), s.mMembers);
                     },
                     [&](const auto&) {
                     });
             }
+            outputParams(cntr, members);
 
-            for (uint32_t i = 0; const auto& m : members) {
-                for (const auto& id : cntr.mIndices) {
-                    if (i == id) {
-                        auto memberID = locate(m.mTypePath, g);
-                        OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
-                            << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
-                    }
-                }
-                ++i;
+            if (bChangeLine) {
+                OSS << ") {\n";
+            } else {
+                oss << ") {\n";
             }
+            {
+                INDENT();
+                if (!inherits.empty()) {
+                    const auto& base = inherits.front();
+                    auto baseID = locate(base, g);
+                    visit_vertex(
+                        baseID, g,
+                        [&](const Composition_ auto& s) {
+                            if (s.mConstructors.empty()) {
+                                return;
+                            }
+                            const auto& cntr = s.mConstructors.front();
+                            const auto& members = s.mMembers;
+                            OSS << "super(";
+                            for (int count = 0; const auto& id : cntr.mIndices) {
+                                for (uint32_t i = 0; const auto& m : members) {
+                                    if (i == id) {
+                                        auto memberID = locate(m.mTypePath, g);
+                                        if (count++)
+                                            oss << ", ";
+                                        oss << g.getMemberName(m.mMemberName, true);
+                                    }
+                                }
+                            }
+                            oss << ");\n";
+                        },
+                        [&](const auto&) {
+                        });
+                }
+
+                for (uint32_t i = 0; const auto& m : members) {
+                    for (const auto& id : cntr.mIndices) {
+                        if (i == id) {
+                            auto memberID = locate(m.mTypePath, g);
+                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
+                                << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
+                        }
+                    }
+                    ++i;
+                }
+            }
+            OSS << "}\n";
         }
-        OSS << "}\n";
+        if (!(traits.mFlags & SKIP_RESET)) { // reset
+            count = 0;
+            OSS;
+            oss << "reset (";
+            if (!inherits.empty()) {
+                Expects(inherits.size() == 1);
+                const auto& base = inherits.front();
+                auto baseID = locate(base, g);
+                visit_vertex(
+                    baseID, g,
+                    [&](const Composition_ auto& s) {
+                        if (s.mConstructors.empty()) {
+                            return;
+                        }
+                        outputParams(s.mConstructors.front(), s.mMembers, true);
+                    },
+                    [&](const auto&) {
+                    });
+            }
+            outputParams(cntr, members, true);
+
+            if (bChangeLine) {
+                OSS << "): void {\n";
+            } else {
+                oss << "): void {\n";
+            }
+            {
+                INDENT();
+                if (!inherits.empty()) {
+                    const auto& base = inherits.front();
+                    auto baseID = locate(base, g);
+                    visit_vertex(
+                        baseID, g,
+                        [&](const Composition_ auto& s) {
+                            if (s.mConstructors.empty()) {
+                                return;
+                            }
+                            const auto& cntr = s.mConstructors.front();
+                            const auto& members = s.mMembers;
+                            Expects(false);
+                            OSS << "super(";
+                            for (int count = 0; const auto& id : cntr.mIndices) {
+                                for (uint32_t i = 0; const auto& m : members) {
+                                    if (i == id) {
+                                        auto memberID = locate(m.mTypePath, g);
+                                        if (count++)
+                                            oss << ", ";
+                                        oss << g.getMemberName(m.mMemberName, true);
+                                    }
+                                }
+                            }
+                            oss << ");\n";
+                        },
+                        [&](const auto&) {
+                        });
+                }
+
+                for (uint32_t i = 0; const auto& m : members) {
+                    bool bFound = false;
+                    for (const auto& id : cntr.mIndices) {
+                        if (i == id) {
+                            bFound = true;
+                            auto memberID = locate(m.mTypePath, g);
+                            const auto& memberTraits = get(g.traits, g, memberID);
+                            if (g.isTypescriptValueType(memberID) || m.mTypescriptOptional || g.isTypescriptPointer(memberID)) {
+                                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
+                                    << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
+                            } else if (g.isTypescriptTypedArray(memberID)) {
+                                OSS << "// " << g.getMemberName(m.mMemberName, m.mPublic)
+                                    << ": " << g.getTypescriptTypename(memberID, scratch, scratch)
+                                    << " size unchanged\n";
+                            } else if (g.isTypescriptArray(memberID, scratch)) {
+                                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".length = 0;\n";
+                            } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID)) {
+                                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
+                            } else {
+                                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset();\n";
+                            }
+                        }
+                    }
+                    if (!bFound) {
+                        auto memberID = locate(m.mTypePath, g);
+                        if (needAssign(m, memberID)) {
+                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
+                                << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                        } else if (g.isTypescriptTypedArray(memberID)) {
+                            OSS << "// " << g.getMemberName(m.mMemberName, m.mPublic)
+                                << ": " << g.getTypescriptTypename(memberID, scratch, scratch)
+                                << " size unchanged\n";
+                        } else if (g.isTypescriptArray(memberID, scratch)) {
+                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".length = 0;\n";
+                        } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID)) {
+                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
+                        } else {
+                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset();\n";
+                        }
+                    }
+                    ++i;
+                }
+            }
+            OSS << "}\n";
+        }
     }
 
     if (false && !methods.empty()) {
@@ -459,7 +580,8 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
         || holds_tag<Graph_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
         if (isKey && (traits.mFlags & STRING_KEY)) {
-            OSS << "save" << memberName << "(ar, JSON.parse(" << varName << "));\n";
+            OSS << "save" << memberName << "(ar, JSON.parse(" << varName << ") as "
+                << g.getTypescriptTypename(vertID, scratch, scratch) << ");\n";
         } else {
             OSS << "save" << memberName << "(ar, " << varName << ");\n";
         }

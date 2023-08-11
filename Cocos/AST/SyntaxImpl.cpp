@@ -1758,6 +1758,34 @@ bool SyntaxGraph::isTypescriptArray(vertex_descriptor instanceID,
     return false;
 }
 
+bool SyntaxGraph::isTypescriptTypedArray(vertex_descriptor vertID) const {
+    static const Set<std::string> types = {
+        "Int8Array",
+        "Int16Array",
+        "Int32Array",
+        "BigInt64Array",
+        "Uint8Array",
+        "Uint16Array",
+        "Uint32Array",
+        "BigUint64Array",
+    };
+
+    auto scratch = mScratch;
+    const auto& g = *this;
+    if (!holds_tag<Instance_>(vertID, g)) {
+        return false;
+    }
+    Expects(holds_tag<Instance_>(vertID, g));
+    const auto& name = getTypescriptTypename(vertID, scratch, scratch);
+    if (name.empty()) {
+        return false;
+    }
+    if (types.contains(std::string_view(name))) {
+        return true;
+    }
+    return false;
+}
+
 bool SyntaxGraph::isTypescriptSet(vertex_descriptor vertID) const {
     auto scratch = mScratch;
     const auto& g = *this;

@@ -60,6 +60,7 @@ enum GenerationFlags : uint64_t {
     POOL_OBJECT = 1 << 23,
     VALUE_OBJECT = 1 << 24,
     FORCE_COPY = 1 << 25,
+    SKIP_RESET = 1 << 26,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -1315,6 +1316,7 @@ struct SyntaxGraph {
     bool isTypescriptNumber(vertex_descriptor vertID) const;
     bool isTypescriptString(vertex_descriptor vertID) const;
     bool isTypescriptArray(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const;
+    bool isTypescriptTypedArray(vertex_descriptor vertID) const;
     bool isTypescriptSet(vertex_descriptor vertID) const;
     bool isTypescriptMap(vertex_descriptor vertID) const;
     bool isTypescriptPointer(vertex_descriptor vertID) const;
