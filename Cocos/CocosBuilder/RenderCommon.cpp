@@ -218,7 +218,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             );
         }
 
-        STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB | STRING_KEY) {
+        STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
             PUBLIC(
                 (UpdateFrequency, mUpdateFrequency, _)
                 (ParameterType, mParameterType, _)
