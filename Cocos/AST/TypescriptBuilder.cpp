@@ -323,6 +323,20 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             }
             OSS << "}\n";
         }
+        {
+            OSS << "reset (): void {\n";
+            {
+                INDENT();
+                for (const auto& vertID : make_range(vertices(g))) {
+                    if (!isPoolType(vertID)) {
+                        continue;
+                    }
+                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                    OSS << "this._" << camelToVariable(name, scratch) << ".reset();\n";
+                }
+            }
+            OSS << "}\n";
+        }
 
         for (const auto& importedPath : moduleImports) {
             const auto importedID = locate(importedPath, mg);
