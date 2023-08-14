@@ -1570,7 +1570,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             const auto& typeModulePath = get(g.modulePaths, g, vertID);
             if (typeModulePath != modulePath)
                 continue;
-            outputTypescript(oss, space, codegen, *this, "", vertID, graphImports, scratch);
+            outputTypescript(oss, space, codegen, *this, m, "", vertID, graphImports, scratch);
         }
 
         if (features & Features::Serialization) {

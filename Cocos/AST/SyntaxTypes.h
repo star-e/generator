@@ -1445,6 +1445,7 @@ enum Features : uint32_t {
     Jsb = 1 << 9,
     ToJs = 1 << 10,
     Interface = 1 << 11,
+    TsPool = 1 << 12,
 };
 
 constexpr Features operator|(const Features lhs, const Features rhs) noexcept {

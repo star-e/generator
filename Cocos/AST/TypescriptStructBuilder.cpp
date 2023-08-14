@@ -160,6 +160,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
 
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
     const SyntaxGraph& g,
     const SyntaxGraph::vertex_descriptor vertID,
     const std::pmr::vector<std::pmr::string>& inherits,
@@ -305,7 +306,10 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 OSS << "}\n";
             }
         }
-        if (!g.isInterface(vertID) && !holds_tag<Graph_>(vertID, g) && !(traits.mFlags & SKIP_RESET)) { // reset
+        if ((moduleInfo.mFeatures & TsPool)
+            && !g.isInterface(vertID)
+            && !holds_tag<Graph_>(vertID, g)
+            && !(traits.mFlags & SKIP_RESET)) { // reset
             const Constructor* pCntr = nullptr;
             if (!cntrs.empty()) {
                 pCntr = &cntrs.front();

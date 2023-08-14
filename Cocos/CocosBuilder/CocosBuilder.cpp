@@ -59,11 +59,11 @@ int main() {
 
         // build render pipeline
         buildRenderCommon(builder,
-            Fwd | Types | Names | Typescripts | Jsb | Serialization);
+            Fwd | Types | Names | Typescripts | Jsb | Serialization | TsPool);
         buildLayoutGraph(builder,
-            Fwd | Types | Names | Graphs | Typescripts | Serialization);
+            Fwd | Types | Names | Graphs | Typescripts | Serialization | TsPool);
         buildRenderGraph(builder,
-            Fwd | Types | Graphs | Typescripts);
+            Fwd | Types | Graphs | Typescripts | TsPool);
         buildFGDispatcher(builder, Types | Graphs);
         buildCustomization(builder, Fwd | Types);
 

@@ -32,7 +32,9 @@ namespace Cocos::Meta {
 
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
-    const ModuleBuilder& builder, std::string_view scope,
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
     SyntaxGraph::vertex_descriptor vertID,
     std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch);
@@ -46,6 +48,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
 
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
     const SyntaxGraph& g,
     const SyntaxGraph::vertex_descriptor vertID,
     const std::pmr::vector<std::pmr::string>& inherits,

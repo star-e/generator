@@ -530,6 +530,7 @@ void outputGraphEdge(std::ostream& oss, std::pmr::string& space,
 }
 
 std::pmr::string generateGraph(const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
     const Graph& s, SyntaxGraph::vertex_descriptor vertID, std::string_view name,
     std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch) {
@@ -2487,7 +2488,8 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
         // GraphMembers
         const auto& constraints = get(g.constraints, g, vertID);
-        outputMembers(oss, space, builder, g, vertID,
+        outputMembers(oss, space, builder, moduleInfo,
+            g, vertID,
             constraints.mConcepts,
             s.mMembers, s.mTypescriptFunctions,
             s.mConstructors, s.mMethods, scratch);

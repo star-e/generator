@@ -32,6 +32,7 @@ namespace Cocos::Meta {
 constexpr bool gImpl = false;
 
 std::pmr::string generateGraph(const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
     const Graph& s, uint32_t vertID,
     std::string_view name,
     std::pmr::set<std::pmr::string>& imports,

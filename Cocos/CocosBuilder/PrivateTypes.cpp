@@ -47,7 +47,7 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
-        STRUCT(ProgramInfo, .mFlags = SKIP_RESET) {
+        STRUCT(ProgramInfo) {
             PUBLIC(
                 (IProgramInfo, mProgramInfo, _)
                 (gfx::ShaderInfo, mShaderInfo, _)

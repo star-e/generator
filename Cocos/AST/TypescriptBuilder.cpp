@@ -35,7 +35,9 @@ namespace Cocos::Meta {
 
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
-    const ModuleBuilder& builder, std::string_view scope,
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
     SyntaxGraph::vertex_descriptor vertID,
     std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch) {
@@ -112,7 +114,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (!comment.mComment.empty()) {
                 outputComment(oss, space, comment.mComment);
             }
-            auto content = generateGraph(builder, s, vertID, name, imports, scratch);
+            auto content = generateGraph(builder, moduleInfo, s, vertID, name, imports, scratch);
             copyString(oss, space, content);
         }, 
         [&](const Struct& s) {
@@ -182,7 +184,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 for (const auto& base : inherits.mBases) {
                     bases.emplace_back(base.mTypePath);
                 }
-                outputMembers(oss, space, builder, g, vertID,
+                outputMembers(oss, space, builder, moduleInfo, g, vertID,
                     bases, s.mMembers,
                     s.mTypescriptFunctions, s.mConstructors, s.mMethods, scratch);
             }

@@ -188,7 +188,7 @@ virtual void onGlobalPipelineStateChanged() = 0;
             );
         }
 
-        STRUCT(PipelineCapabilities, .mFlags = SKIP_RESET) {
+        STRUCT(PipelineCapabilities) {
             PUBLIC(
                 (SubpassCapabilities, mSubpass, SubpassCapabilities::NONE)
             );
