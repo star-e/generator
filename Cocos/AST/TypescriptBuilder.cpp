@@ -337,6 +337,50 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             }
             OSS << "}\n";
         }
+        if (false) { // create
+            for (const auto& vertID : make_range(vertices(g))) {
+                if (!isPoolType(vertID)) {
+                    continue;
+                }
+                auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+
+                // get cntr
+                const Constructor* pCntr = nullptr;
+                if (holds_tag<Struct_>(vertID, g)) {
+                    const auto& s = get_by_tag<Struct_>(vertID, g);
+                    if (!s.mConstructors.empty()) {
+                        pCntr = &s.mConstructors.front();
+                    }
+                }
+
+                // format
+                int count = 0;
+                bool bChangeLine = false;
+                auto outputComma = [&]() {
+                    if (bChangeLine) {
+                        if (count++ == 0)
+                            oss << "\n";
+                        INDENT();
+                        OSS;
+                    } else {
+                        if (count++) {
+                            oss << ", ";
+                        }
+                    }
+                };
+
+                OSS << "create" << name << " (";
+                {
+                }
+                oss << "): " << name << " {\n";
+                {
+                    INDENT();
+                    OSS << "const v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                    OSS << "return v;\n";
+                }
+                OSS << "}\n";
+            }
+        }
 
         for (const auto& importedPath : moduleImports) {
             const auto importedID = locate(importedPath, mg);

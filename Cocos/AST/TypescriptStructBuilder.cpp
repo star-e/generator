@@ -158,6 +158,67 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
     }
 }
 
+bool typescriptMemberNeedAssign(const SyntaxGraph& g, const Member& m, uint32_t memberID) {
+    return g.isTypescriptValueType(memberID)
+        || m.mTypescriptOptional
+        || g.isTypescriptPointer(memberID);
+}
+
+void outputConstructionParams(
+    std::ostream& oss, std::pmr::string& space, int& count,
+    const ModuleBuilder& builder,
+    const bool bChangeLine,
+    const SyntaxGraph& g,
+    const std::pmr::vector<Member>& members,
+    const Constructor& cntr,
+    bool bReset,
+    std::pmr::memory_resource* scratch) {
+    auto outputComma = [&]() {
+        if (bChangeLine) {
+            if (count++ == 0)
+                oss << "\n";
+            INDENT();
+            OSS;
+        } else {
+            if (count++) {
+                oss << ", ";
+            }
+        }
+    };
+    for (const auto& id : cntr.mIndices) {
+        for (uint32_t i = 0; const auto& m : members) {
+            if (i == id) {
+                auto memberID = locate(m.mTypePath, g);
+
+                bool bSkip = bReset
+                    && (!typescriptMemberNeedAssign(g, m, memberID)
+                        || g.isTypescriptTypedArray(memberID)
+                        || g.isTypescriptArray(memberID, scratch)
+                        || g.isTypescriptMap(memberID)
+                        || g.isTypescriptSet(memberID));
+
+                if (bSkip) {
+                    ++i;
+                    continue;
+                }
+                outputComma();
+
+                auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
+                if (cntr.mHasDefault) {
+                    oss << builder.getTypedMemberName(m, true);
+                    oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                } else {
+                    oss << builder.getTypedMemberName(m, true, true);
+                }
+                if (bChangeLine) {
+                    oss << ",\n";
+                }
+            }
+            ++i;
+        }
+    }
+}
+
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const ModuleInfo& moduleInfo,
@@ -175,57 +236,6 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     {
         int count = 0;
         bool bChangeLine = false;
-        auto outputComma = [&]() {
-            if (bChangeLine) {
-                if (count++ == 0)
-                    oss << "\n";
-                INDENT();
-                OSS;
-            } else {
-                if (count++) {
-                    oss << ", ";
-                }
-            }
-        };
-        auto needAssign = [&](const Member& m, uint32_t memberID) {
-            return g.isTypescriptValueType(memberID)
-                || m.mTypescriptOptional
-                || g.isTypescriptPointer(memberID);
-        };
-        auto outputParams = [&](const Constructor& cntr, const std::pmr::vector<Member>& members, bool bReset = false) {
-            for (const auto& id : cntr.mIndices) {
-                for (uint32_t i = 0; const auto& m : members) {
-                    if (i == id) {
-                        auto memberID = locate(m.mTypePath, g);
-
-                        bool bSkip = bReset
-                            && (!needAssign(m, memberID)
-                                || g.isTypescriptTypedArray(memberID)
-                                || g.isTypescriptArray(memberID, scratch)
-                                || g.isTypescriptMap(memberID)
-                                || g.isTypescriptSet(memberID));
-
-                        if (bSkip) {
-                            ++i;
-                            continue;
-                        }
-                        outputComma();
-
-                        auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
-                        if (cntr.mHasDefault) {
-                            oss << builder.getTypedMemberName(m, true);
-                            oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
-                        } else {
-                            oss << builder.getTypedMemberName(m, true, true);
-                        }
-                        if (bChangeLine) {
-                            oss << ",\n";
-                        }
-                    }
-                    ++i;
-                }
-            }
-        };
 
         if (!cntrs.empty()) {
             auto& cntr = cntrs.front();
@@ -250,12 +260,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                             if (s.mConstructors.empty()) {
                                 return;
                             }
-                            outputParams(s.mConstructors.front(), s.mMembers);
+                            outputConstructionParams(oss, space, count, builder, bChangeLine,
+                                g, s.mMembers, s.mConstructors.front(), false, scratch);
                         },
                         [&](const auto&) {
                         });
                 }
-                outputParams(cntr, members);
+                outputConstructionParams(oss, space, count, builder, bChangeLine,
+                    g, members, cntr, false, scratch);
 
                 if (bChangeLine) {
                     OSS << ") {\n";
@@ -327,13 +339,15 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         if (s.mConstructors.empty()) {
                             return;
                         }
-                        outputParams(s.mConstructors.front(), s.mMembers, true);
+                        outputConstructionParams(oss, space, count, builder, bChangeLine,
+                            g, s.mMembers, s.mConstructors.front(), true, scratch);
                     },
                     [&](const auto&) {
                     });
             }
             if (pCntr) {
-                outputParams(*pCntr, members, true);
+                outputConstructionParams(oss, space, count, builder, bChangeLine,
+                    g, members, *pCntr, true, scratch);
             }
             if (bChangeLine) {
                 OSS << "): void {\n";
@@ -398,7 +412,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                     }
                     if (!bFound) {
                         auto memberID = locate(m.mTypePath, g);
-                        if (needAssign(m, memberID)) {
+                        if (typescriptMemberNeedAssign(g, m, memberID)) {
                             OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
                                 << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
                         } else if (g.isTypescriptTypedArray(memberID)) {

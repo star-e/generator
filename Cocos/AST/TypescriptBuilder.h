@@ -30,6 +30,18 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+bool typescriptMemberNeedAssign(const SyntaxGraph& g, const Member& m, uint32_t memberID);
+
+void outputConstructionParams(
+    std::ostream& oss, std::pmr::string& space, int& count,
+    const ModuleBuilder& builder,
+    const bool bChangeLine,
+    const SyntaxGraph& g,
+    const std::pmr::vector<Member>& members,
+    const Constructor& cntr,
+    bool bReset,
+    std::pmr::memory_resource* scratch);
+
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
     const ModuleBuilder& builder,
