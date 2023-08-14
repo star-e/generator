@@ -453,12 +453,14 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
         STRUCT(RenderData, .mFlags = NO_COPY) {
             PUBLIC(
+                //((mutable ccstd::unordered_map<uint32_t, ccstd::vector<char>>), mConstants, _)
                 ((PmrUnorderedMap<uint32_t, ccstd::pmr::vector<char>>), mConstants, _)
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Buffer>>), mBuffers, _)
                 ((PmrUnorderedMap<uint32_t, IntrusivePtr<gfx::Texture>>), mTextures, _)
                 ((PmrUnorderedMap<uint32_t, gfx::Sampler*>), mSamplers, _)
                 (ccstd::pmr::string, mCustom, _)
             );
+            //TS_INIT(mConstants, {});
         }
 
         PMR_GRAPH(RenderGraph, _, _, .mFlags = NO_COPY) {

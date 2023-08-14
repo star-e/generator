@@ -155,7 +155,9 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             PUBLIC(
                 ([[optional]] IntrusivePtr<scene::Light>, mLight, _)
                 (uint32_t, mLevel, 0)
+                (bool, mCulledByLight, false)
             );
+            CNTR(mLight, mLevel, mCulledByLight);
             CNTR(mLight, mLevel);
         }
 
