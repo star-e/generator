@@ -206,7 +206,7 @@ bool checkResource(const ResourceDesc &desc) const;
             );
         }
 
-        STRUCT(RasterSubpass, .mFlags = NO_DEFAULT_CNTR) {
+        STRUCT(RasterSubpass) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
@@ -217,16 +217,16 @@ bool checkResource(const ResourceDesc &desc) const;
                 (uint32_t, mQuality, 0)
                 (bool, mShowStatistics, false)
             );
-            CNTR_NO_DEFAULT(mSubpassID, mCount, mQuality);
+            CNTR(mSubpassID, mCount, mQuality);
         }
 
-        STRUCT(ComputeSubpass, .mFlags = NO_DEFAULT_CNTR) {
+        STRUCT(ComputeSubpass) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
                 (uint32_t, mSubpassID, 0xFFFFFFFF)
             );
-            CNTR_NO_DEFAULT(mSubpassID);
+            CNTR(mSubpassID);
         }
 
         STRUCT(RasterPass, .mFlags = EQUAL | HASH_COMBINE) {
@@ -256,13 +256,13 @@ bool checkResource(const ResourceDesc &desc) const;
 
         STRUCT(PersistentRenderPassAndFramebuffer) {
             PUBLIC(
-                (IntrusivePtr<gfx::RenderPass>, mRenderPass, _)
-                (IntrusivePtr<gfx::Framebuffer>, mFramebuffer, _)
+                ([[optional]] IntrusivePtr<gfx::RenderPass>, mRenderPass, _)
+                ([[optional]] IntrusivePtr<gfx::Framebuffer>, mFramebuffer, _)
                 (ccstd::pmr::vector<gfx::Color>, mClearColors, _)
                 (float, mClearDepth, 0)
                 (uint8_t, mClearStencil, 0)
             );
-            CNTR_NO_DEFAULT(mRenderPass, mFramebuffer);
+            CNTR(mRenderPass, mFramebuffer);
         }
         PROJECT_TS(IntrusivePtr<gfx::RenderPass>, RenderPass);
 
@@ -438,7 +438,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (uint32_t, mThreadGroupCountY, 0)
                 (uint32_t, mThreadGroupCountZ, 0)
             );
-            CNTR_NO_DEFAULT(mMaterial, mPassID, mThreadGroupCountX, mThreadGroupCountY, mThreadGroupCountZ);
+            CNTR(mMaterial, mPassID, mThreadGroupCountX, mThreadGroupCountY, mThreadGroupCountZ);
         }
 
         STRUCT(Blit) {
@@ -448,7 +448,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (SceneFlags, mSceneFlags, _)
                 ([[optional]] scene::Camera*, mCamera, nullptr)
             );
-            CNTR_NO_DEFAULT(mMaterial, mPassID, mSceneFlags, mCamera);
+            CNTR(mMaterial, mPassID, mSceneFlags, mCamera);
         }
 
         STRUCT(RenderData, .mFlags = NO_COPY) {

@@ -285,9 +285,9 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 break;
             }
         }
-        if (hasPools) {
-            OSS << "constructor (";
-            int count = 0;
+        {
+            OSS << "constructor (settings: " << typeModulePath.substr(1) << "ObjectPoolSettings";
+            int count = 1;
             for (const auto& importedPath : moduleImports) {
                 const auto importedID = locate(importedPath, mg);
                 const auto& info = get(mg.modules, mg, importedID);
@@ -307,9 +307,27 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                     const auto& info = get(mg.modules, mg, importedID);
                     const auto& name = get(mg.names, mg, importedID);
                     if (info.mFeatures & TsPool) {
-                        OSS << "this._" << camelToVariable(name, scratch) << " = "
+                        OSS << "this." << camelToVariable(name, scratch) << " = "
                             << camelToVariable(name, scratch) << ";\n";
                     }
+                }
+
+                for (const auto& vertID : make_range(vertices(g))) {
+                    const auto& modulePath = get(g.modulePaths, g, vertID);
+                    if (typeModulePath != modulePath) {
+                        continue;
+                    }
+                    if (g.isTypescriptValueType(vertID)) {
+                        continue;
+                    }
+                    const auto parentID = parent(vertID, g);
+                    if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+                        continue;
+                    }
+                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                    OSS << "this._" << camelToVariable(name, scratch)
+                        << " = new RecyclePool<" << name << ">(() => new " << name << "(), settings."
+                        << camelToVariable(name, scratch) << "BatchSize);\n";
                 }
             }
             OSS << "}\n";
@@ -320,8 +338,25 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             const auto& info = get(mg.modules, mg, importedID);
             const auto& name = get(mg.names, mg, importedID);
             if (info.mFeatures & TsPool) {
-                OSS << "_" << camelToVariable(name, scratch) << ": " << name << "ObjectPool;\n";
+                OSS << "public readonly " << camelToVariable(name, scratch) << ": " << name << "ObjectPool;\n";
             }
+        }
+
+        for (const auto& vertID : make_range(vertices(g))) {
+            const auto& modulePath = get(g.modulePaths, g, vertID);
+            if (typeModulePath != modulePath) {
+                continue;
+            }
+            if (g.isTypescriptValueType(vertID)) {
+                continue;
+            }
+            const auto parentID = parent(vertID, g);
+            if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+                continue;
+            }
+            auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+            OSS << "private readonly _" << camelToVariable(name, scratch)
+                << ": RecyclePool<" << name << ">;\n";
         }
     }
 
