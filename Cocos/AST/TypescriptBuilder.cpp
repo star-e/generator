@@ -215,4 +215,117 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         });
 }
 
+void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
+    CodegenContext& codegen,
+    const ModuleBuilder& builder,
+    std::string_view typeModulePath,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
+    std::pmr::set<std::pmr::string>& moduleImports,
+    std::pmr::memory_resource* scratch) {
+    const auto& g = builder.mSyntaxGraph;
+    const auto& mg = builder.mModuleGraph;
+
+    const auto moduleID = locate(typeModulePath, mg);
+    Ensures(moduleID != ModuleGraph::null_vertex());
+
+    oss << "\n";
+    OSS << "export class " << typeModulePath.substr(1) << "ObjectPoolSettings {\n";
+    {
+        INDENT();
+        OSS << "constructor (batchSize: number) {\n";
+        {
+            INDENT();
+            for (const auto& vertID : make_range(vertices(g))) {
+                const auto& modulePath = get(g.modulePaths, g, vertID);
+                if (typeModulePath != modulePath) {
+                    continue;
+                }
+                if (g.isTypescriptValueType(vertID)) {
+                    continue;
+                }
+                const auto parentID = parent(vertID, g);
+                if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+                    continue;
+                }
+                auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                OSS << "this." << camelToVariable(name, scratch) << "BatchSize = batchSize;\n";
+            }
+        }
+        OSS << "}\n";
+        for (const auto& vertID : make_range(vertices(g))) {
+            const auto& modulePath = get(g.modulePaths, g, vertID);
+            if (typeModulePath != modulePath) {
+                continue;
+            }
+            if (g.isTypescriptValueType(vertID)) {
+                continue;
+            }
+            const auto parentID = parent(vertID, g);
+            if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+                continue;
+            }
+            auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+            OSS << camelToVariable(name, scratch) << "BatchSize = 0;\n";
+        }
+    }
+    OSS << "}\n";
+
+    oss << "\n";
+    OSS << "export class " << typeModulePath.substr(1) << "ObjectPool {\n";
+    {
+        INDENT();
+        bool hasPools = false;
+        for (const auto& importedPath : moduleImports) {
+            const auto importedID = locate(importedPath, mg);
+            const auto& info = get(mg.modules, mg, importedID);
+            const auto& name = get(mg.names, mg, importedID);
+            if (info.mFeatures & TsPool) {
+                hasPools = true;
+                break;
+            }
+        }
+        if (hasPools) {
+            OSS << "constructor (";
+            int count = 0;
+            for (const auto& importedPath : moduleImports) {
+                const auto importedID = locate(importedPath, mg);
+                const auto& info = get(mg.modules, mg, importedID);
+                const auto& name = get(mg.names, mg, importedID);
+                if (info.mFeatures & TsPool) {
+                    if (count++) {
+                        oss << ", ";
+                    }
+                    oss << camelToVariable(name, scratch) << ": " << name << "ObjectPool";
+                }
+            }
+            oss << ") {\n";
+            {
+                INDENT();
+                for (const auto& importedPath : moduleImports) {
+                    const auto importedID = locate(importedPath, mg);
+                    const auto& info = get(mg.modules, mg, importedID);
+                    const auto& name = get(mg.names, mg, importedID);
+                    if (info.mFeatures & TsPool) {
+                        OSS << "this._" << camelToVariable(name, scratch) << " = "
+                            << camelToVariable(name, scratch) << ";\n";
+                    }
+                }
+            }
+            OSS << "}\n";
+        }
+
+        for (const auto& importedPath : moduleImports) {
+            const auto importedID = locate(importedPath, mg);
+            const auto& info = get(mg.modules, mg, importedID);
+            const auto& name = get(mg.names, mg, importedID);
+            if (info.mFeatures & TsPool) {
+                OSS << "_" << camelToVariable(name, scratch) << ": " << name << "ObjectPool;\n";
+            }
+        }
+    }
+
+    OSS << "}\n";
+}
+
 }

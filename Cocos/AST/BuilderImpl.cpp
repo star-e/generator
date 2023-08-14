@@ -1524,13 +1524,16 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         codegen.mScopes.emplace_back("Struct");
 
         std::pmr::set<std::pmr::string> graphImports(scratch);
+        std::pmr::set<std::pmr::string> moduleImports(scratch);
         int count = 0;
         {
             auto imported = g.getImportedTypes(modulePath, scratch);
             for (const auto& m : imported) {
                 const auto targetID = locate(m.first, mModuleGraph);
                 const auto targetPath = get_path(targetID, mg, scratch);
+                const auto targetName = get(mg.names, mg, targetID);
                 const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
+                moduleImports.emplace(targetPath);
                 OSS << "import { ";
                 int count = 0;
                 for (const auto& type : m.second) {
@@ -1550,6 +1553,11 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                         oss << ", equal" << tsName;
                     }
                 }
+
+                if ((features & TsPool) && (target.mFeatures & TsPool)) {
+                    oss << ", " << targetName << "ObjectPool";
+                }
+
                 oss << " } from '";
 
                 std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
@@ -1571,6 +1579,10 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             if (typeModulePath != modulePath)
                 continue;
             outputTypescript(oss, space, codegen, *this, m, "", vertID, graphImports, scratch);
+        }
+
+        if (features & Features::TsPool) {
+            outputTypescriptPool(oss, space, codegen, *this, modulePath, m, "", moduleImports, scratch);
         }
 
         if (features & Features::Serialization) {

@@ -39,6 +39,15 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch);
 
+void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
+    CodegenContext& codegen,
+    const ModuleBuilder& builder,
+    std::string_view typeModulePath,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
+    std::pmr::set<std::pmr::string>& imports,
+    std::pmr::memory_resource* scratch);
+
 void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
     const ModuleBuilder& builder,
     const SyntaxGraph& g,
