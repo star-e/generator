@@ -229,6 +229,21 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     const auto moduleID = locate(typeModulePath, mg);
     Ensures(moduleID != ModuleGraph::null_vertex());
 
+    auto isPoolType = [&](SyntaxGraph::vertex_descriptor vertID) {
+        const auto& modulePath = get(g.modulePaths, g, vertID);
+        if (typeModulePath != modulePath) {
+            return false;
+        }
+        if (g.isTypescriptValueType(vertID)) {
+            return false;
+        }
+        const auto parentID = parent(vertID, g);
+        if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+            return false;
+        }
+        return true;
+    };
+
     oss << "\n";
     OSS << "export class " << typeModulePath.substr(1) << "ObjectPoolSettings {\n";
     {
@@ -237,15 +252,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         {
             INDENT();
             for (const auto& vertID : make_range(vertices(g))) {
-                const auto& modulePath = get(g.modulePaths, g, vertID);
-                if (typeModulePath != modulePath) {
-                    continue;
-                }
-                if (g.isTypescriptValueType(vertID)) {
-                    continue;
-                }
-                const auto parentID = parent(vertID, g);
-                if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+                if (!isPoolType(vertID)) {
                     continue;
                 }
                 auto name = g.getTypescriptTypename(vertID, scratch, scratch);
@@ -254,15 +261,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         }
         OSS << "}\n";
         for (const auto& vertID : make_range(vertices(g))) {
-            const auto& modulePath = get(g.modulePaths, g, vertID);
-            if (typeModulePath != modulePath) {
-                continue;
-            }
-            if (g.isTypescriptValueType(vertID)) {
-                continue;
-            }
-            const auto parentID = parent(vertID, g);
-            if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+            if (!isPoolType(vertID)) {
                 continue;
             }
             auto name = g.getTypescriptTypename(vertID, scratch, scratch);
@@ -313,15 +312,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 }
 
                 for (const auto& vertID : make_range(vertices(g))) {
-                    const auto& modulePath = get(g.modulePaths, g, vertID);
-                    if (typeModulePath != modulePath) {
-                        continue;
-                    }
-                    if (g.isTypescriptValueType(vertID)) {
-                        continue;
-                    }
-                    const auto parentID = parent(vertID, g);
-                    if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+                    if (!isPoolType(vertID)) {
                         continue;
                     }
                     auto name = g.getTypescriptTypename(vertID, scratch, scratch);
@@ -343,15 +334,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         }
 
         for (const auto& vertID : make_range(vertices(g))) {
-            const auto& modulePath = get(g.modulePaths, g, vertID);
-            if (typeModulePath != modulePath) {
-                continue;
-            }
-            if (g.isTypescriptValueType(vertID)) {
-                continue;
-            }
-            const auto parentID = parent(vertID, g);
-            if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+            if (!isPoolType(vertID)) {
                 continue;
             }
             auto name = g.getTypescriptTypename(vertID, scratch, scratch);
