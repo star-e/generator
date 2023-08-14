@@ -40,6 +40,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
+#include "cocos/scene/gpu-scene/GPUScene.h"
 
 #ifdef _MSC_VER
     #pragma warning(push)
@@ -100,6 +101,10 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
 
         STRUCT(NativeRenderQueueBuilder, .mFlags = NO_DEFAULT_CNTR) {
             INHERITS(RenderQueueBuilder, NativeSetter);
+            MEMBER_FUNCTIONS(R"(
+private:
+void addGpuDrivenResource(const scene::Camera *camera, SceneFlags sceneFlags, RenderGraph::vertex_descriptor rgSceneID, uint32_t cullingID);
+)");
             CNTR_EMPTY();
         }
 
@@ -256,8 +261,8 @@ void recordCommandBuffer(
                 (ccstd::pmr::vector<uint32_t>, mBatches, _)
             );
             MEMBER_FUNCTIONS(R"(
-static void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera, 
-    gfx::RenderPass *renderPass, gfx::CommandBuffer *cmdBuffer, SceneFlags sceneFlags);
+void recordCommandBuffer(const ResourceGraph& resg, gfx::Device *device, const scene::Camera *camera,
+    gfx::RenderPass *renderPass, gfx::CommandBuffer *cmdBuffer, SceneFlags sceneFlags, uint32_t cullingID) const;
 )");
         }
 
@@ -294,7 +299,7 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
                 (RenderInstancingQueue, mOpaqueInstancingQueue, _)
                 (RenderInstancingQueue, mTransparentInstancingQueue, _)
                 (RenderBatchingQueue, mOpaqueBatchingQueue, _)
-                (RenderBatchingQueue, mTransparentBatchingQueue, _)
+                //(RenderBatchingQueue, mTransparentBatchingQueue, _)
                 (SceneFlags, mSceneFlags, SceneFlags::NONE)
                 (uint32_t, mSubpassOrPassLayoutID, 0xFFFFFFFF)
                 //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
@@ -440,13 +445,13 @@ gfx::Buffer* createFromCpuBuffer();
 
         STRUCT(SceneCulling, .mFlags = NO_COPY) {
             PUBLIC(
+                ((ccstd::pmr::unordered_map<const scene::RenderScene*, uint32_t>), mSceneIDs, _)
                 ((ccstd::pmr::unordered_map<const scene::RenderScene*, CullingQueries>), mSceneQueries, _)
                 (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mCulledResults, _)
                 (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
                 ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mSceneQueryIndex, _)
                 (uint32_t, mNumCullingQueries, 0)
                 (uint32_t, mNumRenderQueues, 0)
-                (uint32_t, mGpuCullingPassID, 0xFFFFFFFF)
             );
             MEMBER_FUNCTIONS(R"(
 void clear() noexcept;
@@ -467,7 +472,6 @@ public:
                 (uint64_t, mNextFenceValue, 0)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
-                ((ccstd::pmr::unordered_map<const scene::RenderScene*, SceneResource>), mRenderSceneResources, _)
                 (QuadResource, mFullscreenQuad, _)
                 (SceneCulling, mSceneCulling, _)
             );

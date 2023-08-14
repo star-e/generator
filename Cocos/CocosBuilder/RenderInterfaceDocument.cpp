@@ -197,6 +197,10 @@ A render graph consists of these nodes and form a forest(which is a set of trees
 @zh 设置浮点值 (4 bytes)
 @param name @en uniform name in shader. @zh 填写着色器中的常量(uniform)名字
 )");
+        METHOD_COMMENT(setUint, R"(@en Set unsigned integer uniform (4 bytes).
+@zh 设置无符号整型值 (4 bytes)
+@param name @en uniform name in shader. @zh 填写着色器中的常量(uniform)名字
+)");
         METHOD_COMMENT(setArrayBuffer, R"(@en Set uniform array.
 Size and type of the data should match the corresponding uniforms in the shader.
 Mismatches will cause undefined behaviour.
@@ -689,6 +693,7 @@ Can't be currently mapped.
 
 @param uploadPairs @en Array of upload source and target @zh 上传来源与目标的数组
 )");
+
         METHOD_COMMENT(addMovePass, R"(@en Add move pass.
 Move-construct target resource, by moving source resources into subresources of target.
 After the move, the target resource must be completely initialized.
@@ -710,6 +715,17 @@ Can't be currently mapped.
 不能被Map。
 
 @param movePairs @en Array of move source and target @zh 移动来源与目标的数组
+)");
+        METHOD_COMMENT(addBuiltinGpuCullingPass, R"(@en Add GPU culling pass
+@zh 添加 GPU 剔除通道
+@param camera @en camera of the culling pass @zh 剔除通道的摄像机
+@param hzbName @en name of hierarchical z buffer @zh 层次深度缓存的名字
+@param light @en light of the culling pass @zh 剔除通道的灯光
+)");
+        METHOD_COMMENT(addBuiltinHzbGenerationPass, R"(@en Add hierarchical z buffer generation pass
+@zh 添加层次化深度缓存生成通道
+@param sourceDepthStencilName @en name of source depth buffer @zh 来源深度缓存名字
+@param targetHzbName @en name of target hierarchical z buffer @zh 目标层次深度缓存的名字
 )");
     }
 

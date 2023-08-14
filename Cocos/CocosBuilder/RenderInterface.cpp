@@ -211,6 +211,7 @@ virtual void setColor(const ccstd::string& name, const gfx::Color& color) = 0;
 virtual void setVec4(const ccstd::string& name, const cc::Vec4& vec) = 0;
 virtual void setVec2(const ccstd::string& name, const cc::Vec2& vec) = 0;
 virtual void setFloat(const ccstd::string& name, float v) = 0;
+virtual void setUint(const ccstd::string &name, uint32_t v) = 0;
 virtual void setArrayBuffer(const ccstd::string& name, const ArrayBuffer* arrayBuffer) = 0;
 
 virtual void setBuffer(const ccstd::string& name, gfx::Buffer* buffer) = 0;
@@ -233,7 +234,7 @@ virtual void setBuiltinSpotLightViewConstants(const scene::SpotLight* light) = 0
         INTERFACE(RenderQueueBuilder) {
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
-[[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
+[[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE, uint32_t cullingID = 0xFFFFFFFF) = 0;
 virtual void addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] const scene::Light* light = nullptr) = 0;
 virtual void addSceneCulledByDirectionalLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::DirectionalLight* light, uint32_t level) = 0;
 virtual void addSceneCulledBySpotLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::SpotLight* light) = 0;
@@ -438,7 +439,7 @@ virtual MultisampleRenderPassBuilder *addMultisampleRenderPass(uint32_t width, u
 virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
 [[beta]] virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
-virtual void addBuiltinGpuCullingPass(const scene::Camera* camera, const std::string& hzbName = "", [[optional]] const scene::Light* light = nullptr) = 0;
+virtual void addBuiltinGpuCullingPass(uint32_t cullingID, const scene::Camera* camera, const std::string& hzbName = "", [[optional]] const scene::Light* light = nullptr, bool bMainPass = true) = 0;
 virtual void addBuiltinHzbGenerationPass(const std::string& sourceDepthStencilName, const std::string& targetHzbName) = 0;
 
 [[experimental]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;

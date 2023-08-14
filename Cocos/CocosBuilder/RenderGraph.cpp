@@ -426,6 +426,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 ([[optional]] const scene::Camera*, mCamera, nullptr)
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
+                (uint32_t, mCullingID, 0xFFFFFFFF)
             );
             CNTR(mScene, mCamera, mFlags, mLight);
         }
