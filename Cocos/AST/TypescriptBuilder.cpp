@@ -266,7 +266,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 continue;
             }
             auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-            OSS << camelToVariable(name, scratch) << "BatchSize = 0;\n";
+            OSS << camelToVariable(name, scratch) << "BatchSize = 16;\n";
         }
     }
     OSS << "}\n";
