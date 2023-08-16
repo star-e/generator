@@ -337,7 +337,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             }
             OSS << "}\n";
         }
-        if (false) { // create
+        if (true) { // create
             for (const auto& vertID : make_range(vertices(g))) {
                 if (!isPoolType(vertID)) {
                     continue;
@@ -346,36 +346,42 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
 
                 // get cntr
                 const Constructor* pCntr = nullptr;
+                const Struct* pStruct = nullptr;
                 if (holds_tag<Struct_>(vertID, g)) {
                     const auto& s = get_by_tag<Struct_>(vertID, g);
+                    pStruct = &s;
                     if (!s.mConstructors.empty()) {
                         pCntr = &s.mConstructors.front();
                     }
                 }
 
                 // format
-                int count = 0;
-                bool bChangeLine = false;
-                auto outputComma = [&]() {
-                    if (bChangeLine) {
-                        if (count++ == 0)
-                            oss << "\n";
-                        INDENT();
-                        OSS;
-                    } else {
-                        if (count++) {
-                            oss << ", ";
-                        }
-                    }
-                };
-
-                OSS << "create" << name << " (";
                 {
+                    int count = 0;
+                    OSS << "create" << name << " (";
+                    if (pCntr) {
+                        outputConstructionParams(oss, space, count, builder, true,
+                            g, pStruct->mMembers, *pCntr, true, false, scratch);
+                    }
+                    if (count) {
+                        OSS;
+                    }
+                    oss << "): " << name << " {\n";
                 }
-                oss << "): " << name << " {\n";
                 {
                     INDENT();
                     OSS << "const v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                    if (pCntr) {
+                        int count = 0;
+                        OSS << "v.reset(";
+                        outputConstructionParams(oss, space, count, builder, false,
+                            g, pStruct->mMembers, *pCntr, true, true, scratch);
+                        oss << ");\n";
+                    } else if (pStruct) {
+                        OSS << "v.reset();\n";
+                    } else {
+                        OSS << "v.clear();\n";
+                    }
                     OSS << "return v;\n";
                 }
                 OSS << "}\n";

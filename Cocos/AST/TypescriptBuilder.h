@@ -40,6 +40,7 @@ void outputConstructionParams(
     const std::pmr::vector<Member>& members,
     const Constructor& cntr,
     bool bReset,
+    bool bArgument,
     std::pmr::memory_resource* scratch);
 
 void outputTypescript(std::ostream& oss, std::pmr::string& space,

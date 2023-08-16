@@ -172,6 +172,7 @@ void outputConstructionParams(
     const std::pmr::vector<Member>& members,
     const Constructor& cntr,
     bool bReset,
+    bool bArgument,
     std::pmr::memory_resource* scratch) {
     auto outputComma = [&]() {
         if (bChangeLine) {
@@ -204,11 +205,15 @@ void outputConstructionParams(
                 outputComma();
 
                 auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
-                if (cntr.mHasDefault) {
-                    oss << builder.getTypedMemberName(m, true);
-                    oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                if (bArgument) {
+                    oss << g.getMemberName(m.mMemberName, true);
                 } else {
-                    oss << builder.getTypedMemberName(m, true, true);
+                    if (cntr.mHasDefault) {
+                        oss << builder.getTypedMemberName(m, true);
+                        oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                    } else {
+                        oss << builder.getTypedMemberName(m, true, true);
+                    }
                 }
                 if (bChangeLine) {
                     oss << ",\n";
@@ -261,13 +266,13 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 return;
                             }
                             outputConstructionParams(oss, space, count, builder, bChangeLine,
-                                g, s.mMembers, s.mConstructors.front(), false, scratch);
+                                g, s.mMembers, s.mConstructors.front(), false, false, scratch);
                         },
                         [&](const auto&) {
                         });
                 }
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, cntr, false, scratch);
+                    g, members, cntr, false, false, scratch);
 
                 if (bChangeLine) {
                     OSS << ") {\n";
@@ -340,14 +345,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                             return;
                         }
                         outputConstructionParams(oss, space, count, builder, bChangeLine,
-                            g, s.mMembers, s.mConstructors.front(), true, scratch);
+                            g, s.mMembers, s.mConstructors.front(), true, false, scratch);
                     },
                     [&](const auto&) {
                     });
             }
             if (pCntr) {
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, *pCntr, true, scratch);
+                    g, members, *pCntr, true, false, scratch);
             }
             if (bChangeLine) {
                 OSS << "): void {\n";
