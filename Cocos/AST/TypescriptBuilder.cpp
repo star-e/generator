@@ -342,6 +342,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 if (!isPoolType(vertID)) {
                     continue;
                 }
+                const auto& traits = get(g.traits, g, vertID);
                 auto name = g.getTypescriptTypename(vertID, scratch, scratch);
 
                 // get cntr
@@ -371,16 +372,23 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 {
                     INDENT();
                     OSS << "const v = this._" << camelToVariable(name, scratch) << ".add();\n";
-                    if (pCntr) {
-                        int count = 0;
-                        OSS << "v.reset(";
-                        outputConstructionParams(oss, space, count, builder, false,
-                            g, pStruct->mMembers, *pCntr, true, true, scratch);
-                        oss << ");\n";
-                    } else if (pStruct) {
-                        OSS << "v.reset();\n";
+                    if (pStruct) {
+                        if (traits.mFlags & SKIP_RESET) {
+                            for (uint32_t i = 0; const auto& m : pStruct->mMembers) {
+                                const auto& member = g.getMemberName(m.mMemberName, true);
+                                OSS << "v." << member << " = " << member << ";\n";
+                            }
+                        } else if (pCntr){
+                            int count = 0;
+                            OSS << "v.reset(";
+                            outputConstructionParams(oss, space, count, builder, false,
+                                g, pStruct->mMembers, *pCntr, true, true, scratch);
+                            oss << ");\n";
+                        } else {
+                            OSS << "v.reset();\n"; 
+                        }
                     } else {
-                        OSS << "v.clear();\n";
+                        OSS << "v.clear();\n"; 
                     }
                     OSS << "return v;\n";
                 }
