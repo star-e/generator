@@ -126,6 +126,7 @@ bool isWrite() const {
                 (gfx::SampleCount, mSampleCount, gfx::SampleCount::X1)
                 (gfx::TextureFlagBit, mTextureFlags, gfx::TextureFlagBit::NONE)
                 (ResourceFlags, mFlags, ResourceFlags::NONE)
+                (gfx::TextureType, mViewType, gfx::TextureType::TEX2D)
             );
             TS_INIT(mFormat, Format.UNKNOWN);
             TS_INIT(mSampleCount, SampleCount.X1);
@@ -285,6 +286,7 @@ bool checkResource(const ResourceDesc &desc) const;
                 (uint16_t, mNumArraySlices, 0)
                 (uint16_t, mFirstPlane, 0)
                 (uint16_t, mNumPlanes, 0)
+                //(gfx::TextureType, mViewType, gfx::TextureType::TEX2D)
             );
         }
 
