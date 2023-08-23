@@ -186,7 +186,19 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             }
         }
     }
+    MODULE(ReflectionProbe,
+        .mFolder = "cocos/scene",
+        .mFilePrefix = "ReflectionProbe.h",
+        .mTypescriptFolder = "cocos/render-scene/scene",
+        .mTypescriptFilePrefix = "reflection-probe", ) {
+        ADD_FEATURES(ToJs);
 
+        NAMESPACE(cc) {
+            NAMESPACE(scene) {
+                IMPORT_CLASS(ReflectionProbe);
+            }
+        }
+    }
     MODULE(Camera,
         .mFolder = "cocos/scene",
         .mFilePrefix = "Camera.h",
@@ -225,7 +237,6 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             IMPORT_CLASS(Shadows);
         }
     }
-
     MODULE(GeometryRenderer,
         .mTypescriptFolder = "cocos/rendering",
         .mTypescriptFilePrefix = "geometry-renderer", ) {

@@ -1165,6 +1165,11 @@ std::pmr::string generateSerialization_ts(
                                 || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
                                 continue;
                             }
+                            if (m.mPointer) {
+                                OSS << "// skip, v." << m.getMemberName() << ": "
+                                    << g.getTypescriptTypename(memberID, scratch, scratch) << "\n";
+                                continue;
+                            }
                             std::pmr::string memberVar("v.", scratch);
                             memberVar.append(m.getMemberName());
                             outputSaveSerializable(oss, space, ns, g, memberID, memberVar, 0, false, scratch);
@@ -1187,6 +1192,11 @@ std::pmr::string generateSerialization_ts(
                             auto memberID = locate(m.mTypePath, g);
                             if ((m.mFlags & GenerationFlags::NO_SERIALIZATION)
                                 || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
+                                continue;
+                            }
+                            if (m.mPointer) {
+                                OSS << "// skip, v." << m.getMemberName() << ": "
+                                    << g.getTypescriptTypename(memberID, scratch, scratch) << "\n";
                                 continue;
                             }
                             if (g.isTypescriptArray(memberID, scratch)

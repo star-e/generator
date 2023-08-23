@@ -52,6 +52,16 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mRequires = { "Gfx" },
         .mHeader = R"(#include "cocos/scene/Light.h"
 #include "cocos/base/std/container/map.h"
+
+namespace cc {
+
+namespace scene {
+
+class ReflectionProbe;
+
+} // namespace scene
+
+} // namespace cc
 )",
         .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock } from './serialization';
@@ -154,10 +164,11 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<scene::Light>, mLight, _)
+                ([[optional]] scene::ReflectionProbe*, mProbe, nullptr)
                 (uint32_t, mLevel, 0)
                 (bool, mCulledByLight, false)
             );
-            CNTR(mLight, mLevel, mCulledByLight);
+            CNTR(mLight, mLevel, mCulledByLight, mProbe);
             CNTR(mLight, mLevel);
         }
 

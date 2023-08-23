@@ -105,7 +105,7 @@ std::pmr::string generateSerialization_h(
                                 || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
                                 continue;
                             }
-                            if (g.isTypescriptPointer(memberID)) {
+                            if (g.isTypescriptPointer(memberID) || m.mPointer) {
                                 OSS << "// skip, " << m.getMemberName() << ": "
                                     << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
                                 continue;
@@ -131,7 +131,7 @@ std::pmr::string generateSerialization_h(
                                 || (m.mFlags & GenerationFlags::IMPL_DETAIL)) {
                                 continue;
                             }
-                            if (g.isTypescriptPointer(memberID)) {
+                            if (g.isTypescriptPointer(memberID) || m.mPointer) {
                                 OSS << "// skip, " << m.getMemberName() << ": "
                                     << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
                                 continue;
