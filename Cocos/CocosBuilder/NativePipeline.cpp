@@ -141,6 +141,11 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             INHERITS(ComputePassBuilder, NativeSetter);
             CNTR_EMPTY();
         }
+        
+        //STRUCT(NativeBuiltinReflectionProbePassBuilder, .mFlags = NO_DEFAULT_CNTR) {
+        //    INHERITS(BuiltinReflectionProbePassBuilder, NativeSetter);
+        //    CNTR_EMPTY();
+        //}
 
         //STRUCT(NativeSceneTransversal) {
         //    INHERITS(SceneTransversal);

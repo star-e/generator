@@ -267,6 +267,13 @@ virtual void resolveRenderTarget(const ccstd::string& source, const ccstd::strin
 virtual void resolveDepthStencil(const ccstd::string& source, const ccstd::string& target, gfx::ResolveMode depthMode = gfx::ResolveMode::SAMPLE_ZERO, gfx::ResolveMode stencilMode = gfx::ResolveMode::SAMPLE_ZERO) = 0;
 )");
         }
+//
+//        INTERFACE(BuiltinReflectionProbePassBuilder) {
+//            INHERITS(Setter);
+//            PUBLIC_METHODS(R"(
+//virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
+//)");
+//        }
 
         INTERFACE(BasicPipeline) {
             INHERITS(PipelineRuntime);
@@ -303,6 +310,8 @@ virtual void endFrame() = 0;
 [[beta]] [[covariant]] virtual BasicMultisampleRenderPassBuilder *addMultisampleRenderPass(uint32_t width, uint32_t height, uint32_t count, uint32_t quality, const ccstd::string& passName = "default") = 0;
 [[deprecated]] virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
+
+virtual void addBuiltinReflectionProbePass(uint32_t width, uint32_t height) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
