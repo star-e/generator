@@ -323,7 +323,11 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             methodName = camelToVariable(methodName, scratch);
             oss << "set " << methodName << " (";
         } else {
-            oss << method.mFunctionName << " (";
+            oss << method.mFunctionName;
+            if (method.mOptionalMethod) {
+                oss << "?";
+            }
+            oss << " (";
         }
         const bool bChangeLine = method.mParameters.size() > maxParams2
             || (method.mParameters.size() > (maxParams2 + 1) && method.mParameters.back().mName.back() == '_');
@@ -356,6 +360,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             if (!method.mSetter) {
                 oss << ": ";
                 oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+
             } else {
                 oss << ": void";
             }
