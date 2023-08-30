@@ -267,6 +267,25 @@ void recordCommandBuffer(
             );
         }
 
+        STRUCT(ProbeHelperQueue) {
+            PUBLIC(
+                (ccstd::pmr::vector<scene::SubModel*>, mProbeMap, _)
+            );
+            MEMBER_FUNCTIONS(R"(
+static LayoutGraphData::vertex_descriptor getDefaultId(const LayoutGraphData &lg);
+
+inline void clear() noexcept {
+    probeMap.clear();
+}
+
+void removeMacro() const;
+
+static uint32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::vertex_descriptor phaseLayoutId);
+
+void applyMacro(const LayoutGraphData &lg, const scene::Model& model, LayoutGraphData::vertex_descriptor probeLayoutId);
+)");
+        }
+
         STRUCT(RenderDrawQueue) {
             PUBLIC(
                 (ccstd::pmr::vector<DrawInstance>, mInstances, _)
@@ -286,6 +305,7 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
                 //(ccstd::pmr::vector<RenderObject>, mRenderObjects, _)
                 (RenderDrawQueue, mOpaqueQueue, _)
                 (RenderDrawQueue, mTransparentQueue, _)
+                (ProbeHelperQueue, mProbeQueue, _)
                 (RenderInstancingQueue, mOpaqueInstancingQueue, _)
                 (RenderInstancingQueue, mTransparentInstancingQueue, _)
                 (SceneFlags, mSceneFlags, SceneFlags::NONE)
@@ -411,6 +431,7 @@ gfx::Buffer* createFromCpuBuffer();
             PUBLIC(
                 (const scene::Camera*, mCamera, nullptr)
                 (const scene::Light*, mLight, nullptr)
+                (const scene::ReflectionProbe*, mProbe, nullptr)
                 (bool, mCastShadow, false)
                 (uint32_t, mLightLevel, 0xFFFFFFFF)
             );

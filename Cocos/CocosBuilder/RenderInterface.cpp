@@ -311,7 +311,7 @@ virtual void endFrame() = 0;
 [[deprecated]] virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
-virtual void addBuiltinReflectionProbePass(uint32_t width, uint32_t height) = 0;
+virtual void addBuiltinReflectionProbePass(uint32_t width, uint32_t height, const scene::Camera *camera) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
