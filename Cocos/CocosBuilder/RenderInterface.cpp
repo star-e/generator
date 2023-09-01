@@ -252,7 +252,6 @@ virtual void setViewport(const gfx::Viewport &viewport) = 0;
 virtual void addRenderTarget(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, const gfx::Color& color = {}) = 0;
 virtual void addDepthStencil(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
 virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
-virtual void useResource(const ccstd::string& name, ResourceFlags flags) = 0;
 
 virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
