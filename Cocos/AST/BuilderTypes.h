@@ -71,6 +71,7 @@ struct CppStructBuilder {
     const Traits& getTraits() const;
     std::pmr::string getDependentName(SyntaxGraph::vertex_descriptor vertID) const;
     std::pmr::string getDependentName(std::string_view typePath) const;
+    std::pmr::string getParameterType(const Parameter& param, bool bTypeParam = true) const;
     std::pmr::string getImplName(std::string_view ns = ".") const;
     std::pmr::string generateGetAllocatorSignature(bool bInline) const;
     std::pmr::string generateGetAllocatorBody() const;

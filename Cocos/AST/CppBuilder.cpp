@@ -330,10 +330,10 @@ std::pmr::string generateFwd_h(std::string_view projectName,
                 } else {
                     OSS << "using " << name << " = std::variant<";
                 }
-                for (auto count = 0; const auto& e : v.mVariants) {
+                for (auto count = 0; const auto& param : v.mVariants) {
                     if (count++)
                         oss << ", ";
-                    OSS << cpp.getDependentName(e);
+                    OSS << cpp.getParameterType(param);
                 }
                 oss << ">;\n";
             },
@@ -922,11 +922,10 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 } else {
                     OSS << "using " << name << " = std::variant<";
                 }
-                for (auto count = 0; const auto& e : v.mVariants) {
+                for (auto count = 0; const auto& param : v.mVariants) {
                     if (count++)
                         oss << ", ";
-                    auto tagName = cpp.getDependentName(e);
-                    OSS << getCppPath(tagName, scratch);
+                    OSS << cpp.getParameterType(param);
                 }
                 oss << ">;\n";
             },
@@ -1734,8 +1733,8 @@ std::pmr::string generateReflection_cpp(std::string_view projectName,
                     OSS << "static const std::unordered_map<std::string_view, " << name << "> index{\n";
                     {
                         INDENT();
-                        for (const auto& var : s.mVariants) {
-                            auto varID = locate(var, g);
+                        for (const auto& param : s.mVariants) {
+                            auto varID = locate(param.mTypePath, g);
                             auto varName = getCppPath(g.getDependentName(ns, varID, scratch, scratch), scratch);
                             visit_vertex(
                                 varID, g,
@@ -1747,7 +1746,7 @@ std::pmr::string generateReflection_cpp(std::string_view projectName,
                                     OSS << "{ std::string_view(\"" << name2 << "\"), " << name << "(std::in_place_type_t<" << varName << ">()) },\n";
                                 },
                                 [&](const Struct& s) {
-                                    if (var == "/std/monostate") {
+                                    if (param.mTypePath == "/std/monostate") {
                                         OSS << "{ std::string_view(\"\"), "
                                             << name << "(std::in_place_type_t<" << varName << ">()) },\n";
                                         OSS << "{ std::string_view(\"_\"), "

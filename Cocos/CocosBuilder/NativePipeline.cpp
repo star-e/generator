@@ -36,7 +36,19 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "Customization", "InstancedBuffer", "PrivateTypes" },
+        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "Customization", "InstancedBuffer", "ReflectionProbe", "PrivateTypes" },
+        .mFwdHeader = R"(
+namespace cc {
+
+namespace scene {
+
+class ReflectionProbe;
+
+} // namespace scene
+
+} // namespace cc
+
+)",
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 #include "cocos/renderer/gfx-base/GFXFramebuffer.h"
@@ -427,13 +439,15 @@ gfx::Buffer* createFromCpuBuffer();
         }
 
         // Render Context
+        VARIANT(CullingTarget, (std::monostate, const scene::ReflectionProbe*, const scene::Light*));
+
         STRUCT(CullingKey, .mFlags = EQUAL | HASH_COMBINE) {
             PUBLIC(
                 (const scene::Camera*, mCamera, nullptr)
-                (const scene::Light*, mLight, nullptr)
                 (const scene::ReflectionProbe*, mProbe, nullptr)
-                (bool, mCastShadow, false)
+                (const scene::Light*, mLight, nullptr)
                 (uint32_t, mLightLevel, 0xFFFFFFFF)
+                (bool, mCastShadow, false)
             );
         }
 

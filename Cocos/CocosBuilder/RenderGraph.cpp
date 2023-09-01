@@ -422,14 +422,24 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             CNTR(mPhaseID);
         }
 
+        FLAG_CLASS(CullingFlags) {
+            FLAGS(
+                (NONE, 0)
+                (CAMERA_FRUSTUM, 0x1)
+                (LIGHT_FRUSTUM, 0x2)
+                (LIGHT_BOUNDS, 0x4)
+            );
+        }
+
         STRUCT(SceneData) {
             PUBLIC(
                 ([[optional]] const scene::RenderScene*, mScene, nullptr)
                 ([[optional]] const scene::Camera*, mCamera, nullptr)
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
+                (CullingFlags, mCullingFlags, CullingFlags::CAMERA_FRUSTUM)
             );
-            CNTR(mScene, mCamera, mFlags, mLight);
+            CNTR(mScene, mCamera, mFlags, mLight, mCullingFlags);
         }
 
         STRUCT(Dispatch) {

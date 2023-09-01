@@ -141,10 +141,11 @@ bool SyntaxGraph::isTag(vertex_descriptor vertID) const noexcept {
 
     if (holds_tag<Variant_>(vertID, g)) {
         const auto& var = get_by_tag<Variant_>(vertID, g);
-        for (const auto& typePath : var.mVariants) {
-            if (typePath == "/std/monostate")
+        for (const auto& param : var.mVariants) {
+            if (param.mTypePath == "/std/monostate") {
                 continue;
-            auto typeID = locate(typePath, g);
+            }
+            auto typeID = locate(param.mTypePath, g);
             if (!holds_tag<Tag_>(typeID, g)) {
                 return false;
             }
@@ -1496,8 +1497,8 @@ void SyntaxGraph::propagate(vertex_descriptor vertID, GenerationFlags flags) {
         },
         [&](const Variant& s) {
             if (!g.isTag(vertID)) {
-                for (const auto& v : s.mVariants) {
-                    auto typeID = locate(v, g);
+                for (const auto& param : s.mVariants) {
+                    auto typeID = locate(param.mTypePath, g);
                     propagate(typeID, flags);
                 }
             }
@@ -2109,7 +2110,7 @@ std::pmr::string SyntaxGraph::getTypescriptInitialValue(
             } else {
                 Expects(!v.mVariants.empty());
                 oss << g.getTypescriptTypename(vertID, scratch, scratch)
-                    << "." << g.getTypescriptTagName(v.mVariants.front(), scratch, scratch);
+                    << "." << g.getTypescriptTagName(v.mVariants.front().mTypePath, scratch, scratch);
             }
         },
         [&](const Identifier_ auto& v) {

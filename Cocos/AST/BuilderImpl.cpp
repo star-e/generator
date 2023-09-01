@@ -771,11 +771,17 @@ void ModuleBuilder::addVariantElement(SyntaxGraph::vertex_descriptor vertID,
     Expects(holds_tag<Variant_>(vertID, g));
     auto& var = get<Variant>(vertID, g);
 
-    std::pmr::string typePath(type, scratch);
-    convertTypename(typePath);
+     std::pmr::string typePath(type, scratch);
+     convertTypename(typePath);
 
-    var.mVariants.emplace_back(g.getTypePath(mCurrentScope, typePath,
-        g.get_allocator().resource(), mScratch));
+    auto info = extractType(typePath);
+
+    Parameter param(scratch);
+    param.mConst = info.mConst;
+    param.mPointer = info.mPointer;
+    param.mTypePath = g.getTypePath(mCurrentScope, info.mShortName, mScratch, mScratch);
+
+    var.mVariants.emplace_back(std::move(param));
 }
 
 TypeHandle ModuleBuilder::addGraph(std::string_view name,
@@ -1174,7 +1180,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             const auto& dep = get(mg.modules, mg, moduleID);
             auto ccDepFolder = std::string_view(dep.mFolder);
             if (dep.mFilePrefix.ends_with(".h")) {
-                OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "\"\n";
+                // TODO:
             } else {
                 OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Fwd.h\"\n";
             }
@@ -1182,6 +1188,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         if (mBoost) {
             OSS << "#include \"cocos/base/std/variant.h\"\n";
         }
+        copyString(oss, m.mFwdHeader);
         copyString(oss, generateFwd_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
         oss << "\n";
         OSS << "// clang-format on\n";

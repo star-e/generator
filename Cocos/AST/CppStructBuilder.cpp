@@ -96,6 +96,35 @@ std::pmr::string CppStructBuilder::getDependentName(std::string_view typePath) c
     return getDependentName(vertID);
 }
 
+std::pmr::string CppStructBuilder::getParameterType(const Parameter& param, bool bTypeParam) const {
+    auto* scratch = get_allocator().resource();
+    pmr_ostringstream oss(std::ios::out, scratch);
+    
+    if (param.mConst) {
+        oss << "const ";
+    }
+    oss << getDependentName(param.mTypePath);
+
+    if (bTypeParam) {
+        if (param.mPointer || param.mReference) {
+            oss << " ";
+        }
+    } else {
+        oss << " ";
+    }
+    if (param.mPointer) {
+        oss << "*";
+    }
+    if (param.mReference) {
+        oss << "&";
+    }
+    if (param.mRvalue) {
+        oss << "&";
+    }
+
+    return oss.str();
+}
+
 std::pmr::string CppStructBuilder::getImplName(std::string_view ns) const {
     auto* scratch = get_allocator().resource();
     const auto& g = *mSyntaxGraph;
@@ -1468,27 +1497,6 @@ std::pmr::string CppStructBuilder::generateMemberFunctions(std::pmr::string& spa
     return oss.str();
 }
 
-namespace {
-
-void outputParam(const CppStructBuilder& builder, std::ostream& oss, const Parameter& p) {
-    if (p.mConst) {
-        oss << "const ";
-    }
-    oss << builder.getDependentName(p.mTypePath);
-    oss << " ";
-    if (p.mPointer) {
-        oss << "*";
-    }
-    if (p.mReference) {
-        oss << "&";
-    }
-    if (p.mRvalue) {
-        oss << "&";
-    }
-}
-
-} // namespace
-
 std::pmr::string CppStructBuilder::generateDispatchMethods(const Method& m) const {
     auto scratch = get_allocator().resource();
     pmr_ostringstream oss(std::ios_base::out, scratch);
@@ -1504,7 +1512,7 @@ std::pmr::string CppStructBuilder::generateDispatchMethods(const Method& m) cons
     }
     for (uint32_t i = numDefaultValues; i-- > 0;) {
         OSS;
-        outputParam(*this, oss, m.mReturnType);
+        oss << getParameterType(m.mReturnType, false);
         uint32_t count = 0;
         oss << m.mFunctionName << "(";
         for (const auto& param : m.mParameters) {
@@ -1515,7 +1523,7 @@ std::pmr::string CppStructBuilder::generateDispatchMethods(const Method& m) cons
             if (count++) {
                 oss << ", ";
             }
-            outputParam(*this, oss, param);
+            oss << getParameterType(param, false);
             oss << param.name();
         }
         oss << ")";
@@ -1582,7 +1590,7 @@ void CppStructBuilder::generateMethod(
         OSS;
     }
     
-    outputParam(*this, oss, m.mReturnType);
+    oss << getParameterType(m.mReturnType, false);
 
     oss << m.mFunctionName << "(";
 
@@ -1592,7 +1600,7 @@ void CppStructBuilder::generateMethod(
         if (count++) {
             oss << ", ";
         }
-        outputParam(*this, oss, param);
+        oss << getParameterType(param, false);
         oss << param.name();
         if (bEnableDefaultParam && bDefaultParam && !param.mDefaultValue.empty()) {
             ++numDefaultValues;

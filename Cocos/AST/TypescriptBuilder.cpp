@@ -201,8 +201,8 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 OSS << "export const enum " << name << " {\n";
                 {
                     INDENT();
-                    for (const auto& type : s.mVariants) {
-                        OSS << g.getTypescriptTagName(type, scratch, scratch) << ",\n";
+                    for (const auto& param : s.mVariants) {
+                        OSS << g.getTypescriptTagName(param.mTypePath, scratch, scratch) << ",\n";
                     }
                 }
                 OSS << "}\n";

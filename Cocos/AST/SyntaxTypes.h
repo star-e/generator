@@ -437,6 +437,7 @@ struct Method {
     bool mGetter = false;
     bool mSetter = false;
     bool mOptional = false;
+    bool mOptionalMethod = false;
     bool mSkip = false;
     bool mCovariant = false;
     Doc mFlags = Doc::None;
@@ -522,7 +523,7 @@ struct Variant {
     Variant& operator=(Variant const& rhs) = default;
     ~Variant() noexcept;
 
-    std::pmr::vector<std::pmr::string> mVariants;
+    std::pmr::vector<Parameter> mVariants;
     bool mUseIndex = true;
 };
 
@@ -1492,6 +1493,7 @@ struct ModuleInfo {
     std::string mTypescriptFilePrefix;
     std::string mAPI;
     std::vector<std::string> mRequires;
+    std::string mFwdHeader;
     std::string mHeader;
     std::string mTypescriptInclude;
     std::string mTail;
