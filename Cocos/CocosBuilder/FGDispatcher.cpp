@@ -142,6 +142,13 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(MoveStatus) {
+            PUBLIC(
+                (bool, mFinalAccess, true)
+                (AccessStatus, mStatus, _)
+            );
+        }
+
         PMR_GRAPH(ResourceAccessGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
             PUBLIC(
                 (ccstd::pmr::vector<ccstd::pmr::string>, mResourceNames, _)
@@ -154,7 +161,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
                 ((PmrTransparentMap<ccstd::pmr::string, PmrFlatMap<uint32_t, AccessStatus>>), mResourceAccess, _)
 
                 ((PmrFlatMap<ccstd::pmr::string, PmrFlatMap<ccstd::pmr::string, ccstd::pmr::string>>), mMovedTarget, _)
-                ((PmrFlatMap<ccstd::pmr::string, AccessStatus>), mMovedSourceStatus, _)
+                ((PmrFlatMap<ccstd::pmr::string, MoveStatus>), mMovedSourceStatus, _)
                 ((PmrFlatMap<ccstd::pmr::string, ResourceNode>), mMovedTargetStatus, _)
             );
             COMPONENT_GRAPH(

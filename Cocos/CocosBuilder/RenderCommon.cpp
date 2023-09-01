@@ -98,6 +98,8 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
                 (SHADING_RATE, 0x80)
                 (TRANSFER_SRC, 0x100)
                 (TRANSFER_DST, 0x200)
+                (VERTEX, 0x400)
+                (INDEX, 0x800)
             );
         }
 
@@ -296,6 +298,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
                 (uint32_t, mTargetMostDetailedMip, 0)
                 (uint32_t, mTargetFirstSlice, 0)
                 (uint32_t, mTargetPlaneSlice, 0)
+                (gfx::AccessFlagBit, mPossibleUsage, gfx::AccessFlagBit::NONE)
             );
             CNTR(mSource, mTarget, mMipLevels, mNumSlices,
                 mTargetMostDetailedMip,
