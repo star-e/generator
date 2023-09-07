@@ -515,7 +515,7 @@ gfx::Buffer* createFromCpuBuffer();
                 (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mLightBoundsCullingResults, _)
 
                 (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
-                ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mSceneQueryIndex, _)
+                ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mRenderQueueIndex, _)
                 (uint32_t, mNumFrustumCulling, 0)
                 (uint32_t, mNumLightBoundsCulling, 0)
                 (uint32_t, mNumRenderQueues, 0)
