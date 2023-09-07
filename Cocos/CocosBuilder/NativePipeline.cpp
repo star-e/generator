@@ -439,8 +439,6 @@ gfx::Buffer* createFromCpuBuffer();
         }
 
         // Render Context
-        VARIANT(CullingTarget, (std::monostate, const scene::ReflectionProbe*, const scene::Light*));
-
         STRUCT(CullingKey, .mFlags = EQUAL | HASH_COMBINE) {
             PUBLIC(
                 (const scene::Camera*, mCamera, nullptr)
@@ -451,25 +449,70 @@ gfx::Buffer* createFromCpuBuffer();
             );
         }
 
+        STRUCT(FrustumCullingID) {
+            PUBLIC(
+                (uint32_t, mValue, 0xFFFFFFFF)
+            );
+            MEMBER_FUNCTIONS(R"(explicit operator uint32_t() const {
+    return value;
+})");
+        }
+
         STRUCT(CullingQueries) {
             PUBLIC(
-                ((ccstd::pmr::unordered_map<CullingKey, uint32_t>), mCulledResultIndex, _)
+                ((ccstd::pmr::unordered_map<CullingKey, FrustumCullingID>), mCulledResultIndex, _)
             )
+        }
+        
+        STRUCT(LightBoundsCullingID) {
+            PUBLIC(
+                (uint32_t, mValue, 0xFFFFFFFF)
+            );
+            MEMBER_FUNCTIONS(R"(explicit operator uint32_t() const {
+    return value;
+})");
+        }
+
+        STRUCT(LightBoundsCullingKey, .mFlags = EQUAL | HASH_COMBINE) {
+            PUBLIC(
+                (const scene::Camera*, mCameraTarget, nullptr)
+                (const scene::ReflectionProbe*, mProbeTarget, nullptr)
+                (const scene::Light*, mCullingLight, nullptr)
+            );
+        }
+
+        STRUCT(LightBoundsCullingQueries) {
+            PUBLIC(
+                ((ccstd::pmr::unordered_map<LightBoundsCullingKey, LightBoundsCullingID>), mLightCulledResultIndex, _)
+            )
+        }
+
+        STRUCT(DrawQueueID) {
+            PUBLIC(
+                (uint32_t, mValue, 0xFFFFFFFF)
+            );
+            MEMBER_FUNCTIONS(R"(explicit operator uint32_t() const {
+    return value;
+})");
         }
 
         STRUCT(NativeRenderQueueDesc) {
             PUBLIC(
-                (uint32_t, mCulledSource, 0xFFFFFFFF)
-                (uint32_t, mRenderQueueTarget, 0xFFFFFFFF)
+                (FrustumCullingID, mFrustumCulledResultID, _)
+                (LightBoundsCullingID, mLightBoundsCulledResultID, _)
+                (DrawQueueID, mRenderQueueTarget, _)
                 (scene::LightType, mLightType, scene::LightType::UNKNOWN)
             );
-            CNTR(mCulledSource, mRenderQueueTarget, mLightType);
         }
 
         STRUCT(SceneCulling, .mFlags = NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::unordered_map<const scene::RenderScene*, CullingQueries>), mSceneQueries, _)
-                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mCulledResults, _)
+                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mFrustumCulledResults, _)
+
+                ((ccstd::pmr::unordered_map<const scene::RenderScene*, LightBoundsCullingQueries>), mLightCulledQueries, _)
+                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mLightCulledResults, _)
+
                 (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
                 ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mSceneQueryIndex, _)
                 (uint32_t, mNumCullingQueries, 0)
@@ -480,8 +523,8 @@ gfx::Buffer* createFromCpuBuffer();
 void clear() noexcept;
 void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const pipeline::PipelineSceneData& pplSceneData);
 private:
-uint32_t getOrCreateSceneCullingQuery(const SceneData& sceneData);
-uint32_t createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
+FrustumCullingID getOrCreateSceneCullingQuery(const SceneData& sceneData);
+DrawQueueID createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
 void collectCullingQueries(const RenderGraph& rg, const LayoutGraphData& lg);
 void batchCulling(const pipeline::PipelineSceneData& pplSceneData);
 void fillRenderQueues(const RenderGraph& rg, const pipeline::PipelineSceneData& pplSceneData);
