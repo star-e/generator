@@ -458,7 +458,7 @@ gfx::Buffer* createFromCpuBuffer();
 })");
         }
 
-        STRUCT(FrustumCullingQueries) {
+        STRUCT(FrustumCulling) {
             PUBLIC(
                 ((ccstd::pmr::unordered_map<FrustumCullingKey, FrustumCullingID>), mCulledResultIndex, _)
             )
@@ -475,15 +475,16 @@ gfx::Buffer* createFromCpuBuffer();
 
         STRUCT(LightBoundsCullingKey, .mFlags = EQUAL | HASH_COMBINE) {
             PUBLIC(
-                (const scene::Camera*, mCameraTarget, nullptr)
-                (const scene::ReflectionProbe*, mProbeTarget, nullptr)
+                (FrustumCullingID, mFrustumCullingID, _)
+                (const scene::Camera*, mCamera, nullptr)
+                (const scene::ReflectionProbe*, mProbe, nullptr)
                 (const scene::Light*, mCullingLight, nullptr)
             );
         }
 
-        STRUCT(LightBoundsCullingQueries) {
+        STRUCT(LightBoundsCulling) {
             PUBLIC(
-                ((ccstd::pmr::unordered_map<LightBoundsCullingKey, LightBoundsCullingID>), mLightCulledResultIndex, _)
+                ((ccstd::pmr::unordered_map<LightBoundsCullingKey, LightBoundsCullingID>), mResultIndex, _)
             )
         }
 
@@ -507,15 +508,16 @@ gfx::Buffer* createFromCpuBuffer();
 
         STRUCT(SceneCulling, .mFlags = NO_COPY) {
             PUBLIC(
-                ((ccstd::pmr::unordered_map<const scene::RenderScene*, FrustumCullingQueries>), mSceneQueries, _)
-                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mFrustumCulledResults, _)
+                ((ccstd::pmr::unordered_map<const scene::RenderScene*, FrustumCulling>), mFrustumCullings, _)
+                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mFrustumCullingResults, _)
 
-                ((ccstd::pmr::unordered_map<const scene::RenderScene*, LightBoundsCullingQueries>), mLightCulledQueries, _)
-                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mLightCulledResults, _)
+                ((ccstd::pmr::unordered_map<const scene::RenderScene*, LightBoundsCulling>), mLightBoundsCullings, _)
+                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mLightBoundsCullingResults, _)
 
                 (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
                 ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mSceneQueryIndex, _)
-                (uint32_t, mNumCullingQueries, 0)
+                (uint32_t, mNumFrustumCulling, 0)
+                (uint32_t, mNumLightBoundsCulling, 0)
                 (uint32_t, mNumRenderQueues, 0)
                 (uint32_t, mGpuCullingPassID, 0xFFFFFFFF)
             );
@@ -524,6 +526,7 @@ void clear() noexcept;
 void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const pipeline::PipelineSceneData& pplSceneData);
 private:
 FrustumCullingID getOrCreateFrustumCulling(const SceneData& sceneData);
+LightBoundsCullingID getOrCreateLightBoundsCulling(const SceneData& sceneData, FrustumCullingID frustumCullingID);
 NativeRenderQueueID createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
 void collectCullingQueries(const RenderGraph& rg, const LayoutGraphData& lg);
 void batchCulling(const pipeline::PipelineSceneData& pplSceneData);
