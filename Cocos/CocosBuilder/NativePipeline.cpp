@@ -36,7 +36,7 @@ void buildNativePipeline(ModuleBuilder& builder, Features features) {
     MODULE(NativePipeline,
         .mFolder = "cocos/renderer/pipeline/custom",
         .mFilePrefix = "NativePipeline",
-        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "Customization", "InstancedBuffer", "ReflectionProbe", "PrivateTypes" },
+        .mRequires = { "RenderInterface", "PrivateInterface", "LayoutGraph", "RenderGraph", "Customization", "InstancedBuffer", "ReflectionProbe", "PrivateTypes", "Frustum", "AABB" },
         .mFwdHeader = R"(
 namespace cc {
 
@@ -45,6 +45,13 @@ namespace scene {
 class ReflectionProbe;
 
 } // namespace scene
+
+namespace render {
+
+template <class T>
+using Array4 = std::array<T, 4>;
+
+} // namespace render
 
 } // namespace cc
 
@@ -65,6 +72,8 @@ class ReflectionProbe;
 )" ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
+
+        CONTAINER(Array4);
 
         if (false) {
             STRUCT(NativeLayoutGraphBuilder) {
@@ -102,6 +111,11 @@ void setMat4ArraySize(const ccstd::string& name, uint32_t sz);
 void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t id);
 )");
             CNTR(mLayoutGraph, mLayoutID);
+        }
+
+        STRUCT(NativeSetterBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(Setter, NativeSetter)
+            CNTR_EMPTY();
         }
 
         STRUCT(NativeRenderSubpassBuilderImpl, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
@@ -523,13 +537,13 @@ gfx::Buffer* createFromCpuBuffer();
             );
             MEMBER_FUNCTIONS(R"(
 void clear() noexcept;
-void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const pipeline::PipelineSceneData& pplSceneData);
+void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const NativePipeline& ppl);
 private:
 FrustumCullingID getOrCreateFrustumCulling(const SceneData& sceneData);
 LightBoundsCullingID getOrCreateLightBoundsCulling(const SceneData& sceneData, FrustumCullingID frustumCullingID);
 NativeRenderQueueID createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
 void collectCullingQueries(const RenderGraph& rg, const LayoutGraphData& lg);
-void batchFrustumCulling(const pipeline::PipelineSceneData& pplSceneData);
+void batchFrustumCulling(const NativePipeline& ppl);
 void batchLightBoundsCulling();
 void fillRenderQueues(const RenderGraph& rg, const pipeline::PipelineSceneData& pplSceneData);
 public:
@@ -587,6 +601,37 @@ void destroy();
             );
         }
 
+        STRUCT(BuiltinShadowTransform) {
+            PUBLIC(
+                (Mat4, mShadowView, _)
+                (Mat4, mShadowProj, _)
+                (Mat4, mShadowViewProj, _)
+                (geometry::Frustum, mValidFrustum, _)
+                (geometry::Frustum, mSplitFrustum, _)
+                (geometry::Frustum, mLightViewFrustum, _)
+                (geometry::AABB, mCastLightViewBoundingBox, _)
+                (float, mShadowCameraFar, 0)
+                (float, mSplitCameraNear, 0)
+                (float, mSplitCameraFar, 0)
+                (Vec4, mCsmAtlas, _)
+            );
+        }
+
+        STRUCT(BuiltinCascadedShadowMapKey, .mFlags = LESS) {
+            PUBLIC(
+                (const scene::Camera*, mCamera, nullptr)
+                (const scene::DirectionalLight*, mLight, nullptr)
+            )
+        }
+
+        STRUCT(BuiltinCascadedShadowMap) {
+            PUBLIC(
+                (Array4<BuiltinShadowTransform>, mLayers, _)
+                (BuiltinShadowTransform, mSpecialLayer, _)
+                (float, mShadowDistance, 0)
+            );
+        }
+
         STRUCT(NativePipeline, .mFlags = CUSTOM_CNTR) {
             INHERITS(Pipeline);
             PUBLIC(
@@ -605,6 +650,7 @@ void destroy();
                 (NativeRenderContext, mNativeContext, _)
                 (ResourceGraph, mResourceGraph, _)
                 (RenderGraph, mRenderGraph, _)
+                ((mutable PmrFlatMap<BuiltinCascadedShadowMapKey, BuiltinCascadedShadowMap>), mBuiltinCSMs, _)
                 (PipelineStatistics, mStatistics, _)
                 (PipelineCustomization, mCustom, _)
             );

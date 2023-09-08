@@ -105,6 +105,34 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+	MODULE(Frustum,
+        .mFolder = "cocos/core/geometry",
+        .mFilePrefix = "Frustum.h",
+        .mTypescriptFolder = "cocos/core/geometry",
+        .mTypescriptFilePrefix = "frustum") {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(geometry) {
+                IMPORT_CLASS(Frustum);
+            }
+        }
+    }
+
+    MODULE(AABB,
+        .mFolder = "cocos/core/geometry",
+        .mFilePrefix = "AABB.h",
+        .mTypescriptFolder = "cocos/core/geometry",
+        .mTypescriptFilePrefix = "aabb") {
+        ADD_FEATURES(ToJs);
+
+        NAMESPACE(cc) {
+            NAMESPACE(geometry) {
+                IMPORT_CLASS(AABB);
+            }
+        }
+    }
+
     MODULE(Light,
         .mFolder = "cocos/scene",
         .mFilePrefix = "Light.h",) {
