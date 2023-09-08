@@ -460,7 +460,7 @@ gfx::Buffer* createFromCpuBuffer();
 
         STRUCT(FrustumCulling) {
             PUBLIC(
-                ((ccstd::pmr::unordered_map<FrustumCullingKey, FrustumCullingID>), mCulledResultIndex, _)
+                ((ccstd::pmr::unordered_map<FrustumCullingKey, FrustumCullingID>), mResultIndex, _)
             )
         }
         
@@ -529,7 +529,8 @@ FrustumCullingID getOrCreateFrustumCulling(const SceneData& sceneData);
 LightBoundsCullingID getOrCreateLightBoundsCulling(const SceneData& sceneData, FrustumCullingID frustumCullingID);
 NativeRenderQueueID createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
 void collectCullingQueries(const RenderGraph& rg, const LayoutGraphData& lg);
-void batchCulling(const pipeline::PipelineSceneData& pplSceneData);
+void batchFrustumCulling(const pipeline::PipelineSceneData& pplSceneData);
+void batchLightBoundsCulling();
 void fillRenderQueues(const RenderGraph& rg, const pipeline::PipelineSceneData& pplSceneData);
 public:
 )");
