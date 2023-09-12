@@ -376,6 +376,7 @@ struct Parameter {
     bool mReference = false;
     bool mRvalue = false;
     bool mOptional = false;
+    bool mNullable = false;
 };
 
 enum class Doc : uint32_t {

@@ -2189,6 +2189,9 @@ std::pmr::string SyntaxGraph::getTypedParameterName(
             result += "unknown";
         } else {
             result += typeName;
+            if (p.mNullable) {
+                result += " | null";
+            }
             if (bOptional && bReturn) {
                 // currently, reference is not supported
                 // we must use pointer

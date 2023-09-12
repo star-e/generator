@@ -458,8 +458,9 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
                 (CullingFlags, mCullingFlags, CullingFlags::CAMERA_FRUSTUM)
+                ([[optional]] IntrusivePtr<scene::Light>, mShadingLight, _)
             );
-            CNTR(mScene, mCamera, mFlags, mLight, mCullingFlags);
+            CNTR(mScene, mCamera, mFlags, mLight, mCullingFlags, mShadingLight);
         }
 
         STRUCT(Dispatch) {

@@ -1083,6 +1083,11 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                     OSS << "}\n";
 
                     oss << "\n";
+                    OSS << "constexpr " << name << " operator~(" << name << " e) noexcept {\n";
+                    OSS << "    return static_cast<" << name << ">(~static_cast<std::underlying_type_t<" << name << ">>(e));\n";
+                    OSS << "}\n";
+
+                    oss << "\n";
                     OSS << "constexpr bool any(" << name << " e) noexcept {\n";
                     OSS << "    return !!e;\n";
                     OSS << "}\n";
