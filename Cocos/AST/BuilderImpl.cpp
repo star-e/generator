@@ -2093,7 +2093,7 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
 }
 
 std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p,
-    bool bPublic, bool bFull, bool bOptional) const {
+    bool bPublic, bool bFull, bool bOptional, bool bReturn) const {
     const auto& g = mSyntaxGraph;
     auto scratch = mScratch;
 
@@ -2106,10 +2106,10 @@ std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p,
     if (bFull || !g.isTypescriptData(typeName)) {
         result += ": ";
         result += typeName;
-        if (bOptional) {
+        if (bOptional && bReturn) {
             // currently, reference is not supported
             // we must use pointer
-            result += " | null";
+            result += " | undefined";
         }
     }
 

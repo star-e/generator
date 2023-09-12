@@ -139,6 +139,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
                 (DRAW_NON_INSTANCING, 0x1000)
                 (REFLECTION_PROBE, 0x2000)
                 (GPU_DRIVEN, 0x4000)
+                (NON_BUILTIN, 0x8000)
                 (ALL, 0xFFFFFFFF)
             );
         }

@@ -464,13 +464,19 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 } else {
                     oss << "readonly " << methodName;
                 }
+                if (method.mOptionalMethod) {
+                    oss << "?";
+                }
                 oss << ": ";
-                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional, true);
                 oss << ";\n";
             } else {
                 oss << "readonly " << methodName;
+                if (method.mOptionalMethod) {
+                    oss << "?";
+                }
                 oss << ": ";
-                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional, true);
                 oss << ";\n";
             }
         } else if (method.mSetter) {
@@ -510,7 +516,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             oss << ")";
             if (!method.mSetter) {
                 oss << ": ";
-                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional);
+                oss << g.getTypedParameterName(method.mReturnType, true, true, method.mOptional, true);
             } else {
                 oss << ": void";
             }

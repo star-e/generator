@@ -1344,7 +1344,7 @@ struct SyntaxGraph {
         std::pmr::memory_resource* mr,
         std::pmr::memory_resource* scratch) const;
 
-    std::pmr::string getTypedParameterName(const Parameter& p, bool bPublic, bool bFull = false, bool bOptional = false) const;
+    std::pmr::string getTypedParameterName(const Parameter& p, bool bPublic, bool bFull = false, bool bOptional = false, bool bReturn = false) const;
 
     PmrMap<std::pmr::string, PmrSet<std::pmr::string>> getImportedTypes(
         std::string_view modulePath, std::pmr::memory_resource* mr) const;

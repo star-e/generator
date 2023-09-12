@@ -174,7 +174,26 @@ bool hasSideEffects() const noexcept {
             CNTR(mBuffer);
         }
 
+        STRUCT(PersistentBuffer, .mFlags = POOL_OBJECT) {
+            PUBLIC(
+                ([[optional]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
+                (uint64_t, mFenceValue, 0)
+            );
+            CNTR(mBuffer);
+        }
+
         STRUCT(ManagedTexture, .mFlags = POOL_OBJECT) {
+            PUBLIC(
+                ([[optional]] IntrusivePtr<gfx::Texture>, mTexture, _)
+                (uint64_t, mFenceValue, 0)
+            );
+            CNTR(mTexture);
+            MEMBER_FUNCTIONS(R"(
+bool checkResource(const ResourceDesc &desc) const;
+)");
+        }
+
+        STRUCT(PersistentTexture, .mFlags = POOL_OBJECT) {
             PUBLIC(
                 ([[optional]] IntrusivePtr<gfx::Texture>, mTexture, _)
                 (uint64_t, mFenceValue, 0)
@@ -305,8 +324,8 @@ bool checkResource(const ResourceDesc &desc) const;
                 (Managed_, ManagedResource, mResources)
                 (ManagedBuffer_, ManagedBuffer, mManagedBuffers)
                 (ManagedTexture_, ManagedTexture, mManagedTextures)
-                (PersistentBuffer_, IntrusivePtr<gfx::Buffer>, mBuffers)
-                (PersistentTexture_, IntrusivePtr<gfx::Texture>, mTextures)
+                (PersistentBuffer_, PersistentBuffer, mBuffers)
+                (PersistentTexture_, PersistentTexture, mTextures)
                 (Framebuffer_, IntrusivePtr<gfx::Framebuffer>, mFramebuffers)
                 (Swapchain_, RenderSwapchain, mSwapchains)
                 (FormatView_, FormatView, mFormatViews)

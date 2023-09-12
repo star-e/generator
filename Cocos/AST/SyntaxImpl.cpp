@@ -2173,7 +2173,8 @@ std::pmr::string SyntaxGraph::getTypescriptGraphPolymorphicVariant(const Graph& 
     return oss.str();
 }
 
-std::pmr::string SyntaxGraph::getTypedParameterName(const Parameter& p, bool bPublic, bool bFull, bool bOptional) const {
+std::pmr::string SyntaxGraph::getTypedParameterName(
+    const Parameter& p, bool bPublic, bool bFull, bool bOptional, bool bReturn) const {
     const auto& g = *this;
     auto scratch = mScratch;
 
@@ -2188,10 +2189,10 @@ std::pmr::string SyntaxGraph::getTypedParameterName(const Parameter& p, bool bPu
             result += "unknown";
         } else {
             result += typeName;
-            if (bOptional) {
+            if (bOptional && bReturn) {
                 // currently, reference is not supported
                 // we must use pointer
-                result += " | null";
+                result += " | undefined";
             }
         }
     }

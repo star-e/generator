@@ -488,7 +488,7 @@ struct ModuleBuilder {
     // Generation
     int compile();
     std::pmr::string getTypedMemberName(const Member& m, bool bPublic, bool bFull = false) const;
-    std::pmr::string getTypedParameterName(const Parameter& m, bool bPublic, bool bFull = false, bool bOptional = false) const;
+    std::pmr::string getTypedParameterName(const Parameter& m, bool bPublic, bool bFull = false, bool bOptional = false, bool bReturn = false) const;
 
     std::pmr::string getTypescriptVertexName(SyntaxGraph::vertex_descriptor vertID,
         std::string_view descName) const;

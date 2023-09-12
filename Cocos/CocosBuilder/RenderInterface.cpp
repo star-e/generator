@@ -80,8 +80,6 @@ using namespace cc::render;
 %release_returned_cpp_object_in_gc(cc::render::RenderPassBuilder::addComputeSubpass);
 %release_returned_cpp_object_in_gc(cc::render::ComputePassBuilder::addQueue);
 %release_returned_cpp_object_in_gc(cc::render::RenderQueueBuilder::addScene);
-%release_returned_cpp_object_in_gc(cc::render::RenderQueueBuilder::addSceneCulledByDirectionalLight);
-%release_returned_cpp_object_in_gc(cc::render::RenderQueueBuilder::addSceneCulledBySpotLight);
 %release_returned_cpp_object_in_gc(cc::render::Pipeline::addRenderPass);
 %release_returned_cpp_object_in_gc(cc::render::Pipeline::addComputePass);
 )",
@@ -229,8 +227,15 @@ virtual void setBuiltinSphereLightConstants(const scene::SphereLight* light, con
 virtual void setBuiltinSpotLightConstants(const scene::SpotLight* light, const scene::Camera* camera) = 0;
 virtual void setBuiltinPointLightConstants(const scene::PointLight* light, const scene::Camera* camera) = 0;
 virtual void setBuiltinRangedDirectionalLightConstants(const scene::RangedDirectionalLight* light, const scene::Camera* camera) = 0;
-virtual void setBuiltinDirectionalLightViewConstants(const scene::Camera* camera, const scene::DirectionalLight* light, uint32_t level = 0) = 0;
-virtual void setBuiltinSpotLightViewConstants(const scene::SpotLight* light) = 0;
+virtual void setBuiltinDirectionalLightFrustumConstants(const scene::Camera* camera, const scene::DirectionalLight* light, uint32_t csmLevel = 0) = 0;
+virtual void setBuiltinSpotLightFrustumConstants(const scene::SpotLight* light) = 0;
+)");
+        }
+
+        INTERFACE(SceneBuilder) {
+            INHERITS(Setter);
+            PUBLIC_METHODS(R"(
+virtual void useLightFrustum(IntrusivePtr<scene::Light> light, uint32_t csmLevel = 0, [[optional]] const scene::Camera* optCamera = nullptr) = 0;
 )");
         }
 
@@ -238,9 +243,7 @@ virtual void setBuiltinSpotLightViewConstants(const scene::SpotLight* light) = 0
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
-virtual Setter *addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] const scene::Light* light = nullptr) = 0;
-virtual Setter *addSceneCulledByDirectionalLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::DirectionalLight* light, uint32_t level) = 0;
-virtual Setter *addSceneCulledBySpotLight(const scene::Camera* camera, SceneFlags sceneFlags, scene::SpotLight* light) = 0;
+virtual SceneBuilder *addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] scene::Light* light = nullptr) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;

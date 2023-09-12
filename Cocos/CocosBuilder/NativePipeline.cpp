@@ -113,8 +113,8 @@ void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t i
             CNTR(mLayoutGraph, mLayoutID);
         }
 
-        STRUCT(NativeSetterBuilder, .mFlags = NO_DEFAULT_CNTR) {
-            INHERITS(Setter, NativeSetter)
+        STRUCT(NativeSceneBuilder, .mFlags = NO_DEFAULT_CNTR) {
+            INHERITS(SceneBuilder, NativeSetter)
             CNTR_EMPTY();
         }
 
