@@ -470,6 +470,8 @@ virtual void addBuiltinHzbGenerationPass(const std::string& sourceDepthStencilNa
         INTERFACE(PipelineBuilder) {
             PUBLIC_METHODS(R"(
 virtual void setup(const ccstd::vector<scene::Camera*>& cameras, BasicPipeline* pipeline) = 0;
+
+[[?]] virtual void onGlobalPipelineStateChanged() = 0;
 )");
         }
 
