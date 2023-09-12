@@ -305,9 +305,9 @@ bool checkResource(const ResourceDesc &desc) const;
                 (uint16_t, mNumArraySlices, 0)
                 (uint16_t, mFirstPlane, 0)
                 (uint16_t, mNumPlanes, 0)
-                (gfx::TextureType, mViewType, gfx::TextureType::TEX2D)
+                //(gfx::TextureType, mViewType, gfx::TextureType::TEX2D)
             );
-            MEMBER_FLAGS(mViewType, IMPL_DETAIL);
+            //MEMBER_FLAGS(mViewType, IMPL_DETAIL);
         }
 
         PMR_GRAPH(ResourceGraph, _, _, .mFlags = NO_MOVE_NO_COPY) {
