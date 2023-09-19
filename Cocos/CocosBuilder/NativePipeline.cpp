@@ -276,9 +276,9 @@ void add(const scene::Pass& pass, scene::SubModel& submodel, uint32_t passID);
 void sort();
 void uploadBuffers(gfx::CommandBuffer *cmdBuffer) const;
 void recordCommandBuffer(
-    gfx::RenderPass *renderPass, gfx::CommandBuffer *cmdBuffer,
-    gfx::DescriptorSet *ds = nullptr, uint32_t offset = 0,
-    const ccstd::vector<uint32_t> *dynamicOffsets = nullptr) const;
+    gfx::RenderPass *renderPass, uint32_t subpassIndex,
+    gfx::CommandBuffer *cmdBuffer,
+    uint32_t lightByteOffset = 0xFFFFFFFF) const;
 )");
         }
 
@@ -320,9 +320,10 @@ void applyMacro(const LayoutGraphData &lg, const scene::Model& model, LayoutGrap
 void add(const scene::Model& model, float depth, uint32_t subModelIdx, uint32_t passIdx);
 void sortOpaqueOrCutout();
 void sortTransparent();
-void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
-    gfx::RenderPass *renderPass, gfx::CommandBuffer *cmdBuffer,
-    uint32_t subpassIndex) const;
+void recordCommandBuffer(
+    gfx::RenderPass *renderPass, uint32_t subpassIndex,
+    gfx::CommandBuffer *cmdBuffer,
+    uint32_t lightByteOffset = 0xFFFFFFFF) const;
 )");
         }
 
@@ -336,6 +337,7 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
                 (RenderInstancingQueue, mTransparentInstancingQueue, _)
                 (SceneFlags, mSceneFlags, SceneFlags::NONE)
                 (uint32_t, mSubpassOrPassLayoutID, 0xFFFFFFFF)
+                (uint32_t, mLightByteOffset, 0xFFFFFFFF)
                 //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
                 //(ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
                 //(ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
@@ -346,6 +348,8 @@ void recordCommandBuffer(gfx::Device *device, const scene::Camera *camera,
 void sort();
 void clear() noexcept;
 bool empty() const noexcept;
+void recordCommands(
+    gfx::CommandBuffer *cmdBuffer, gfx::RenderPass *renderPass, uint32_t subpassIndex) const;
 )");
         }
 
@@ -423,7 +427,7 @@ gfx::Buffer* createFromCpuBuffer();
 
         STRUCT(LayoutGraphNodeResource, .mFlags = NO_COPY) {
             PUBLIC(
-                ((PmrFlatMap<NameLocalID, UniformBlockResource>), mUniformBuffers, _)
+                ((ccstd::pmr::unordered_map<NameLocalID, UniformBlockResource>), mUniformBuffers, _)
                 (DescriptorSetPool, mDescriptorSetPool, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ProgramResource>), mProgramResources, _)
             );
@@ -520,13 +524,20 @@ gfx::Buffer* createFromCpuBuffer();
             );
         }
 
+        STRUCT(LightBoundsCullingResult) {
+            PUBLIC(
+                (ccstd::vector<const scene::Model*>, mInstances, _)
+                (uint32_t, mLightByteOffset, 0xFFFFFFFF)
+            );
+        }
+
         STRUCT(SceneCulling, .mFlags = NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::unordered_map<const scene::RenderScene*, FrustumCulling>), mFrustumCullings, _)
                 (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mFrustumCullingResults, _)
 
                 ((ccstd::pmr::unordered_map<const scene::RenderScene*, LightBoundsCulling>), mLightBoundsCullings, _)
-                (ccstd::pmr::vector<ccstd::vector<const scene::Model*>>, mLightBoundsCullingResults, _)
+                (ccstd::pmr::vector<LightBoundsCullingResult>, mLightBoundsCullingResults, _)
 
                 (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
                 ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mRenderQueueIndex, _)
@@ -550,6 +561,34 @@ public:
 )");
         }
 
+        STRUCT(LightResource, .mFlags = NO_MOVE_NO_COPY) {
+            PUBLIC(
+                (ccstd::pmr::vector<char>, mCpuBuffer, _)
+                (const NativeProgramLibrary*, mProgramLibrary, nullptr)
+                (gfx::Device*, mDevice, nullptr)
+                (uint32_t, mElementSize, 0)
+                (uint32_t, mMaxNumLights, 16)
+                (uint32_t, mBinding, 0xFFFFFFFF)
+                (bool, mResized, false)
+                (IntrusivePtr<gfx::Buffer>, mLightBuffer, _)
+                (IntrusivePtr<gfx::Buffer>, mFirstLightBufferView, _)
+                (ccstd::pmr::vector<const scene::Light*>, mLights, _)
+                ((PmrFlatMap<const scene::Light*, uint32_t>), mLightIndex, _)
+            );
+            MEMBER_FUNCTIONS(R"(
+void init(const NativeProgramLibrary& programLib, gfx::Device* deviceIn, uint32_t maxNumLights);
+void buildLights(
+    SceneCulling& sceneCulling,
+    bool bHDR,
+    const scene::Shadows* shadowInfo);
+void tryUpdateRenderSceneLocalDescriptorSet(const SceneCulling& sceneCulling);
+void clear();
+
+uint32_t addLight(const scene::Light* light, bool bHDR, float exposure, const scene::Shadows *shadowInfo);
+void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
+)");
+        }
+
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
                 (std::unique_ptr<gfx::DefaultResource>, mDefaultResource, _)
@@ -559,6 +598,7 @@ public:
                 ((ccstd::pmr::unordered_map<const scene::RenderScene*, SceneResource>), mRenderSceneResources, _)
                 (QuadResource, mFullscreenQuad, _)
                 (SceneCulling, mSceneCulling, _)
+                (LightResource, mLightResources, _)
             );
             MEMBER_FUNCTIONS(R"(
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;

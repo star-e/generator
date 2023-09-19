@@ -217,7 +217,11 @@ bool SyntaxGraph::isPmr(vertex_descriptor vertID) const noexcept {
             }
 
             for (const auto& typePath : s.mParameters) {
-                auto paramID = locate(typePath, g);
+                const auto typeInfo = extractType(typePath);
+                if (typeInfo.mPointer) {
+                    return false;
+                }
+                auto paramID = locate(typeInfo.mShortName, g);
                 const auto& traits = get(g.traits, g, paramID);
                 Expects(!traits.mPmr);
             }
