@@ -371,7 +371,13 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 }
                 {
                     INDENT();
-                    OSS << "const v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                    OSS << "let v: " << name << ";\n";
+                    OSS << "if (this.debug) {\n";
+                    OSS << "    v = new " << name << "();\n";
+                    OSS << "} else {\n";
+                    OSS << "    v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                    OSS << "    v._pool = true;\n";
+                    OSS << "}\n";
                     if (pStruct) {
                         if (traits.mFlags & SKIP_RESET) {
                             for (uint32_t i = 0; const auto& m : pStruct->mMembers) {
@@ -413,6 +419,8 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             OSS << "private readonly _" << camelToVariable(name, scratch)
                 << ": RecyclePool<" << name << ">;\n";
         }
+
+        OSS << "public debug = false;\n";
     }
 
     OSS << "}\n";

@@ -583,6 +583,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
 
         ++i;
     }
+    OSS << "_pool?: boolean;\n";
 }
 
 namespace {
