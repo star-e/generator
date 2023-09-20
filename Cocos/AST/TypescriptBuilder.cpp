@@ -365,6 +365,12 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                             g, pStruct->mMembers, *pCntr, true, false, scratch);
                     }
                     if (count) {
+                        INDENT();
+                        OSS << "isDebug = true,\n";
+                    } else {
+                        oss << "isDebug = true";
+                    }
+                    if (count) {
                         OSS;
                     }
                     oss << "): " << name << " {\n";
@@ -372,7 +378,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 {
                     INDENT();
                     OSS << "let v: " << name << ";\n";
-                    OSS << "if (this.debug) {\n";
+                    OSS << "if (isDebug) {\n";
                     OSS << "    v = new " << name << "();\n";
                     OSS << "} else {\n";
                     OSS << "    v = this._" << camelToVariable(name, scratch) << ".add();\n";
