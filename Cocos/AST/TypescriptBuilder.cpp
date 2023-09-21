@@ -364,11 +364,13 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                         outputConstructionParams(oss, space, count, builder, true,
                             g, pStruct->mMembers, *pCntr, true, false, scratch);
                     }
-                    if (count) {
-                        INDENT();
-                        OSS << "isDebug = true,\n";
-                    } else {
-                        oss << "isDebug = true";
+                    if (kOutputPoolDebug) {
+                        if (count) {
+                            INDENT();
+                            OSS << "isDebug = true,\n";
+                        } else {
+                            oss << "isDebug = true";
+                        }
                     }
                     if (count) {
                         OSS;
@@ -377,13 +379,18 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 }
                 {
                     INDENT();
-                    OSS << "let v: " << name << ";\n";
-                    OSS << "if (isDebug) {\n";
-                    OSS << "    v = new " << name << "();\n";
-                    OSS << "} else {\n";
-                    OSS << "    v = this._" << camelToVariable(name, scratch) << ".add();\n";
-                    OSS << "    v._pool = true;\n";
-                    OSS << "}\n";
+                    if (kOutputPoolDebug) {
+                        OSS << "let v: " << name << ";\n";
+                        OSS << "if (isDebug) {\n";
+                        OSS << "    v = new " << name << "();\n";
+                        OSS << "} else {\n";
+                        OSS << "    v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                        OSS << "    v._pool = true;\n";
+                        OSS << "}\n";
+                    } else {
+                        OSS << "const v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                    }
+
                     if (pStruct) {
                         if (traits.mFlags & SKIP_RESET) {
                             for (uint32_t i = 0; const auto& m : pStruct->mMembers) {
@@ -425,8 +432,9 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             OSS << "private readonly _" << camelToVariable(name, scratch)
                 << ": RecyclePool<" << name << ">;\n";
         }
-
-        OSS << "public debug = false;\n";
+        if (kOutputPoolDebug) {
+            OSS << "public debug = false;\n";
+        }
     }
 
     OSS << "}\n";

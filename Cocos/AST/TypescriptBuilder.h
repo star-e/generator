@@ -93,4 +93,6 @@ std::pmr::string generateSerialization_ts(
     std::pmr::memory_resource* mr,
     std::pmr::memory_resource* scratch);
 
+static constexpr bool kOutputPoolDebug = false;
+
 }
