@@ -462,6 +462,28 @@ std::string_view removeCvPointerRef(std::string_view typePath) {
     return typePath;
 }
 
+std::string_view peel(std::string_view typePath) {
+    bool bConst = false;
+    bool bVolatile = false;
+    if (typePath.starts_with("const ")) {
+        typePath = typePath.substr(6);
+        bConst = true;
+    }
+    if (typePath.starts_with("volatile ")) {
+        typePath = typePath.substr(6);
+        bVolatile = true;
+    }
+    Expects(!(bConst && bVolatile));
+
+    if (typePath.ends_with(">")) {
+        const auto left = typePath.find_first_of('<');
+        Expects(left != std::string::npos);
+        typePath = typePath.substr(left + 1, typePath.length() - left - 2);
+    }
+
+    return typePath;
+}
+
 // Struct
 std::pmr::string camelToVariable(std::string_view camelName,
     std::pmr::memory_resource* scratch) {
