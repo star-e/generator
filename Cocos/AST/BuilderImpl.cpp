@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include "ToJsBuilder.h"
 #include "CppMethod.h"
 #include "SwigConfig.h"
+#include "WasmBuilder.h"
 
 namespace Cocos::Meta {
 
@@ -1686,6 +1687,27 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         copyString(oss, generateSerialization_h(mProjectName, mSyntaxGraph,
             mModuleGraph, modulePath, false, scratch, scratch));
         updateFile(filename, reorderIncludes(oss.str(), scratch));
+    }
+
+    if (features & Features::WASM) {
+        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Wasm.h", scratch);
+        std::filesystem::path filename = cppFolder / shortname;
+        files.emplace(std::move(shortname));
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+        std::pmr::string space(scratch);
+        std::pmr::set<std::pmr::string> graphImports(scratch);
+        int count = 0;
+        {
+            auto imported = g.getImportedTypes(modulePath, scratch);
+        }
+
+        generateWASMExports(oss, space, moduleID, *this, "", graphImports, scratch);
+
+        pmr_ostringstream oss2(std::ios_base::out, scratch);
+        outputComment(oss2);
+        
+        copyString(oss2, oss.str());
+        updateFile(filename, oss2.str());
     }
 }
 

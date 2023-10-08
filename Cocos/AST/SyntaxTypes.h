@@ -1443,6 +1443,8 @@ enum Features : uint32_t {
     Jsb = 1 << 9,
     ToJs = 1 << 10,
     Interface = 1 << 11,
+    TsPool = 1 << 12,
+    WASM = 1 << 13,
 };
 
 constexpr Features operator|(const Features lhs, const Features rhs) noexcept {
@@ -1487,6 +1489,7 @@ struct ModuleInfo {
     std::string mToJsConfigs;
     std::string mTypescriptFolder;
     std::string mTypescriptFilePrefix;
+    std::string mToWasmFilename;
     std::string mAPI;
     std::vector<std::string> mRequires;
     std::string mHeader;

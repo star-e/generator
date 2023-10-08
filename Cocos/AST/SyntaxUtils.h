@@ -74,6 +74,7 @@ struct ParameterTraits {
 
 ParameterTraits getParameterTraits(std::string_view typePath);
 std::string_view removeCvPointerRef(std::string_view typePath);
+std::string_view peel(std::string_view typePath);
 
 // Struct
 std::pmr::string camelToVariable(std::string_view name,

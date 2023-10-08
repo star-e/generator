@@ -1849,13 +1849,17 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID,
             if (g.isTypescriptArray(vertID, scratch)) {
                 Expects(instance.mParameters.size() == 1);
                 const auto& param = instance.mParameters.front();
-                const auto paramPath = removeCvPointerRef(param);
+                std::string_view p = param;
+                while (p.ends_with('>') && p.find("vector<") != std::string::npos) {
+                    result.append("[]");
+                    p = peel(p);
+                }
+                const auto paramPath = removeCvPointerRef(p);
                 auto paramID = locate(paramPath, g);
                 Expects(paramID != g.null_vertex());
                 auto paramName = g.getTypescriptTypename(paramID, scratch, scratch);
                 Expects(!paramName.empty());
-                result.append(paramName);
-                result.append("[]");   
+                result.insert(0, paramName.c_str());
             } else {
                 if (templateTS.mName == "_") {
                     // is removed
