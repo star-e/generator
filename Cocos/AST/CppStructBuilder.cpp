@@ -1055,6 +1055,9 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                 if (bNoexcept && !bPmr) {
                     OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
                 } else {
+                    //if (bPmr) {
+                    //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
+                    //}
                     OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
                 }
                 break;
@@ -1063,12 +1066,18 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     if (bNoexcept && !bPmr) {
                         OSS << api << name << "& operator=(" << name << "&& rhs) noexcept;\n";
                     } else {
+                        //if (bPmr) {
+                        //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
+                        //}
                         OSS << api << name << "& operator=(" << name << "&& rhs);\n";
                     }
                 } else {
                     if (bNoexcept && !bPmr) {
                         OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
                     } else {
+                        //if (bPmr) {
+                        //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
+                        //}
                         OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
                     }
                 }

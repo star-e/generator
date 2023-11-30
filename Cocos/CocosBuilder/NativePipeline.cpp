@@ -545,6 +545,7 @@ gfx::Buffer* createFromCpuBuffer();
                 (uint32_t, mNumLightBoundsCulling, 0)
                 (uint32_t, mNumRenderQueues, 0)
                 (uint32_t, mGpuCullingPassID, 0xFFFFFFFF)
+                (bool, mEnableLightCulling, true)
             );
             MEMBER_FUNCTIONS(R"(
 void clear() noexcept;
