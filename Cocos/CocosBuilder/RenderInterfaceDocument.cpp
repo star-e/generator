@@ -65,7 +65,14 @@ Geometry renderer is used to render procedural geometries.
 )");
         METHOD_COMMENT(getShadingScale, R"(@en Get shading scale.
 Shading scale affects shading texels per pixel.
+Currently it affects classic native forward pipeline and builtin custom pipeline.
+Users can change the size of the render targets according to the shading scale,
+when writing their own custom pipelines.
+To change screen size, please check director.root.resize.
 @zh 获得渲染倍率(ShadingScale)，每像素(pixel)绘制的纹素(texel)会根据渲染倍率进行调整。
+目前仅对原有原生Forward管线以及内置自定义管线生效。
+用户编写自定义管线时，可以根据渲染倍率进行渲染目标尺寸大小的调整。
+如果要修改屏幕大小，详见director.root.resize。
 )");
         METHOD_COMMENT(getMacroString, R"(@en Get macro as string.
 @zh 根据宏名获得字符串
@@ -230,14 +237,90 @@ Type of the sampler should match the one in shader.
 不匹配会引起未定义行为。
 @param name @en descriptor name in shader. @zh 填写着色器中的描述符(descriptor)名字
 )");
+        METHOD_COMMENT(setBuiltinCameraConstants, R"(@en Set builtin camera constants of CCCamera, such as cc_matView.
+For list of constants, please check CCCamera in cc-global.chunk.
+@zh 设置内置相机常量，例如cc_matView。
+具体常量见cc-global.chunk中的CCCamera.
+@param camera @en The camera instance to be set. @zh 当前相机
+)");
+        METHOD_COMMENT(setBuiltinShadowMapConstants, R"(@en Same as setBuiltinDirectionalLightConstants
+@zh 同setBuiltinDirectionalLightConstants
+@param light @en The main light. @zh 主光
+)");
+        METHOD_COMMENT(setBuiltinDirectionalLightConstants, R"(@en Set builtin directional light and shadow constants.
+For list of constants, please check CCShadow in cc-shadow.chunk and CCCamera in cc-global.chunk.
+@zh 设置内置方向光与阴影常量。
+具体常量见cc-shadow.chunk中的CCShadow与cc-global.chunk中的CCCamera。
+@param light @en The main light. @zh 主光
+@param camera @en The camera instance to be set. @zh 当前相机
+)");
+        METHOD_COMMENT(setBuiltinSphereLightConstants, R"(@en Set builtin sphere light and shadow constants.
+For list of constants, please check CCShadow in cc-shadow.chunk and CCForwardLight in cc-forward-light.chunk.
+@zh 设置内置球形光与阴影常量。
+具体常量见cc-shadow.chunk中的CCShadow与cc-forward-light.chunk中的CCForwardLight。
+@param light @en The sphere light. @zh 球形光源
+@param camera @en The camera instance to be set. @zh 当前相机
+)");
+        METHOD_COMMENT(setBuiltinSpotLightConstants, R"(@en Set builtin spot light and shadow constants.
+For list of constants, please check CCShadow in cc-shadow.chunk and CCForwardLight in cc-forward-light.chunk.
+@zh 设置内置探照光与阴影常量。
+具体常量见cc-shadow.chunk中的CCShadow与cc-forward-light.chunk中的CCForwardLight。
+@param light @en The spot light. @zh 探照光源
+@param camera @en The camera instance to be set. @zh 当前相机
+)");
+        METHOD_COMMENT(setBuiltinPointLightConstants, R"(@en Set builtin point light and shadow constants.
+For list of constants, please check CCShadow in cc-shadow.chunk and CCForwardLight in cc-forward-light.chunk.
+@zh 设置内置点光与阴影常量。
+具体常量见cc-shadow.chunk中的CCShadow与cc-forward-light.chunk中的CCForwardLight。
+@param light @en The point light. @zh 点光源
+@param camera @en The camera instance to be set. @zh 当前相机
+)");
+        METHOD_COMMENT(setBuiltinRangedDirectionalLightConstants, R"(@en Set builtin ranged directional light and shadow constants.
+For list of constants, please check CCShadow in cc-shadow.chunk and CCForwardLight in cc-forward-light.chunk.
+@zh 设置内置区间平行光与阴影常量。
+具体常量见cc-shadow.chunk中的CCShadow与cc-forward-light.chunk中的CCForwardLight。
+@param light @en The ranged directional light. @zh 区间平行光源
+@param camera @en The camera instance to be set. @zh 当前相机
+)");
+        METHOD_COMMENT(setBuiltinDirectionalLightFrustumConstants, R"(@en Set builtin directional light frustum and shadow constants.
+These constants are used in builtin shadow map, cascaded shadow map and planar shadow.
+For list of constants, please check CCShadow in cc-shadow.chunk and CCCSM in cc-csm.chunk.
+@zh 设置内置平行光视锥与阴影常量。
+这些常量用于内置的阴影、级联阴影与平面阴影。
+具体常量见cc-shadow.chunk中的CCShadow与cc-csm.chunk中的CCCSM。
+@param light @en The directional light. @zh 平行光源
+@param camera @en The camera instance to be set. @zh 当前相机
+@param csmLevel @en Curent level of cascaded shadow map @zh 级联阴影等级
+)");
+        METHOD_COMMENT(setBuiltinSpotLightFrustumConstants, R"(@en Set builtin spot light frustum and shadow constants.
+These constants are used in builtin shadow map.
+For list of constants, please check CCShadow in cc-shadow.chunk.
+@zh 设置内置探照光视锥与阴影常量。
+这些常量用于内置的阴影。
+具体常量见cc-shadow.chunk中的CCShadow。
+@param light @en The spot light. @zh 探照光源
+)");
     }
-    
+
     auto setViewport = [&](uint32_t vertID){
         builder.addMethodComment(vertID, "setViewport", R"(@en Set rendering viewport.
 @zh 设置渲染视口
 @param viewport @en The required viewport @zh 所需视口
 )");
     };
+
+    COMMENT(SceneBuilder, R"(@en Scene
+A scene is an abstraction of content for rendering.
+@zh 场景。需要绘制的场景内容。
+)") {
+        METHOD_COMMENT(useLightFrustum, R"(@en Use the frustum information of light instead of camera.
+Often used in building shadow map.
+@zh 使用光源视锥进行投影，而不是用相机。常用于shadow map的生成。
+@param light @en The light used for projection @zh 用于投影的光源
+@param csmLevel @en Curent level of cascaded shadow map @zh 级联阴影等级
+@param optCamera @en Additional scene culling camera. @zh 额外的场景裁切相机
+)");
+    }
 
     COMMENT(RenderQueueBuilder, R"(@en Render queue
 A render queue is an abstraction of graphics commands submission.
@@ -251,6 +334,15 @@ the next render queue will start submitting.
 @param camera @en Required camera @zh 所需相机
 @param light @en Lighting information of the scene @zh 场景光照信息
 @param sceneFlags @en Rendering flags of the scene @zh 场景渲染标志位
+)");
+        METHOD_COMMENT(addScene, R"(@en Add the scene to be rendered.
+If SceneFlags.NON_BUILTIN is specified, no builtin constants will be set.
+Otherwise, related builtin constants will be set automatically.
+@zh 添加需要绘制的场景。
+如果设置了SceneFlags.NON_BUILTIN，那么不会自动设置内置常量。
+@param camera @en Camera used for projection @zh 用于投影的相机
+@param sceneFlags @en Rendering flags of the scene @zh 场景渲染标志位
+@param light @en Light used for lighting computation @zh 用于光照的光源
 )");
         METHOD_COMMENT(addFullscreenQuad, R"(@en Render a full-screen quad.
 @zh 渲染全屏四边形
@@ -373,15 +465,35 @@ Every render queue has a phase name. Only objects of the same phase name will be
         showStatistics(vertID);
     }
 
+    COMMENT(BasicMultisampleRenderPassBuilder, R"(@en Basic multisample render pass builder
+Support resolve render targets and depth stencil.
+This render pass only contains one render subpass.
+If resolve targets are specified, they will be resolved at the end of the render pass.
+After resolving, the contents of multisample render targets and depth stencils are unspecified.
+@zh 基础的多重采样渲染通道。支持决算(Resolve)渲染目标与深度缓冲。
+此渲染通道只包含一个渲染子通道。
+如果添加了决算对象，那么在渲染通道结束时，会进行决算。
+决算后多重采样渲染目标与深度缓冲的内容是未定义的。
+)") {
+        METHOD_COMMENT(resolveRenderTarget, R"(@en Set resolve render target
+@zh 设置决算渲染目标
+)");
+        METHOD_COMMENT(resolveDepthStencil, R"(@en Set resolve depth stencil
+@zh 设置决算深度模板缓冲
+)");
+    }
+
     COMMENT(BasicPipeline, R"(@en BasicPipeline
 Basic pipeline provides basic rendering features which are supported on all platforms.
 User can register resources which will be used in the render graph.
 Theses resources are generally read and write, and will be managed by the pipeline.
+The residency information of resource should not be changed after registration.
 In each frame, user can create a render graph to be executed by the pipeline.
 @zh 基础渲染管线。
 基础渲染管线提供基础的渲染能力，能在全平台使用。
 用户可以在渲染管线中注册资源，这些资源将由管线托管，用于render graph。
 这些资源一般是可读写的资源。
+资源在注册后，不能更改驻留属性。
 用户可以每帧构建一个render graph，然后交由管线执行。
 )") {
         METHOD_COMMENT(beginSetup, R"(@engineInternal
@@ -392,13 +504,17 @@ In each frame, user can create a render graph to be executed by the pipeline.
 @en End render pipeline setup
 @zh 结束管线构建
 )");
+        METHOD_COMMENT(getEnableCpuLightCulling, R"(@en Enable cpu culling of objects affected by the light. Enabled by default.
+@zh 光照计算时，裁切受光源影响的物件。默认开启。
+)");
+
         METHOD_COMMENT(containsResource, R"(@en Check whether the resource has been registered in the pipeline.
 @zh 检查资源是否在管线中已注册
 @param name @en Resource name @zh 资源名字
 @returns Exist or not
 )");
-        METHOD_COMMENT(addRenderWindow, R"(@en Add render window to the pipeline.
-@zh 注册渲染窗口(RenderWindow)
+        METHOD_COMMENT(addRenderWindow, R"(@en Add or update render window to the pipeline.
+@zh 注册或更新渲染窗口(RenderWindow)
 @param name @en Resource name @zh 资源名字
 @param format @en Expected format of the render window @zh 期望的渲染窗口格式
 @param width @en Expected width of the render window @zh 期望的渲染窗口宽度
@@ -411,8 +527,8 @@ When render window information is updated, such as resized, user should notify t
 @zh 更新渲染窗口信息。当渲染窗口发生更新时，用户应通知管线。
 @param renderWindow @en The render window to update. @zh 渲染窗口
 )");
-        METHOD_COMMENT(addRenderTarget, R"(@en Add 2D render target.
-@zh 添加2D渲染目标
+        METHOD_COMMENT(addRenderTarget, R"(@en Add or update 2D render target.
+@zh 添加或更新2D渲染目标
 @param name @en Resource name @zh 资源名字
 @param format @en Format of the resource @zh 资源的格式
 @param width @en Width of the resource @zh 资源的宽度
@@ -420,8 +536,8 @@ When render window information is updated, such as resized, user should notify t
 @param residency @en Residency of the resource. @zh 资源的驻留性
 @returns Resource ID
 )");
-        METHOD_COMMENT(addDepthStencil, R"(@en Add 2D depth stencil.
-@zh 添加2D深度模板缓冲
+        METHOD_COMMENT(addDepthStencil, R"(@en Add or update 2D depth stencil.
+@zh 添加或更新2D深度模板缓冲
 @param name @en Resource name @zh 资源名字
 @param format @en Format of the resource @zh 资源的格式
 @param width @en Width of the resource @zh 资源的宽度
@@ -442,6 +558,84 @@ When render window information is updated, such as resized, user should notify t
 @param width @en Width of the resource @zh 资源的宽度
 @param height @en Height of the resource @zh 资源的高度
 @param format @en Format of the resource @zh 资源的格式
+)");
+        METHOD_COMMENT(addBuffer, R"(@en Add or update buffer.
+@zh 添加或更新缓冲
+@param name @en Resource name @zh 资源名字
+@param size @en Size of the resource in bytes @zh 资源的大小
+@param flags @en Flags of the resource @zh 资源的标志位
+@param residency @en Residency of the resource. @zh 资源的驻留性
+@returns Resource ID
+)");
+        METHOD_COMMENT(updateBuffer, R"(@en Update buffer information.
+@zh 更新缓冲的信息
+@param name @en Resource name @zh 资源名字
+@param size @en Size of the resource in bytes @zh 资源的大小
+)");
+        METHOD_COMMENT(addExternalTexture, R"(@en Add or update external texture.
+Must be readonly.
+@zh 添加或更新外部的贴图。贴图必须是只读的。
+@param name @en Resource name @zh 资源名字
+@param texture @en External unmanaged texture @zh 外部不受管理的贴图
+@param flags @en Flags of the resource @zh 资源的标志位
+@returns Resource ID
+)");
+        METHOD_COMMENT(updateExternalTexture, R"(@en Update external texture information.
+@zh 更新外部的贴图信息
+@param name @en Resource name @zh 资源名字
+@param texture @en External unmanaged texture @zh 外部不受管理的贴图
+)");
+        METHOD_COMMENT(addTexture, R"(@en Add or update texture.
+@zh 添加或更新外部的贴图。
+@param name @en Resource name @zh 资源名字
+@param type @en Type of the texture @zh 贴图的类型
+@param format @en Format of the texture @zh 贴图的格式
+@param width @en Width of the resource @zh 资源的宽度
+@param height @en Height of the resource @zh 资源的高度
+@param depth @en Depth of the resource @zh 资源的深度
+@param arraySize @en Size of the array @zh 资源数组的大小
+@param mipLevels @en Mip levels of the texture @zh 贴图的Mipmap数目
+@param sampleCount @en Sample count of the texture @zh 贴图的采样数目
+@param flags @en Flags of the resource @zh 资源的标志位
+@param residency @en Residency of the resource. @zh 资源的驻留性
+@returns Resource ID
+)");
+        METHOD_COMMENT(updateTexture, R"(@en Update texture information.
+@zh 更新贴图信息
+@param name @en Resource name @zh 资源名字
+@param format @en Format of the texture @zh 贴图的格式
+@param width @en Width of the resource @zh 资源的宽度
+@param height @en Height of the resource @zh 资源的高度
+@param depth @en Depth of the resource @zh 资源的深度
+@param arraySize @en Size of the array @zh 资源数组的大小
+@param mipLevels @en Mip levels of the texture @zh 贴图的Mipmap数目
+@param sampleCount @en Sample count of the texture @zh 贴图的采样数目
+)");
+        METHOD_COMMENT(addResource, R"(@en Add or update resource.
+@zh 添加或更新资源
+@param name @en Resource name @zh 资源名字
+@param dimension @en Dimension of the resource @zh 资源的维度
+@param format @en Format of the texture @zh 资源的格式
+@param width @en Width of the resource @zh 资源的宽度
+@param height @en Height of the resource @zh 资源的高度
+@param depth @en Depth of the resource @zh 资源的深度
+@param arraySize @en Size of the array @zh 资源数组的大小
+@param mipLevels @en Mip levels of the texture @zh 资源的Mipmap数目
+@param sampleCount @en Sample count of the texture @zh 资源的采样数目
+@param flags @en Flags of the resource @zh 资源的标志位
+@param residency @en Residency of the resource. @zh 资源的驻留性
+@returns Resource ID
+)");
+        METHOD_COMMENT(updateResource, R"(@en Update resource information.
+@zh 更新资源信息
+@param name @en Resource name @zh 资源名字
+@param format @en Format of the texture @zh 资源的格式
+@param width @en Width of the resource @zh 资源的宽度
+@param height @en Height of the resource @zh 资源的高度
+@param depth @en Depth of the resource @zh 资源的深度
+@param arraySize @en Size of the array @zh 资源数组的大小
+@param mipLevels @en Mip levels of the texture @zh 资源的Mipmap数目
+@param sampleCount @en Sample count of the texture @zh 资源的采样数目
 )");
         METHOD_COMMENT(beginFrame, R"(@engineInternal
 @en Begin rendering one frame
@@ -491,6 +685,11 @@ Reinterpret copy is not supported.
 
 @param copyPairs @en Array of copy source and target @zh 拷贝来源与目标的数组
 )");
+        METHOD_COMMENT(addBuiltinReflectionProbePass, R"(@en Builtin reflection probe pass
+@zh 添加内置环境光反射通道
+@param camera @en Capturing camera @zh 用于捕捉的相机
+)");
+
         METHOD_COMMENT(getDescriptorSetLayout, R"(@engineInternal
 )");
     } // BasicPipeline
@@ -601,6 +800,23 @@ Sample count and quality should match those of the resources.
 @returns Compute subpass builder
 )");
     }
+    
+    COMMENT(MultisampleRenderPassBuilder, R"(@en Multisample render pass builder
+@zh 多重采样渲染通道。
+)") {
+        METHOD_COMMENT(addStorageBuffer, R"(@en Add storage buffer
+@zh 添加存储缓冲
+@param name @en Name of the storage buffer @zh 存储缓冲的名字
+@param accessType @en Access type of the buffer in the render pass @zh 渲染通道中缓冲的读写状态
+@param slotName @en name of the descriptor in shader @zh 着色器中描述符的名字
+)");
+        METHOD_COMMENT(addStorageImage, R"(@en Add storage image
+@zh 添加存储贴图
+@param name @en Name of the storage texture @zh 存储贴图的名字
+@param accessType @en Access type of the texture in the render pass @zh 渲染通道中贴图的读写状态
+@param slotName @en name of the descriptor in shader @zh 着色器中描述符的名字
+)");
+    }
 
     COMMENT(ComputePassBuilder, R"(@en Compute pass
 @zh 计算通道
@@ -621,23 +837,23 @@ Sample count and quality should match those of the resources.
     COMMENT(Pipeline, R"(@en Render pipeline.
 @zh 渲染管线
 )") {
-         METHOD_COMMENT(addStorageBuffer, R"(@en Add storage buffer.
-@zh 添加存储缓冲
+         METHOD_COMMENT(addStorageBuffer, R"(@en Add or update storage buffer.
+@zh 添加或更新存储缓冲
 @param name @en Resource name @zh 资源名字
 @param format @en Format of the resource @zh 资源的格式
-@param size @en Size of the resource @zh 资源的大小
+@param size @en Size of the resource in bytes @zh 资源的大小
 @param residency @en Residency of the resource. @zh 资源的驻留性
 )");
-         METHOD_COMMENT(addStorageTexture, R"(@en Add 2D storage texture
-@zh 添加2D存储贴图
+         METHOD_COMMENT(addStorageTexture, R"(@en Add or update 2D storage texture
+@zh 添加或更新2D存储贴图
 @param name @en Resource name @zh 资源名字
 @param format @en Format of the resource @zh 资源的格式
 @param width @en Width of the resource @zh 资源的宽度
 @param height @en Height of the resource @zh 资源的高度
 @param residency @en Residency of the resource. @zh 资源的驻留性
 )");
-         METHOD_COMMENT(addShadingRateTexture, R"(@en Add 2D shading rate texture
-@zh 添加2D着色率贴图
+         METHOD_COMMENT(addShadingRateTexture, R"(@en Add or update 2D shading rate texture
+@zh 添加或更新2D着色率贴图
 @param name @en Resource name @zh 资源名字
 @param width @en Width of the resource @zh 资源的宽度
 @param height @en Height of the resource @zh 资源的高度
@@ -646,7 +862,7 @@ Sample count and quality should match those of the resources.
          METHOD_COMMENT(updateStorageBuffer, R"(@en Update storage buffer information.
 @zh 更新存储缓冲的信息
 @param name @en Resource name @zh 资源名字
-@param size @en Size of the resource @zh 资源的大小
+@param size @en Size of the resource in bytes @zh 资源的大小
 @param format @en Format of the resource @zh 资源的格式
 )");
          METHOD_COMMENT(updateStorageTexture, R"(@en Update storage texture information.
@@ -668,6 +884,15 @@ Sample count and quality should match those of the resources.
 @param height @en Height of the render pass @zh 渲染通道的高度
 @param passName @en Pass name declared in the effect. Default value is 'default' @zh effect中的pass name，缺省为'default'
 @returns Render pass builder
+)");
+        METHOD_COMMENT(addMultisampleRenderPass, R"(@en Add multisample render pass
+@zh 添加多重采样渲染通道
+@param width @en Width of the render pass @zh 渲染通道的宽度
+@param height @en Height of the render pass @zh 渲染通道的高度
+@param count @en Sample count @zh 采样数目
+@param quality @en Sample quality (default is 0) @zh 采样质量（默认为0）
+@param passName @en Pass name declared in the effect. Default value is 'default' @zh effect中的pass name，缺省为'default'
+@returns Multisample render pass builder
 )");
         METHOD_COMMENT(addComputePass, R"(@en Add compute pass
 @zh 添加计算通道
@@ -711,6 +936,10 @@ Can't be currently mapped.
 
 @param movePairs @en Array of move source and target @zh 移动来源与目标的数组
 )");
+        METHOD_COMMENT(addBuiltinGpuCullingPass, R"(@engineInternal
+)");
+        METHOD_COMMENT(addBuiltinHzbGenerationPass, R"(@engineInternal
+)");
     }
 
     COMMENT(PipelineBuilder, R"(@en Pipeline builder.
@@ -724,6 +953,9 @@ Call setCustomPipeline to register the pipeline builder
 @zh 构建渲染管线
 @param cameras @en Camera list to render @zh 需要渲染的相机列表
 @param pipeline @en Current render pipeline @zh 当前管线
+)");
+        METHOD_COMMENT(onGlobalPipelineStateChanged, R"(@en Callback of pipeline state changed
+@zh 渲染管线状态更新的回调
 )");
     }
 
