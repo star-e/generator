@@ -462,6 +462,10 @@ virtual MultisampleRenderPassBuilder *addMultisampleRenderPass(uint32_t width, u
 virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
 [[beta]] virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
+
+virtual void setGlobalBuffer(const ccstd::string& slotName, const ccstd::string& resourceName) = 0;
+virtual void setGlobalTexture(const ccstd::string& slotName, const ccstd::string& resourceName) = 0;
+
 [[experimental]] virtual void addBuiltinGpuCullingPass(const scene::Camera* camera, const std::string& hzbName = "", [[optional]] const scene::Light* light = nullptr) = 0;
 [[experimental]] virtual void addBuiltinHzbGenerationPass(const std::string& sourceDepthStencilName, const std::string& targetHzbName) = 0;
 

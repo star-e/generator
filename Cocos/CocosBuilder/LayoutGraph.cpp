@@ -147,8 +147,10 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 (NameLocalID, mDescriptorID, _)
                 (gfx::Type, mType, gfx::Type::UNKNOWN)
                 (uint32_t, mCount, 1)
+                (gfx::MemoryAccessBit, mAccessType, gfx::MemoryAccessBit::READ_ONLY)
             );
             TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mDescriptorID, mType, mCount, mAccessType);
             CNTR(mDescriptorID, mType, mCount);
             CNTR(mDescriptorID, mType);
             CNTR(mDescriptorID);

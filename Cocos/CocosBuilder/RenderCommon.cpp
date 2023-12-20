@@ -204,8 +204,11 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             PUBLIC(
                 (gfx::Type, mType, gfx::Type::UNKNOWN)
                 (uint32_t, mCount, 1)
+                (gfx::MemoryAccessBit, mAccessType, gfx::MemoryAccessBit::READ_ONLY)
             );
             TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mType, mCount, mAccessType);
+            CNTR(mType, mCount);
             CNTR(mType);
         }
 

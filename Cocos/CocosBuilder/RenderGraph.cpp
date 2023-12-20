@@ -230,6 +230,7 @@ bool checkResource(const ResourceDesc &desc) const;
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::string>), mComputeBindings, _)
                 (ccstd::pmr::vector<ResolvePair>, mResolvePairs, _)
                 (gfx::Viewport, mViewport, _)
                 (uint32_t, mSubpassID, 0xFFFFFFFF)
@@ -244,6 +245,7 @@ bool checkResource(const ResourceDesc &desc) const;
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::string>), mComputeBindings, _)
                 (uint32_t, mSubpassID, 0xFFFFFFFF)
             );
             CNTR(mSubpassID);
@@ -253,6 +255,7 @@ bool checkResource(const ResourceDesc &desc) const;
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, RasterView>), mRasterViews, _)
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::string>), mComputeBindings, _)
                 ((PmrTransparentMap<ccstd::pmr::string, uint32_t>), mAttachmentIndexMap, _)
                 ((PmrTransparentMap<ccstd::pmr::string, gfx::ShaderStageFlagBit>), mTextures, _)
                 (SubpassGraph, mSubpassGraph, _)
@@ -391,6 +394,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
         STRUCT(ComputePass) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::string>), mComputeBindings, _)
                 ((PmrTransparentMap<ccstd::pmr::string, gfx::ShaderStageFlagBit>), mTextures, _)
             );
         }
@@ -417,6 +421,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
         STRUCT(RaytracePass) {
             PUBLIC(
                 ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>), mComputeViews, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::string>), mComputeBindings, _)
             );
         }
 
@@ -526,6 +531,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             PUBLIC(
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mIndex, _)
                 (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mSortedVertices, _)
+                ((PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::string>), mGlobalBindings, _)
             );
             MEMBER_FUNCTIONS(R"(
 vertex_descriptor getPassID(vertex_descriptor nodeID) const;
