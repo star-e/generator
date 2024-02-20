@@ -1683,34 +1683,47 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
     }
 
     if (features & Features::Serialization) {
-        std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Serialization.h", scratch);
-        std::filesystem::path filename = cppFolder / shortname;
-        files.emplace(std::move(shortname));
-        pmr_ostringstream oss(std::ios_base::out, scratch);
-        std::pmr::string space(scratch);
-        outputComment(oss);
-        OSS << "#pragma once\n";
-        OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
-        const auto included = getIndirectIncludes(moduleID, mg, scratch);
-        for (const auto& require : m.mRequires) {
-            auto moduleID = locate(mg.null_vertex(), require, mg);
-            if (included.contains(moduleID))
-                continue;
-            const auto& dep = get(mg.modules, mg, moduleID);
-            auto ccDepFolder = std::string_view(dep.mFolder);
-            if (!dep.mFilePrefix.ends_with(".h")) {
-                OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Serialization.h\"\n";
+        {
+            std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Serialization.h", scratch);
+            std::filesystem::path filename = cppFolder / shortname;
+            files.emplace(std::move(shortname));
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            outputComment(oss);
+            OSS << "#pragma once\n";
+            OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Fwd.h\"\n";
+            OSS << "#include \"" << ccFolder << "/ArchiveTypes.h\"\n";
+            copyString(oss, generateSerialization_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, false, scratch, scratch));
+            updateFile(filename, reorderIncludes(oss.str(), scratch));
+        }
+        {
+            std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Serialization.cpp", scratch);
+            std::filesystem::path filename = cppFolder / shortname;
+            files.emplace(std::move(shortname));
+            pmr_ostringstream oss(std::ios_base::out, scratch);
+            std::pmr::string space(scratch);
+            outputComment(oss);
+            OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Serialization.h\"\n";
+            OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
+            const auto included = getIndirectIncludes(moduleID, mg, scratch);
+            for (const auto& require : m.mRequires) {
+                auto moduleID = locate(mg.null_vertex(), require, mg);
+                if (included.contains(moduleID))
+                    continue;
+                const auto& dep = get(mg.modules, mg, moduleID);
+                auto ccDepFolder = std::string_view(dep.mFolder);
+                if (!dep.mFilePrefix.ends_with(".h")) {
+                    OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Serialization.h\"\n";
+                }
             }
+            if (features & Features::Graphs && g.moduleHasGraphSerialization(modulePath)) {
+                OSS << "#include \"" << m.mFolder << "/" << m.mFilePrefix << "Graphs.h\"\n";
+                OSS << "#include \"" << ccFolder << "/details/Range.h\"\n";
+            }
+            OSS << "#include \"" << ccFolder << "/details/SerializationUtils.h\"\n";
+            copyString(oss, generateSerialization_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, false, scratch, scratch));
+            updateFile(filename, reorderIncludes(oss.str(), scratch));
         }
-        if (features & Features::Graphs && g.moduleHasGraphSerialization(modulePath)) {
-            OSS << "#include \"" << m.mFolder << "/" << m.mFilePrefix << "Graphs.h\"\n";
-        }
-        OSS << "#include \"" << ccFolder << "/ArchiveTypes.h\"\n";
-        OSS << "#include \"" << ccFolder << "/details/SerializationUtils.h\"\n";
-        OSS << "#include \"" << ccFolder << "/details/Range.h\"\n";
-        copyString(oss, generateSerialization_h(mProjectName, mSyntaxGraph,
-            mModuleGraph, modulePath, false, scratch, scratch));
-        updateFile(filename, reorderIncludes(oss.str(), scratch));
     }
 }
 

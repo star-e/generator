@@ -4242,7 +4242,42 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
         s.mOutEdgeListType);
 
     OSS << "\n";
-    OSS << "inline void save(OutputArchive& ar, const " << name << "& g) {\n";
+    OSS << "void save(OutputArchive& ar, const " << name << "& g);\n";
+    OSS << "void load(InputArchive& ar, " << name << "& g);\n";
+
+    return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::generateGraphSerialization_cpp(bool nvp) const {
+    pmr_ostringstream oss(std::ios::out, get_allocator());
+    std::pmr::string space(get_allocator());
+    const auto& g = *mStruct.mSyntaxGraph;
+    const auto& s = *mGraph;
+    const auto& cpp = mStruct;
+    auto scratch = get_allocator().resource();
+
+    auto ns = mStruct.mCurrentNamespace;
+    auto name = cpp.getDependentName(cpp.mCurrentPath);
+
+    bool bListVertexList = false;
+    bool bContinuousOutEdgeList = false;
+    if (!s.isVector()) {
+        bListVertexList = true;
+    }
+    const auto bVector = s.isVector();
+
+    visit(
+        overload(
+            [&](Vector_) {
+                bContinuousOutEdgeList = true;
+            },
+            [&](auto) {
+
+            }),
+        s.mOutEdgeListType);
+
+    OSS << "\n";
+    OSS << "void save(OutputArchive& ar, const " << name << "& g) {\n";
     {
         INDENT();
         OSS << "using Graph = " << name << ";\n";
@@ -4268,7 +4303,7 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_h(bool nvp) const {
     OSS << "}\n";
 
     OSS << "\n";
-    OSS << "inline void load(InputArchive& ar, " << name << "& g) {\n";
+    OSS << "void load(InputArchive& ar, " << name << "& g) {\n";
     {
         INDENT();
         OSS << "using Graph = " << name << ";\n";
