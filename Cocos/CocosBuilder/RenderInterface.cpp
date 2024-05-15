@@ -472,11 +472,19 @@ virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 
         INTERFACE(PipelineBuilder) {
             PUBLIC_METHODS(R"(
+[[?]] virtual void editorWindowResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
+[[?]] virtual void editorSceneViewResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
+[[?]] virtual void editorGameViewResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
+[[?]] virtual void editorPreviewResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
+
+[[?]] virtual void gameWindowResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
+
 virtual void setup(const ccstd::vector<scene::Camera*>& cameras, BasicPipeline* pipeline) = 0;
 
 [[?]] virtual void onGlobalPipelineStateChanged() = 0;
 )");
         }
+// [[?]] virtual void gameWindowOrientationChange(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t orientation) = 0;
 
         INTERFACE(RenderingModule) {
             PUBLIC_METHODS(R"(
