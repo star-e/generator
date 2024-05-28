@@ -202,7 +202,7 @@ Member::Member(Member&& rhs, const allocator_type& alloc)
     , mTypescriptType(std::move(rhs.mTypescriptType), alloc)
     , mTypescriptDefaultValue(std::move(rhs.mTypescriptDefaultValue), alloc)
     , mTypescriptArray(std::move(rhs.mTypescriptArray))
-    , mTypescriptNullable(std::move(rhs.mTypescriptNullable)) {}
+    , mRealPointer(std::move(rhs.mRealPointer)) {}
 
 Member::Member(Member const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
@@ -219,7 +219,7 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
     , mTypescriptType(rhs.mTypescriptType, alloc)
     , mTypescriptDefaultValue(rhs.mTypescriptDefaultValue, alloc)
     , mTypescriptArray(rhs.mTypescriptArray)
-    , mTypescriptNullable(rhs.mTypescriptNullable) {}
+    , mRealPointer(rhs.mRealPointer) {}
 
 Member::~Member() noexcept = default;
 

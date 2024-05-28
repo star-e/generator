@@ -185,8 +185,8 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
             PUBLIC(
                 (DescriptorSetLayoutData, mDescriptorSetLayoutData, _)
                 (gfx::DescriptorSetLayoutInfo, mDescriptorSetLayoutInfo, _)
-                ([[optional]] IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
-                ([[optional]] IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
+                ([[pointer]] IntrusivePtr<gfx::DescriptorSetLayout>, mDescriptorSetLayout, _)
+                ([[pointer]] IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
             );
             CNTR(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
         }
@@ -227,7 +227,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
         STRUCT(ShaderProgramData, .mFlags = NO_COPY) {
             PUBLIC(
                 (PipelineLayoutData, mLayout, _)
-                ([[optional]] IntrusivePtr<gfx::PipelineLayout>, mPipelineLayout, _)
+                ([[pointer]] IntrusivePtr<gfx::PipelineLayout>, mPipelineLayout, _)
             );
         }
 
@@ -244,7 +244,7 @@ import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDe
                 (ccstd::pmr::string, mRootSignature, _)
                 (ccstd::pmr::vector<ShaderProgramData>, mShaderPrograms, _)
                 ((PmrTransparentMap<ccstd::pmr::string, uint32_t>), mShaderIndex, _)
-                ([[optional]] IntrusivePtr<gfx::PipelineLayout>, mPipelineLayout, _)
+                ([[pointer]] IntrusivePtr<gfx::PipelineLayout>, mPipelineLayout, _)
             );
         }
 

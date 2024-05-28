@@ -333,7 +333,7 @@ struct Member {
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
     bool mTypescriptArray = false;
-    bool mTypescriptNullable = false;
+    bool mRealPointer = false;
 };
 
 struct Parameter {
