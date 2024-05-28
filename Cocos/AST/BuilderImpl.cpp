@@ -2130,7 +2130,7 @@ std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p,
     if (bFull || !g.isTypescriptData(typeName)) {
         result += ": ";
         result += typeName;
-        if (p.mNullable) {
+        if (p.mRealPointer) {
             result += " | null";
         }
         if (bOptional && bReturn) {

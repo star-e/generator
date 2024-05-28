@@ -617,7 +617,7 @@ void removeCustomAttributes(std::pmr::string& str, std::string_view apiDLL) {
     boost::algorithm::replace_all(str, "[[setter]] ", "");
     boost::algorithm::replace_all(str, "[[skip]] ", "");
     boost::algorithm::replace_all(str, "[[optional]] ", "");
-    boost::algorithm::replace_all(str, "[[nullable]] ", "");
+    boost::algorithm::replace_all(str, "[[pointer]] ", "");
     boost::algorithm::replace_all(str, "[[?]] ", "");
     boost::algorithm::replace_all(str, "[[deprecated]] ", "");
     boost::algorithm::replace_all(str, "[[beta]] ", "");
