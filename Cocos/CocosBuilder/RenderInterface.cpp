@@ -503,7 +503,7 @@ static Pipeline *createPipeline();
 
         STRUCT(PipelineSettings) {
             PUBLIC(
-                ([[?]] ccstd::string, mToneMapping, _)
+                ([[optional]] ccstd::string, mToneMapping, _)
             );
         }
 

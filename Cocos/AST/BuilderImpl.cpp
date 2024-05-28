@@ -537,9 +537,9 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
     }
 
     bool bOptional = false;
-    if (boost::algorithm::contains(adlPath, "[[?]]")) {
+    if (boost::algorithm::contains(adlPath, "[[optional]]")) {
         bOptional = true;
-        boost::algorithm::replace_all(adlPath, "[[?]]", "");
+        boost::algorithm::replace_all(adlPath, "[[optional]]", "");
         boost::algorithm::trim(adlPath);
     }
 
