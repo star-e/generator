@@ -147,9 +147,9 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers() const = 0;
 [[getter]] virtual pipeline::PipelineSceneData *getPipelineSceneData() const = 0;
 [[getter]] virtual const ccstd::string &getConstantMacros() const = 0;
-[[pointer]] [[getter]] virtual scene::Model *getProfiler() const = 0;
-[[setter]] virtual void setProfiler([[pointer]] scene::Model *profiler) = 0;
-[[pointer]] [[getter]] virtual pipeline::GeometryRenderer *getGeometryRenderer() const = 0;
+[[nullable]] [[getter]] virtual scene::Model *getProfiler() const = 0;
+[[setter]] virtual void setProfiler([[nullable]] scene::Model *profiler) = 0;
+[[nullable]] [[getter]] virtual pipeline::GeometryRenderer *getGeometryRenderer() const = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
 [[setter]] virtual void setShadingScale(float scale) = 0;
@@ -548,7 +548,7 @@ virtual const gfx::DescriptorSetLayout& getMaterialDescriptorSetLayout(gfx::Devi
 virtual const gfx::DescriptorSetLayout& getLocalDescriptorSetLayout(gfx::Device* device, uint32_t phaseID, const ccstd::string& programName) = 0;
 virtual const IProgramInfo& getProgramInfo(uint32_t phaseID, const ccstd::string& programName) const = 0;
 virtual const gfx::ShaderInfo& getShaderInfo(uint32_t phaseID, const ccstd::string& programName) const = 0;
-[[pointer]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) = 0;
+[[nullable]] virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) = 0;
 [[skip]] virtual gfx::PipelineState* getComputePipelineState(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, [[optional]] const ccstd::pmr::string* key = nullptr) = 0;
 virtual const ccstd::vector<int>& getBlockSizes(uint32_t phaseID, const ccstd::string& programName) const = 0;
 virtual const ccstd::unordered_map<ccstd::string, uint32_t>& getHandleMap(uint32_t phaseID, const ccstd::string& programName) const = 0;

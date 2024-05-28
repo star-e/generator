@@ -70,9 +70,9 @@ void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parame
         param.mOptional = true;
         typeName = typeName.substr(std::size("[[optional]]") - 1);
     }
-    if (boost::algorithm::starts_with(typeName, "[[pointer]]")) {
+    if (boost::algorithm::starts_with(typeName, "[[nullable]]")) {
         param.mRealPointer = true;
-        typeName = typeName.substr(std::size("[[pointer]]") - 1);
+        typeName = typeName.substr(std::size("[[nullable]]") - 1);
     }
     if (typeName.starts_with("const ")) {
         param.mConst = true;
@@ -144,7 +144,7 @@ Method parseFunction(ModuleBuilder& builder, std::string_view function) {
         if (boost::algorithm::contains(function2, "[[optional]]")) {
             method.mOptional = true;
         }
-        if (boost::algorithm::contains(function2, "[[pointer]]")) {
+        if (boost::algorithm::contains(function2, "[[nullable]]")) {
             method.mReturnType.mRealPointer = true;
         }
         if (boost::algorithm::contains(function2, "[[?]]")) {

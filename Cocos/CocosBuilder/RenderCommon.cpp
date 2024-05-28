@@ -164,8 +164,8 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
 
         STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {
             PUBLIC(
-                ([[pointer]] IntrusivePtr<scene::Light>, mLight, _)
-                ([[pointer]] scene::ReflectionProbe*, mProbe, nullptr)
+                ([[nullable]] IntrusivePtr<scene::Light>, mLight, _)
+                ([[nullable]] scene::ReflectionProbe*, mProbe, nullptr)
                 (uint32_t, mLevel, 0)
                 (bool, mCulledByLight, false)
             );

@@ -530,9 +530,9 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
     std::pmr::string adlPath(className, scratch);
 
     bool bRealPointer = false;
-    if (boost::algorithm::contains(adlPath, "[[pointer]]")) {
+    if (boost::algorithm::contains(adlPath, "[[nullable]]")) {
         bRealPointer = true;
-        boost::algorithm::replace_all(adlPath, "[[pointer]]", "");
+        boost::algorithm::replace_all(adlPath, "[[nullable]]", "");
         boost::algorithm::trim(adlPath);
     }
 
