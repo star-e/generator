@@ -529,9 +529,9 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
 
     std::pmr::string adlPath(className, scratch);
 
-    bool bRealPointer = false;
+    bool bNullable = false;
     if (boost::algorithm::contains(adlPath, "[[nullable]]")) {
-        bRealPointer = true;
+        bNullable = true;
         boost::algorithm::replace_all(adlPath, "[[nullable]]", "");
         boost::algorithm::trim(adlPath);
     }
@@ -614,7 +614,7 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
         m.mFlags = flags;
         m.mComments = comments;
         m.mOptional = bOptional;
-        m.mRealPointer = bRealPointer;
+        m.mNullable = bNullable;
 
         s.mMembers.emplace_back(std::move(m));
         ptr = &s.mMembers.back();
@@ -2108,7 +2108,7 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
         }
         name += ": ";
         name += typeName;
-        if (m.mRealPointer) {
+        if (m.mNullable) {
             name += " | null";
         }
     }
@@ -2130,7 +2130,7 @@ std::pmr::string ModuleBuilder::getTypedParameterName(const Parameter& p,
     if (bFull || !g.isTypescriptData(typeName)) {
         result += ": ";
         result += typeName;
-        if (p.mRealPointer) {
+        if (p.mNullable) {
             result += " | null";
         }
         if (bOptional && bReturn) {

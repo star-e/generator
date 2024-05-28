@@ -147,7 +147,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
                 OSS << memberName;
                 oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n"; 
             } else {
-                if (m.mRealPointer) {
+                if (m.mNullable) {
                     OSS << memberName << " = null;\n";
                 } else {
                     OSS << "// " << memberName
@@ -160,7 +160,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
 
 bool typescriptMemberNeedAssign(const SyntaxGraph& g, const Member& m, uint32_t memberID) {
     return g.isTypescriptValueType(memberID)
-        || m.mRealPointer
+        || m.mNullable
         || g.isTypescriptPointer(memberID);
 }
 
@@ -398,7 +398,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 bFound = true;
                                 auto memberID = locate(m.mTypePath, g);
                                 const auto& memberTraits = get(g.traits, g, memberID);
-                                if (g.isTypescriptValueType(memberID) || m.mRealPointer || g.isTypescriptPointer(memberID)) {
+                                if (g.isTypescriptValueType(memberID) || m.mNullable || g.isTypescriptPointer(memberID)) {
                                     OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
                                         << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
                                 } else if (g.isTypescriptTypedArray(memberID)) {
@@ -565,7 +565,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         bool bTypscriptPointer = g.isTypescriptPointer(memberID);
         if (m.mMutable) {
             oss << "/*mutable*/ ";
-        } else if (!m.mPointer && !bTypscriptPointer && !m.mRealPointer && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
+        } else if (!m.mPointer && !bTypscriptPointer && !m.mNullable && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         } else if (bTypscriptPointer) {
             oss << "/*refcount*/ ";

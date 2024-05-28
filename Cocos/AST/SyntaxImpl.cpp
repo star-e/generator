@@ -2193,7 +2193,7 @@ std::pmr::string SyntaxGraph::getTypedParameterName(
             result += "unknown";
         } else {
             result += typeName;
-            if (p.mRealPointer) {
+            if (p.mNullable) {
                 result += " | null";
             }
             if (bOptional && bReturn) {

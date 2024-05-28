@@ -202,7 +202,7 @@ Member::Member(Member&& rhs, const allocator_type& alloc)
     , mTypescriptType(std::move(rhs.mTypescriptType), alloc)
     , mTypescriptDefaultValue(std::move(rhs.mTypescriptDefaultValue), alloc)
     , mTypescriptArray(std::move(rhs.mTypescriptArray))
-    , mRealPointer(std::move(rhs.mRealPointer)) {}
+    , mNullable(std::move(rhs.mNullable)) {}
 
 Member::Member(Member const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
@@ -219,7 +219,7 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
     , mTypescriptType(rhs.mTypescriptType, alloc)
     , mTypescriptDefaultValue(rhs.mTypescriptDefaultValue, alloc)
     , mTypescriptArray(rhs.mTypescriptArray)
-    , mRealPointer(rhs.mRealPointer) {}
+    , mNullable(rhs.mNullable) {}
 
 Member::~Member() noexcept = default;
 
@@ -239,7 +239,7 @@ Parameter::Parameter(Parameter&& rhs, const allocator_type& alloc)
     , mReference(std::move(rhs.mReference))
     , mRvalue(std::move(rhs.mRvalue))
     , mOptional(std::move(rhs.mOptional))
-    , mRealPointer(std::move(rhs.mRealPointer)) {}
+    , mNullable(std::move(rhs.mNullable)) {}
 
 Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
@@ -251,7 +251,7 @@ Parameter::Parameter(Parameter const& rhs, const allocator_type& alloc)
     , mReference(rhs.mReference)
     , mRvalue(rhs.mRvalue)
     , mOptional(rhs.mOptional)
-    , mRealPointer(rhs.mRealPointer) {}
+    , mNullable(rhs.mNullable) {}
 
 Parameter::~Parameter() noexcept = default;
 

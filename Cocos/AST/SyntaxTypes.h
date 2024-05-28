@@ -333,7 +333,7 @@ struct Member {
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
     bool mTypescriptArray = false;
-    bool mRealPointer = false;
+    bool mNullable = false;
 };
 
 struct Parameter {
@@ -377,7 +377,7 @@ struct Parameter {
     bool mReference = false;
     bool mRvalue = false;
     bool mOptional = false;
-    bool mRealPointer = false;
+    bool mNullable = false;
 };
 
 enum class Doc : uint32_t {
