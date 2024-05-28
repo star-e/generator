@@ -565,7 +565,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         bool bTypscriptPointer = g.isTypescriptPointer(memberID);
         if (m.mMutable) {
             oss << "/*mutable*/ ";
-        } else if (!m.mPointer && !bTypscriptPointer && !m.mNullable && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
+        } else if (!m.mPointer && !bTypscriptPointer && !m.mOptional && !m.mNullable && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         } else if (bTypscriptPointer) {
             oss << "/*refcount*/ ";
@@ -576,7 +576,12 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         }
         if (bNeedIntial) {
             if (m.mOptional || g.isOptional(memberID)) {
-                oss << builder.getTypedMemberName(m, m.mPublic, true) << ";\n";
+                oss << builder.getTypedMemberName(m, m.mPublic, true) << ";";
+                if (g.isTypescriptValueType(memberID)) {
+                    oss << " /*" << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << "*/\n";
+                } else {
+                    oss << "\n";
+                }
             } else {
                 oss << builder.getTypedMemberName(m, m.mPublic);
                 oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";

@@ -478,6 +478,7 @@ virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 [[?]] virtual void editorPreviewResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
 
 [[?]] virtual void gameWindowResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
+[[?]] virtual void customWindowResize(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t width, uint32_t height) = 0;
 
 virtual void setup(const ccstd::vector<scene::Camera*>& cameras, BasicPipeline* pipeline) = 0;
 
@@ -501,9 +502,80 @@ static Pipeline *createPipeline();
 )");
         }
 
+        STRUCT(HBAO) {
+            PUBLIC(
+                (bool, mEnabled, false)
+                ([[optional]] float, mRadiusScale, 1)
+                ([[optional]] float, mAngleBiasDegree, 10)
+                ([[optional]] float, mBlurSharpness, 3)
+                ([[optional]] float, mAoSaturation, 1)
+                ([[optional]] bool, mNeedBlur, false)
+            );
+        }
+
+        STRUCT(DepthOfField) {
+            PUBLIC(
+                (bool, mEnabled, false)
+                ([[optional]] float, mFocusDistance, 0)
+                ([[optional]] float, mFocusRange, 0)
+                ([[optional]] float, mBokehRadius, 1)
+            );
+        }
+
+        STRUCT(Bloom) {
+            PUBLIC(
+                (bool, mEnabled, false)
+                ([[optional]] bool, mEnableAlphaMask, false)
+                ([[optional]] bool, mUseHdrIlluminance, false)
+                ([[optional]] uint32_t, mIterations, 3)
+                ([[optional]] float, mThreshold, 0.8)
+                ([[optional]] float, mIntensity, 2.3)
+            );
+        }
+
+        STRUCT(ToneMapping) {
+            PUBLIC(
+                (bool, mEnabled, false)
+                ([[optional]] ccstd::string, mAlgorithm, _)
+            );
+        }
+
+        STRUCT(ColorGrading) {
+            PUBLIC(
+                (bool, mEnabled, false)
+                ([[optional]] float, mContribute, 0)
+                ([[optional]] IntrusivePtr<gfx::Texture>, mColorGradingMap, _)
+            );
+        }
+
+        STRUCT(FSR) {
+            PUBLIC(
+                (bool, mEnabled, false)
+                ([[optional]] float, mSharpness, 0.8)
+            );
+        }
+
+        STRUCT(FXAA) {
+            PUBLIC(
+                (bool, mEnabled, false)
+            );
+        }
+
+        STRUCT(ForwardPipeline) {
+            PUBLIC(
+                (uint32_t, mMobileMaxSpotLightShadowMaps, 4)
+            );
+        }
+
         STRUCT(PipelineSettings) {
             PUBLIC(
-                ([[optional]] ccstd::string, mToneMapping, _)
+                (ForwardPipeline, mForwardPipeline, _)
+                ([[optional]] DepthOfField, mDepthOfField, _)
+                ([[optional]] Bloom, mBloom, _)
+                ([[optional]] ToneMapping, mToneMapping, _)
+                ([[optional]] ColorGrading, mColorGrading, _)
+                ([[optional]] FSR, mFsr, _)
+                ([[optional]] FXAA, mFxaa, _)
             );
         }
 
