@@ -328,11 +328,12 @@ struct Member {
     bool mPointer = false;
     bool mReference = false;
     bool mPublic = true;
+    bool mOptional = false;
     GenerationFlags mFlags = {};
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
     bool mTypescriptArray = false;
-    bool mTypescriptOptional = false;
+    bool mTypescriptNullable = false;
 };
 
 struct Parameter {

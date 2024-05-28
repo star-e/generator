@@ -501,6 +501,12 @@ static Pipeline *createPipeline();
 )");
         }
 
+        STRUCT(PipelineSettings) {
+            PUBLIC(
+                ([[?]] ccstd::string, mToneMapping, _)
+            );
+        }
+
         NAMESPACE_END(render);
         NAMESPACE_END(cc);
     }

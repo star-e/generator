@@ -205,6 +205,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
     NAMESPACE(ccstd) {
         CLASS(string, .mFlags = JSB);
         CONTAINER(vector, .mFlags = JSB);
+        CONTAINER(optional);
         MAP(map);
         MAP(unordered_map);
         NAMESPACE(pmr) {

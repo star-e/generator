@@ -197,11 +197,12 @@ Member::Member(Member&& rhs, const allocator_type& alloc)
     , mPointer(std::move(rhs.mPointer))
     , mReference(std::move(rhs.mReference))
     , mPublic(std::move(rhs.mPublic))
+    , mOptional(std::move(rhs.mOptional))
     , mFlags(std::move(rhs.mFlags))
     , mTypescriptType(std::move(rhs.mTypescriptType), alloc)
     , mTypescriptDefaultValue(std::move(rhs.mTypescriptDefaultValue), alloc)
     , mTypescriptArray(std::move(rhs.mTypescriptArray))
-    , mTypescriptOptional(std::move(rhs.mTypescriptOptional)) {}
+    , mTypescriptNullable(std::move(rhs.mTypescriptNullable)) {}
 
 Member::Member(Member const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
@@ -213,11 +214,12 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
     , mPointer(rhs.mPointer)
     , mReference(rhs.mReference)
     , mPublic(rhs.mPublic)
+    , mOptional(rhs.mOptional)
     , mFlags(rhs.mFlags)
     , mTypescriptType(rhs.mTypescriptType, alloc)
     , mTypescriptDefaultValue(rhs.mTypescriptDefaultValue, alloc)
     , mTypescriptArray(rhs.mTypescriptArray)
-    , mTypescriptOptional(rhs.mTypescriptOptional) {}
+    , mTypescriptNullable(rhs.mTypescriptNullable) {}
 
 Member::~Member() noexcept = default;
 

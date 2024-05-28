@@ -529,10 +529,17 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
 
     std::pmr::string adlPath(className, scratch);
 
-    bool bOptional = false;
+    bool bTypescriptNullable = false;
     if (boost::algorithm::contains(adlPath, "[[optional]]")) {
-        bOptional = true;
+        bTypescriptNullable = true;
         boost::algorithm::replace_all(adlPath, "[[optional]]", "");
+        boost::algorithm::trim(adlPath);
+    }
+
+    bool bOptional = false;
+    if (boost::algorithm::contains(adlPath, "[[?]]")) {
+        bOptional = true;
+        boost::algorithm::replace_all(adlPath, "[[?]]", "");
         boost::algorithm::trim(adlPath);
     }
 
@@ -606,7 +613,8 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
         }
         m.mFlags = flags;
         m.mComments = comments;
-        m.mTypescriptOptional = bOptional;
+        m.mOptional = bOptional;
+        m.mTypescriptNullable = bTypescriptNullable;
 
         s.mMembers.emplace_back(std::move(m));
         ptr = &s.mMembers.back();
@@ -2095,9 +2103,12 @@ std::pmr::string ModuleBuilder::getTypedMemberName(
     auto name = g.getMemberName(m.mMemberName, bPublic);
 
     if (bFull || !g.isTypescriptData(typeName)) {
+        if (m.mOptional) {
+            name += "?";
+        }
         name += ": ";
         name += typeName;
-        if (m.mTypescriptOptional) {
+        if (m.mTypescriptNullable) {
             name += " | null";
         }
     }
