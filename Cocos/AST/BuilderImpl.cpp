@@ -557,8 +557,26 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
         initial = {};
     }
 
+    Member m(get_allocator());
+
     bool bInstance = isInstance(adlPath);
     if (bInstance) {
+        if (adlPath.starts_with("mutable ")) {
+            m.mMutable = true;
+            boost::algorithm::replace_all(adlPath, "mutable ", "");
+        }
+        if (adlPath.starts_with("const ")) {
+            m.mConst = true;
+            boost::algorithm::replace_all(adlPath, "const ", "");
+        }
+        if (adlPath.ends_with("*")) {
+            m.mPointer = true;
+            adlPath.pop_back();
+        }
+        if (adlPath.ends_with("&")) {
+            m.mReference = true;
+            adlPath.pop_back();
+        }
         g.instantiate(mCurrentScope, adlPath, scratch);
     }
 
@@ -566,7 +584,6 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
 
     auto addMember = [&](auto& s) {
         std::pmr::string typeName(adlPath, scratch);
-        Member m(get_allocator());
 
         if (!bInstance) {
             auto astPos = adlPath.find('*');

@@ -119,6 +119,8 @@ int main() {
         files.emplace("cocos/renderer/pipeline/custom/NativeFactory.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativePipeline.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeExecutorRenderGraph.h");
+        files.emplace("cocos/renderer/pipeline/custom/NativeExecutorDescriptor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraph.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderQueue.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeProgramLibrary.cpp");

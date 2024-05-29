@@ -250,6 +250,7 @@ virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &colo
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[experimental]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
+// [[experimental]] virtual void addRenderPassTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
         }
 
         INTERFACE(BasicRenderPassBuilder) {

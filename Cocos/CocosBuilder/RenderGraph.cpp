@@ -436,11 +436,19 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (QueueHint, mHint, QueueHint::RENDER_OPAQUE)
                 (uint32_t, mPhaseID, 0xFFFFFFFF)
                 ([[nullable]] gfx::Viewport, mViewport, _)
+                //(bool, mOverwritePassDescriptors, false)
             );
             TS_INIT(mViewport, null);
             CNTR(mHint, mPhaseID);
             CNTR(mPhaseID);
         }
+
+        //STRUCT(RenderGraphQueueContext) {
+        //    PUBLIC(
+        //        ([[nullable]] gfx::DescriptorSet*, mPhaseDescriptorSet, nullptr)
+        //        ([[nullable]] gfx::DescriptorSet*, mPassDescriptorSet, nullptr)
+        //    );
+        //}
 
         FLAG_CLASS(CullingFlags) {
             FLAGS(
