@@ -558,6 +558,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
             }
         }
+
         OSS;
         if (!m.mPublic) {
             oss << "private ";
@@ -575,7 +576,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             oss << "/*reference*/ ";
         }
         if (bNeedIntial) {
-            if (m.mOptional || g.isOptional(memberID)) {
+            if (m.mOptional || g.isOptional(memberID) || traits.mStructInterface) {
                 oss << builder.getTypedMemberName(m, m.mPublic, true) << ";";
                 if (g.isTypescriptValueType(memberID)) {
                     oss << " /*" << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << "*/\n";

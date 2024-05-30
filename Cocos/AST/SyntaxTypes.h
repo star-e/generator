@@ -244,6 +244,7 @@ struct Traits {
     bool mUnknown = false;
     bool mTrivial = false;
     bool mFinal = true;
+    bool mStructInterface = false;
     GenerationFlags mFlags = {};
     uint32_t mAlignment = 0;
 };

@@ -129,7 +129,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 OSS << "@ccclass('cc." << name << "')\n";
             }
             OSS << "export";
-            if (traits.mInterface) {
+            if (traits.mInterface || traits.mStructInterface) {
                 oss << " interface " << name;
             } else {
                 oss << " class " << name;

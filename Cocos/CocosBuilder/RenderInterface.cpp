@@ -503,7 +503,7 @@ static Pipeline *createPipeline();
 )");
         }
 
-        STRUCT(HBAO) {
+        STRUCT(HBAO, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
                 ([[optional]] float, mRadiusScale, 1)
@@ -514,7 +514,7 @@ static Pipeline *createPipeline();
             );
         }
 
-        STRUCT(DepthOfField) {
+        STRUCT(DepthOfField, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
                 ([[optional]] float, mFocusDistance, 0)
@@ -523,7 +523,7 @@ static Pipeline *createPipeline();
             );
         }
 
-        STRUCT(Bloom) {
+        STRUCT(Bloom, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
                 ([[optional]] bool, mEnableAlphaMask, false)
@@ -534,14 +534,14 @@ static Pipeline *createPipeline();
             );
         }
 
-        STRUCT(ToneMapping) {
-            PUBLIC(
-                (bool, mEnabled, false)
-                ([[optional]] ccstd::string, mAlgorithm, _)
-            );
-        }
+        //STRUCT(ToneMapping, .mStructInterface = true) {
+        //    PUBLIC(
+        //        (bool, mEnabled, false)
+        //        ([[optional]] ccstd::string, mAlgorithm, _)
+        //    );
+        //}
 
-        STRUCT(ColorGrading) {
+        STRUCT(ColorGrading, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
                 ([[optional]] float, mContribute, 0)
@@ -549,31 +549,31 @@ static Pipeline *createPipeline();
             );
         }
 
-        STRUCT(FSR) {
+        STRUCT(FSR, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
                 ([[optional]] float, mSharpness, 0.8)
             );
         }
 
-        STRUCT(FXAA) {
+        STRUCT(FXAA, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
             );
         }
 
-        STRUCT(ForwardPipeline) {
+        STRUCT(ForwardPipeline, .mStructInterface = true) {
             PUBLIC(
                 (uint32_t, mMobileMaxSpotLightShadowMaps, 4)
             );
         }
 
-        STRUCT(PipelineSettings) {
+        STRUCT(PipelineSettings, .mStructInterface = true) {
             PUBLIC(
                 (ForwardPipeline, mForwardPipeline, _)
                 ([[optional]] DepthOfField, mDepthOfField, _)
                 ([[optional]] Bloom, mBloom, _)
-                ([[optional]] ToneMapping, mToneMapping, _)
+                //([[optional]] ToneMapping, mToneMapping, _)
                 ([[optional]] ColorGrading, mColorGrading, _)
                 ([[optional]] FSR, mFsr, _)
                 ([[optional]] FXAA, mFxaa, _)
