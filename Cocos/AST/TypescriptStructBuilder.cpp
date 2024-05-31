@@ -596,6 +596,10 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     if (kOutputPoolDebug) {
         OSS << "_pool?: boolean;\n";
     }
+
+    if (traits.mStructInterface) {
+        OSS << "[name: string]: unknown;\n";
+    }
 }
 
 namespace {

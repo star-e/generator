@@ -189,7 +189,38 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                     s.mTypescriptFunctions, s.mConstructors, s.mMethods, scratch);
             }
             OSS << "}\n";
-            
+
+            if (traits.mStructInterface) {
+                oss << "\n";
+                OSS << "export function make" << name << " (): " << name << " {\n";
+                {
+                    INDENT();
+                    OSS << "return {\n";
+                    for (const auto& m : s.mMembers) {
+                        INDENT();
+                        const auto memberID = locate(m.mTypePath, g);
+                        const auto& memberType = get(g.names, g, memberID);
+                        const auto& memberTraits = get(g.traits, g, memberID);
+                        const auto& memberName = g.getMemberName(m.mMemberName, true);
+                        
+                        if (m.mOptional || g.isOptional(memberID)) {
+                            // noop
+                        } else if (memberTraits.mStructInterface) {
+                            OSS << memberName << ": make" << memberType << "(),\n";
+                        } else {
+                            if (g.isTypescriptValueType(memberID)) {
+                                OSS << memberName << ": "
+                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ",\n";
+                            } else {
+                                Expects(false);
+                            }
+                        }
+                    }
+                    OSS << "};\n";
+                }
+                OSS << "}\n";
+            }
+
             if (false) {
                 outputFunctions(oss, space, g, vertID, scratch);
             }

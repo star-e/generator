@@ -500,35 +500,35 @@ static Pipeline *createPipeline();
         STRUCT(HBAO, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
-                ([[optional]] float, mRadiusScale, 1)
-                ([[optional]] float, mAngleBiasDegree, 10)
-                ([[optional]] float, mBlurSharpness, 3)
-                ([[optional]] float, mAoSaturation, 1)
-                ([[optional]] bool, mNeedBlur, false)
+                (float, mRadiusScale, 1)
+                (float, mAngleBiasDegree, 10)
+                (float, mBlurSharpness, 3)
+                (float, mAoSaturation, 1)
+                (bool, mNeedBlur, false)
             );
         }
 
         STRUCT(DepthOfField, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
-                ([[optional]] float, mFocusDistance, 0)
-                ([[optional]] float, mFocusRange, 0)
-                ([[optional]] float, mBokehRadius, 1)
+                (float, mFocusDistance, 0)
+                (float, mFocusRange, 0)
+                (float, mBokehRadius, 1)
             );
         }
 
         STRUCT(Bloom, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
-                ([[optional]] bool, mEnableAlphaMask, false)
-                ([[optional]] bool, mUseHdrIlluminance, false)
-                ([[optional]] uint32_t, mIterations, 3)
-                ([[optional]] float, mThreshold, 0.8)
-                ([[optional]] float, mIntensity, 2.3)
+                (bool, mEnableAlphaMask, false)
+                (bool, mUseHdrIlluminance, false)
+                (uint32_t, mIterations, 3)
+                (float, mThreshold, 0.8)
+                (float, mIntensity, 2.3)
             );
         }
 
-        //STRUCT(ToneMapping, .mStructInterface = true) {
+        //STRUCT(ToneMapping) {
         //    PUBLIC(
         //        (bool, mEnabled, false)
         //        ([[optional]] ccstd::string, mAlgorithm, _)
@@ -538,7 +538,7 @@ static Pipeline *createPipeline();
         STRUCT(ColorGrading, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
-                ([[optional]] float, mContribute, 0)
+                (float, mContribute, 0)
                 ([[optional]] IntrusivePtr<gfx::Texture>, mColorGradingMap, _)
             );
         }
@@ -546,7 +546,7 @@ static Pipeline *createPipeline();
         STRUCT(FSR, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
-                ([[optional]] float, mSharpness, 0.8)
+                (float, mSharpness, 0.8)
             );
         }
 
@@ -558,19 +558,19 @@ static Pipeline *createPipeline();
 
         STRUCT(ForwardPipeline, .mStructInterface = true) {
             PUBLIC(
-                (uint32_t, mMobileMaxSpotLightShadowMaps, 4)
+                (uint32_t, mMobileMaxSpotLightShadowMaps, 1)
             );
         }
 
-        STRUCT(PipelineSettings, .mStructInterface = true) {
+        STRUCT(PipelineSettings, .mStructInterface = true, .mStructInterfaceCntr = true) {
             PUBLIC(
                 (ForwardPipeline, mForwardPipeline, _)
-                ([[optional]] DepthOfField, mDepthOfField, _)
-                ([[optional]] Bloom, mBloom, _)
+                (DepthOfField, mDepthOfField, _)
+                (Bloom, mBloom, _)
                 //([[optional]] ToneMapping, mToneMapping, _)
-                ([[optional]] ColorGrading, mColorGrading, _)
-                ([[optional]] FSR, mFsr, _)
-                ([[optional]] FXAA, mFxaa, _)
+                (ColorGrading, mColorGrading, _)
+                (FSR, mFsr, _)
+                (FXAA, mFxaa, _)
             );
         }
 
