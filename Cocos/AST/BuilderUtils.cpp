@@ -36,7 +36,7 @@ void outputMethodComment(std::ostream& oss, std::pmr::string& space,
         OSS << " * @experimental\n";
     }
     if (any(method.mFlags & Doc::Deprecated)) {
-        OSS << " * @deprecated Method will be removed in 3.9.0\n";
+        OSS << " * @deprecated Method will be removed in the future\n";
     }
     std::istringstream iss{ std::string{ method.mComment } };
     std::string line;

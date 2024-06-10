@@ -67,6 +67,9 @@ int main() {
         buildFGDispatcher(builder, Types | Graphs);
         buildCustomization(builder, Fwd | Types);
 
+        // settings
+        buildRenderSettings(builder, Typescripts);
+
         // build render compiler (native)
         buildArchiveInterface(builder, Fwd | Types | Typescripts | Interface);
         buildRenderInterface(builder, Fwd | Types | Typescripts | Interface | ToJs);
@@ -140,6 +143,9 @@ int main() {
 
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);
+
+        // render settings
+        builder.outputModule("RenderSettings", files);
 
         // descriptor layout graph
         builder.outputModule("LayoutGraph", files);
