@@ -43,6 +43,13 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
 
+        STRUCT(MSAA, .mStructInterface = true) {
+            PUBLIC(
+                (bool, mEnabled, false)
+                (gfx::SampleCount, mSampleCount, gfx::SampleCount::X4)
+            );
+        }
+
         STRUCT(HBAO, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
@@ -112,6 +119,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 //(bool, mEditorUseGamePipeline, false)
                 //(ForwardPipeline, mForwardPipeline, _)
+                (MSAA, mMSAA, _)
                 //(HBAO, mHBAO, _)
                 (bool, mEnableShadingScale, false)
                 (float, mShadingScale, 0.5)

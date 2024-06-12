@@ -219,6 +219,34 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                     OSS << "};\n";
                 }
                 OSS << "}\n";
+
+                oss << "\n";
+                OSS << "export function fillRequired" << name << " (value: " << name << "): void {\n";
+                {
+                    INDENT();
+                    for (const auto& m : s.mMembers) {
+                        const auto memberID = locate(m.mTypePath, g);
+                        const auto& memberType = get(g.names, g, memberID);
+                        const auto& memberTraits = get(g.traits, g, memberID);
+                        const auto& memberName = g.getMemberName(m.mMemberName, true);
+
+                        if (m.mOptional || g.isOptional(memberID)) {
+                            // noop
+                        } else if (memberTraits.mStructInterface) {
+                            OSS << "if (value." << memberName << " === undefined) {\n";
+                            OSS << "    (value." << memberName << " as " << memberType << ") = make" << memberType << "();\n";
+                            OSS << "} else {\n";
+                            OSS << "    fillRequired" << memberType << "(value." << memberName << ");\n";
+                            OSS << "}\n";
+                        } else {
+                            OSS << "if (value." << memberName << " === undefined) {\n";
+                            OSS << "    value." << memberName << " = "
+                                << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                            OSS << "}\n";
+                        }
+                    }
+                }
+                OSS << "}\n";
             }
 
             if (false) {
