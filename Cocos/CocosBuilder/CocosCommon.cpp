@@ -519,6 +519,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             }
             IMPORT_CLASS(Material) {
             }
+            IMPORT_CLASS(Texture2D) {
+            }
         }
     }
 }

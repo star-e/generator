@@ -91,8 +91,8 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         STRUCT(ColorGrading, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
-                (float, mContribute, 0)
-                ([[optional]] IntrusivePtr<gfx::Texture>, mColorGradingMap, _)
+                (float, mContribute, 1)
+                ([[nullable]] IntrusivePtr<Texture2D>, mColorGradingMap, _)
             );
         }
 
