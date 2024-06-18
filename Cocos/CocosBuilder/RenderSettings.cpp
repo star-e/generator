@@ -64,6 +64,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         STRUCT(DepthOfField, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
+                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
                 (float, mFocusDistance, 0)
                 (float, mFocusRange, 0)
                 (float, mBokehRadius, 1)
@@ -73,6 +74,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         STRUCT(Bloom, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
+                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
                 (bool, mEnableAlphaMask, false)
                 //(bool, mUseHdrIlluminance, false)
                 (uint32_t, mIterations, 3)
@@ -91,6 +93,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         STRUCT(ColorGrading, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
+                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
                 (float, mContribute, 1)
                 ([[nullable]] IntrusivePtr<Texture2D>, mColorGradingMap, _)
             );
@@ -99,6 +102,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         STRUCT(FSR, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
+                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
                 (float, mSharpness, 0.8)
             );
         }
@@ -106,6 +110,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         STRUCT(FXAA, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
+                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
             );
         }
 
@@ -129,6 +134,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
                 (ColorGrading, mColorGrading, _)
                 (FSR, mFsr, _)
                 (FXAA, mFxaa, _)
+                ([[nullable]] IntrusivePtr<Material>, mCopyMaterial, _)
             );
         }
 
