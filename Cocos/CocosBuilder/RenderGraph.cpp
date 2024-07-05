@@ -435,12 +435,13 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             PUBLIC(
                 (QueueHint, mHint, QueueHint::RENDER_OPAQUE)
                 (uint32_t, mPhaseID, 0xFFFFFFFF)
+                (uint32_t, mPassLayoutID, 0xFFFFFFFF)
                 ([[nullable]] gfx::Viewport, mViewport, _)
                 //(bool, mOverwritePassDescriptors, false)
             );
             TS_INIT(mViewport, null);
-            CNTR(mHint, mPhaseID);
-            CNTR(mPhaseID);
+            CNTR(mHint, mPhaseID, mPassLayoutID);
+            CNTR(mPhaseID, mPassLayoutID);
         }
 
         //STRUCT(RenderGraphQueueContext) {
