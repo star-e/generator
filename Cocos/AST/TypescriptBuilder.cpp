@@ -40,7 +40,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     std::string_view scope,
     SyntaxGraph::vertex_descriptor vertID,
     std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch) {
+    const auto funcSpace = bPublicFormat ? "" : " ";
     const auto& g = builder.mSyntaxGraph;
     auto name = g.getTypescriptTypename(vertID, scratch, scratch);
     const auto& traits = get(g.traits, g, vertID);
@@ -89,7 +91,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
 
             if (!e.mIsFlags) {
                 oss << "\n";
-                OSS << "export function get" << name << "Name (e: " << name << "): string {\n";
+                OSS << "export function get" << name << "Name" << funcSpace << "(e: " << name << "): string {\n";
                 {
                     INDENT();
                     OSS << "switch (e) {\n";
@@ -114,7 +116,8 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (!comment.mComment.empty()) {
                 outputComment(oss, space, comment.mComment);
             }
-            auto content = generateGraph(builder, moduleInfo, s, vertID, name, imports, scratch);
+            auto content = generateGraph(builder, moduleInfo, s, vertID, name, imports,
+                bPublicFormat, scratch);
             copyString(oss, space, content);
         }, 
         [&](const Struct& s) {
@@ -162,7 +165,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 INDENT();
                 if (false && (traits.mFlags & POOL_OBJECT)) {
                     OSS << "private static _pool: " << name << "[] = [];\n";
-                    OSS << "static create (): " << name << " {\n";
+                    OSS << "static create" << funcSpace << "(): " << name << " {\n";
                     {
                         INDENT();
                         OSS << "if (" << name << "._pool.length) {\n";
@@ -171,7 +174,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                         OSS << "return new " << name << "();\n";
                     }
                     OSS << "}\n";
-                    OSS << "disassemble (): void {\n";
+                    OSS << "disassemble" << funcSpace << "(): void {\n";
                     {
                         INDENT();
                         outputDisassembleMembers(oss, space, builder, g, vertID, s.mMembers, scratch);
@@ -186,13 +189,14 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 }
                 outputMembers(oss, space, builder, moduleInfo, g, vertID,
                     bases, s.mMembers,
-                    s.mTypescriptFunctions, s.mConstructors, s.mMethods, scratch);
+                    s.mTypescriptFunctions, s.mConstructors, s.mMethods,
+                    bPublicFormat, scratch);
             }
             OSS << "}\n";
 
             if (traits.mStructInterface) {
                 oss << "\n";
-                OSS << "export function make" << name << " (): " << name << " {\n";
+                OSS << "export function make" << name << funcSpace << "(): " << name << " {\n";
                 {
                     INDENT();
                     OSS << "return {\n";
@@ -223,7 +227,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 OSS << "}\n";
 
                 oss << "\n";
-                OSS << "export function fillRequired" << name << " (value: " << name << "): void {\n";
+                OSS << "export function fillRequired" << name << funcSpace << "(value: " << name << "): void {\n";
                 {
                     INDENT();
                     for (const auto& m : s.mMembers) {
@@ -283,6 +287,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     const ModuleInfo& moduleInfo,
     std::string_view scope,
     std::pmr::set<std::pmr::string>& moduleImports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch) {
     const auto& g = builder.mSyntaxGraph;
     const auto& mg = builder.mModuleGraph;
@@ -423,7 +428,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                     OSS << "create" << name << " (";
                     if (pCntr) {
                         outputConstructionParams(oss, space, count, builder, true,
-                            g, pStruct->mMembers, *pCntr, true, false, scratch);
+                            g, pStruct->mMembers, *pCntr, true, false, bPublicFormat, scratch);
                     }
                     if (kOutputPoolDebug) {
                         if (count) {
@@ -462,7 +467,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                             int count = 0;
                             OSS << "v.reset(";
                             outputConstructionParams(oss, space, count, builder, false,
-                                g, pStruct->mMembers, *pCntr, true, true, scratch);
+                                g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, scratch);
                             oss << ");\n";
                         } else {
                             OSS << "v.reset();\n"; 

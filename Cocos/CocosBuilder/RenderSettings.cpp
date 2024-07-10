@@ -36,8 +36,8 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
     MODULE(RenderSettings,
         .mFolder = "cocos/renderer/pipeline/custom",
         //.mFilePrefix = "RenderSettings",
-        .mTypescriptFolder = "cocos/rendering/custom",
-        .mTypescriptFilePrefix = "settings",
+        .mTypescriptFolder = "editor/assets/default_renderpipeline/",
+        .mTypescriptFilePrefix = "builtin-pipeline-types",
         .mRequires = {},
     ) {
         NAMESPACE_BEG(cc);

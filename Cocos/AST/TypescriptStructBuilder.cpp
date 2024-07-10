@@ -173,6 +173,7 @@ void outputConstructionParams(
     const Constructor& cntr,
     bool bReset,
     bool bArgument,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch) {
     auto outputComma = [&]() {
         if (bChangeLine) {
@@ -209,10 +210,10 @@ void outputConstructionParams(
                     oss << g.getMemberName(m.mMemberName, true);
                 } else {
                     if (cntr.mHasDefault) {
-                        oss << builder.getTypedMemberName(m, true);
+                        oss << builder.getTypedMemberName(bPublicFormat, m, true);
                         oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
                     } else {
-                        oss << builder.getTypedMemberName(m, true, true);
+                        oss << builder.getTypedMemberName(bPublicFormat, m, true, true);
                     }
                 }
                 if (bChangeLine) {
@@ -234,6 +235,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,
     const std::pmr::vector<Method>& methods,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch) {
     const auto& traits = get(g.traits, g, vertID);
     const int maxParams = 4;
@@ -266,13 +268,13 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 return;
                             }
                             outputConstructionParams(oss, space, count, builder, bChangeLine,
-                                g, s.mMembers, s.mConstructors.front(), false, false, scratch);
+                                g, s.mMembers, s.mConstructors.front(), false, false, bPublicFormat, scratch);
                         },
                         [&](const auto&) {
                         });
                 }
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, cntr, false, false, scratch);
+                    g, members, cntr, false, false, bPublicFormat, scratch);
 
                 if (bChangeLine) {
                     OSS << ") {\n";
@@ -345,14 +347,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                             return;
                         }
                         outputConstructionParams(oss, space, count, builder, bChangeLine,
-                            g, s.mMembers, s.mConstructors.front(), true, false, scratch);
+                            g, s.mMembers, s.mConstructors.front(), true, false, bPublicFormat, scratch);
                     },
                     [&](const auto&) {
                     });
             }
             if (pCntr) {
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, *pCntr, true, false, scratch);
+                    g, members, *pCntr, true, false, bPublicFormat, scratch);
             }
             if (bChangeLine) {
                 OSS << "): void {\n";
@@ -540,6 +542,8 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         }
     }
 
+    const auto commentBegin = bPublicFormat ? "/* " : "/*";
+    const auto commentEnd = bPublicFormat ? " */" : "*/";
     for (uint32_t i = 0; const auto& m : members) {
         if (m.mFlags & IMPL_DETAIL)
             continue;
@@ -565,30 +569,32 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         }
         bool bTypscriptPointer = g.isTypescriptPointer(memberID);
         if (m.mMutable) {
-            oss << "/*mutable*/ ";
+            oss << commentBegin << "mutable" << commentEnd << " ";
         } else if (!m.mPointer && !bTypscriptPointer && !m.mOptional && !m.mNullable && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         } else if (bTypscriptPointer) {
-            oss << "/*refcount*/ ";
+            oss << commentBegin << "refcount" << commentEnd << " ";
         } else if (m.mPointer) {
-            oss << "/*pointer*/ ";
+            oss << commentBegin << "pointer" << commentEnd << " ";
         } else if (m.mReference) {
-            oss << "/*reference*/ ";
+            oss << commentBegin << "reference" << commentEnd << " ";
         }
         if (bNeedIntial) {
             if (m.mOptional || g.isOptional(memberID) || traits.mStructInterface) {
-                oss << builder.getTypedMemberName(m, m.mPublic, true) << ";";
+                oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";";
                 if (g.isTypescriptValueType(memberID)) {
-                    oss << " /*" << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << "*/\n";
+                    oss << " " << commentBegin
+                        << g.getTypescriptInitialValue(memberID, m, scratch, scratch)
+                        << commentEnd << "\n";
                 } else {
                     oss << "\n";
                 }
             } else {
-                oss << builder.getTypedMemberName(m, m.mPublic);
+                oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic);
                 oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
             }
         } else {
-            oss << builder.getTypedMemberName(m, m.mPublic, true) << ";\n";
+            oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";\n";
         }
 
         ++i;

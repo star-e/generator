@@ -42,7 +42,7 @@ int main() {
     std::filesystem::path typescriptFolder = "../../../cocos-engine";
     std::filesystem::path cppFolder = "../../../cocos-engine/native";
 
-    ModuleBuilder builder("cc", cppFolder, typescriptFolder, scratch, scratch);
+    ModuleBuilder builder("cc", cppFolder, typescriptFolder, "cc", scratch, scratch);
     builder.init();
 
     // type registration
@@ -68,7 +68,7 @@ int main() {
         buildCustomization(builder, Fwd | Types);
 
         // settings
-        buildRenderSettings(builder, Typescripts);
+        buildRenderSettings(builder, Typescripts | PublicFormat);
 
         // build render compiler (native)
         buildArchiveInterface(builder, Fwd | Types | Typescripts | Interface);

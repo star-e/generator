@@ -334,6 +334,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "GFXDef-common.h",
         .mTypescriptFolder = "cocos",
         .mTypescriptFilePrefix = "gfx",
+        .mTypescriptNamespace = "gfx",
     ) {
         ADD_FEATURES(ToJs);
 

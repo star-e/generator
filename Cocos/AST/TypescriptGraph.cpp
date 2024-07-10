@@ -533,6 +533,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
     const ModuleInfo& moduleInfo,
     const Graph& s, SyntaxGraph::vertex_descriptor vertID, std::string_view name,
     std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch) {
     const auto& g = builder.mSyntaxGraph;
 
@@ -2492,7 +2493,8 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             g, vertID,
             constraints.mConcepts,
             s.mMembers, s.mTypescriptFunctions,
-            s.mConstructors, s.mMethods, scratch);
+            s.mConstructors, s.mMethods,
+            bPublicFormat, scratch);
     }
     OSS << "}\n";
 

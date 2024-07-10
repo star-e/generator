@@ -389,7 +389,7 @@ struct ModuleBuilder {
         return allocator_type(mSyntaxGraph.get_allocator().resource());
     }
 
-    ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, std::pmr::memory_resource* scratch, const allocator_type& alloc);
+    ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, std::string_view typescriptRoot, std::pmr::memory_resource* scratch, const allocator_type& alloc);
     ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc);
 
     ModuleBuilder(ModuleBuilder&& rhs) = default;
@@ -489,7 +489,7 @@ struct ModuleBuilder {
 
     // Generation
     int compile();
-    std::pmr::string getTypedMemberName(const Member& m, bool bPublic, bool bFull = false) const;
+    std::pmr::string getTypedMemberName(bool bPublicFormat, const Member& m, bool bPublic, bool bFull = false) const;
     std::pmr::string getTypedParameterName(const Parameter& m, bool bPublic, bool bFull = false, bool bOptional = false, bool bReturn = false) const;
 
     std::pmr::string getTypescriptVertexName(SyntaxGraph::vertex_descriptor vertID,
@@ -502,6 +502,7 @@ struct ModuleBuilder {
     std::pmr::string mCurrentModule;
     std::pmr::string mCurrentScope;
     std::pmr::string mProjectName;
+    std::pmr::string mTypescriptRoot;
     std::pmr::memory_resource* mScratch = nullptr;
     bool mUnderscoreMemberName = true;
     bool mCompiled = false;

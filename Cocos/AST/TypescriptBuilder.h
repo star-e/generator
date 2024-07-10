@@ -41,6 +41,7 @@ void outputConstructionParams(
     const Constructor& cntr,
     bool bReset,
     bool bArgument,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
@@ -50,6 +51,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     std::string_view scope,
     SyntaxGraph::vertex_descriptor vertID,
     std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
@@ -59,6 +61,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     const ModuleInfo& moduleInfo,
     std::string_view scope,
     std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
@@ -78,6 +81,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,
     const std::pmr::vector<Method>& methods,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 void outputFunctions(std::ostream& oss, std::pmr::string& space,
