@@ -83,13 +83,6 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             );
         }
 
-        //STRUCT(ToneMapping) {
-        //    PUBLIC(
-        //        (bool, mEnabled, false)
-        //        ([[optional]] ccstd::string, mAlgorithm, _)
-        //    );
-        //}
-
         STRUCT(ColorGrading, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
@@ -114,6 +107,12 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(ToneMapping, .mStructInterface = true) {
+            PUBLIC(
+                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
+            );
+        }
+
         //STRUCT(ForwardPipeline, .mStructInterface = true) {
         //    PUBLIC(
         //        (uint32_t, mMobileMaxSpotLightShadowMaps, 1)
@@ -130,11 +129,11 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
                 (float, mShadingScale, 0.5)
                 (DepthOfField, mDepthOfField, _)
                 (Bloom, mBloom, _)
-                //([[optional]] ToneMapping, mToneMapping, _)
+                (ToneMapping, mToneMapping, _)
                 (ColorGrading, mColorGrading, _)
                 (FSR, mFsr, _)
                 (FXAA, mFxaa, _)
-                ([[nullable]] IntrusivePtr<Material>, mCopyMaterial, _)
+                //([[nullable]] IntrusivePtr<Material>, mCopyMaterial, _)
             );
         }
 
