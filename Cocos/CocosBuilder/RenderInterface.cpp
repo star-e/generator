@@ -243,7 +243,7 @@ virtual void useLightFrustum(IntrusivePtr<scene::Light> light, uint32_t csmLevel
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
-virtual SceneBuilder *addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] scene::Light* light = nullptr) = 0;
+virtual SceneBuilder *addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] scene::Light* light = nullptr, [[optional]] scene::RenderScene* scene = nullptr) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;

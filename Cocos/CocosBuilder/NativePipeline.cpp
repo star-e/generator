@@ -317,7 +317,7 @@ inline void clear() noexcept {
 
 void removeMacro() const;
 
-static uint32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::vertex_descriptor phaseLayoutId);
+static int32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::vertex_descriptor phaseLayoutId);
 
 void applyMacro(const LayoutGraphData &lg, const scene::Model& model, LayoutGraphData::vertex_descriptor probeLayoutId);
 )");
@@ -475,6 +475,7 @@ gfx::Buffer* createFromCpuBuffer();
                 (const scene::Light*, mLight, nullptr)
                 (uint32_t, mLightLevel, 0xFFFFFFFF)
                 (bool, mCastShadow, false)
+                (bool, mProbePass, false)
             );
         }
 
