@@ -706,6 +706,7 @@ void destroy();
                 ((mutable PmrFlatMap<BuiltinCascadedShadowMapKey, BuiltinCascadedShadowMap>), mBuiltinCSMs, _)
                 (PipelineStatistics, mStatistics, _)
                 (PipelineCustomization, mCustom, _)
+                (bool, mDefaultFramebufferHasDepthStencil, false)
             );
             MEMBER_FUNCTIONS(R"(
 void executeRenderGraph(const RenderGraph& rg);

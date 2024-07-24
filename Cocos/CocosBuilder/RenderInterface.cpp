@@ -295,8 +295,8 @@ virtual void endSetup() = 0;
 [[setter]] virtual void setEnableCpuLightCulling(bool enable) = 0;
 
 virtual bool containsResource(const ccstd::string& name) const = 0;
-virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
-[[deprecated]] virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
+virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow, const ccstd::string& depthStencilName = "") = 0;
+[[deprecated]] virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow, const ccstd::string& depthStencilName = "") = 0;
 
 virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
@@ -322,7 +322,7 @@ virtual void endFrame() = 0;
 [[deprecated]] virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
-virtual void addBuiltinReflectionProbePass(const scene::Camera *camera) = 0;
+[[deprecated]] virtual void addBuiltinReflectionProbePass(const scene::Camera *camera) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
