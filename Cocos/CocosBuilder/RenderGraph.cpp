@@ -155,8 +155,9 @@ bool hasSideEffects() const noexcept {
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
                 (uint32_t, mGeneration, 0xFFFFFFFF)
+                (bool, mIsDepthStencil, false)
             );
-            CNTR(mSwapchain);
+            CNTR(mSwapchain, mIsDepthStencil);
         }
 
         STRUCT(ResourceStates, .mFlags = POOL_OBJECT) {
