@@ -580,7 +580,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             oss << commentBegin << "reference" << commentEnd << " ";
         }
         if (bNeedIntial) {
-            if (m.mOptional || g.isOptional(memberID) || traits.mStructInterface) {
+            if (m.mOptional || g.isOptional(memberID) || (traits.mStructInterface && sEnableMake)) {
                 oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";";
                 if (g.isTypescriptValueType(memberID)) {
                     oss << " " << commentBegin
@@ -603,7 +603,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         OSS << "_pool?: boolean;\n";
     }
 
-    if (traits.mStructInterface) {
+    if (traits.mStructInterface && sEnableMake) {
         OSS << "[name: string]: unknown;\n";
     }
 }

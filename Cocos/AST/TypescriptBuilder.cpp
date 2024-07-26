@@ -132,7 +132,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 OSS << "@ccclass('cc." << name << "')\n";
             }
             OSS << "export";
-            if (traits.mInterface || traits.mStructInterface) {
+            if (traits.mInterface || (traits.mStructInterface && sEnableMake)) {
                 oss << " interface " << name;
             } else {
                 oss << " class " << name;
@@ -195,36 +195,38 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             OSS << "}\n";
 
             if (traits.mStructInterface) {
-                oss << "\n";
-                OSS << "export function make" << name << funcSpace << "(): " << name << " {\n";
-                {
-                    INDENT();
-                    OSS << "return {\n";
-                    for (const auto& m : s.mMembers) {
+                if (sEnableMake) {
+                    oss << "\n";
+                    OSS << "export function make" << name << funcSpace << "(): " << name << " {\n";
+                    {
                         INDENT();
-                        const auto memberID = locate(m.mTypePath, g);
-                        const auto& memberType = get(g.names, g, memberID);
-                        const auto& memberTraits = get(g.traits, g, memberID);
-                        const auto& memberName = g.getMemberName(m.mMemberName, true);
-                        
-                        if (m.mOptional || g.isOptional(memberID)) {
-                            // noop
-                        } else if (memberTraits.mStructInterface) {
-                            OSS << memberName << ": make" << memberType << "(),\n";
-                        } else {
-                            if (g.isTypescriptValueType(memberID)) {
-                                OSS << memberName << ": "
-                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ",\n";
-                            } else if (m.mNullable) {
-                                OSS << memberName << ": null,\n";
+                        OSS << "return {\n";
+                        for (const auto& m : s.mMembers) {
+                            INDENT();
+                            const auto memberID = locate(m.mTypePath, g);
+                            const auto& memberType = get(g.names, g, memberID);
+                            const auto& memberTraits = get(g.traits, g, memberID);
+                            const auto& memberName = g.getMemberName(m.mMemberName, true);
+
+                            if (m.mOptional || g.isOptional(memberID)) {
+                                // noop
+                            } else if (memberTraits.mStructInterface && sEnableMake) {
+                                OSS << memberName << ": make" << memberType << "(),\n";
                             } else {
-                                Expects(false);
+                                if (g.isTypescriptValueType(memberID)) {
+                                    OSS << memberName << ": "
+                                        << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ",\n";
+                                } else if (m.mNullable) {
+                                    OSS << memberName << ": null,\n";
+                                } else {
+                                    Expects(false);
+                                }
                             }
                         }
+                        OSS << "};\n";
                     }
-                    OSS << "};\n";
+                    OSS << "}\n";
                 }
-                OSS << "}\n";
 
                 oss << "\n";
                 OSS << "export function fillRequired" << name << funcSpace << "(value: " << name << "): void {\n";
@@ -239,16 +241,24 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                         if (m.mOptional || g.isOptional(memberID)) {
                             // noop
                         } else if (memberTraits.mStructInterface) {
-                            OSS << "if (value." << memberName << " === undefined) {\n";
-                            OSS << "    (value." << memberName << " as " << memberType << ") = make" << memberType << "();\n";
-                            OSS << "} else {\n";
-                            OSS << "    fillRequired" << memberType << "(value." << memberName << ");\n";
-                            OSS << "}\n";
+                            if (sEnableMake) {
+                                OSS << "if (!value." << memberName << ") {\n";
+                                OSS << "    (value." << memberName << " as " << memberType << ") = make" << memberType << "();\n";
+                                OSS << "} else {\n";
+                                OSS << "    fillRequired" << memberType << "(value." << memberName << ");\n";
+                                OSS << "}\n";
+                            } else {
+                                const auto typescriptFullName = memberType + (m.mNullable ? " | null" : "");
+                                OSS << "if (!value." << memberName << ") {\n";
+                                OSS << "    (value." << memberName << " as " << memberType << ") = "
+                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                                OSS << "} else {\n";
+                                OSS << "    fillRequired" << memberType << "(value." << memberName << ");\n";
+                                OSS << "}\n";
+                            }
                         } else {
-                            OSS << "if (value." << memberName << " === undefined) {\n";
-                            OSS << "    value." << memberName << " = "
+                            OSS << "value." << memberName << " ??= "
                                 << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
-                            OSS << "}\n";
                         }
                     }
                 }
