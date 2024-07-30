@@ -2014,20 +2014,26 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     {
                         INDENT();
                         if (s.isVector()) {
-                            OSS << "if (this._vertices[v]._id === "
-                                << enumType << "." << tagName << ") {\n";
-                            OSS << "    return this._vertices[v]._object as " << typeName << ";\n";
-                            OSS << "} else {\n";
-                            if (bTry) {
-                                OSS << "    return null;\n";
+                            if (gReduceCode) {
+                                //imports.emplace("assert");
+                                //OSS << "assert(this._vertices[v]._id === " << enumType << "." << tagName << ");\n";
+                                OSS << "return this._vertices[v]._object as " << typeName << ";\n";
                             } else {
-                                if (gThrow) {
-                                    OSS << "    throw Error('value id not match');\n";
+                                OSS << "if (this._vertices[v]._id === "
+                                    << enumType << "." << tagName << ") {\n";
+                                OSS << "    return this._vertices[v]._object as " << typeName << ";\n";
+                                OSS << "} else {\n";
+                                if (bTry) {
+                                    OSS << "    return null;\n";
                                 } else {
-                                    OSS << "    return undefined;\n";
+                                    if (gThrow) {
+                                        OSS << "    throw Error('value id not match');\n";
+                                    } else {
+                                        OSS << "    return undefined;\n";
+                                    }
                                 }
+                                OSS << "}\n";
                             }
-                            OSS << "}\n";
                         } else {
                             OSS << "if (v._id === "
                                 << enumType << "." << tagName << ") {\n";
