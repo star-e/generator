@@ -1406,197 +1406,199 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "}\n";
 
             // clear_vertex
-            OSS << "clearVertex (v: " << vertexDescType << "): void {\n";
-            {
-                INDENT();
-                if (s.isReference()) {
-                    OSS << "// ReferenceGraph";
-                    if (s.isAliasGraph()) {
-                        oss << "(Alias)";
-                    } else {
-                        oss << "(Separated)";
-                    }
-                    oss << "\n";
-                }
-                OSS << "const vert = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
-
-                auto outputClearEdges = [&](bool bOutputSeperated) {
-                    auto outEdgeList = s.getTypescriptOutEdgeList(bOutputSeperated);
-                    auto inEdgeList = s.getTypescriptInEdgeList(bOutputSeperated);
-
-                    if (bOutputSeperated) {
-                        OSS << "// clear child edges\n";
-                    } else {
-                        OSS << "// clear out edges\n";
-                    }
-                    OSS << "for (const oe of vert." << outEdgeList << ") {\n";
-                    {
-                        INDENT();
-                        std::pmr::string key("oe.target as ", scratch);
-                        if (s.isVector()) {
-                            key.append("number");
+            if (!gReduceCode) {
+                OSS << "clearVertex (v: " << vertexDescType << "): void {\n";
+                {
+                    INDENT();
+                    if (s.isReference()) {
+                        OSS << "// ReferenceGraph";
+                        if (s.isAliasGraph()) {
+                            oss << "(Alias)";
                         } else {
-                            key.append(vertexDescType);
+                            oss << "(Separated)";
                         }
-                        OSS << "const target = "
-                            << s.getTypescriptVertexDereference(key, scratch) << ";\n";
-
-                        if (true) {
-                            outputRemoveOutEdge(oss, space, "target", inEdgeList, "target", "v", false);
-                        } else {
-                            OSS << "target." << inEdgeList << " = target." << inEdgeList
-                                << ".filter(ie => ie.target !== v);\n";
-                        }
-                        if (!bOutputSeperated && s.needEdgeList()) {
-                            OSS << "// remove edge from edge list\n";
-                            OSS << "this._edges.delete(oe.edge as " << edgeType << ");\n";
-                        }
-                    }
-                    OSS << "}\n";
-                    OSS << "vert." << outEdgeList << ".length = 0;\n";
-
-                    oss << "\n";
-                    if (bOutputSeperated) {
-                        OSS << "// clear parent edges\n";
-                    } else {
-                        OSS << "// clear in edges\n";
-                    }
-                    OSS << "for (const ie of vert." << inEdgeList << ") {\n";
-                    {
-                        INDENT();
-                        std::pmr::string key("ie.target as ", scratch);
-                        if (s.isVector()) {
-                            key.append("number");
-                        } else {
-                            key.append(vertexDescType);
-                        }
-                        OSS << "const source = "
-                            << s.getTypescriptVertexDereference(key, scratch) << ";\n";
-                        if (true) {
-                            outputRemoveOutEdge(oss, space, "source", outEdgeList, "target", "v", false);
-                        } else {
-                            OSS << "source." << outEdgeList << " = source."
-                                << outEdgeList << ".filter(ie => ie.target !== v);\n";
-                        }
-                        if (!bOutputSeperated && s.needEdgeList()) {
-                            OSS << "// remove edge from edge list\n";
-                            OSS << "this._edges.delete(ie.edge as " << edgeType << ");\n";
-                        }
-                    }
-                    OSS << "}\n";
-                    OSS << "vert." << inEdgeList << ".length = 0;\n";
-                };
-                outputClearEdges(false);
-                if (s.isReference() && !s.isAliasGraph()) {
-                    oss << "\n";
-                    outputClearEdges(true);
-                }
-            }
-            OSS << "}\n";
-
-            // remove_vertex
-            OSS << "removeVertex (u: " << vertexDescType << "): void {\n";
-            {
-                INDENT();
-                if (s.isVector()) {
-                    Expects(s.mVertexMaps.empty() || s.mVertexMaps.size() == 1);
-                    for (const auto& map : s.mVertexMaps) {
-                        OSS << "{ // UuidGraph\n";
-                        {
-                            INDENT();
-                            for (const auto& c : s.mComponents) {
-                                if (c.mName != map.mComponentName)
-                                    continue;
-
-                                const auto& component = g.getMemberName(c.mMemberName, false);
-                                OSS << "const key = this." << component << "[u];\n";
-                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".delete(key);\n";
-                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".forEach((v): void => {\n";
-                                {
-                                    INDENT();
-                                    OSS << "if (v > u) { --v; }\n";
-                                }
-                                OSS << "});\n";
-                                break;
-                            }
-                        }
-                        OSS << "}\n";
-                    }
-
-                    OSS << "this._vertices.splice(u, 1);\n";
-
-                    for (const auto& c : s.mComponents) {
-                        Expects(!c.mMemberName.empty());
-                        OSS << "this." << g.getMemberName(c.mMemberName, false)
-                            << ".splice(u, 1);\n";
-                    }
-
-                    oss << "\n";
-                    OSS << "const sz = this._vertices.length;\n";
-                    OSS << "if (u === sz) {\n";
-                    OSS << "    return;\n";
-                    OSS << "}\n";
-                    oss << "\n";
-                    OSS << "for (let v = 0; v !== sz; ++v) {\n";
-                    {
-                        INDENT();
-                        OSS << "const vert = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
-                        if (gImpl) {
-                            OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
-                            OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
-                            if (s.isReference() && !s.isAliasGraph()) {
-                                OSS << "// ReferenceGraph (Separated)\n";
-                                OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(true) << ", u);\n";
-                                OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(true) << ", u);\n";
-                            }
-                        } else {
-                            OSS << "reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
-                            OSS << "reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
-                            if (s.isReference() && !s.isAliasGraph()) {
-                                OSS << "// ReferenceGraph (Separated)\n";
-                                OSS << "reindexEdgeList(vert." << s.getTypescriptOutEdgeList(true) << ", u);\n";
-                                OSS << "reindexEdgeList(vert." << s.getTypescriptInEdgeList(true) << ", u);\n";
-                            }
-                            imports.emplace("reindexEdgeList");
-                        }
-                    }
-                    OSS << "}\n";
-
-                    if (s.needEdgeList()) {
                         oss << "\n";
-                        OSS << "for (const e of this._edges) {\n";
-                        {
-                            INDENT();
-                            OSS << "if (e.source > u) {\n";
-                            OSS << "    --e.source;\n";
-                            OSS << "}\n";
-                            OSS << "if (e.target > u) {\n";
-                            OSS << "    --e.target;\n";
-                            OSS << "}\n";
-                        }
-                        OSS << "}\n";
                     }
-                } else {
-                    for (const auto& map : s.mVertexMaps) {
-                        OSS << "{ // UuidGraph\n";
+                    OSS << "const vert = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
+
+                    auto outputClearEdges = [&](bool bOutputSeperated) {
+                        auto outEdgeList = s.getTypescriptOutEdgeList(bOutputSeperated);
+                        auto inEdgeList = s.getTypescriptInEdgeList(bOutputSeperated);
+
+                        if (bOutputSeperated) {
+                            OSS << "// clear child edges\n";
+                        } else {
+                            OSS << "// clear out edges\n";
+                        }
+                        OSS << "for (const oe of vert." << outEdgeList << ") {\n";
                         {
                             INDENT();
-                            for (const auto& c : s.mComponents) {
-                                if (c.mName != map.mComponentName)
-                                    continue;
+                            std::pmr::string key("oe.target as ", scratch);
+                            if (s.isVector()) {
+                                key.append("number");
+                            } else {
+                                key.append(vertexDescType);
+                            }
+                            OSS << "const target = "
+                                << s.getTypescriptVertexDereference(key, scratch) << ";\n";
 
-                                const auto& component = g.getMemberName(c.mMemberName, false);
-                                OSS << "const key = this." << component << "[u];\n";
-                                OSS << "this." << g.getMemberName(map.mMemberName, false) << ".delete(key);\n";
-                                break;
+                            if (true) {
+                                outputRemoveOutEdge(oss, space, "target", inEdgeList, "target", "v", false);
+                            } else {
+                                OSS << "target." << inEdgeList << " = target." << inEdgeList
+                                    << ".filter(ie => ie.target !== v);\n";
+                            }
+                            if (!bOutputSeperated && s.needEdgeList()) {
+                                OSS << "// remove edge from edge list\n";
+                                OSS << "this._edges.delete(oe.edge as " << edgeType << ");\n";
                             }
                         }
                         OSS << "}\n";
+                        OSS << "vert." << outEdgeList << ".length = 0;\n";
+
+                        oss << "\n";
+                        if (bOutputSeperated) {
+                            OSS << "// clear parent edges\n";
+                        } else {
+                            OSS << "// clear in edges\n";
+                        }
+                        OSS << "for (const ie of vert." << inEdgeList << ") {\n";
+                        {
+                            INDENT();
+                            std::pmr::string key("ie.target as ", scratch);
+                            if (s.isVector()) {
+                                key.append("number");
+                            } else {
+                                key.append(vertexDescType);
+                            }
+                            OSS << "const source = "
+                                << s.getTypescriptVertexDereference(key, scratch) << ";\n";
+                            if (true) {
+                                outputRemoveOutEdge(oss, space, "source", outEdgeList, "target", "v", false);
+                            } else {
+                                OSS << "source." << outEdgeList << " = source."
+                                    << outEdgeList << ".filter(ie => ie.target !== v);\n";
+                            }
+                            if (!bOutputSeperated && s.needEdgeList()) {
+                                OSS << "// remove edge from edge list\n";
+                                OSS << "this._edges.delete(ie.edge as " << edgeType << ");\n";
+                            }
+                        }
+                        OSS << "}\n";
+                        OSS << "vert." << inEdgeList << ".length = 0;\n";
+                    };
+                    outputClearEdges(false);
+                    if (s.isReference() && !s.isAliasGraph()) {
+                        oss << "\n";
+                        outputClearEdges(true);
                     }
-                    OSS << "this._vertices.delete(u);\n";
                 }
+                OSS << "}\n";
+
+                // remove_vertex
+                OSS << "removeVertex (u: " << vertexDescType << "): void {\n";
+                {
+                    INDENT();
+                    if (s.isVector()) {
+                        Expects(s.mVertexMaps.empty() || s.mVertexMaps.size() == 1);
+                        for (const auto& map : s.mVertexMaps) {
+                            OSS << "{ // UuidGraph\n";
+                            {
+                                INDENT();
+                                for (const auto& c : s.mComponents) {
+                                    if (c.mName != map.mComponentName)
+                                        continue;
+
+                                    const auto& component = g.getMemberName(c.mMemberName, false);
+                                    OSS << "const key = this." << component << "[u];\n";
+                                    OSS << "this." << g.getMemberName(map.mMemberName, false) << ".delete(key);\n";
+                                    OSS << "this." << g.getMemberName(map.mMemberName, false) << ".forEach((v): void => {\n";
+                                    {
+                                        INDENT();
+                                        OSS << "if (v > u) { --v; }\n";
+                                    }
+                                    OSS << "});\n";
+                                    break;
+                                }
+                            }
+                            OSS << "}\n";
+                        }
+
+                        OSS << "this._vertices.splice(u, 1);\n";
+
+                        for (const auto& c : s.mComponents) {
+                            Expects(!c.mMemberName.empty());
+                            OSS << "this." << g.getMemberName(c.mMemberName, false)
+                                << ".splice(u, 1);\n";
+                        }
+
+                        oss << "\n";
+                        OSS << "const sz = this._vertices.length;\n";
+                        OSS << "if (u === sz) {\n";
+                        OSS << "    return;\n";
+                        OSS << "}\n";
+                        oss << "\n";
+                        OSS << "for (let v = 0; v !== sz; ++v) {\n";
+                        {
+                            INDENT();
+                            OSS << "const vert = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
+                            if (gImpl) {
+                                OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
+                                OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
+                                if (s.isReference() && !s.isAliasGraph()) {
+                                    OSS << "// ReferenceGraph (Separated)\n";
+                                    OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(true) << ", u);\n";
+                                    OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(true) << ", u);\n";
+                                }
+                            } else {
+                                OSS << "reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
+                                OSS << "reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
+                                if (s.isReference() && !s.isAliasGraph()) {
+                                    OSS << "// ReferenceGraph (Separated)\n";
+                                    OSS << "reindexEdgeList(vert." << s.getTypescriptOutEdgeList(true) << ", u);\n";
+                                    OSS << "reindexEdgeList(vert." << s.getTypescriptInEdgeList(true) << ", u);\n";
+                                }
+                                imports.emplace("reindexEdgeList");
+                            }
+                        }
+                        OSS << "}\n";
+
+                        if (s.needEdgeList()) {
+                            oss << "\n";
+                            OSS << "for (const e of this._edges) {\n";
+                            {
+                                INDENT();
+                                OSS << "if (e.source > u) {\n";
+                                OSS << "    --e.source;\n";
+                                OSS << "}\n";
+                                OSS << "if (e.target > u) {\n";
+                                OSS << "    --e.target;\n";
+                                OSS << "}\n";
+                            }
+                            OSS << "}\n";
+                        }
+                    } else {
+                        for (const auto& map : s.mVertexMaps) {
+                            OSS << "{ // UuidGraph\n";
+                            {
+                                INDENT();
+                                for (const auto& c : s.mComponents) {
+                                    if (c.mName != map.mComponentName)
+                                        continue;
+
+                                    const auto& component = g.getMemberName(c.mMemberName, false);
+                                    OSS << "const key = this." << component << "[u];\n";
+                                    OSS << "this." << g.getMemberName(map.mMemberName, false) << ".delete(key);\n";
+                                    break;
+                                }
+                            }
+                            OSS << "}\n";
+                        }
+                        OSS << "this._vertices.delete(u);\n";
+                    }
+                }
+                OSS << "}\n";
             }
-            OSS << "}\n";
 
             // add_edge
             OSS << "addEdge (u: " << vertexDescType << ", v: " << vertexDescType;
@@ -1610,19 +1612,21 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "removeEdges (u: " << vertexDescType << ", v: " << vertexDescType << "): void {\n";
-            {
-                INDENT();
-                outputRemoveEdges(oss, space, s, false, imports, scratch);
-            }
-            OSS << "}\n";
+            if (!gReduceCode) {
+                OSS << "removeEdges (u: " << vertexDescType << ", v: " << vertexDescType << "): void {\n";
+                {
+                    INDENT();
+                    outputRemoveEdges(oss, space, s, false, imports, scratch);
+                }
+                OSS << "}\n";
 
-            OSS << "removeEdge (e: " << edgeDescType << "): void {\n";
-            {
-                INDENT();
-                outputRemoveEdge(oss, space, s, vertexDescType, edgeType, false, scratch);
+                OSS << "removeEdge (e: " << edgeDescType << "): void {\n";
+                {
+                    INDENT();
+                    outputRemoveEdge(oss, space, s, vertexDescType, edgeType, false, scratch);
+                }
+                OSS << "}\n";
             }
-            OSS << "}\n";
         }
 
         if (s.mNamed) { // NamedGraph
@@ -2242,28 +2246,30 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
             }
             OSS << "}\n";
-            OSS << "removeReference (e: " << refDescType << "): void {\n";
-            {
-                INDENT();
-                if (s.isAliasGraph()) {
-                    OSS << "return this.removeEdge(e);\n";
-                } else {
-                    outputRemoveEdge(oss, space, s, vertexDescType, edgeType, true, scratch);
+            if (!gReduceCode) {
+                OSS << "removeReference (e: " << refDescType << "): void {\n";
+                {
+                    INDENT();
+                    if (s.isAliasGraph()) {
+                        OSS << "return this.removeEdge(e);\n";
+                    } else {
+                        outputRemoveEdge(oss, space, s, vertexDescType, edgeType, true, scratch);
+                    }
                 }
-            }
-            OSS << "}\n";
+                OSS << "}\n";
 
-            OSS << "removeReferences (u: " << vertexDescType
-                << ", v: " << vertexDescType << "): void {\n";
-            {
-                INDENT();
-                if (s.isAliasGraph()) {
-                    OSS << "return this.removeEdges(u, v);\n";
-                } else {
-                    outputRemoveEdges(oss, space, s, true, imports, scratch);
+                OSS << "removeReferences (u: " << vertexDescType
+                    << ", v: " << vertexDescType << "): void {\n";
+                {
+                    INDENT();
+                    if (s.isAliasGraph()) {
+                        OSS << "return this.removeEdges(u, v);\n";
+                    } else {
+                        outputRemoveEdges(oss, space, s, true, imports, scratch);
+                    }
                 }
+                OSS << "}\n";
             }
-            OSS << "}\n";
         }
 
         if (s.isAddressable()) {
