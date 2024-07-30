@@ -728,11 +728,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "}\n";
         };
 
-        oss << "\n";
-        OSS << "//-----------------------------------------------------------------\n";
-        OSS << "// PropertyGraph Concept\n";
         int count = 0;
         if (!gReduceCode) {
+            oss << "\n";
+            OSS << "//-----------------------------------------------------------------\n";
+            OSS << "// PropertyGraph Concept\n";
             if (false && s.mNamed) {
                 if (count++)
                     oss << "\n";
@@ -1669,9 +1669,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         }
 
         if (s.hasProperties()) { // PropertyGraph
-            OSS << "//-----------------------------------------------------------------\n";
-            OSS << "// PropertyGraph\n";
             if (!gReduceCode) {
+                OSS << "//-----------------------------------------------------------------\n";
+                OSS << "// PropertyGraph\n";
                 if (!s.mVertexProperty.empty()) {
                     OSS << "vertexProperty (v: " << vertexDescType << "): "
                         << s.getTypescriptVertexPropertyType(g, scratch, scratch) << " {\n";
