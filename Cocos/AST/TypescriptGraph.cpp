@@ -1963,7 +1963,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             };
 
             generateValue(false);
-            generateValue(true);
+            if (!gReduceCode) {
+                generateValue(true); 
+            }
 
             OSS << "visitVertex (visitor: " << name << "Visitor, v: "
                 << vertexDescType << "): unknown {\n";
@@ -2049,7 +2051,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
             if (true) {
                 generatePolymorphicGetters(false);
-                generatePolymorphicGetters(true);
+                if (!gReduceCode) {
+                    generatePolymorphicGetters(true);
+                }
             }
         }
 
