@@ -353,16 +353,18 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
     }
     OSS << "}\n";
 
-    oss << "\n";
-    OSS << "export interface " << name << "ComponentPropertyMap {\n";
-    {
-        INDENT();
-        for (const auto& c : s.mComponents) {
-            auto typeName = g.getTypescriptTypename(c.mValuePath, scratch, scratch);
-            OSS << "[" << name << "Component." << getTypescriptTagType(c.mName, scratch) << "]: " << name << convertTag(c.mName) << "Map;\n";
+    if (!gReduceCode) {
+        oss << "\n";
+        OSS << "export interface " << name << "ComponentPropertyMap {\n";
+        {
+            INDENT();
+            for (const auto& c : s.mComponents) {
+                auto typeName = g.getTypescriptTypename(c.mValuePath, scratch, scratch);
+                OSS << "[" << name << "Component." << getTypescriptTagType(c.mName, scratch) << "]: " << name << convertTag(c.mName) << "Map;\n";
+            }
         }
+        OSS << "}\n";
     }
-    OSS << "}\n";
 }
 
 void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
@@ -730,32 +732,34 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         OSS << "//-----------------------------------------------------------------\n";
         OSS << "// PropertyGraph Concept\n";
         int count = 0;
-        if (false && s.mNamed) {
-            if (count++)
-                oss << "\n";
-            outputPropertyMap(SyntaxGraph::null_vertex(), nullptr, "Name", true, "vertices", vertexName, "_name", "string");
-        }
-
-        if (!s.mVertexProperty.empty()) {
-            if (count++)
-                oss << "\n";
-            auto vertID = locate(s.mVertexProperty, g);
-            auto tsType = g.getTypescriptTypename(vertID, scratch, scratch);
-            auto member = std::pmr::string(get(g.names, g, vertID), scratch);
-            member.front() = tolower(member.front());
-            outputPropertyMap(vertID, nullptr, "VertexProperty", true, "vertices", vertexName, "_property", tsType);
-        }
-
-        if (!s.mComponents.empty()) {
-            for (const auto& c : s.mComponents) {
+        if (!gReduceCode) {
+            if (false && s.mNamed) {
                 if (count++)
                     oss << "\n";
-                auto vertID = locate(c.mValuePath, g);
-                auto componentType = g.getTypescriptTypename(vertID, scratch, scratch);
-                Expects(!c.mMemberName.empty());
-                auto member = g.getMemberName(c.mMemberName, true);
-                outputPropertyMap(vertID, &c, convertTag(c.mName), false, member, componentType,
-                    g.getMemberName(c.mMemberName, false), componentType);
+                outputPropertyMap(SyntaxGraph::null_vertex(), nullptr, "Name", true, "vertices", vertexName, "_name", "string");
+            }
+
+            if (!s.mVertexProperty.empty()) {
+                if (count++)
+                    oss << "\n";
+                auto vertID = locate(s.mVertexProperty, g);
+                auto tsType = g.getTypescriptTypename(vertID, scratch, scratch);
+                auto member = std::pmr::string(get(g.names, g, vertID), scratch);
+                member.front() = tolower(member.front());
+                outputPropertyMap(vertID, nullptr, "VertexProperty", true, "vertices", vertexName, "_property", tsType);
+            }
+
+            if (!s.mComponents.empty()) {
+                for (const auto& c : s.mComponents) {
+                    if (count++)
+                        oss << "\n";
+                    auto vertID = locate(c.mValuePath, g);
+                    auto componentType = g.getTypescriptTypename(vertID, scratch, scratch);
+                    Expects(!c.mMemberName.empty());
+                    auto member = g.getMemberName(c.mMemberName, true);
+                    outputPropertyMap(vertID, &c, convertTag(c.mName), false, member, componentType,
+                        g.getMemberName(c.mMemberName, false), componentType);
+                }
             }
         }
         if (!s.mComponents.empty()) {
@@ -1644,120 +1648,124 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
             }
             OSS << "}\n";
-            OSS << "vertexNameMap (): " << name << "NameMap {\n";
-            {
-                INDENT();
-                if (s.isVector()) {
-                    for (const auto& c : s.mComponents) {
-                        if (c.mName != s.mNamedConcept.mComponentName)
-                            continue;
+            if (!gReduceCode) {
+                OSS << "vertexNameMap (): " << name << "NameMap {\n";
+                {
+                    INDENT();
+                    if (s.isVector()) {
+                        for (const auto& c : s.mComponents) {
+                            if (c.mName != s.mNamedConcept.mComponentName)
+                                continue;
 
-                        OSS << "return new " << name << "NameMap(this."
-                            << g.getMemberName(c.mMemberName, false) << ");\n";
+                            OSS << "return new " << name << "NameMap(this."
+                                << g.getMemberName(c.mMemberName, false) << ");\n";
+                        }
+                    } else {
+                        OSS << "return new " << name << "NameMap();\n";
                     }
-                } else {
-                    OSS << "return new " << name << "NameMap();\n";
                 }
+                OSS << "}\n";
             }
-            OSS << "}\n";
         }
 
         if (s.hasProperties()) { // PropertyGraph
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// PropertyGraph\n";
-            if (!s.mVertexProperty.empty()) {
-                OSS << "vertexProperty (v: " << vertexDescType << "): "
-                    << s.getTypescriptVertexPropertyType(g, scratch, scratch) << " {\n";
-                {
-                    INDENT();
-                    if (s.isVector()) {
-                        OSS << "return this._vertices[v]._property;\n";
-                    } else {
-                        OSS << "return v._property;\n";
+            if (!gReduceCode) {
+                if (!s.mVertexProperty.empty()) {
+                    OSS << "vertexProperty (v: " << vertexDescType << "): "
+                        << s.getTypescriptVertexPropertyType(g, scratch, scratch) << " {\n";
+                    {
+                        INDENT();
+                        if (s.isVector()) {
+                            OSS << "return this._vertices[v]._property;\n";
+                        } else {
+                            OSS << "return v._property;\n";
+                        }
                     }
-                }
-                OSS << "}\n";
-                OSS << "vertexPropertyMap (): " << name << "VertexPropertyMap {\n";
-                {
-                    INDENT();
-                    if (s.isVector()) {
-                        OSS << "return new " << name << "VertexPropertyMap(this._vertices);\n";
-                    } else {
-                        OSS << "return new " << name << "VertexPropertyMap();\n";
+                    OSS << "}\n";
+                    OSS << "vertexPropertyMap (): " << name << "VertexPropertyMap {\n";
+                    {
+                        INDENT();
+                        if (s.isVector()) {
+                            OSS << "return new " << name << "VertexPropertyMap(this._vertices);\n";
+                        } else {
+                            OSS << "return new " << name << "VertexPropertyMap();\n";
+                        }
                     }
+                    OSS << "}\n";
                 }
-                OSS << "}\n";
-            }
 
-            OSS << "get (tag: string): ";
-            int count = 0;
-            if (false && s.mNamed) {
-                if (count++)
-                    oss << " | ";
-                oss << name << "NameMap";
-            }
-            if (!s.mVertexProperty.empty()) {
-                if (count++)
-                    oss << " | ";
-                oss << name << "VertexPropertyMap";
-            }
-            for (const auto& c : s.mComponents) {
-                if (count++)
-                    oss << " | ";
-                oss << name << convertTag(c.mName) << "Map";
-            }
-            oss << " {\n";
-            {
-                INDENT();
-                OSS << "switch (tag) {\n";
+                OSS << "get (tag: string): ";
+                int count = 0;
                 if (false && s.mNamed) {
-                    OSS << "// NamedGraph\n";
-                    OSS << "case '"
-                        << "name"
-                        << "':\n";
-                    INDENT();
-                    if (s.isVector()) {
-                        OSS << "return new " << name << "NameMap(this._vertices);\n";
-                    } else {
-                        OSS << "return new " << name << "NameMap();\n";
-                    }
+                    if (count++)
+                        oss << " | ";
+                    oss << name << "NameMap";
                 }
                 if (!s.mVertexProperty.empty()) {
-                    OSS << "// VertexProperty\n";
-                    OSS << "case '"
-                        << "vertex"
-                        << "':\n";
-                    INDENT();
-                    if (s.isVector()) {
-                        OSS << "return new " << name << "VertexPropertyMap(this._vertices);\n";
-                    } else {
-                        OSS << "return new " << name << "VertexPropertyMap();\n";
-                    }
-                }
-                if (!s.mComponents.empty()) {
-                    OSS << "// Components\n";
+                    if (count++)
+                        oss << " | ";
+                    oss << name << "VertexPropertyMap";
                 }
                 for (const auto& c : s.mComponents) {
-                    auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
-                    auto member = g.getMemberName(c.mMemberName, false);
-                    OSS << "case '" << getTypescriptTagType(c.mName, scratch) << "':\n";
-                    Expects(c.isValid());
-                    if (s.isVector()) {
-                        OSS << "    return new " << name << convertTag(c.mName) << "Map("
-                            << "this." << member << ");\n";
-                    } else {
-                        OSS << "    return new " << name << convertTag(c.mName) << "Map();\n";
-                    }
+                    if (count++)
+                        oss << " | ";
+                    oss << name << convertTag(c.mName) << "Map";
                 }
-                OSS << "default:\n";
-                if (gThrow) {
-                    OSS << "    throw Error('property map not found');\n";
-                } else {
-                    OSS << "    return undefined;\n";
+                oss << " {\n";
+                {
+                    INDENT();
+                    OSS << "switch (tag) {\n";
+                    if (false && s.mNamed) {
+                        OSS << "// NamedGraph\n";
+                        OSS << "case '"
+                            << "name"
+                            << "':\n";
+                        INDENT();
+                        if (s.isVector()) {
+                            OSS << "return new " << name << "NameMap(this._vertices);\n";
+                        } else {
+                            OSS << "return new " << name << "NameMap();\n";
+                        }
+                    }
+                    if (!s.mVertexProperty.empty()) {
+                        OSS << "// VertexProperty\n";
+                        OSS << "case '"
+                            << "vertex"
+                            << "':\n";
+                        INDENT();
+                        if (s.isVector()) {
+                            OSS << "return new " << name << "VertexPropertyMap(this._vertices);\n";
+                        } else {
+                            OSS << "return new " << name << "VertexPropertyMap();\n";
+                        }
+                    }
+                    if (!s.mComponents.empty()) {
+                        OSS << "// Components\n";
+                    }
+                    for (const auto& c : s.mComponents) {
+                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        auto member = g.getMemberName(c.mMemberName, false);
+                        OSS << "case '" << getTypescriptTagType(c.mName, scratch) << "':\n";
+                        Expects(c.isValid());
+                        if (s.isVector()) {
+                            OSS << "    return new " << name << convertTag(c.mName) << "Map("
+                                << "this." << member << ");\n";
+                        } else {
+                            OSS << "    return new " << name << convertTag(c.mName) << "Map();\n";
+                        }
+                    }
+                    OSS << "default:\n";
+                    if (gThrow) {
+                        OSS << "    throw Error('property map not found');\n";
+                    } else {
+                        OSS << "    return undefined;\n";
+                    }
+                    OSS << "}\n";
                 }
                 OSS << "}\n";
             }
-            OSS << "}\n";
         }
 
         if (!s.mComponents.empty()) { // ComponentGraph
@@ -1793,35 +1801,37 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "componentMap<T extends " << name << "Component> (id: T): " << name << "ComponentPropertyMap[T] {\n";
-            {
-                INDENT();
-                OSS << "switch (id) {\n";
-                for (const auto& c : s.mComponents) {
-                    auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
-                    auto member = g.getMemberName(c.mMemberName, false);
-
-                    OSS << "case " << name << "Component."
-                        << getTypescriptTagType(c.mName, scratch) << ":\n";
+            if (!gReduceCode) {
+                OSS << "componentMap<T extends " << name << "Component> (id: T): " << name << "ComponentPropertyMap[T] {\n";
+                {
                     INDENT();
-                    if (s.isVector()) {
-                        OSS << "return new " << name << convertTag(c.mName) << "Map("
-                            << "this." << member << ") as "
-                            << name << "ComponentPropertyMap[T];\n";
-                    } else {
-                        OSS << "return new " << name << convertTag(c.mName) << "Map() as "
-                            << name << "ComponentPropertyMap[T];\n";
+                    OSS << "switch (id) {\n";
+                    for (const auto& c : s.mComponents) {
+                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        auto member = g.getMemberName(c.mMemberName, false);
+
+                        OSS << "case " << name << "Component."
+                            << getTypescriptTagType(c.mName, scratch) << ":\n";
+                        INDENT();
+                        if (s.isVector()) {
+                            OSS << "return new " << name << convertTag(c.mName) << "Map("
+                                << "this." << member << ") as "
+                                << name << "ComponentPropertyMap[T];\n";
+                        } else {
+                            OSS << "return new " << name << convertTag(c.mName) << "Map() as "
+                                << name << "ComponentPropertyMap[T];\n";
+                        }
                     }
-                }
-                OSS << "default:\n";
-                if (gThrow) {
-                    OSS << "    throw Error('component map not found');\n";
-                } else {
-                    OSS << "    return undefined;\n";
+                    OSS << "default:\n";
+                    if (gThrow) {
+                        OSS << "    throw Error('component map not found');\n";
+                    } else {
+                        OSS << "    return undefined;\n";
+                    }
+                    OSS << "}\n";
                 }
                 OSS << "}\n";
             }
-            OSS << "}\n";
 
             if (true) {
                 for (const auto& c : s.mComponents) {
