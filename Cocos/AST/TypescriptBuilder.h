@@ -109,7 +109,8 @@ std::pmr::string generateNames_ts(
     std::pmr::memory_resource* scratch);
 
 static constexpr bool kOutputPoolDebug = false;
-static constexpr bool sEnableMake = false;
+static constexpr bool sEnableMake = true;
+static constexpr bool sEnableOptionalAssign = false;
 static constexpr bool sResetHasDefaultParameters = false;
 
 }

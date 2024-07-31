@@ -240,8 +240,15 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                                 OSS << "}\n";
                             }
                         } else {
-                            OSS << "value." << memberName << " ??= "
-                                << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                            if (sEnableOptionalAssign) {
+                                OSS << "value." << memberName << " ??= "
+                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                            } else {
+                                OSS << "if (value." << memberName << " === undefined) {\n";
+                                OSS << "    value." << memberName << " = "
+                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                                OSS << "}\n";
+                            }
                         }
                     }
                 }
