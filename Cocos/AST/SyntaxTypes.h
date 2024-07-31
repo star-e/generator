@@ -429,8 +429,21 @@ struct Method {
     Method& operator=(Method const& rhs) = default;
     ~Method() noexcept;
 
+    const std::pmr::string& getTypescriptName() const noexcept {
+        if constexpr (sReduceTypescriptMemberFunction) {
+            if (!mTypescriptFunctionName.empty()) {
+                return mTypescriptFunctionName;
+            } else {
+                return mFunctionName;
+            }
+        } else {
+            return mFunctionName;
+        }
+    }
+
     Parameter mReturnType;
     std::pmr::string mFunctionName;
+    std::pmr::string mTypescriptFunctionName;
     std::pmr::vector<Parameter> mParameters;
     std::pmr::string mComment;
     bool mVirtual = false;

@@ -257,6 +257,7 @@
     <ClInclude Include="BuilderMacros.h" />
     <ClInclude Include="BuilderTypes.h" />
     <ClInclude Include="BuilderUtils.h" />
+    <ClInclude Include="CodeConfigs.h" />
     <ClInclude Include="CppBuilder.h" />
     <ClInclude Include="CppDefaultValues.h" />
     <ClInclude Include="CppMethod.h" />

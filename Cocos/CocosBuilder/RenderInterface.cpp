@@ -33,6 +33,11 @@ virtual void writeNumber(double value) = 0;
 virtual void writeString(std::string_view value) = 0;
 [[skip]] virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
 )");
+            TS_RENAME_METHODS(
+                (writeBool, b)
+                (writeNumber, n)
+                (writeString, s)
+            );
         }
 
         INTERFACE(InputArchive) {
@@ -42,6 +47,11 @@ virtual double readNumber() = 0;
 virtual std::string_view readString() = 0;
 [[skip]] virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
 )");
+            TS_RENAME_METHODS(
+                (readBool, b)
+                (readNumber, n)
+                (readString, s)
+            );
         }
 
         NAMESPACE_END(render);

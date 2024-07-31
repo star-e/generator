@@ -447,6 +447,7 @@ struct ModuleBuilder {
         std::initializer_list<std::string_view> members, bool hasDefault);
     void addMemberFunctions(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
     void addMethods(SyntaxGraph::vertex_descriptor vertID, std::string_view content);
+    void setMethodTypescriptName(SyntaxGraph::vertex_descriptor vertID, std::string_view methodName, std::string_view tsName);
 
     void addConstraints(std::string_view conceptName, std::string_view typeName);
     void addConstraints(SyntaxGraph::vertex_descriptor vertID, std::string_view conceptName);

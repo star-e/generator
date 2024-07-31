@@ -258,12 +258,14 @@ Parameter::~Parameter() noexcept = default;
 Method::Method(const allocator_type& alloc) noexcept
     : mReturnType(alloc)
     , mFunctionName(alloc)
+    , mTypescriptFunctionName(alloc)
     , mParameters(alloc)
     , mComment(alloc) {}
 
 Method::Method(Method&& rhs, const allocator_type& alloc)
     : mReturnType(std::move(rhs.mReturnType), alloc)
     , mFunctionName(std::move(rhs.mFunctionName), alloc)
+    , mTypescriptFunctionName(std::move(rhs.mTypescriptFunctionName), alloc)
     , mParameters(std::move(rhs.mParameters), alloc)
     , mComment(std::move(rhs.mComment), alloc)
     , mVirtual(std::move(rhs.mVirtual))
@@ -282,6 +284,7 @@ Method::Method(Method&& rhs, const allocator_type& alloc)
 Method::Method(Method const& rhs, const allocator_type& alloc)
     : mReturnType(rhs.mReturnType, alloc)
     , mFunctionName(rhs.mFunctionName, alloc)
+    , mTypescriptFunctionName(rhs.mTypescriptFunctionName, alloc)
     , mParameters(rhs.mParameters, alloc)
     , mComment(rhs.mComment, alloc)
     , mVirtual(rhs.mVirtual)

@@ -217,6 +217,14 @@ builder.addMember(vertID, COND,\
 #define PUBLIC_METHODS(STR) \
     builder.addMethods(vertID, STR)
 
+#define TS_RENAME_METHOD(r, _, i, MEMBER) \
+builder.setMethodTypescriptName(vertID, \
+    BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 0, MEMBER)), \
+    BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 1, MEMBER)));
+
+#define TS_RENAME_METHODS(SEQ) \
+    BOOST_PP_SEQ_FOR_EACH_I(TS_RENAME_METHOD, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
+
 #define TS_FUNCTIONS(STR) \
     builder.addTypescriptFunctions(vertID, STR)
 

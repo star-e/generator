@@ -734,6 +734,23 @@ void ModuleBuilder::addMethods(SyntaxGraph::vertex_descriptor vertID,
         });
 }
 
+void ModuleBuilder::setMethodTypescriptName(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view methodName, std::string_view tsName) {
+    auto& g = mSyntaxGraph;
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            for (Method& m : s.mMethods) {
+                if (m.mFunctionName == methodName) {
+                    m.mTypescriptFunctionName = tsName;
+                    break;
+                }
+            }
+        },
+        [&](const auto&) {
+        });
+}
+
 void ModuleBuilder::addConstraints(std::string_view conceptName0,
     std::string_view typeName0) {
     auto scratch = mScratch;
