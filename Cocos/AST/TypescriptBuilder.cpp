@@ -70,7 +70,11 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (!comment.mComment.empty()) {
                 outputComment(oss, space, comment.mComment);
             }
-            OSS << "export enum " << name << " {\n";
+            OSS << "export ";
+            if (!(traits.mFlags & TS_ENUM_OBJECT)) {
+                oss << "const ";
+            }
+            oss << "enum " << name << " {\n";
             {
                 INDENT();
                 for (const auto& v : e.mValues) {
@@ -269,6 +273,8 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         });
 }
 
+static const uint32_t sPoolBatchSize = 16;
+
 void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
     const ModuleBuilder& builder,
@@ -284,46 +290,33 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     const auto moduleID = locate(typeModulePath, mg);
     Ensures(moduleID != ModuleGraph::null_vertex());
 
-    auto isPoolType = [&](SyntaxGraph::vertex_descriptor vertID) {
-        const auto& modulePath = get(g.modulePaths, g, vertID);
-        if (typeModulePath != modulePath) {
-            return false;
-        }
-        if (g.isTypescriptValueType(vertID)) {
-            return false;
-        }
-        const auto parentID = parent(vertID, g);
-        if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
-            return false;
-        }
-        return true;
-    };
-
-    oss << "\n";
-    OSS << "export class " << typeModulePath.substr(1) << "ObjectPoolSettings {\n";
-    {
-        INDENT();
-        OSS << "constructor (batchSize: number) {\n";
+    if (sEnablePoolSettings) {
+        oss << "\n";
+        OSS << "export class " << typeModulePath.substr(1) << "ObjectPoolSettings {\n";
         {
             INDENT();
+            OSS << "constructor (batchSize: number) {\n";
+            {
+                INDENT();
+                for (const auto& vertID : make_range(vertices(g))) {
+                    if (!g.isPoolType(vertID, typeModulePath)) {
+                        continue;
+                    }
+                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                    OSS << "this." << camelToVariable(name, scratch) << "BatchSize = batchSize;\n";
+                }
+            }
+            OSS << "}\n";
             for (const auto& vertID : make_range(vertices(g))) {
-                if (!isPoolType(vertID)) {
+                if (!g.isPoolType(vertID, typeModulePath)) {
                     continue;
                 }
                 auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-                OSS << "this." << camelToVariable(name, scratch) << "BatchSize = batchSize;\n";
+                OSS << camelToVariable(name, scratch) << "BatchSize = " << sPoolBatchSize << ";\n";
             }
         }
         OSS << "}\n";
-        for (const auto& vertID : make_range(vertices(g))) {
-            if (!isPoolType(vertID)) {
-                continue;
-            }
-            auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-            OSS << camelToVariable(name, scratch) << "BatchSize = 16;\n";
-        }
     }
-    OSS << "}\n";
 
     oss << "\n";
     OSS << "export class " << typeModulePath.substr(1) << "ObjectPool {\n";
@@ -340,8 +333,13 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             }
         }
         {
-            OSS << "constructor (settings: " << typeModulePath.substr(1) << "ObjectPoolSettings";
-            int count = 1;
+
+            OSS << "constructor (";
+            int count = 0;
+            if (sEnablePoolSettings) {
+                oss << "settings: " << typeModulePath.substr(1) << "ObjectPoolSettings";
+                ++count;
+            }
             for (const auto& importedPath : moduleImports) {
                 const auto importedID = locate(importedPath, mg);
                 const auto& info = get(mg.modules, mg, importedID);
@@ -365,15 +363,16 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                             << camelToVariable(name, scratch) << ";\n";
                     }
                 }
-
-                for (const auto& vertID : make_range(vertices(g))) {
-                    if (!isPoolType(vertID)) {
-                        continue;
+                if (sEnablePoolSettings) {
+                    for (const auto& vertID : make_range(vertices(g))) {
+                        if (!g.isPoolType(vertID, typeModulePath)) {
+                            continue;
+                        }
+                        auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                        OSS << "this._" << camelToVariable(name, scratch)
+                            << " = new RecyclePool<" << name << ">(() => new " << name << "(), settings."
+                            << camelToVariable(name, scratch) << "BatchSize);\n";
                     }
-                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-                    OSS << "this._" << camelToVariable(name, scratch)
-                        << " = new RecyclePool<" << name << ">(() => new " << name << "(), settings."
-                        << camelToVariable(name, scratch) << "BatchSize);\n";
                 }
             }
             OSS << "}\n";
@@ -383,7 +382,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             {
                 INDENT();
                 for (const auto& vertID : make_range(vertices(g))) {
-                    if (!isPoolType(vertID)) {
+                    if (!g.isPoolType(vertID, typeModulePath)) {
                         continue;
                     }
                     auto name = g.getTypescriptTypename(vertID, scratch, scratch);
@@ -394,7 +393,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         }
         if (true) { // create
             for (const auto& vertID : make_range(vertices(g))) {
-                if (!isPoolType(vertID)) {
+                if (!g.isPoolType(vertID, typeModulePath)) {
                     continue;
                 }
                 const auto& traits = get(g.traits, g, vertID);
@@ -480,12 +479,18 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         }
 
         for (const auto& vertID : make_range(vertices(g))) {
-            if (!isPoolType(vertID)) {
+            if (!g.isPoolType(vertID, typeModulePath)) {
                 continue;
             }
             auto name = g.getTypescriptTypename(vertID, scratch, scratch);
             OSS << "private readonly _" << camelToVariable(name, scratch)
-                << ": RecyclePool<" << name << ">;\n";
+                << ": RecyclePool<" << name << ">";
+            if (sEnablePoolSettings) {
+                oss << ";\n";
+            } else {
+                oss << " = new RecyclePool<" << name
+                    << ">(() => new " << name << "(), " << sPoolBatchSize << ");\n";
+            }
         }
         if (kOutputPoolDebug) {
             OSS << "public debug = false;\n";

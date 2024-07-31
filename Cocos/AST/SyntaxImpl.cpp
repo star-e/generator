@@ -414,6 +414,22 @@ bool SyntaxGraph::isPoolObject(vertex_descriptor vertID) const noexcept {
         });
 }
 
+bool SyntaxGraph::isPoolType(vertex_descriptor vertID, std::string_view typeModulePath) const noexcept {
+    const auto& g = *this;
+    const auto& modulePath = get(g.modulePaths, g, vertID);
+    if (typeModulePath != modulePath) {
+        return false;
+    }
+    if (g.isTypescriptValueType(vertID)) {
+        return false;
+    }
+    const auto parentID = parent(vertID, g);
+    if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+        return false;
+    }
+    return true;
+}
+
 bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept {
     const auto& g = *this;
     const auto& modulePath = get(g.modulePaths, g, vertID);

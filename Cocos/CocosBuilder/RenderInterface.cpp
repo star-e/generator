@@ -184,11 +184,11 @@ virtual void onGlobalPipelineStateChanged() = 0;
 )");
         }
                 
-        ENUM_CLASS(PipelineType) {
+        ENUM_CLASS(PipelineType, .mFlags = TS_ENUM_OBJECT) {
             ENUMS(BASIC, STANDARD);
         }
 
-        FLAG_CLASS(SubpassCapabilities) {
+        FLAG_CLASS(SubpassCapabilities, .mFlags = TS_ENUM_OBJECT) {
             UNDERLYING_TYPE(uint32_t);
             FLAGS(
                 (NONE, 0)

@@ -62,6 +62,7 @@ enum GenerationFlags : uint64_t {
     FORCE_COPY = 1 << 25,
     SKIP_RESET = 1 << 26,
     TS_NAME = 1 << 27,
+    TS_ENUM_OBJECT = 1 << 28,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -430,12 +431,8 @@ struct Method {
     ~Method() noexcept;
 
     const std::pmr::string& getTypescriptName() const noexcept {
-        if constexpr (sReduceTypescriptMemberFunction) {
-            if (!mTypescriptFunctionName.empty()) {
-                return mTypescriptFunctionName;
-            } else {
-                return mFunctionName;
-            }
+        if (!mTypescriptFunctionName.empty()) {
+            return mTypescriptFunctionName;
         } else {
             return mFunctionName;
         }
@@ -1251,6 +1248,7 @@ struct SyntaxGraph {
     bool isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept;
     bool isOptional(vertex_descriptor vertID) const noexcept;
     bool isPoolObject(vertex_descriptor vertID) const noexcept;
+    bool isPoolType(vertex_descriptor vertID, std::string_view modulePath) const noexcept;
     bool isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
     bool isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
 
