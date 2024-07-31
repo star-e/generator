@@ -174,6 +174,7 @@ void outputConstructionParams(
     bool bReset,
     bool bArgument,
     bool bPublicFormat,
+    bool bHasDefaultParameters,
     std::pmr::memory_resource* scratch) {
     auto outputComma = [&]() {
         if (bChangeLine) {
@@ -207,9 +208,13 @@ void outputConstructionParams(
 
                 auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
                 if (bArgument) {
-                    oss << g.getMemberName(m.mMemberName, true);
+                    if (bReset && bHasDefaultParameters) {
+                        oss << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                    } else {
+                        oss << g.getMemberName(m.mMemberName, true);
+                    }
                 } else {
-                    if (cntr.mHasDefault) {
+                    if (bHasDefaultParameters && cntr.mHasDefault) {
                         oss << builder.getTypedMemberName(bPublicFormat, m, true);
                         oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
                     } else {
@@ -268,13 +273,13 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 return;
                             }
                             outputConstructionParams(oss, space, count, builder, bChangeLine,
-                                g, s.mMembers, s.mConstructors.front(), false, false, bPublicFormat, scratch);
+                                g, s.mMembers, s.mConstructors.front(), false, false, bPublicFormat, true, scratch);
                         },
                         [&](const auto&) {
                         });
                 }
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, cntr, false, false, bPublicFormat, scratch);
+                    g, members, cntr, false, false, bPublicFormat, true, scratch);
 
                 if (bChangeLine) {
                     OSS << ") {\n";
@@ -347,14 +352,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                             return;
                         }
                         outputConstructionParams(oss, space, count, builder, bChangeLine,
-                            g, s.mMembers, s.mConstructors.front(), true, false, bPublicFormat, scratch);
+                            g, s.mMembers, s.mConstructors.front(), true, false, bPublicFormat, true, scratch);
                     },
                     [&](const auto&) {
                     });
             }
             if (pCntr) {
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, *pCntr, true, false, bPublicFormat, scratch);
+                    g, members, *pCntr, true, false, bPublicFormat, sResetHasDefaultParameters, scratch);
             }
             if (bChangeLine) {
                 OSS << "): void {\n";
@@ -412,7 +417,25 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                                     OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                                 } else {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset();\n";
+                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset(";
+                                    if (!sResetHasDefaultParameters) {
+                                        // get cntr
+                                        const Constructor* pCntr = nullptr;
+                                        const Struct* pStruct = nullptr;
+                                        if (holds_tag<Struct_>(memberID, g)) {
+                                            const auto& s = get_by_tag<Struct_>(memberID, g);
+                                            pStruct = &s;
+                                            if (!s.mConstructors.empty()) {
+                                                pCntr = &s.mConstructors.front();
+                                            }
+                                        }
+                                        if (pStruct && pCntr) {
+                                            int count = 0;
+                                            outputConstructionParams(oss, space, count, builder, false,
+                                                g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, true, scratch);
+                                        }
+                                    }
+                                    oss << ");\n";
                                 }
                             }
                         }

@@ -42,6 +42,7 @@ void outputConstructionParams(
     bool bReset,
     bool bArgument,
     bool bPublicFormat,
+    bool bHasDefaultParameters,
     std::pmr::memory_resource* scratch);
 
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
@@ -109,5 +110,6 @@ std::pmr::string generateNames_ts(
 
 static constexpr bool kOutputPoolDebug = false;
 static constexpr bool sEnableMake = false;
+static constexpr bool sResetHasDefaultParameters = false;
 
 }

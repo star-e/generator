@@ -417,7 +417,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                     OSS << "create" << name << " (";
                     if (pCntr) {
                         outputConstructionParams(oss, space, count, builder, true,
-                            g, pStruct->mMembers, *pCntr, true, false, bPublicFormat, scratch);
+                            g, pStruct->mMembers, *pCntr, true, false, bPublicFormat, true, scratch);
                     }
                     if (kOutputPoolDebug) {
                         if (count) {
@@ -456,7 +456,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                             int count = 0;
                             OSS << "v.reset(";
                             outputConstructionParams(oss, space, count, builder, false,
-                                g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, scratch);
+                                g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, false, scratch);
                             oss << ");\n";
                         } else {
                             OSS << "v.reset();\n"; 
