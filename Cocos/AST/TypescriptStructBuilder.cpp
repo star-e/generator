@@ -1258,6 +1258,76 @@ std::pmr::string generateSerialization_ts(
     return oss.str();
 }
 
+std::pmr::string generateNames_ts(
+    CodegenContext& codegen,
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
+    SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
+    std::pmr::memory_resource* scratch) {
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+    std::pmr::string space(scratch);
+    const auto funcSpace = bPublicFormat ? "" : " ";
+    const auto& g = builder.mSyntaxGraph;
+    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+    const auto& traits = get(g.traits, g, vertID);
+    const auto& comment = get(g.comments, g, vertID);
+    if (traits.mImport)
+        return "";
+
+    if (traits.mFlags & IMPL_DETAIL)
+        return "";
+
+    if (!traits.mExport) {
+        return "";
+    }
+
+    if (g.isTypescriptData(name))
+        return "";
+
+    auto& currScope = codegen.mScopes.back();
+
+    visit_vertex(
+        vertID, g,
+        [&](const Enum& e) {
+            if (!e.mIsFlags && (moduleInfo.mFeatures & Names) && (traits.mFlags & TS_NAME)) {
+                if (currScope.mCount++) {
+                    oss << "\n";
+                }
+                imports.emplace(name);
+                OSS << "export function get" << name << "Name" << funcSpace << "(e: " << name << "): string {\n";
+                {
+                    INDENT();
+                    OSS << "switch (e) {\n";
+                    for (const auto& v : e.mValues) {
+                        if (v.mAlias) {
+                            continue;
+                        }
+                        OSS << "case " << name << "." << v.mName << ":\n";
+                        INDENT();
+                        OSS << "return '" << v.mName << "';\n";
+                    }
+                    OSS << "default:\n";
+                    OSS << "    return '';\n";
+                    OSS << "}\n";
+                }
+                OSS << "}\n";
+            }
+        },
+        [&](const Graph& s) {
+        },
+        [&](const Struct& s) {
+        },
+        [&](const Variant& s) {
+        },
+        [&](const auto&) {
+        });
+
+    return oss.str();
+}
+
 namespace {
 
 SyntaxGraph::vertex_descriptor

@@ -61,6 +61,7 @@ enum GenerationFlags : uint64_t {
     VALUE_OBJECT = 1 << 24,
     FORCE_COPY = 1 << 25,
     SKIP_RESET = 1 << 26,
+    TS_NAME = 1 << 27,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {

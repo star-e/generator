@@ -70,7 +70,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
         
-        ENUM_CLASS(UpdateFrequency) {
+        ENUM_CLASS(UpdateFrequency, .mFlags = TS_NAME) {
             ENUMS(PER_INSTANCE, PER_BATCH, PER_PHASE, PER_PASS, COUNT);
         }
 
@@ -186,7 +186,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         //        SUBPASS_INPUT
         //    );
         //}
-        ENUM_CLASS(DescriptorTypeOrder) {
+        ENUM_CLASS(DescriptorTypeOrder, .mFlags = TS_NAME) {
             ENUMS(
                 UNIFORM_BUFFER,
                 DYNAMIC_UNIFORM_BUFFER,

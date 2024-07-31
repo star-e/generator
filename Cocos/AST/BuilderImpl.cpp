@@ -1766,6 +1766,47 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         updateFile(filename, oss2.str());
     }
 
+    if ((features & Features::Typescripts) && (features & Names)) {
+        std::filesystem::path tsPath = typescriptFolder / m.mTypescriptFolder / m.mTypescriptFilePrefix;
+        std::filesystem::path filename = tsPath;
+        filename += "-names.ts";
+        const bool bPublicFormat = !!(features & PublicFormat);
+
+        pmr_ostringstream oss2(std::ios_base::out, scratch);
+        std::pmr::string space(scratch);
+        std::pmr::set<std::pmr::string> imported;
+        {
+            CodegenContext codegen(scratch);
+            for (const auto& vertID : make_range(vertices(g))) {
+                const auto& typeModulePath = get(g.modulePaths, g, vertID);
+                if (typeModulePath != modulePath)
+                    continue;
+                copyString(oss2, space,
+                    generateNames_ts(codegen,
+                        *this, m, "", vertID, imported, bPublicFormat, scratch));
+            }
+        }
+
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+        outputComment(oss);
+
+        if (!imported.empty()) {
+            int count = 0;
+            OSS << "import { ";
+            for (const auto& type : imported) {
+                if (count++) {
+                    oss << ", ";
+                }
+                oss << type;
+            }
+            oss << " } from './" << m.mTypescriptFilePrefix << "'\n";
+        }
+
+        copyString(oss, space, oss2.str());
+
+        updateFile(filename, oss.str());
+    }
+
     if (features & Features::Serialization) {
         {
             std::pmr::string shortname(m.mFolder + "/" + m.mFilePrefix + "Serialization.h", scratch);

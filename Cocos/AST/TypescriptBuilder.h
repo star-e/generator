@@ -97,6 +97,16 @@ std::pmr::string generateSerialization_ts(
     std::pmr::memory_resource* mr,
     std::pmr::memory_resource* scratch);
 
+std::pmr::string generateNames_ts(
+    CodegenContext& codegen,
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
+    SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
+    std::pmr::memory_resource* scratch);
+
 static constexpr bool kOutputPoolDebug = false;
 static constexpr bool sEnableMake = false;
 

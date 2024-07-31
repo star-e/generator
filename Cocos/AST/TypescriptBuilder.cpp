@@ -88,27 +88,6 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 }
             }
             OSS << "}\n";
-
-            if (!e.mIsFlags) {
-                oss << "\n";
-                OSS << "export function get" << name << "Name" << funcSpace << "(e: " << name << "): string {\n";
-                {
-                    INDENT();
-                    OSS << "switch (e) {\n";
-                    for (const auto& v : e.mValues) {
-                        if (v.mAlias) {
-                            continue;
-                        }
-                        OSS << "case " << name << "." << v.mName << ":\n";
-                        INDENT();
-                        OSS << "return '" << v.mName << "';\n";
-                    }
-                    OSS << "default:\n";
-                    OSS << "    return '';\n";
-                    OSS << "}\n";
-                }
-                OSS << "}\n";
-            }
         },
         [&](const Graph& s) {
             if (currScope.mCount++)
