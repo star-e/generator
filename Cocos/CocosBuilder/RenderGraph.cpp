@@ -339,6 +339,9 @@ bool checkResource(const ResourceDesc &desc) const;
                 (uint64_t, mNextFenceValue, 0)
                 (uint64_t, mVersion, 0)
             );
+            //TS_MEMBER_NAMES(
+            //    (mValueIndex, q)
+            //);
             MEMBER_FUNCTIONS(R"(
 void validateSwapchains();
 void mount(gfx::Device* device, vertex_descriptor vertID);
