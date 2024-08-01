@@ -447,7 +447,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                 {
                     INDENT();
                     if (s.isPolymorphic()) {
-                        OSS << "this._id = id;\n";
+                        OSS << "this." << gNamePolymorphicID << " = id;\n";
                         OSS << "this._object = object;\n";
                     }
                     if (false && s.mNamed) {
@@ -476,7 +476,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                 OSS << "readonly " << gNameParentsList<< ": " << outRefType << "[] = [];\n";
             }
             if (s.isPolymorphic()) {
-                OSS << "readonly _id: " << name << "Value;\n";
+                OSS << "readonly " << gNamePolymorphicID << ": " << name << "Value;\n";
                 OSS << "_object: "<< name << "Object;\n";
             }
             if (false && s.mNamed)
@@ -1888,9 +1888,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (s.isVector()) {
-                    OSS << "return this." << gNameVertices << "[v]._id === id;\n";
+                    OSS << "return this." << gNameVertices << "[v]." << gNamePolymorphicID << " === id;\n";
                 } else {
-                    OSS << "return v._id === id;\n";
+                    OSS << "return v." << gNamePolymorphicID << " === id;\n";
                 }
             }
             OSS << "}\n";
@@ -1899,9 +1899,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (s.isVector()) {
-                    OSS << "return this." << gNameVertices << "[v]._id;\n";
+                    OSS << "return this." << gNameVertices << "[v]." << gNamePolymorphicID << ";\n";
                 } else {
-                    OSS << "return v._id;\n";
+                    OSS << "return v." << gNamePolymorphicID << ";\n";
                 }
             }
             OSS << "}\n";
@@ -1931,7 +1931,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 {
                     INDENT();
                     if (s.isVector()) {
-                        OSS << "if (this." << gNameVertices << "[v]._id === id) {\n";
+                        OSS << "if (this." << gNameVertices << "[v]." << gNamePolymorphicID << " === id) {\n";
                         OSS << "    return this." << gNameVertices << "[v]._object as " << name << "ValueType[T];\n";
                         OSS << "} else {\n";
                         if (bTry) {
@@ -1945,7 +1945,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         }
                         OSS << "}\n";
                     } else {
-                        OSS << "if (v._id === id) {\n";
+                        OSS << "if (v." << gNamePolymorphicID << " === id) {\n";
                         OSS << "    return v._object as " << name << "ValueType[T];\n";
                         OSS << "} else {\n";
                         if (bTry) {
@@ -1977,7 +1977,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 } else {
                     OSS << "const vert = v;\n";
                 }
-                OSS << "switch (vert._id) {\n";
+                OSS << "switch (vert." << gNamePolymorphicID << ") {\n";
 
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
@@ -2017,10 +2017,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         if (s.isVector()) {
                             if (gReduceCode) {
                                 //imports.emplace("assert");
-                                //OSS << "assert(this." << gNameVertices << "[v]._id === " << enumType << "." << tagName << ");\n";
+                                //OSS << "assert(this." << gNameVertices << "[v]." << gNamePolymorphicID << " === " << enumType << "." << tagName << ");\n";
                                 OSS << "return this." << gNameVertices << "[v]._object as " << typeName << ";\n";
                             } else {
-                                OSS << "if (this." << gNameVertices << "[v]._id === "
+                                OSS << "if (this." << gNameVertices << "[v]." << gNamePolymorphicID << " === "
                                     << enumType << "." << tagName << ") {\n";
                                 OSS << "    return this." << gNameVertices << "[v]._object as " << typeName << ";\n";
                                 OSS << "} else {\n";
@@ -2036,7 +2036,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                                 OSS << "}\n";
                             }
                         } else {
-                            OSS << "if (v._id === "
+                            OSS << "if (v." << gNamePolymorphicID << " === "
                                 << enumType << "." << tagName << ") {\n";
                             OSS << "    return v._object as " << typeName << ";\n";
                             OSS << "} else {\n";

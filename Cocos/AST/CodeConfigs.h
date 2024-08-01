@@ -5,10 +5,11 @@ namespace Cocos::Meta {
 static constexpr bool sReduceTypescriptMemberFunction = true;
 static constexpr bool sEnablePoolSettings = false;
 static constexpr bool gReduceCode = true;
-const char* const gNameVertices = "x";
-const char* const gNameOutEdgeList = "o";
-const char* const gNameInEdgeList = "i";
-const char* const gNameChildrenList = "c";
-const char* const gNameParentsList = "p";
+const auto* const gNameVertices = "x";
+const auto* const gNameOutEdgeList = "o";
+const auto* const gNameInEdgeList = "i";
+const auto* const gNameChildrenList = "c";
+const auto* const gNameParentsList = "p";
+const auto* const gNamePolymorphicID = "t";
 
 } // namespace Cocos::Meta
