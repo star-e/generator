@@ -30,6 +30,7 @@ THE SOFTWARE.
 #include "SyntaxUtils.h"
 #include "SyntaxGraphs.h"
 #include "BuilderUtils.h"
+#include "Cocos/AST/CodeConfigs.h"
 
 namespace Cocos::Meta {
 

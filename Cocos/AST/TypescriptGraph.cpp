@@ -30,6 +30,7 @@ THE SOFTWARE.
 #include "BuilderTypes.h"
 #include "SyntaxUtils.h"
 #include "SyntaxGraphs.h"
+#include "Cocos/AST/CodeConfigs.h"
 
 namespace Cocos::Meta {
 
@@ -969,7 +970,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
-                    OSS << "for (const oe of this._vertices[u]._outEdges) {\n";
+                    OSS << "for (const oe of this." << gNameVertices << "[u]._outEdges) {\n";
                     {
                         INDENT();
                         OSS << "if (v === oe.target as " << vertexDescType << ") {\n";
@@ -1011,7 +1012,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 INDENT();
                 if (bVectorVertexDescriptor) {
                     OSS << "return new " << outEdgeIter
-                        << "(this._vertices[v]._outEdges.values(), v);\n";
+                        << "(this." << gNameVertices << "[v]._outEdges.values(), v);\n";
                 } else {
                     OSS << "return new " << outEdgeIter
                         << "(v._outEdges.values(), v);\n";
@@ -1023,7 +1024,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
-                    OSS << "return this._vertices[v]._outEdges.length;\n";
+                    OSS << "return this." << gNameVertices << "[v]._outEdges.length;\n";
                 } else {
                     OSS << "return v._outEdges.length;\n";
                 }
@@ -1040,7 +1041,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 INDENT();
                 if (bVectorVertexDescriptor) {
                     OSS << "return new " << inEdgeIter
-                        << "(this._vertices[v]._inEdges.values(), v);\n";
+                        << "(this." << gNameVertices << "[v]._inEdges.values(), v);\n";
                 } else {
                     OSS << "return new " << inEdgeIter
                         << "(v._inEdges.values(), v);\n";
@@ -1052,7 +1053,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
-                    OSS << "return this._vertices[v]._inEdges.length;\n";
+                    OSS << "return this." << gNameVertices << "[v]._inEdges.length;\n";
                 } else {
                     OSS << "return v._inEdges.length;\n";
                 }
@@ -1103,9 +1104,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
-                    OSS << "return this._vertices.keys();\n";
+                    OSS << "return this." << gNameVertices << ".keys();\n";
                 } else {
-                    OSS << "return this._vertices.values();\n";
+                    OSS << "return this." << gNameVertices << ".values();\n";
                 }
             }
             OSS << "}\n";
@@ -1113,9 +1114,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
-                    OSS << "return this._vertices.length;\n";
+                    OSS << "return this." << gNameVertices << ".length;\n";
                 } else {
-                    OSS << "return this._vertices.size;\n";
+                    OSS << "return this." << gNameVertices << ".size;\n";
                 }
             }
             OSS << "}\n";
@@ -1263,10 +1264,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 // Graph Vertices
                 OSS << "// Graph Vertices\n";
                 if (s.isVector()) {
-                    OSS << "this._vertices.length = 0;\n";
+                    OSS << "this." << gNameVertices << ".length = 0;\n";
                     ++numCleared;
                 } else {
-                    OSS << "this._vertices.clear();\n";
+                    OSS << "this." << gNameVertices << ".clear();\n";
                     ++numCleared;
                 }
                 Ensures(numCleared == s.mMembers.size());
@@ -1352,14 +1353,14 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
                 // add vertex
                 if (s.isVector()) {
-                    OSS << "const v = this._vertices.length;\n";
-                    OSS << "this._vertices.push(vert);\n";
+                    OSS << "const v = this." << gNameVertices << ".length;\n";
+                    OSS << "this." << gNameVertices << ".push(vert);\n";
                     for (const auto& c : s.mComponents) {
                         OSS << "this." << g.getMemberName(c.mMemberName, false)
                             << ".push(" << getTagVariableName(c.mName, scratch) << ");\n";
                     }
                 } else {
-                    OSS << "this._vertices.add(v);\n";
+                    OSS << "this." << gNameVertices << ".add(v);\n";
                 }
 
                 // UuidGraph
@@ -1393,7 +1394,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             }
                         } else {
                             if (s.isVector()) {
-                                OSS << "this._vertices[u]._children.push(new " << outRefType << "(v));\n";
+                                OSS << "this." << gNameVertices << "[u]._children.push(new " << outRefType << "(v));\n";
                                 OSS << "vert._parents.push(new " << outRefType << "(u));\n";
                             } else {
                                 OSS << "u._children.push(new " << outRefType << "(v));\n";
@@ -1528,7 +1529,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             OSS << "}\n";
                         }
 
-                        OSS << "this._vertices.splice(u, 1);\n";
+                        OSS << "this." << gNameVertices << ".splice(u, 1);\n";
 
                         for (const auto& c : s.mComponents) {
                             Expects(!c.mMemberName.empty());
@@ -1537,7 +1538,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         }
 
                         oss << "\n";
-                        OSS << "const sz = this._vertices.length;\n";
+                        OSS << "const sz = this." << gNameVertices << ".length;\n";
                         OSS << "if (u === sz) {\n";
                         OSS << "    return;\n";
                         OSS << "}\n";
@@ -1598,7 +1599,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             }
                             OSS << "}\n";
                         }
-                        OSS << "this._vertices.delete(u);\n";
+                        OSS << "this." << gNameVertices << ".delete(u);\n";
                     }
                 }
                 OSS << "}\n";
@@ -1678,7 +1679,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     {
                         INDENT();
                         if (s.isVector()) {
-                            OSS << "return this._vertices[v]._property;\n";
+                            OSS << "return this." << gNameVertices << "[v]._property;\n";
                         } else {
                             OSS << "return v._property;\n";
                         }
@@ -1688,7 +1689,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     {
                         INDENT();
                         if (s.isVector()) {
-                            OSS << "return new " << name << "VertexPropertyMap(this._vertices);\n";
+                            OSS << "return new " << name << "VertexPropertyMap(this." << gNameVertices << ");\n";
                         } else {
                             OSS << "return new " << name << "VertexPropertyMap();\n";
                         }
@@ -1724,7 +1725,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             << "':\n";
                         INDENT();
                         if (s.isVector()) {
-                            OSS << "return new " << name << "NameMap(this._vertices);\n";
+                            OSS << "return new " << name << "NameMap(this." << gNameVertices << ");\n";
                         } else {
                             OSS << "return new " << name << "NameMap();\n";
                         }
@@ -1736,7 +1737,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             << "':\n";
                         INDENT();
                         if (s.isVector()) {
-                            OSS << "return new " << name << "VertexPropertyMap(this._vertices);\n";
+                            OSS << "return new " << name << "VertexPropertyMap(this." << gNameVertices << ");\n";
                         } else {
                             OSS << "return new " << name << "VertexPropertyMap();\n";
                         }
@@ -1887,7 +1888,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (s.isVector()) {
-                    OSS << "return this._vertices[v]._id === id;\n";
+                    OSS << "return this." << gNameVertices << "[v]._id === id;\n";
                 } else {
                     OSS << "return v._id === id;\n";
                 }
@@ -1898,7 +1899,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (s.isVector()) {
-                    OSS << "return this._vertices[v]._id;\n";
+                    OSS << "return this." << gNameVertices << "[v]._id;\n";
                 } else {
                     OSS << "return v._id;\n";
                 }
@@ -1909,7 +1910,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (s.isVector()) {
-                    OSS << "return this._vertices[v]._object;\n";
+                    OSS << "return this." << gNameVertices << "[v]._object;\n";
                 } else {
                     OSS << "return v._object;\n";
                 }
@@ -1930,8 +1931,8 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 {
                     INDENT();
                     if (s.isVector()) {
-                        OSS << "if (this._vertices[v]._id === id) {\n";
-                        OSS << "    return this._vertices[v]._object as " << name << "ValueType[T];\n";
+                        OSS << "if (this." << gNameVertices << "[v]._id === id) {\n";
+                        OSS << "    return this." << gNameVertices << "[v]._object as " << name << "ValueType[T];\n";
                         OSS << "} else {\n";
                         if (bTry) {
                             OSS << "    return null;\n";
@@ -1972,7 +1973,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (s.isVector()) {
-                    OSS << "const vert = this._vertices[v];\n";
+                    OSS << "const vert = this." << gNameVertices << "[v];\n";
                 } else {
                     OSS << "const vert = v;\n";
                 }
@@ -2016,12 +2017,12 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         if (s.isVector()) {
                             if (gReduceCode) {
                                 //imports.emplace("assert");
-                                //OSS << "assert(this._vertices[v]._id === " << enumType << "." << tagName << ");\n";
-                                OSS << "return this._vertices[v]._object as " << typeName << ";\n";
+                                //OSS << "assert(this." << gNameVertices << "[v]._id === " << enumType << "." << tagName << ");\n";
+                                OSS << "return this." << gNameVertices << "[v]._object as " << typeName << ";\n";
                             } else {
-                                OSS << "if (this._vertices[v]._id === "
+                                OSS << "if (this." << gNameVertices << "[v]._id === "
                                     << enumType << "." << tagName << ") {\n";
-                                OSS << "    return this._vertices[v]._object as " << typeName << ";\n";
+                                OSS << "    return this." << gNameVertices << "[v]._object as " << typeName << ";\n";
                                 OSS << "} else {\n";
                                 if (bTry) {
                                     OSS << "    return null;\n";
@@ -2075,7 +2076,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
-                    OSS << "for (const oe of this._vertices[u]." << s.getTypescriptOutEdgeList(true) << ") {\n";
+                    OSS << "for (const oe of this." << gNameVertices << "[u]." << s.getTypescriptOutEdgeList(true) << ") {\n";
                     {
                         INDENT();
                         OSS << "if (v === oe.target as " << vertexDescType << ") {\n";
@@ -2117,7 +2118,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     if (s.isAliasGraph()) {
                         if (bVectorVertexDescriptor) {
                             OSS << "return new " << inRefIter
-                                << "(this._vertices[v]._inEdges.values(), v);\n";
+                                << "(this." << gNameVertices << "[v]._inEdges.values(), v);\n";
                         } else {
                             OSS << "return new " << inRefIter
                                 << "(v._inEdges.values(), v);\n";
@@ -2125,7 +2126,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     } else {
                         if (bVectorVertexDescriptor) {
                             OSS << "return new " << inRefIter
-                                << "(this._vertices[v]._parents.values(), v);\n";
+                                << "(this." << gNameVertices << "[v]._parents.values(), v);\n";
                         } else {
                             OSS << "return new " << inRefIter
                                 << "(v._parents.values(), v);\n";
@@ -2140,7 +2141,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 if (s.isAliasGraph()) {
                     if (bVectorVertexDescriptor) {
                         OSS << "return new " << outRefIter
-                            << "(this._vertices[v]._outEdges.values(), v);\n";
+                            << "(this." << gNameVertices << "[v]._outEdges.values(), v);\n";
                     } else {
                         OSS << "return new " << outRefIter
                             << "(v._outEdges.values(), v);\n";
@@ -2148,7 +2149,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 } else {
                     if (bVectorVertexDescriptor) {
                         OSS << "return new " << outRefIter
-                            << "(this._vertices[v]._children.values(), v);\n";
+                            << "(this." << gNameVertices << "[v]._children.values(), v);\n";
                     } else {
                         OSS << "return new " << outRefIter
                             << "(v._children.values(), v);\n";
@@ -2162,7 +2163,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     INDENT();
                     OSS << "return ";
                     if (s.isVector()) {
-                        oss << "this._vertices[v].";
+                        oss << "this." << gNameVertices << "[v].";
                     } else {
                         oss << "v.";
                     }
@@ -2180,7 +2181,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 INDENT();
                 OSS << "return ";
                 if (s.isVector()) {
-                    oss << "this._vertices[v].";
+                    oss << "this." << gNameVertices << "[v].";
                 } else {
                     oss << "v.";
                 }
@@ -2199,7 +2200,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 OSS << "    return " << s.getTypescriptNullVertex() << ";\n";
                 OSS << "}\n";
                 if (s.isVector()) {
-                    OSS << "const list = this._vertices[v].";
+                    OSS << "const list = this." << gNameVertices << "[v].";
                 } else {
                     OSS << "const list = v.";
                 }
@@ -2308,10 +2309,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 {
                     INDENT();
                     if (s.isVector()) {
-                        OSS << "for (const v of this._vertices.keys()) {\n";
+                        OSS << "for (const v of this." << gNameVertices << ".keys()) {\n";
                         {
                             INDENT();
-                            OSS << "const vert = this._vertices[v];\n";
+                            OSS << "const vert = this." << gNameVertices << "[v];\n";
                             if (s.isAliasGraph()) {
                                 OSS << "if (vert._inEdges.length === 0 && "
                                     << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
@@ -2324,7 +2325,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         }
                         OSS << "}\n";
                     } else {
-                        OSS << "for (const v of this._vertices) {\n";
+                        OSS << "for (const v of this." << gNameVertices << ") {\n";
                         {
                             INDENT();
                             if (s.isAliasGraph()) {
@@ -2345,7 +2346,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
                 OSS << "for (const oe of ";
                 if (s.isVector()) {
-                    oss << "this._vertices[u].";
+                    oss << "this." << gNameVertices << "[u].";
                 } else {
                     oss << "u.";
                 }
@@ -2478,9 +2479,9 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         }
         if (true) { // VertexList Graph
             if (bVectorVertexDescriptor) {
-                OSS << "readonly _vertices: " << vertexName << "[] = [];\n";
+                OSS << "readonly " << gNameVertices << ": " << vertexName << "[] = [];\n";
             } else {
-                OSS << "readonly _vertices: Set<" << vertexName << "> = new Set<" << vertexName << ">();\n";
+                OSS << "readonly " << gNameVertices << ": Set<" << vertexName << "> = new Set<" << vertexName << ">();\n";
             }
         }
 

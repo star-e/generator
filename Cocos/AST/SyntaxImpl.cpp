@@ -28,6 +28,7 @@ THE SOFTWARE.
 #include "SyntaxGraphs.h"
 #include "SyntaxUtils.h"
 #include "TypescriptGraph.h"
+#include "CodeConfigs.h"
 
 namespace Cocos::Meta {
 
@@ -2362,7 +2363,7 @@ std::pmr::string Graph::getTypescriptVertexDereference(std::string_view v,
     pmr_ostringstream oss(std::ios_base::out, scratch);
 
     if (isVector()) {
-        oss << "this._vertices[" << v << "]";
+        oss << "this." << gNameVertices << "[" << v << "]";
     } else {
         oss << v;
     }

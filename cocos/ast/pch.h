@@ -33,5 +33,3 @@ THE SOFTWARE.
 #include <Cocos/AST/BuilderMacros.h>
 #include <Cocos/FileUtils.h>
 #include <Cocos/Indent.h>
-
-#include "CodeConfigs.h"

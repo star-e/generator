@@ -38,6 +38,5 @@ THE SOFTWARE.
 #endif
 
 #include <Cocos/PCH/CompilerPCH.h>
-#include <Cocos/AST/CodeConfigs.h>
 
 #include <filesystem>
