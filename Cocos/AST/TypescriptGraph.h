@@ -30,7 +30,6 @@ THE SOFTWARE.
 namespace Cocos::Meta {
 
 constexpr bool gImpl = false;
-constexpr bool gReduceCode = true;
 
 std::pmr::string generateGraph(const ModuleBuilder& builder,
     const ModuleInfo& moduleInfo,

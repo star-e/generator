@@ -2466,16 +2466,18 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "}\n";
         }
         // Members
-        oss << "\n";
-        if (!s.mComponents.empty()) {
-            OSS << "readonly components: string[] = [";
-            int count = 0;
-            for (const auto& c : s.mComponents) {
-                if (count++)
-                    oss << ", ";
-                oss << "'" << getTypescriptTagType(c.mName, scratch) << "'";
+        if (!gReduceCode) {
+            oss << "\n";
+            if (!s.mComponents.empty()) {
+                OSS << "readonly components: string[] = [";
+                int count = 0;
+                for (const auto& c : s.mComponents) {
+                    if (count++)
+                        oss << ", ";
+                    oss << "'" << getTypescriptTagType(c.mName, scratch) << "'";
+                }
+                oss << "];\n";
             }
-            oss << "];\n";
         }
         if (true) { // VertexList Graph
             if (bVectorVertexDescriptor) {

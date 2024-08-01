@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "CocosModules.h"
 #include <Cocos/AST/DSL.h>
 #include <Cocos/AST/SyntaxGraphs.h>
+#include <Cocos/AST/CodeConfigs.h>
 
 // clang-format off
 
