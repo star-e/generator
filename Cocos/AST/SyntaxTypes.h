@@ -321,6 +321,7 @@ struct Member {
     ~Member() noexcept;
 
     std::pmr::string getMemberName() const;
+    std::pmr::string getTypescriptMemberName() const;
 
     std::pmr::string mTypePath;
     std::pmr::string mMemberName;
@@ -335,6 +336,7 @@ struct Member {
     GenerationFlags mFlags = {};
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
+    std::pmr::string mTypescriptMemberName;
     bool mTypescriptArray = false;
     bool mNullable = false;
 };

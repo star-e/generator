@@ -43,6 +43,13 @@ std::pmr::string Member::getMemberName() const {
     }
 }
 
+std::pmr::string Member::getTypescriptMemberName() const {
+    if (mTypescriptMemberName.empty()) {
+        return getMemberName();
+    }
+    return mTypescriptMemberName;
+}
+
 std::pmr::string SyntaxGraph::getMemberName(std::string_view memberName, bool bPublic) const {
     Expects(memberName.size() >= 2);
     std::pmr::string name(mScratch);
