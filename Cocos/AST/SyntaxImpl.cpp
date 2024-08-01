@@ -2386,7 +2386,7 @@ std::string_view Graph::getTypescriptOutEdgeList(bool bAddressable) const {
         if (mAliasGraph) {
             return gNameOutEdgeList;
         } else {
-            return "_children";
+            return gNameChildrenList;
         }
     } else {
         return gNameOutEdgeList;
@@ -2395,7 +2395,7 @@ std::string_view Graph::getTypescriptOutEdgeList(bool bAddressable) const {
 
 std::string_view Graph::getTypescriptInEdgeList(bool bAddressable) const {
     if (bAddressable) {
-        return "_parents";
+        return gNameParentsList;
     } else {
         return gNameInEdgeList;
     }

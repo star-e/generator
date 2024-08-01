@@ -472,8 +472,8 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                 OSS << "readonly " << gNameInEdgeList << ": " << outEdgeType << "[] = [];\n";
             }
             if (s.needReferenceEdges()) {
-                OSS << "readonly _children: " << outRefType << "[] = [];\n";
-                OSS << "readonly _parents: " << outRefType << "[] = [];\n";
+                OSS << "readonly " << gNameChildrenList << ": " << outRefType << "[] = [];\n";
+                OSS << "readonly " << gNameParentsList<< ": " << outRefType << "[] = [];\n";
             }
             if (s.isPolymorphic()) {
                 OSS << "readonly _id: " << name << "Value;\n";
@@ -1394,11 +1394,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                             }
                         } else {
                             if (s.isVector()) {
-                                OSS << "this." << gNameVertices << "[u]._children.push(new " << outRefType << "(v));\n";
-                                OSS << "vert._parents.push(new " << outRefType << "(u));\n";
+                                OSS << "this." << gNameVertices << "[u]." << gNameChildrenList << ".push(new " << outRefType << "(v));\n";
+                                OSS << "vert." << gNameParentsList<< ".push(new " << outRefType << "(u));\n";
                             } else {
-                                OSS << "u._children.push(new " << outRefType << "(v));\n";
-                                OSS << "v._parents.push(new " << outRefType << "(u));\n";
+                                OSS << "u." << gNameChildrenList << ".push(new " << outRefType << "(v));\n";
+                                OSS << "v." << gNameParentsList<< ".push(new " << outRefType << "(u));\n";
                             }
                         }
                     }
@@ -2126,10 +2126,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     } else {
                         if (bVectorVertexDescriptor) {
                             OSS << "return new " << inRefIter
-                                << "(this." << gNameVertices << "[v]._parents.values(), v);\n";
+                                << "(this." << gNameVertices << "[v]." << gNameParentsList<< ".values(), v);\n";
                         } else {
                             OSS << "return new " << inRefIter
-                                << "(v._parents.values(), v);\n";
+                                << "(v." << gNameParentsList<< ".values(), v);\n";
                         }
                     }
                 }
@@ -2149,10 +2149,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 } else {
                     if (bVectorVertexDescriptor) {
                         OSS << "return new " << outRefIter
-                            << "(this." << gNameVertices << "[v]._children.values(), v);\n";
+                            << "(this." << gNameVertices << "[v]." << gNameChildrenList << ".values(), v);\n";
                     } else {
                         OSS << "return new " << outRefIter
-                            << "(v._children.values(), v);\n";
+                            << "(v." << gNameChildrenList << ".values(), v);\n";
                     }
                 }
             }
@@ -2170,7 +2170,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     if (s.isAliasGraph()) {
                         oss << gNameInEdgeList << ".length";
                     } else {
-                        oss << "_parents.length";
+                        oss << gNameParentsList<< ".length";
                     }
                     oss << ";\n";
                 }
@@ -2188,7 +2188,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 if (s.isAliasGraph()) {
                     oss << gNameOutEdgeList << ".length";
                 } else {
-                    oss << "_children.length";
+                    oss << gNameChildrenList << ".length";
                 }
                 oss << ";\n";
             }
@@ -2207,7 +2207,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 if (s.isAliasGraph()) {
                     oss << gNameInEdgeList;
                 } else {
-                    oss << "_parents";
+                    oss << gNameParentsList;
                 }
                 oss << ";\n";
                 OSS << "if (list.length === 0) {\n";
@@ -2317,7 +2317,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                                 OSS << "if (vert." << gNameInEdgeList << ".length === 0 && "
                                     << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             } else {
-                                OSS << "if (vert._parents.length === 0 && "
+                                OSS << "if (vert." << gNameParentsList<< ".length === 0 && "
                                     << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             }
                             OSS << "    return v;\n";
@@ -2332,7 +2332,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                                 OSS << "if (v." << gNameInEdgeList << ".length === 0 && "
                                     << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             } else {
-                                OSS << "if (v._parents.length === 0 && "
+                                OSS << "if (v." << gNameParentsList<< ".length === 0 && "
                                     << builder.getTypescriptVertexName(vertID, "v") << " === name) {\n";
                             }
                             OSS << "    return v;\n";
@@ -2353,7 +2353,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 if (s.isAliasGraph()) {
                     oss << gNameOutEdgeList;
                 } else {
-                    oss << "_children";
+                    oss << gNameChildrenList;
                 }
                 oss << ") {\n";
                 {
