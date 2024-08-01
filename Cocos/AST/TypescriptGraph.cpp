@@ -2110,28 +2110,30 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 OSS << "return e.target as " << vertexDescType << ";\n";
             }
             OSS << "}\n";
-            OSS << "parents (v: " << vertexDescType << "): " << inRefIter << " {\n";
-            {
-                INDENT();
-                if (s.isAliasGraph()) {
-                    if (bVectorVertexDescriptor) {
-                        OSS << "return new " << inRefIter
-                            << "(this._vertices[v]._inEdges.values(), v);\n";
+            if (!gReduceCode) {
+                OSS << "parents (v: " << vertexDescType << "): " << inRefIter << " {\n";
+                {
+                    INDENT();
+                    if (s.isAliasGraph()) {
+                        if (bVectorVertexDescriptor) {
+                            OSS << "return new " << inRefIter
+                                << "(this._vertices[v]._inEdges.values(), v);\n";
+                        } else {
+                            OSS << "return new " << inRefIter
+                                << "(v._inEdges.values(), v);\n";
+                        }
                     } else {
-                        OSS << "return new " << inRefIter
-                            << "(v._inEdges.values(), v);\n";
-                    }
-                } else {
-                    if (bVectorVertexDescriptor) {
-                        OSS << "return new " << inRefIter
-                            << "(this._vertices[v]._parents.values(), v);\n";
-                    } else {
-                        OSS << "return new " << inRefIter
-                            << "(v._parents.values(), v);\n";
+                        if (bVectorVertexDescriptor) {
+                            OSS << "return new " << inRefIter
+                                << "(this._vertices[v]._parents.values(), v);\n";
+                        } else {
+                            OSS << "return new " << inRefIter
+                                << "(v._parents.values(), v);\n";
+                        }
                     }
                 }
+                OSS << "}\n";
             }
-            OSS << "}\n";
             OSS << "children (v: " << vertexDescType << "): " << outRefIter << " {\n";
             {
                 INDENT();
@@ -2154,23 +2156,25 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
             }
             OSS << "}\n";
-            OSS << "numParents (v: " << vertexDescType << "): number {\n";
-            {
-                INDENT();
-                OSS << "return ";
-                if (s.isVector()) {
-                    oss << "this._vertices[v].";
-                } else {
-                    oss << "v.";
+            if (!gReduceCode) {
+                OSS << "numParents (v: " << vertexDescType << "): number {\n";
+                {
+                    INDENT();
+                    OSS << "return ";
+                    if (s.isVector()) {
+                        oss << "this._vertices[v].";
+                    } else {
+                        oss << "v.";
+                    }
+                    if (s.isAliasGraph()) {
+                        oss << "_inEdges.length";
+                    } else {
+                        oss << "_parents.length";
+                    }
+                    oss << ";\n";
                 }
-                if (s.isAliasGraph()) {
-                    oss << "_inEdges.length";
-                } else {
-                    oss << "_parents.length";
-                }
-                oss << ";\n";
+                OSS << "}\n";
             }
-            OSS << "}\n";
             OSS << "numChildren (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
@@ -2213,35 +2217,37 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "isAncestor (ancestor: " << vertexDescType
-                << ", descendent: " << vertexDescType << "): boolean {\n";
-            {
-                INDENT();
-                OSS << "const pseudo = " << s.getTypescriptNullVertex() << ";\n";
-                OSS << "if (ancestor === descendent) {\n";
-                OSS << "    // when ancestor === descendent, is_ancestor is defined as false\n";
-                OSS << "    return false;\n";
-                OSS << "}\n";
-                OSS << "if (ancestor === pseudo) {\n";
-                OSS << "    // special case: pseudo root is always ancestor\n";
-                OSS << "    return true;\n";
-                OSS << "}\n";
-                OSS << "if (descendent === pseudo) {\n";
-                OSS << "    // special case: pseudo root is never descendent\n";
-                OSS << "    return false;\n";
-                OSS << "}\n";
-                OSS << "for (let parent = this.getParent(descendent); parent !== pseudo;) {\n";
+            if (!gReduceCode) {
+                OSS << "isAncestor (ancestor: " << vertexDescType
+                    << ", descendent: " << vertexDescType << "): boolean {\n";
                 {
                     INDENT();
-                    OSS << "if (ancestor === parent) {\n";
+                    OSS << "const pseudo = " << s.getTypescriptNullVertex() << ";\n";
+                    OSS << "if (ancestor === descendent) {\n";
+                    OSS << "    // when ancestor === descendent, is_ancestor is defined as false\n";
+                    OSS << "    return false;\n";
+                    OSS << "}\n";
+                    OSS << "if (ancestor === pseudo) {\n";
+                    OSS << "    // special case: pseudo root is always ancestor\n";
                     OSS << "    return true;\n";
                     OSS << "}\n";
-                    OSS << "parent = this.getParent(parent);\n";
+                    OSS << "if (descendent === pseudo) {\n";
+                    OSS << "    // special case: pseudo root is never descendent\n";
+                    OSS << "    return false;\n";
+                    OSS << "}\n";
+                    OSS << "for (let parent = this.getParent(descendent); parent !== pseudo;) {\n";
+                    {
+                        INDENT();
+                        OSS << "if (ancestor === parent) {\n";
+                        OSS << "    return true;\n";
+                        OSS << "}\n";
+                        OSS << "parent = this.getParent(parent);\n";
+                    }
+                    OSS << "}\n";
+                    OSS << "return false;\n";
                 }
                 OSS << "}\n";
-                OSS << "return false;\n";
             }
-            OSS << "}\n";
         }
 
         if (s.isMutableReference()) {
@@ -2367,19 +2373,21 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "}\n";
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// AddressableGraph\n";
-            OSS << "addressable (absPath: string): boolean {\n";
-            {
-                INDENT();
-                if (gImpl) {
-                    OSS << "return impl.findRelative(this, ";
-                } else {
-                    imports.emplace("findRelative");
-                    OSS << "return findRelative(this, ";
+            if (!gReduceCode) {
+                OSS << "addressable (absPath: string): boolean {\n";
+                {
+                    INDENT();
+                    if (gImpl) {
+                        OSS << "return impl.findRelative(this, ";
+                    } else {
+                        imports.emplace("findRelative");
+                        OSS << "return findRelative(this, ";
+                    }
+                    oss << s.getTypescriptNullVertex() << ", absPath) as "
+                        << vertexDescType << " !== " << s.getTypescriptNullVertex() << ";\n";
                 }
-                oss << s.getTypescriptNullVertex() << ", absPath) as "
-                    << vertexDescType << " !== " << s.getTypescriptNullVertex() << ";\n";
+                OSS << "}\n";
             }
-            OSS << "}\n";
 
             OSS << "locate (absPath: string): " << vertexDescType << " {\n";
             {
