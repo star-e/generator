@@ -47,7 +47,10 @@ std::pmr::string Member::getTypescriptMemberName() const {
     if (mTypescriptMemberName.empty()) {
         return getMemberName();
     }
-    return mTypescriptMemberName;
+    if (mPublic) {
+        return mTypescriptMemberName;
+    }
+    return "_" + mTypescriptMemberName;
 }
 
 std::pmr::string SyntaxGraph::getMemberName(std::string_view memberName, bool bPublic) const {
@@ -2381,12 +2384,12 @@ std::pmr::string Graph::getTypescriptVertexDereference(std::string_view v,
 std::string_view Graph::getTypescriptOutEdgeList(bool bAddressable) const {
     if (bAddressable) {
         if (mAliasGraph) {
-            return "_outEdges";
+            return gNameOutEdgeList;
         } else {
             return "_children";
         }
     } else {
-        return "_outEdges";
+        return gNameOutEdgeList;
     }
 }
 
@@ -2394,7 +2397,7 @@ std::string_view Graph::getTypescriptInEdgeList(bool bAddressable) const {
     if (bAddressable) {
         return "_parents";
     } else {
-        return "_inEdges";
+        return gNameInEdgeList;
     }
 }
 
