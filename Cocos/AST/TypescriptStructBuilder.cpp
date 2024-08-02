@@ -1049,10 +1049,17 @@ std::pmr::string generateGraphSerialization_ts(
                     const auto objectID = locate(c.mValue, g);
                     const auto tagID = locate(c.mTag, g);
                     const auto& tagName = get(g.names, g, tagID);
-                    std::pmr::string objectVar("g.get", scratch);
-                    objectVar.append(convertTag(tagName));
-                    objectVar.append("(v)");
-
+                    std::pmr::string objectVar(scratch);
+                    if (gReduceCode) {
+                        auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+                        objectVar.append("g.x[v].j as ");
+                        objectVar.append(typeName);
+                        objectVar.append("");
+                    } else {
+                        objectVar.append("g.get");
+                        objectVar.append(convertTag(tagName));
+                        objectVar.append("(v)");
+                    }
                     OSS << "case " << name << "Value." << convertTag(tagName) << ":\n";
                     {
                         INDENT();

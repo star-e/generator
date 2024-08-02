@@ -1282,7 +1282,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     int count = 0;
                     if (s.isPolymorphic()) {
                         oss << "<T extends " << enumType << "> (\n";
-                        OSS << "id: " << enumType << ",\n";
+                        OSS << "id: T,\n";
                         OSS << "object: " << enumTypeMap << "[T],\n";
                         ++count;
                     } else {
@@ -2056,7 +2056,14 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
             };
 
-            if (true) {
+            OSS << "j<T extends " << name  << "Object> (v: number): T {\n";
+            {
+                INDENT();
+                OSS << "return this." << gNameVertices << "[v]." << gNameObject << " as T;\n";
+            }
+            OSS << "}\n";
+
+            if (!gReduceCode) {
                 generatePolymorphicGetters(false);
                 if (!gReduceCode) {
                     generatePolymorphicGetters(true);
