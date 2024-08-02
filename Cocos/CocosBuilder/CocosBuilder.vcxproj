@@ -253,6 +253,7 @@
     <ClCompile Include="RenderInterface.cpp" />
     <ClCompile Include="PrivateTypes.cpp" />
     <ClCompile Include="RenderInterfaceDocument.cpp" />
+    <ClCompile Include="RenderSettings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CocosModules.h" />

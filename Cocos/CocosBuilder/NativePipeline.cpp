@@ -51,6 +51,8 @@ namespace render {
 template <class T>
 using Array4 = std::array<T, 4>;
 
+struct RenderGraphVisitorContext;
+
 } // namespace render
 
 } // namespace cc
@@ -58,7 +60,6 @@ using Array4 = std::array<T, 4>;
 )",
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
-#include "cocos/renderer/gfx-base/GFXFramebuffer.h"
 
 #ifdef _MSC_VER
     #pragma warning(push)
@@ -84,6 +85,16 @@ using Array4 = std::array<T, 4>;
                 );
                 CNTR(mDevice, mData);
             }
+        }
+
+        STRUCT(RenderGraphFilter) {
+            PUBLIC(
+                (const ccstd::pmr::vector<bool>*, mValidPasses, nullptr)
+            );
+            MEMBER_FUNCTIONS(R"(bool operator()(RenderGraph::vertex_descriptor u) const {
+    return validPasses->operator[](u);
+}
+)");
         }
 
         STRUCT(NativeRenderNode, .mFinal = false, .mFlags = NO_DEFAULT_CNTR) {
@@ -306,7 +317,7 @@ inline void clear() noexcept {
 
 void removeMacro() const;
 
-static uint32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::vertex_descriptor phaseLayoutId);
+static int32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::vertex_descriptor phaseLayoutId);
 
 void applyMacro(const LayoutGraphData &lg, const scene::Model& model, LayoutGraphData::vertex_descriptor probeLayoutId);
 )");
@@ -464,6 +475,7 @@ gfx::Buffer* createFromCpuBuffer();
                 (const scene::Light*, mLight, nullptr)
                 (uint32_t, mLightLevel, 0xFFFFFFFF)
                 (bool, mCastShadow, false)
+                (bool, mProbePass, false)
             );
         }
 
@@ -694,6 +706,7 @@ void destroy();
                 ((mutable PmrFlatMap<BuiltinCascadedShadowMapKey, BuiltinCascadedShadowMap>), mBuiltinCSMs, _)
                 (PipelineStatistics, mStatistics, _)
                 (PipelineCustomization, mCustom, _)
+                (bool, mDefaultFramebufferHasDepthStencil, false)
             );
             MEMBER_FUNCTIONS(R"(
 void executeRenderGraph(const RenderGraph& rg);
@@ -707,6 +720,8 @@ void addCustomRenderQueue(std::string_view name, std::shared_ptr<CustomRenderQue
 void addCustomRenderCommand(std::string_view name, std::shared_ptr<CustomRenderCommand> ptr);
 
 void setCustomContext(std::string_view name);
+
+static void prepareDescriptors(RenderGraphVisitorContext& ctx, RenderGraph::vertex_descriptor passID);
 
 private:
 ccstd::vector<gfx::CommandBuffer*> _commandBuffers;

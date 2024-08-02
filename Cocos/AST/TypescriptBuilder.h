@@ -41,6 +41,8 @@ void outputConstructionParams(
     const Constructor& cntr,
     bool bReset,
     bool bArgument,
+    bool bPublicFormat,
+    bool bHasDefaultParameters,
     std::pmr::memory_resource* scratch);
 
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
@@ -50,6 +52,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     std::string_view scope,
     SyntaxGraph::vertex_descriptor vertID,
     std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
@@ -59,6 +62,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     const ModuleInfo& moduleInfo,
     std::string_view scope,
     std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
@@ -78,6 +82,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,
     const std::pmr::vector<Method>& methods,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 void outputFunctions(std::ostream& oss, std::pmr::string& space,
@@ -93,6 +98,19 @@ std::pmr::string generateSerialization_ts(
     std::pmr::memory_resource* mr,
     std::pmr::memory_resource* scratch);
 
+std::pmr::string generateNames_ts(
+    CodegenContext& codegen,
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
+    SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
+    std::pmr::memory_resource* scratch);
+
 static constexpr bool kOutputPoolDebug = false;
+static constexpr bool sEnableMake = true;
+static constexpr bool sEnableOptionalAssign = false;
+static constexpr bool sResetHasDefaultParameters = false;
 
 }

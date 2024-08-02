@@ -529,6 +529,13 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
 
     std::pmr::string adlPath(className, scratch);
 
+    bool bNullable = false;
+    if (boost::algorithm::contains(adlPath, "[[nullable]]")) {
+        bNullable = true;
+        boost::algorithm::replace_all(adlPath, "[[nullable]]", "");
+        boost::algorithm::trim(adlPath);
+    }
+
     bool bOptional = false;
     if (boost::algorithm::contains(adlPath, "[[optional]]")) {
         bOptional = true;
@@ -550,8 +557,26 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
         initial = {};
     }
 
+    Member m(get_allocator());
+
     bool bInstance = isInstance(adlPath);
     if (bInstance) {
+        if (adlPath.starts_with("mutable ")) {
+            m.mMutable = true;
+            boost::algorithm::replace_all(adlPath, "mutable ", "");
+        }
+        if (adlPath.starts_with("const ")) {
+            m.mConst = true;
+            boost::algorithm::replace_all(adlPath, "const ", "");
+        }
+        if (adlPath.ends_with("*")) {
+            m.mPointer = true;
+            adlPath.pop_back();
+        }
+        if (adlPath.ends_with("&")) {
+            m.mReference = true;
+            adlPath.pop_back();
+        }
         g.instantiate(mCurrentScope, adlPath, scratch);
     }
 
@@ -559,7 +584,6 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
 
     auto addMember = [&](auto& s) {
         std::pmr::string typeName(adlPath, scratch);
-        Member m(get_allocator());
 
         if (!bInstance) {
             auto astPos = adlPath.find('*');
@@ -606,7 +630,8 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
         }
         m.mFlags = flags;
         m.mComments = comments;
-        m.mTypescriptOptional = bOptional;
+        m.mOptional = bOptional;
+        m.mNullable = bNullable;
 
         s.mMembers.emplace_back(std::move(m));
         ptr = &s.mMembers.back();
@@ -634,6 +659,23 @@ void ModuleBuilder::setMemberFlags(SyntaxGraph::vertex_descriptor vertID,
             for (Member& m : s.mMembers) {
                 if (m.mMemberName == memberName) {
                     m.mFlags = flags;
+                    break;
+                }
+            }
+        },
+        [&](const auto&) {
+        });
+}
+
+void ModuleBuilder::setMemberTypescriptName(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view memberName, std::string_view tsName) {
+    auto& g = mSyntaxGraph;
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            for (Member& m : s.mMembers) {
+                if (m.mMemberName == memberName) {
+                    m.mTypescriptMemberName = tsName;
                     break;
                 }
             }
@@ -704,6 +746,23 @@ void ModuleBuilder::addMethods(SyntaxGraph::vertex_descriptor vertID,
         vertID, g,
         [&](Composition_ auto& s) {
             s.mMethods = parseFunctions(*this, content);
+        },
+        [&](const auto&) {
+        });
+}
+
+void ModuleBuilder::setMethodTypescriptName(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view methodName, std::string_view tsName) {
+    auto& g = mSyntaxGraph;
+    visit_vertex(
+        vertID, g,
+        [&](Composition_ auto& s) {
+            for (Method& m : s.mMethods) {
+                if (m.mFunctionName == methodName) {
+                    m.mTypescriptFunctionName = tsName;
+                    break;
+                }
+            }
         },
         [&](const auto&) {
         });
@@ -1106,10 +1165,10 @@ std::pmr::string reorderIncludes(std::pmr::string content,
 }
 
 void outputComment(std::ostream& oss) {
-    oss << R"(/****************************************************************************
- Copyright (c) 2021-2023 Xiamen Yaji Software Co., Ltd.
+    oss << R"(/*
+ Copyright (c) 2021-2024 Xiamen Yaji Software Co., Ltd.
 
- http://www.cocos.com
+ https://www.cocos.com
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -1128,7 +1187,7 @@ void outputComment(std::ostream& oss) {
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
-****************************************************************************/
+*/
 
 /**
  * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
@@ -1533,7 +1592,65 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::pmr::set<std::pmr::string> graphImports(scratch);
         std::pmr::set<std::pmr::string> moduleImports(scratch);
         int count = 0;
-        {
+        const bool bPublicFormat = !!(features & PublicFormat);
+        if (bPublicFormat) {
+            auto imported = g.getImportedTypes(modulePath, scratch);
+            PmrSet<std::pmr::string> defaultTypes(scratch);
+            PmrMap<std::string, PmrSet<std::pmr::string>> importedNamespaces(scratch);
+            for (const auto& m : imported) {
+                const auto targetID = locate(m.first, mModuleGraph);
+                const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
+                if (target.mTypescriptNamespace.empty()) {
+                    for (const auto& type : m.second) {
+                        auto vertID = locate(type, g);
+                        auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+                        defaultTypes.emplace(tsName);
+                    }
+                } else {
+                    auto& tsNs = importedNamespaces[target.mTypescriptNamespace];
+                    for (const auto& type : m.second) {
+                        auto vertID = locate(type, g);
+                        auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+                        tsNs.emplace(tsName);
+                    }
+                }
+            }
+            OSS << "import { ";
+            uint32_t count = 0;
+            for (const auto& tsName : defaultTypes) {
+                if (count++) {
+                    oss << ", ";
+                }
+                oss << tsName;
+            }
+            for (const auto& ns : importedNamespaces) {
+                if (count++) {
+                    oss << ", ";
+                }
+                oss << ns.first;
+            }
+            oss << " } from '" << mTypescriptRoot << "';\n";
+
+            if (!importedNamespaces.empty()) {
+                oss << "\n";
+            }
+
+            for (const auto& ns : importedNamespaces) {
+                OSS << "const { ";
+                uint32_t typeCount = 0;
+                for (const auto& type : ns.second) {
+                    if (typeCount++) {
+                        oss << ", ";
+                    }
+                    oss << type;
+                }
+                oss << " } = " << ns.first << ";\n";
+            }
+
+            if (count || !imported.empty()) {
+                oss << "\n";
+            }
+        } else {
             auto imported = g.getImportedTypes(modulePath, scratch);
             for (const auto& m : imported) {
                 const auto targetID = locate(m.first, mModuleGraph);
@@ -1591,11 +1708,12 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             const auto& typeModulePath = get(g.modulePaths, g, vertID);
             if (typeModulePath != modulePath)
                 continue;
-            outputTypescript(oss, space, codegen, *this, m, "", vertID, graphImports, scratch);
+            outputTypescript(oss, space, codegen, *this, m, "", vertID, graphImports, bPublicFormat, scratch);
         }
 
         if (features & Features::TsPool) {
-            outputTypescriptPool(oss, space, codegen, *this, modulePath, m, "", moduleImports, scratch);
+            outputTypescriptPool(oss, space, codegen, *this, modulePath, m, "",
+                moduleImports, bPublicFormat, scratch);
         }
 
         if (features & Features::Serialization) {
@@ -1680,6 +1798,47 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         }
         copyString(oss2, oss.str());
         updateFile(filename, oss2.str());
+    }
+
+    if ((features & Features::Typescripts) && (features & Names)) {
+        std::filesystem::path tsPath = typescriptFolder / m.mTypescriptFolder / m.mTypescriptFilePrefix;
+        std::filesystem::path filename = tsPath;
+        filename += "-names.ts";
+        const bool bPublicFormat = !!(features & PublicFormat);
+
+        pmr_ostringstream oss2(std::ios_base::out, scratch);
+        std::pmr::string space(scratch);
+        std::pmr::set<std::pmr::string> imported;
+        {
+            CodegenContext codegen(scratch);
+            for (const auto& vertID : make_range(vertices(g))) {
+                const auto& typeModulePath = get(g.modulePaths, g, vertID);
+                if (typeModulePath != modulePath)
+                    continue;
+                copyString(oss2, space,
+                    generateNames_ts(codegen,
+                        *this, m, "", vertID, imported, bPublicFormat, scratch));
+            }
+        }
+
+        pmr_ostringstream oss(std::ios_base::out, scratch);
+        outputComment(oss);
+
+        if (!imported.empty()) {
+            int count = 0;
+            OSS << "import { ";
+            for (const auto& type : imported) {
+                if (count++) {
+                    oss << ", ";
+                }
+                oss << type;
+            }
+            oss << " } from './" << m.mTypescriptFilePrefix << "'\n";
+        }
+
+        copyString(oss, space, oss2.str());
+
+        updateFile(filename, oss.str());
     }
 
     if (features & Features::Serialization) {
@@ -2085,19 +2244,37 @@ int ModuleBuilder::compile() {
 }
 
 std::pmr::string ModuleBuilder::getTypedMemberName(
-    const Member& m, bool bPublic, bool bFull) const {
+    bool bPublicFormat, const Member& m, bool bPublic, bool bFull) const {
     const auto& g = mSyntaxGraph;
     auto scratch = mScratch;
 
     auto memberID = locate(m.mTypePath, g);
+
+    std::string nsPrefix = "";
+    if (bPublicFormat) {
+        const auto& modulePath = get(g.modulePaths, g, memberID);
+        const auto moduleID = locate(modulePath, mModuleGraph);
+        if (moduleID != mModuleGraph.null_vertex()) {
+            const auto& moduleInfo = get(mModuleGraph.modules, mModuleGraph, moduleID);
+            if (!moduleInfo.mTypescriptNamespace.empty()) {
+                nsPrefix = moduleInfo.mTypescriptNamespace;
+                nsPrefix.append(".");
+            }
+        }
+    }
+
     auto typeName = g.getTypescriptTypename(memberID, scratch, scratch);
 
     auto name = g.getMemberName(m.mMemberName, bPublic);
 
     if (bFull || !g.isTypescriptData(typeName)) {
+        if (m.mOptional) {
+            name += "?";
+        }
         name += ": ";
+        name += nsPrefix;
         name += typeName;
-        if (m.mTypescriptOptional) {
+        if (m.mNullable) {
             name += " | null";
         }
     }

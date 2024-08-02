@@ -42,7 +42,7 @@ int main() {
     std::filesystem::path typescriptFolder = "../../../cocos-engine";
     std::filesystem::path cppFolder = "../../../cocos-engine/native";
 
-    ModuleBuilder builder("cc", cppFolder, typescriptFolder, scratch, scratch);
+    ModuleBuilder builder("cc", cppFolder, typescriptFolder, "cc", scratch, scratch);
     builder.init();
 
     // type registration
@@ -66,6 +66,9 @@ int main() {
             Fwd | Types | Graphs | Typescripts | TsPool);
         buildFGDispatcher(builder, Types | Graphs);
         buildCustomization(builder, Fwd | Types);
+
+        // settings
+        buildRenderSettings(builder, Typescripts | PublicFormat);
 
         // build render compiler (native)
         buildArchiveInterface(builder, Fwd | Types | Typescripts | Interface);
@@ -119,6 +122,8 @@ int main() {
         files.emplace("cocos/renderer/pipeline/custom/NativeFactory.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativePipeline.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
+        files.emplace("cocos/renderer/pipeline/custom/NativeExecutorRenderGraph.h");
+        files.emplace("cocos/renderer/pipeline/custom/NativeExecutorDescriptor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraph.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderQueue.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeProgramLibrary.cpp");
@@ -138,6 +143,9 @@ int main() {
 
         // common types, shared by different modules
         builder.outputModule("RenderCommon", files);
+
+        // render settings
+        builder.outputModule("RenderSettings", files);
 
         // descriptor layout graph
         builder.outputModule("LayoutGraph", files);

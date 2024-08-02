@@ -504,10 +504,7 @@ std::pmr::string getParameterPrefix(std::string_view member,
 
 // Syntax
 bool isInstance(std::string_view name) {
-    if (name.back() == '>') {
-        return true;
-    }
-    return false;
+    return boost::algorithm::contains(name, "<") || boost::algorithm::contains(name, ">");
 }
 
 // Generation

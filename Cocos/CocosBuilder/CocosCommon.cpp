@@ -334,6 +334,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         .mFilePrefix = "GFXDef-common.h",
         .mTypescriptFolder = "cocos",
         .mTypescriptFilePrefix = "gfx",
+        .mTypescriptNamespace = "gfx",
     ) {
         ADD_FEATURES(ToJs);
 
@@ -518,6 +519,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             IMPORT_CLASS(RenderTexture) {
             }
             IMPORT_CLASS(Material) {
+            }
+            IMPORT_CLASS(Texture2D) {
             }
         }
     }

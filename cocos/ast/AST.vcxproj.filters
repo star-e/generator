@@ -113,6 +113,7 @@
     <ClInclude Include="BuilderUtils.h">
       <Filter>2.Builder</Filter>
     </ClInclude>
+    <ClInclude Include="CodeConfigs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SyntaxReflection.cpp">

@@ -30,6 +30,7 @@ THE SOFTWARE.
 #include "SyntaxUtils.h"
 #include "SyntaxGraphs.h"
 #include "BuilderUtils.h"
+#include "Cocos/AST/CodeConfigs.h"
 
 namespace Cocos::Meta {
 
@@ -147,7 +148,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
                 OSS << memberName;
                 oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n"; 
             } else {
-                if (m.mTypescriptOptional) {
+                if (m.mNullable) {
                     OSS << memberName << " = null;\n";
                 } else {
                     OSS << "// " << memberName
@@ -160,7 +161,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
 
 bool typescriptMemberNeedAssign(const SyntaxGraph& g, const Member& m, uint32_t memberID) {
     return g.isTypescriptValueType(memberID)
-        || m.mTypescriptOptional
+        || m.mNullable
         || g.isTypescriptPointer(memberID);
 }
 
@@ -173,6 +174,8 @@ void outputConstructionParams(
     const Constructor& cntr,
     bool bReset,
     bool bArgument,
+    bool bPublicFormat,
+    bool bHasDefaultParameters,
     std::pmr::memory_resource* scratch) {
     auto outputComma = [&]() {
         if (bChangeLine) {
@@ -206,13 +209,17 @@ void outputConstructionParams(
 
                 auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
                 if (bArgument) {
-                    oss << g.getMemberName(m.mMemberName, true);
+                    if (bReset && bHasDefaultParameters) {
+                        oss << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                    } else {
+                        oss << g.getMemberName(m.mMemberName, true);
+                    }
                 } else {
-                    if (cntr.mHasDefault) {
-                        oss << builder.getTypedMemberName(m, true);
+                    if (bHasDefaultParameters && cntr.mHasDefault) {
+                        oss << builder.getTypedMemberName(bPublicFormat, m, true);
                         oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
                     } else {
-                        oss << builder.getTypedMemberName(m, true, true);
+                        oss << builder.getTypedMemberName(bPublicFormat, m, true, true);
                     }
                 }
                 if (bChangeLine) {
@@ -234,6 +241,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     const std::pmr::vector<std::pmr::string>& functions,
     const std::pmr::vector<Constructor>& cntrs,
     const std::pmr::vector<Method>& methods,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch) {
     const auto& traits = get(g.traits, g, vertID);
     const int maxParams = 4;
@@ -266,13 +274,13 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 return;
                             }
                             outputConstructionParams(oss, space, count, builder, bChangeLine,
-                                g, s.mMembers, s.mConstructors.front(), false, false, scratch);
+                                g, s.mMembers, s.mConstructors.front(), false, false, bPublicFormat, true, scratch);
                         },
                         [&](const auto&) {
                         });
                 }
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, cntr, false, false, scratch);
+                    g, members, cntr, false, false, bPublicFormat, true, scratch);
 
                 if (bChangeLine) {
                     OSS << ") {\n";
@@ -345,14 +353,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                             return;
                         }
                         outputConstructionParams(oss, space, count, builder, bChangeLine,
-                            g, s.mMembers, s.mConstructors.front(), true, false, scratch);
+                            g, s.mMembers, s.mConstructors.front(), true, false, bPublicFormat, true, scratch);
                     },
                     [&](const auto&) {
                     });
             }
             if (pCntr) {
                 outputConstructionParams(oss, space, count, builder, bChangeLine,
-                    g, members, *pCntr, true, false, scratch);
+                    g, members, *pCntr, true, false, bPublicFormat, sResetHasDefaultParameters, scratch);
             }
             if (bChangeLine) {
                 OSS << "): void {\n";
@@ -398,7 +406,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 bFound = true;
                                 auto memberID = locate(m.mTypePath, g);
                                 const auto& memberTraits = get(g.traits, g, memberID);
-                                if (g.isTypescriptValueType(memberID) || m.mTypescriptOptional || g.isTypescriptPointer(memberID)) {
+                                if (g.isTypescriptValueType(memberID) || m.mNullable || g.isTypescriptPointer(memberID)) {
                                     OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
                                         << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
                                 } else if (g.isTypescriptTypedArray(memberID)) {
@@ -410,7 +418,25 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                                     OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                                 } else {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset();\n";
+                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset(";
+                                    if (!sResetHasDefaultParameters) {
+                                        // get cntr
+                                        const Constructor* pCntr = nullptr;
+                                        const Struct* pStruct = nullptr;
+                                        if (holds_tag<Struct_>(memberID, g)) {
+                                            const auto& s = get_by_tag<Struct_>(memberID, g);
+                                            pStruct = &s;
+                                            if (!s.mConstructors.empty()) {
+                                                pCntr = &s.mConstructors.front();
+                                            }
+                                        }
+                                        if (pStruct && pCntr) {
+                                            int count = 0;
+                                            outputConstructionParams(oss, space, count, builder, false,
+                                                g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, true, scratch);
+                                        }
+                                    }
+                                    oss << ");\n";
                                 }
                             }
                         }
@@ -484,7 +510,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             methodName = camelToVariable(methodName, scratch);
             oss << "set " << methodName << " (";
         } else {
-            oss << method.mFunctionName;
+            oss << method.getTypescriptName();
             if (method.mOptionalMethod) {
                 oss << "?";
             }
@@ -540,6 +566,8 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         }
     }
 
+    const auto commentBegin = bPublicFormat ? "/* " : "/*";
+    const auto commentEnd = bPublicFormat ? " */" : "*/";
     for (uint32_t i = 0; const auto& m : members) {
         if (m.mFlags & IMPL_DETAIL)
             continue;
@@ -558,33 +586,61 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
             }
         }
+
+        const bool bNoInitial
+            = m.mOptional
+            || g.isOptional(memberID)
+            || (traits.mStructInterface && sEnableMake);
+
+        const bool needDeclare
+            = (!bNeedIntial || bNoInitial)
+            && !traits.mStructInterface;
+
         OSS;
+        if (needDeclare) {
+            oss << "declare ";
+        }
         if (!m.mPublic) {
             oss << "private ";
         }
         bool bTypscriptPointer = g.isTypescriptPointer(memberID);
         if (m.mMutable) {
-            oss << "/*mutable*/ ";
-        } else if (!m.mPointer && !bTypscriptPointer && !m.mTypescriptOptional && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
+            oss << commentBegin << "mutable" << commentEnd << " ";
+        } else if (!m.mPointer && !bTypscriptPointer && !m.mOptional && !m.mNullable && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         } else if (bTypscriptPointer) {
-            oss << "/*refcount*/ ";
+            oss << commentBegin << "refcount" << commentEnd << " ";
         } else if (m.mPointer) {
-            oss << "/*pointer*/ ";
+            oss << commentBegin << "pointer" << commentEnd << " ";
         } else if (m.mReference) {
-            oss << "/*reference*/ ";
+            oss << commentBegin << "reference" << commentEnd << " ";
         }
         if (bNeedIntial) {
-            oss << builder.getTypedMemberName(m, m.mPublic);
-            oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+            if (bNoInitial) {
+                oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";";
+                if (g.isTypescriptValueType(memberID)) {
+                    oss << " " << commentBegin
+                        << g.getTypescriptInitialValue(memberID, m, scratch, scratch)
+                        << commentEnd << "\n";
+                } else {
+                    oss << "\n";
+                }
+            } else {
+                oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic);
+                oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+            }
         } else {
-            oss << builder.getTypedMemberName(m, m.mPublic, true) << ";\n";
+            oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";\n";
         }
 
         ++i;
     }
     if (kOutputPoolDebug) {
         OSS << "_pool?: boolean;\n";
+    }
+
+    if (traits.mStructInterface && sEnableMake) {
+        OSS << "[name: string]: unknown;\n";
     }
 }
 
@@ -614,11 +670,23 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
     }
     const auto& traits = get(g.traits, g, vertID);
     if (g.isTypescriptBoolean(vertID)) {
-        OSS << "ar.writeBool(" << varName << ");\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << "a.b(" << varName << ");\n";
+        } else {
+            OSS << "a.writeBool(" << varName << ");\n";
+        }
     } else if (g.isTypescriptNumber(vertID) || holds_tag<Enum_>(vertID, g)) {
-        OSS << "ar.writeNumber(" << varName << ");\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << "a.n(" << varName << ");\n";
+        } else {
+            OSS << "a.writeNumber(" << varName << ");\n";
+        }
     } else if (g.isTypescriptString(vertID)) {
-        OSS << "ar.writeString(" << varName << ");\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << "a.s(" << varName << ");\n";
+        } else {
+            OSS << "a.writeString(" << varName << ");\n";
+        }
     } else if (g.isTypescriptMap(vertID)) {
         outputSaveMap(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (g.isTypescriptArray(vertID, scratch) || g.isTypescriptSet(vertID)) {
@@ -628,10 +696,10 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
         || holds_tag<Graph_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
         if (isKey && (traits.mFlags & STRING_KEY)) {
-            OSS << "save" << memberName << "(ar, JSON.parse(" << varName << ") as "
+            OSS << "save" << memberName << "(a, JSON.parse(" << varName << ") as "
                 << g.getTypescriptTypename(vertID, scratch, scratch) << ");\n";
         } else {
-            OSS << "save" << memberName << "(ar, " << varName << ");\n";
+            OSS << "save" << memberName << "(a, " << varName << ");\n";
         }
     } else {
         OSS << "// skip: " << varName << ": "
@@ -646,11 +714,19 @@ void outputSaveCollection(std::ostream& oss, std::pmr::string& space, std::strin
     std::pmr::memory_resource* scratch) {
     ++depth;
     if (g.isTypescriptSet(vertID)) {
-        OSS << "ar.writeNumber(" << varName << ".size); // "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << "a.n(" << varName << ".size); // ";
+        } else {
+            OSS << "a.writeNumber(" << varName << ".size); // ";
+        }
+        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     } else {
-        OSS << "ar.writeNumber(" << varName << ".length); // "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << "a.n(" << varName << ".length); // ";
+        } else {
+            OSS << "a.writeNumber(" << varName << ".length); // ";
+        }
+        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     }
     OSS << "for (const v" << depth << " of " << varName << ") {\n";
     {
@@ -672,8 +748,12 @@ void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     uint32_t depth,
     std::pmr::memory_resource* scratch) {
     ++depth;
-    OSS << "ar.writeNumber(" << varName << ".size); // "
-        << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+    if (sReduceTypescriptMemberFunction) {
+        OSS << "a.n(" << varName << ".size); // ";
+    } else {
+        OSS << "a.writeNumber(" << varName << ".size); // ";
+    }
+    oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     OSS << "for (const [k" << depth << ", v" << depth << "] of " << varName << ") {\n";
     {
         INDENT();
@@ -718,18 +798,30 @@ void outputLoadSerializable(std::ostream& oss, std::pmr::string& space, std::str
     }
     const auto& traits = get(g.traits, g, vertID);
     if (g.isTypescriptBoolean(vertID)) {
-        OSS << varName << " = ar.readBool();\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << varName << " = a.b();\n";
+        } else {
+            OSS << varName << " = a.readBool();\n";
+        }
     } else if (g.isTypescriptNumber(vertID) || holds_tag<Enum_>(vertID, g)) {
-        OSS << varName << " = ar.readNumber();\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << varName << " = a.n();\n";
+        } else {
+            OSS << varName << " = a.readNumber();\n";
+        }
     } else if (g.isTypescriptString(vertID)) {
-        OSS << varName << " = ar.readString();\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << varName << " = a.s();\n";
+        } else {
+            OSS << varName << " = a.readString();\n";
+        }
     } else if (g.isTypescriptMap(vertID)) {
         outputLoadMap(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (g.isTypescriptArray(vertID, scratch) || g.isTypescriptSet(vertID)) {
         outputLoadCollection(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
-        OSS << "load" << memberName << "(ar, " << varName << ");\n";
+        OSS << "load" << memberName << "(a, " << varName << ");\n";
     } else {
         OSS << "// skip: " << varName << ": "
             << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
@@ -746,12 +838,20 @@ void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::strin
     const auto& name = get(g.names, g, vertID);
     std::pmr::string sizeName("sz", scratch);
     if (depth == 1) {
-        OSS << sizeName << " = ar.readNumber(); // "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << sizeName << " = a.n(); // ";
+        } else {
+            OSS << sizeName << " = a.readNumber(); // ";
+        }
+        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     } else {
         sizeName.append(std::to_string(depth));
-        OSS << "const " << sizeName << " = ar.readNumber(); // "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << "const " << sizeName << " = a.n(); // ";
+        } else {
+            OSS << "const " << sizeName << " = a.readNumber(); // ";
+        }
+        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     }
 
     // elememt
@@ -815,12 +915,20 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     const auto& name = get(g.names, g, vertID);
     std::pmr::string sizeName("sz", scratch);
     if (depth == 1) {
-        OSS << sizeName << " = ar.readNumber(); // "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << sizeName << " = a.n(); // ";
+        } else {
+            OSS << sizeName << " = a.readNumber(); // ";
+        }
+        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     } else {
         sizeName.append(std::to_string(depth));
-        OSS << "const " << sizeName << " = ar.readNumber(); // "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        if (sReduceTypescriptMemberFunction) {
+            OSS << "const " << sizeName << " = a.n(); // ";
+        } else {
+            OSS << "const " << sizeName << " = a.readNumber(); // ";
+        }
+        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
     }
 
     // elememt
@@ -892,7 +1000,7 @@ std::pmr::string generateGraphSerialization_ts(
     const auto& name = get(g.names, g, vertID);
 
     oss << "\n";
-    OSS << "export function save" << cppName << " (ar: OutputArchive, g: " << cppName << "): void {\n";
+    OSS << "export function save" << cppName << " (a: OutputArchive, g: " << cppName << "): void {\n";
     {
         INDENT();
         OSS << "const numVertices = g.numVertices();\n";
@@ -953,10 +1061,17 @@ std::pmr::string generateGraphSerialization_ts(
                     const auto objectID = locate(c.mValue, g);
                     const auto tagID = locate(c.mTag, g);
                     const auto& tagName = get(g.names, g, tagID);
-                    std::pmr::string objectVar("g.get", scratch);
-                    objectVar.append(convertTag(tagName));
-                    objectVar.append("(v)");
-
+                    std::pmr::string objectVar(scratch);
+                    if (gReduceCode) {
+                        auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+                        objectVar.append("g.x[v].j as ");
+                        objectVar.append(typeName);
+                        objectVar.append("");
+                    } else {
+                        objectVar.append("g.get");
+                        objectVar.append(convertTag(tagName));
+                        objectVar.append("(v)");
+                    }
                     OSS << "case " << name << "Value." << convertTag(tagName) << ":\n";
                     {
                         INDENT();
@@ -990,7 +1105,7 @@ std::pmr::string generateGraphSerialization_ts(
     oss << "}\n";
 
     oss << "\n";
-    OSS << "export function load" << cppName << " (ar: InputArchive, g: " << cppName << "): void {\n";
+    OSS << "export function load" << cppName << " (a: InputArchive, g: " << cppName << "): void {\n";
     {
         INDENT();
         const auto sizeID = locate("/uint32_t", g);
@@ -1164,7 +1279,7 @@ std::pmr::string generateSerialization_ts(
                 }
                 numTrival = 0;
                 oss << "\n";
-                oss << "export function save" << cppName << " (ar: OutputArchive, v: " << cppName << "): void {\n";
+                oss << "export function save" << cppName << " (a: OutputArchive, v: " << cppName << "): void {\n";
                 {
                     INDENT();
                     if (nvp) {
@@ -1192,7 +1307,7 @@ std::pmr::string generateSerialization_ts(
                 }
                 oss << "}\n";
                 oss << "\n";
-                oss << "export function load" << cppName << " (ar: InputArchive, v: " << cppName << "): void {\n";
+                oss << "export function load" << cppName << " (a: InputArchive, v: " << cppName << "): void {\n";
                 {
                     INDENT();
                     if (nvp) {
@@ -1234,6 +1349,76 @@ std::pmr::string generateSerialization_ts(
             [&](const auto&) {
             });
     }
+
+    return oss.str();
+}
+
+std::pmr::string generateNames_ts(
+    CodegenContext& codegen,
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    std::string_view scope,
+    SyntaxGraph::vertex_descriptor vertID,
+    std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
+    std::pmr::memory_resource* scratch) {
+    pmr_ostringstream oss(std::ios_base::out, scratch);
+    std::pmr::string space(scratch);
+    const auto funcSpace = bPublicFormat ? "" : " ";
+    const auto& g = builder.mSyntaxGraph;
+    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+    const auto& traits = get(g.traits, g, vertID);
+    const auto& comment = get(g.comments, g, vertID);
+    if (traits.mImport)
+        return "";
+
+    if (traits.mFlags & IMPL_DETAIL)
+        return "";
+
+    if (!traits.mExport) {
+        return "";
+    }
+
+    if (g.isTypescriptData(name))
+        return "";
+
+    auto& currScope = codegen.mScopes.back();
+
+    visit_vertex(
+        vertID, g,
+        [&](const Enum& e) {
+            if (!e.mIsFlags && (moduleInfo.mFeatures & Names) && (traits.mFlags & TS_NAME)) {
+                if (currScope.mCount++) {
+                    oss << "\n";
+                }
+                imports.emplace(name);
+                OSS << "export function get" << name << "Name" << funcSpace << "(e: " << name << "): string {\n";
+                {
+                    INDENT();
+                    OSS << "switch (e) {\n";
+                    for (const auto& v : e.mValues) {
+                        if (v.mAlias) {
+                            continue;
+                        }
+                        OSS << "case " << name << "." << v.mName << ":\n";
+                        INDENT();
+                        OSS << "return '" << v.mName << "';\n";
+                    }
+                    OSS << "default:\n";
+                    OSS << "    return '';\n";
+                    OSS << "}\n";
+                }
+                OSS << "}\n";
+            }
+        },
+        [&](const Graph& s) {
+        },
+        [&](const Struct& s) {
+        },
+        [&](const Variant& s) {
+        },
+        [&](const auto&) {
+        });
 
     return oss.str();
 }

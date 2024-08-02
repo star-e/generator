@@ -33,6 +33,11 @@ virtual void writeNumber(double value) = 0;
 virtual void writeString(std::string_view value) = 0;
 [[skip]] virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
 )");
+            TS_RENAME_METHODS(
+                (writeBool, b)
+                (writeNumber, n)
+                (writeString, s)
+            );
         }
 
         INTERFACE(InputArchive) {
@@ -42,6 +47,11 @@ virtual double readNumber() = 0;
 virtual std::string_view readString() = 0;
 [[skip]] virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
 )");
+            TS_RENAME_METHODS(
+                (readBool, b)
+                (readNumber, n)
+                (readString, s)
+            );
         }
 
         NAMESPACE_END(render);
@@ -149,7 +159,7 @@ virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
 [[getter]] virtual const ccstd::string &getConstantMacros() const = 0;
 [[nullable]] [[getter]] virtual scene::Model *getProfiler() const = 0;
 [[setter]] virtual void setProfiler([[nullable]] scene::Model *profiler) = 0;
-[[nullable]] [[getter]] virtual pipeline::GeometryRenderer  *getGeometryRenderer() const = 0;
+[[nullable]] [[getter]] virtual pipeline::GeometryRenderer *getGeometryRenderer() const = 0;
 
 [[getter]] virtual float getShadingScale() const = 0;
 [[setter]] virtual void setShadingScale(float scale) = 0;
@@ -174,11 +184,11 @@ virtual void onGlobalPipelineStateChanged() = 0;
 )");
         }
                 
-        ENUM_CLASS(PipelineType) {
+        ENUM_CLASS(PipelineType, .mFlags = TS_ENUM_OBJECT) {
             ENUMS(BASIC, STANDARD);
         }
 
-        FLAG_CLASS(SubpassCapabilities) {
+        FLAG_CLASS(SubpassCapabilities, .mFlags = TS_ENUM_OBJECT) {
             UNDERLYING_TYPE(uint32_t);
             FLAGS(
                 (NONE, 0)
@@ -243,13 +253,14 @@ virtual void useLightFrustum(IntrusivePtr<scene::Light> light, uint32_t csmLevel
             INHERITS(Setter);
             PUBLIC_METHODS(R"(
 [[deprecated]] virtual void addSceneOfCamera(scene::Camera* camera, LightInfo light, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
-virtual SceneBuilder *addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] scene::Light* light = nullptr) = 0;
+virtual SceneBuilder *addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] scene::Light* light = nullptr, [[optional]] scene::RenderScene* scene = nullptr) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[experimental]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
+// [[experimental]] virtual void addRenderPassTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
         }
 
         INTERFACE(BasicRenderPassBuilder) {
@@ -259,7 +270,7 @@ virtual void addRenderTarget(const ccstd::string& name, gfx::LoadOp loadOp = gfx
 virtual void addDepthStencil(const ccstd::string& name, gfx::LoadOp loadOp = gfx::LoadOp::CLEAR, gfx::StoreOp storeOp = gfx::StoreOp::STORE, float depth = 1, uint8_t stencil = 0, gfx::ClearFlagBit clearFlags = gfx::ClearFlagBit::DEPTH_STENCIL) = 0;
 virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
 
-virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default", const ccstd::string& passName = "") = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[deprecated]] virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
@@ -278,7 +289,7 @@ virtual void resolveDepthStencil(const ccstd::string& source, const ccstd::strin
 //        INTERFACE(BuiltinReflectionProbePassBuilder) {
 //            INHERITS(Setter);
 //            PUBLIC_METHODS(R"(
-//virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
+//virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default", const ccstd::string& passName = "") = 0;
 //)");
 //        }
 
@@ -294,8 +305,8 @@ virtual void endSetup() = 0;
 [[setter]] virtual void setEnableCpuLightCulling(bool enable) = 0;
 
 virtual bool containsResource(const ccstd::string& name) const = 0;
-virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow) = 0;
-[[deprecated]] virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow) = 0;
+virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow, const ccstd::string& depthStencilName = "") = 0;
+[[deprecated]] virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow, const ccstd::string& depthStencilName = "") = 0;
 
 virtual uint32_t addRenderTarget(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
 virtual uint32_t addDepthStencil(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, ResourceResidency residency = ResourceResidency::MANAGED) = 0;
@@ -321,7 +332,7 @@ virtual void endFrame() = 0;
 [[deprecated]] virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
 virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 
-virtual void addBuiltinReflectionProbePass(const scene::Camera *camera) = 0;
+[[deprecated]] virtual void addBuiltinReflectionProbePass(const scene::Camera *camera) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
 )");
@@ -337,7 +348,7 @@ virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, 
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
-virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default") = 0;
+virtual RenderQueueBuilder *addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default", const ccstd::string& passName = "") = 0;
 [[getter]] virtual bool getShowStatistics() const = 0;
 [[setter]] virtual void setShowStatistics(bool enable) = 0;
 
@@ -370,7 +381,7 @@ virtual void addTexture(const ccstd::string& name, const ccstd::string& slotName
 virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default", const ccstd::string& passName = "") = 0;
 
 [[experimental]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
@@ -407,7 +418,7 @@ virtual void addStorageBuffer(const ccstd::string& name, AccessType accessType, 
 virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
 [[beta]] virtual void addMaterialTexture(const ccstd::string& resourceName, gfx::ShaderStageFlagBit flags = gfx::ShaderStageFlagBit::COMPUTE) = 0;
 
-virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default") = 0;
+virtual ComputeQueueBuilder *addQueue(const ccstd::string& phaseName = "default", const ccstd::string& passName = "") = 0;
 
 [[experimental]] virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
 )");
@@ -472,11 +483,14 @@ virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 
         INTERFACE(PipelineBuilder) {
             PUBLIC_METHODS(R"(
+[[?]] virtual void windowResize(BasicPipeline* pipeline, scene::RenderWindow* window, scene::Camera* camera, uint32_t width, uint32_t height) = 0;
+
 virtual void setup(const ccstd::vector<scene::Camera*>& cameras, BasicPipeline* pipeline) = 0;
 
 [[?]] virtual void onGlobalPipelineStateChanged() = 0;
 )");
         }
+// [[?]] virtual void gameWindowOrientationChange(BasicPipeline* pipeline, scene::RenderWindow* window, uint32_t orientation) = 0;
 
         INTERFACE(RenderingModule) {
             PUBLIC_METHODS(R"(

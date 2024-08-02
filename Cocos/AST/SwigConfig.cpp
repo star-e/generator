@@ -107,12 +107,17 @@ std::pmr::string generateSwigConfig(const ModuleBuilder& builder, uint32_t modul
                 [&](const Struct& s) {
                     std::pmr::set<std::pmr::string> methods(scratch);
                     for (const auto& method : s.mMethods) {
-                        if (!method.mSkip)
+                        if (method.mSkip) {
+                            if (!methods.contains(method.mFunctionName)) {
+                                OSS << "%ignore " << fullName << "::" << method.mFunctionName << ";\n";
+                                methods.emplace(method.mFunctionName);
+                            }
                             continue;
-
-                        if (!methods.contains(method.mFunctionName)) {
-                            OSS << "%ignore " << fullName << "::" << method.mFunctionName << ";\n";
-                            methods.emplace(method.mFunctionName);
+                        }
+                        if (!method.mTypescriptFunctionName.empty() &&
+                            method.mTypescriptFunctionName != method.mFunctionName) {
+                            OSS << "%rename(" << method.mTypescriptFunctionName << ") " << fullName << "::" << method.mFunctionName << ";\n";
+                            continue;
                         }
                     }
                 },

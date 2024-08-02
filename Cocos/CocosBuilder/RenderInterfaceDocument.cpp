@@ -439,6 +439,7 @@ Every render queue has a phase name. Only objects of the same phase name will be
 
 @param hint @en Usage hint of the queue @zh 用途的提示
 @param phaseName @en The name of the phase declared in the effect. Default value is 'default' @zh effect中相位(phase)的名字，缺省为'default'。
+@param passName @en The name of the pass declared in the effect. It is used to override the pass name in the parent pass/subpass. @zh effect中通道(pass)的名字，会覆盖(override)父(通道/子通道)中已设置的pass名字。
 )";
         if (bCompute) {
             oss << "@returns @en compute queue builder @zh 计算队列\n";
@@ -514,12 +515,18 @@ In each frame, user can create a render graph to be executed by the pipeline.
 @returns Exist or not
 )");
         METHOD_COMMENT(addRenderWindow, R"(@en Add or update render window to the pipeline.
-@zh 注册或更新渲染窗口(RenderWindow)
+If the render window is a swapchain and its default framebuffer contains depth stencil buffer,
+user should specify the name of the depth stencil buffer.
+If the depth stencil name is specified but the depth stencil buffer does not exist, a managed one will be created.
+@zh 注册或更新渲染窗口(RenderWindow)。
+如果渲染窗口是交换链并且默认Framebuffer包含深度模板缓冲。用户需要指定深度模板缓冲的名字。
+如果指定了深度模板缓冲的名字，但深度模板缓冲不存在，会创建一个托管的深度模板缓冲。
 @param name @en Resource name @zh 资源名字
 @param format @en Expected format of the render window @zh 期望的渲染窗口格式
 @param width @en Expected width of the render window @zh 期望的渲染窗口宽度
 @param height @en Expected height of the render window @zh 期望的渲染窗口高度
 @param renderWindow @en The render window to add. @zh 需要注册的渲染窗口
+@param depthStencilName @en The name of the depth stencil buffer of the default framebuffer. @zh 默认Framebuffer的深度模板缓冲的名字
 @returns Resource ID
 )");
         METHOD_COMMENT(updateRenderWindow, R"(@en Update render window information.

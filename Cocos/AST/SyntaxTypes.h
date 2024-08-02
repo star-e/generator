@@ -61,6 +61,8 @@ enum GenerationFlags : uint64_t {
     VALUE_OBJECT = 1 << 24,
     FORCE_COPY = 1 << 25,
     SKIP_RESET = 1 << 26,
+    TS_NAME = 1 << 27,
+    TS_ENUM_OBJECT = 1 << 28,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -244,6 +246,7 @@ struct Traits {
     bool mUnknown = false;
     bool mTrivial = false;
     bool mFinal = true;
+    bool mStructInterface = false;
     GenerationFlags mFlags = {};
     uint32_t mAlignment = 0;
 };
@@ -318,6 +321,7 @@ struct Member {
     ~Member() noexcept;
 
     std::pmr::string getMemberName() const;
+    std::pmr::string getTypescriptMemberName() const;
 
     std::pmr::string mTypePath;
     std::pmr::string mMemberName;
@@ -328,11 +332,13 @@ struct Member {
     bool mPointer = false;
     bool mReference = false;
     bool mPublic = true;
+    bool mOptional = false;
     GenerationFlags mFlags = {};
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
+    std::pmr::string mTypescriptMemberName;
     bool mTypescriptArray = false;
-    bool mTypescriptOptional = false;
+    bool mNullable = false;
 };
 
 struct Parameter {
@@ -426,8 +432,17 @@ struct Method {
     Method& operator=(Method const& rhs) = default;
     ~Method() noexcept;
 
+    const std::pmr::string& getTypescriptName() const noexcept {
+        if (!mTypescriptFunctionName.empty()) {
+            return mTypescriptFunctionName;
+        } else {
+            return mFunctionName;
+        }
+    }
+
     Parameter mReturnType;
     std::pmr::string mFunctionName;
+    std::pmr::string mTypescriptFunctionName;
     std::pmr::vector<Parameter> mParameters;
     std::pmr::string mComment;
     bool mVirtual = false;
@@ -1235,6 +1250,7 @@ struct SyntaxGraph {
     bool isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept;
     bool isOptional(vertex_descriptor vertID) const noexcept;
     bool isPoolObject(vertex_descriptor vertID) const noexcept;
+    bool isPoolType(vertex_descriptor vertID, std::string_view modulePath) const noexcept;
     bool isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
     bool isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
 
@@ -1448,6 +1464,7 @@ enum Features : uint32_t {
     ToJs = 1 << 10,
     Interface = 1 << 11,
     TsPool = 1 << 12,
+    PublicFormat = 1 << 13,
 };
 
 constexpr Features operator|(const Features lhs, const Features rhs) noexcept {
@@ -1492,6 +1509,7 @@ struct ModuleInfo {
     std::string mToJsConfigs;
     std::string mTypescriptFolder;
     std::string mTypescriptFilePrefix;
+    std::string mTypescriptNamespace;
     std::string mAPI;
     std::vector<std::string> mRequires;
     std::string mFwdHeader;

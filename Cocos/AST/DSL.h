@@ -211,11 +211,30 @@ builder.addMember(vertID, COND,\
 #define PRIVATE(SEQ) \
     BOOST_PP_SEQ_FOR_EACH_I(STRUCT_MEMBER, false, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
 
+#define TS_MEMBER_NAME(MEMBER, NAME) \
+    builder.setMemberTypescriptName(vertID, BOOST_PP_STRINGIZE(MEMBER), BOOST_PP_STRINGIZE(NAME)
+
+#define TS_MEMBER_NAMES_ELEM(r, _, i, MEMBER) \
+    builder.setMemberTypescriptName(vertID, \
+        BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 0, MEMBER)), \
+        BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 1, MEMBER)));
+
+#define TS_MEMBER_NAMES(SEQ) \
+    BOOST_PP_SEQ_FOR_EACH_I(TS_MEMBER_NAMES_ELEM, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
+
 #define MEMBER_FUNCTIONS(STR) \
     builder.addMemberFunctions(vertID, STR)
 
 #define PUBLIC_METHODS(STR) \
     builder.addMethods(vertID, STR)
+
+#define TS_RENAME_METHOD(r, _, i, MEMBER) \
+builder.setMethodTypescriptName(vertID, \
+    BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 0, MEMBER)), \
+    BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 1, MEMBER)));
+
+#define TS_RENAME_METHODS(SEQ) \
+    BOOST_PP_SEQ_FOR_EACH_I(TS_RENAME_METHOD, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
 
 #define TS_FUNCTIONS(STR) \
     builder.addTypescriptFunctions(vertID, STR)

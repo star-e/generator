@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include "CocosModules.h"
 #include <Cocos/AST/DSL.h>
 #include <Cocos/AST/SyntaxGraphs.h>
+#include <Cocos/AST/CodeConfigs.h>
 
 // clang-format off
 
@@ -150,13 +151,14 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(RenderSwapchain, .mFlags = POOL_OBJECT) {
             PUBLIC(
-                ([[optional]] gfx::Swapchain*, mSwapchain, nullptr)
-                ([[optional]] scene::RenderWindow*, mRenderWindow, nullptr)
+                ([[nullable]] gfx::Swapchain*, mSwapchain, nullptr)
+                ([[nullable]] scene::RenderWindow*, mRenderWindow, nullptr)
                 (uint32_t, mCurrentID, 0)
                 (uint32_t, mNumBackBuffers, 0)
                 (uint32_t, mGeneration, 0xFFFFFFFF)
+                (bool, mIsDepthStencil, false)
             );
-            CNTR(mSwapchain);
+            CNTR(mSwapchain, mIsDepthStencil);
         }
 
         STRUCT(ResourceStates, .mFlags = POOL_OBJECT) {
@@ -168,7 +170,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(ManagedBuffer, .mFlags = POOL_OBJECT) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
+                ([[nullable]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
                 (uint64_t, mFenceValue, 0)
             );
             CNTR(mBuffer);
@@ -176,7 +178,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(PersistentBuffer, .mFlags = POOL_OBJECT) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
+                ([[nullable]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
                 (uint64_t, mFenceValue, 0)
             );
             CNTR(mBuffer);
@@ -184,7 +186,7 @@ bool hasSideEffects() const noexcept {
 
         STRUCT(ManagedTexture, .mFlags = POOL_OBJECT) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<gfx::Texture>, mTexture, _)
+                ([[nullable]] IntrusivePtr<gfx::Texture>, mTexture, _)
                 (uint64_t, mFenceValue, 0)
             );
             CNTR(mTexture);
@@ -195,7 +197,7 @@ bool checkResource(const ResourceDesc &desc) const;
 
         STRUCT(PersistentTexture, .mFlags = POOL_OBJECT) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<gfx::Texture>, mTexture, _)
+                ([[nullable]] IntrusivePtr<gfx::Texture>, mTexture, _)
                 (uint64_t, mFenceValue, 0)
             );
             CNTR(mTexture);
@@ -276,8 +278,8 @@ bool checkResource(const ResourceDesc &desc) const;
 
         STRUCT(PersistentRenderPassAndFramebuffer) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<gfx::RenderPass>, mRenderPass, _)
-                ([[optional]] IntrusivePtr<gfx::Framebuffer>, mFramebuffer, _)
+                ([[nullable]] IntrusivePtr<gfx::RenderPass>, mRenderPass, _)
+                ([[nullable]] IntrusivePtr<gfx::Framebuffer>, mFramebuffer, _)
                 (ccstd::pmr::vector<gfx::Color>, mClearColors, _)
                 (float, mClearDepth, 0)
                 (uint8_t, mClearStencil, 0)
@@ -297,7 +299,7 @@ bool checkResource(const ResourceDesc &desc) const;
 
         STRUCT(SubresourceView) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<gfx::Texture>, mTextureView, _)
+                ([[nullable]] IntrusivePtr<gfx::Texture>, mTextureView, _)
                 (gfx::Format, mFormat, gfx::Format::UNKNOWN)
                 (uint16_t, mIndexOrFirstMipLevel, 0)
                 (uint16_t, mNumMipLevels, 0)
@@ -337,6 +339,9 @@ bool checkResource(const ResourceDesc &desc) const;
                 (uint64_t, mNextFenceValue, 0)
                 (uint64_t, mVersion, 0)
             );
+            //TS_MEMBER_NAMES(
+            //    (mValueIndex, q)
+            //);
             MEMBER_FUNCTIONS(R"(
 void validateSwapchains();
 void mount(gfx::Device* device, vertex_descriptor vertID);
@@ -435,12 +440,21 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             PUBLIC(
                 (QueueHint, mHint, QueueHint::RENDER_OPAQUE)
                 (uint32_t, mPhaseID, 0xFFFFFFFF)
-                ([[optional]] gfx::Viewport, mViewport, _)
+                (uint32_t, mPassLayoutID, 0xFFFFFFFF)
+                ([[nullable]] gfx::Viewport, mViewport, _)
+                //(bool, mOverwritePassDescriptors, false)
             );
             TS_INIT(mViewport, null);
-            CNTR(mHint, mPhaseID);
-            CNTR(mPhaseID);
+            CNTR(mHint, mPhaseID, mPassLayoutID);
+            CNTR(mPhaseID, mPassLayoutID);
         }
+
+        //STRUCT(RenderGraphQueueContext) {
+        //    PUBLIC(
+        //        ([[nullable]] gfx::DescriptorSet*, mPhaseDescriptorSet, nullptr)
+        //        ([[nullable]] gfx::DescriptorSet*, mPassDescriptorSet, nullptr)
+        //    );
+        //}
 
         FLAG_CLASS(CullingFlags) {
             FLAGS(
@@ -453,19 +467,19 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
         STRUCT(SceneData) {
             PUBLIC(
-                ([[optional]] const scene::RenderScene*, mScene, nullptr)
-                ([[optional]] const scene::Camera*, mCamera, nullptr)
+                ([[nullable]] const scene::RenderScene*, mScene, nullptr)
+                ([[nullable]] const scene::Camera*, mCamera, nullptr)
                 (LightInfo, mLight, _)
                 (SceneFlags, mFlags, SceneFlags::NONE)
                 (CullingFlags, mCullingFlags, CullingFlags::CAMERA_FRUSTUM)
-                ([[optional]] IntrusivePtr<scene::Light>, mShadingLight, _)
+                ([[nullable]] IntrusivePtr<scene::Light>, mShadingLight, _)
             );
             CNTR(mScene, mCamera, mFlags, mLight, mCullingFlags, mShadingLight);
         }
 
         STRUCT(Dispatch) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<cc::Material>, mMaterial, _)
+                ([[nullable]] IntrusivePtr<cc::Material>, mMaterial, _)
                 (uint32_t, mPassID, 0)
                 (uint32_t, mThreadGroupCountX, 0)
                 (uint32_t, mThreadGroupCountY, 0)
@@ -476,10 +490,10 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
         STRUCT(Blit) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<cc::Material>, mMaterial, _)
+                ([[nullable]] IntrusivePtr<cc::Material>, mMaterial, _)
                 (uint32_t, mPassID, 0)
                 (SceneFlags, mSceneFlags, _)
-                ([[optional]] scene::Camera*, mCamera, nullptr)
+                ([[nullable]] scene::Camera*, mCamera, nullptr)
             );
             CNTR(mMaterial, mPassID, mSceneFlags, mCamera);
         }

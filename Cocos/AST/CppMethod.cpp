@@ -68,11 +68,11 @@ void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parame
     }
     if (boost::algorithm::starts_with(typeName, "[[optional]]")) {
         param.mOptional = true;
-        typeName = typeName.substr(12);
+        typeName = typeName.substr(std::size("[[optional]]") - 1);
     }
     if (boost::algorithm::starts_with(typeName, "[[nullable]]")) {
         param.mNullable = true;
-        typeName = typeName.substr(12);
+        typeName = typeName.substr(std::size("[[nullable]]") - 1);
     }
     if (typeName.starts_with("const ")) {
         param.mConst = true;

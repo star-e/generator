@@ -70,7 +70,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
         
-        ENUM_CLASS(UpdateFrequency) {
+        ENUM_CLASS(UpdateFrequency, .mFlags = TS_NAME | TS_ENUM_OBJECT) {
             ENUMS(PER_INSTANCE, PER_BATCH, PER_PHASE, PER_PASS, COUNT);
         }
 
@@ -80,22 +80,22 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
 
         TAGS((_), RasterPass_, RasterSubpass_, ComputeSubpass_, Compute_, Resolve_, Copy_, Move_, Raytrace_);
 
-        ENUM_CLASS(ResourceResidency) {
+        ENUM_CLASS(ResourceResidency, .mFlags = TS_ENUM_OBJECT) {
             ENUMS(MANAGED, MEMORYLESS, PERSISTENT, EXTERNAL, BACKBUFFER);
         }
 
-        ENUM_CLASS(QueueHint) {
+        ENUM_CLASS(QueueHint, .mFlags = TS_ENUM_OBJECT) {
             ENUMS(NONE, OPAQUE, MASK, BLEND);
             builder.addEnumElement(vertID, "RENDER_OPAQUE", "OPAQUE", true);
             builder.addEnumElement(vertID, "RENDER_CUTOUT", "MASK", true);
             builder.addEnumElement(vertID, "RENDER_TRANSPARENT", "BLEND", true);
         }
 
-        ENUM_CLASS(ResourceDimension) {
+        ENUM_CLASS(ResourceDimension, .mFlags = TS_ENUM_OBJECT) {
             ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
         }
         
-        FLAG_CLASS(ResourceFlags) {
+        FLAG_CLASS(ResourceFlags, .mFlags = TS_ENUM_OBJECT) {
             FLAGS(
                 (NONE, 0)
                 (UNIFORM, 0x1)
@@ -117,7 +117,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             ENUMS(SYNC, ASYNC);
         }
 
-        FLAG_CLASS(SceneFlags) {
+        FLAG_CLASS(SceneFlags, .mFlags = TS_ENUM_OBJECT) {
             UNDERLYING_TYPE(uint32_t);
             FLAGS(
                 (NONE, 0)
@@ -154,7 +154,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             ENUMS(RENDER_TARGET, DEPTH_STENCIL, SHADING_RATE);
         }
 
-        ENUM_CLASS(AccessType) {
+        ENUM_CLASS(AccessType, .mFlags = TS_ENUM_OBJECT) {
             ENUMS(READ, READ_WRITE, WRITE);
         }
 
@@ -164,8 +164,8 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
 
         STRUCT(LightInfo, .mFlags = JSB | POOL_OBJECT) {
             PUBLIC(
-                ([[optional]] IntrusivePtr<scene::Light>, mLight, _)
-                ([[optional]] scene::ReflectionProbe*, mProbe, nullptr)
+                ([[nullable]] IntrusivePtr<scene::Light>, mLight, _)
+                ([[nullable]] scene::ReflectionProbe*, mProbe, nullptr)
                 (uint32_t, mLevel, 0)
                 (bool, mCulledByLight, false)
             );
@@ -186,7 +186,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         //        SUBPASS_INPUT
         //    );
         //}
-        ENUM_CLASS(DescriptorTypeOrder) {
+        ENUM_CLASS(DescriptorTypeOrder, .mFlags = TS_NAME) {
             ENUMS(
                 UNIFORM_BUFFER,
                 DYNAMIC_UNIFORM_BUFFER,

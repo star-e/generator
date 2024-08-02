@@ -101,7 +101,7 @@ CodegenContext::CodegenContext(CodegenContext const& rhs, const allocator_type& 
 
 CodegenContext::~CodegenContext() noexcept = default;
 
-ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, std::pmr::memory_resource* scratch, const allocator_type& alloc)
+ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path cppFolder, std::filesystem::path typescriptFolder, std::string_view typescriptRoot, std::pmr::memory_resource* scratch, const allocator_type& alloc)
     : mCppFolder(std::move(cppFolder))
     , mTypescriptFolder(std::move(typescriptFolder))
     , mSyntaxGraph(alloc)
@@ -109,6 +109,7 @@ ModuleBuilder::ModuleBuilder(std::string_view projectName, std::filesystem::path
     , mCurrentModule(alloc)
     , mCurrentScope(alloc)
     , mProjectName(std::move(projectName), alloc)
+    , mTypescriptRoot(std::move(typescriptRoot), alloc)
     , mScratch(std::move(scratch)) {}
 
 ModuleBuilder::ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc)
@@ -119,6 +120,7 @@ ModuleBuilder::ModuleBuilder(ModuleBuilder&& rhs, const allocator_type& alloc)
     , mCurrentModule(std::move(rhs.mCurrentModule), alloc)
     , mCurrentScope(std::move(rhs.mCurrentScope), alloc)
     , mProjectName(std::move(rhs.mProjectName), alloc)
+    , mTypescriptRoot(std::move(rhs.mTypescriptRoot), alloc)
     , mScratch(std::move(rhs.mScratch))
     , mUnderscoreMemberName(std::move(rhs.mUnderscoreMemberName))
     , mCompiled(std::move(rhs.mCompiled))

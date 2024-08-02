@@ -185,7 +185,8 @@ Member::Member(const allocator_type& alloc) noexcept
     , mDefaultValue(alloc)
     , mComments(alloc)
     , mTypescriptType(alloc)
-    , mTypescriptDefaultValue(alloc) {}
+    , mTypescriptDefaultValue(alloc)
+    , mTypescriptMemberName(alloc) {}
 
 Member::Member(Member&& rhs, const allocator_type& alloc)
     : mTypePath(std::move(rhs.mTypePath), alloc)
@@ -197,11 +198,13 @@ Member::Member(Member&& rhs, const allocator_type& alloc)
     , mPointer(std::move(rhs.mPointer))
     , mReference(std::move(rhs.mReference))
     , mPublic(std::move(rhs.mPublic))
+    , mOptional(std::move(rhs.mOptional))
     , mFlags(std::move(rhs.mFlags))
     , mTypescriptType(std::move(rhs.mTypescriptType), alloc)
     , mTypescriptDefaultValue(std::move(rhs.mTypescriptDefaultValue), alloc)
+    , mTypescriptMemberName(std::move(rhs.mTypescriptMemberName), alloc)
     , mTypescriptArray(std::move(rhs.mTypescriptArray))
-    , mTypescriptOptional(std::move(rhs.mTypescriptOptional)) {}
+    , mNullable(std::move(rhs.mNullable)) {}
 
 Member::Member(Member const& rhs, const allocator_type& alloc)
     : mTypePath(rhs.mTypePath, alloc)
@@ -213,11 +216,13 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
     , mPointer(rhs.mPointer)
     , mReference(rhs.mReference)
     , mPublic(rhs.mPublic)
+    , mOptional(rhs.mOptional)
     , mFlags(rhs.mFlags)
     , mTypescriptType(rhs.mTypescriptType, alloc)
     , mTypescriptDefaultValue(rhs.mTypescriptDefaultValue, alloc)
+    , mTypescriptMemberName(rhs.mTypescriptMemberName, alloc)
     , mTypescriptArray(rhs.mTypescriptArray)
-    , mTypescriptOptional(rhs.mTypescriptOptional) {}
+    , mNullable(rhs.mNullable) {}
 
 Member::~Member() noexcept = default;
 
@@ -256,12 +261,14 @@ Parameter::~Parameter() noexcept = default;
 Method::Method(const allocator_type& alloc) noexcept
     : mReturnType(alloc)
     , mFunctionName(alloc)
+    , mTypescriptFunctionName(alloc)
     , mParameters(alloc)
     , mComment(alloc) {}
 
 Method::Method(Method&& rhs, const allocator_type& alloc)
     : mReturnType(std::move(rhs.mReturnType), alloc)
     , mFunctionName(std::move(rhs.mFunctionName), alloc)
+    , mTypescriptFunctionName(std::move(rhs.mTypescriptFunctionName), alloc)
     , mParameters(std::move(rhs.mParameters), alloc)
     , mComment(std::move(rhs.mComment), alloc)
     , mVirtual(std::move(rhs.mVirtual))
@@ -280,6 +287,7 @@ Method::Method(Method&& rhs, const allocator_type& alloc)
 Method::Method(Method const& rhs, const allocator_type& alloc)
     : mReturnType(rhs.mReturnType, alloc)
     , mFunctionName(rhs.mFunctionName, alloc)
+    , mTypescriptFunctionName(rhs.mTypescriptFunctionName, alloc)
     , mParameters(rhs.mParameters, alloc)
     , mComment(rhs.mComment, alloc)
     , mVirtual(rhs.mVirtual)

@@ -36,6 +36,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
     const Graph& s, uint32_t vertID,
     std::string_view name,
     std::pmr::set<std::pmr::string>& imports,
+    bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
 }

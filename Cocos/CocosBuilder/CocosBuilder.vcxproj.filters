@@ -42,6 +42,9 @@
     <ClCompile Include="RenderInterfaceDocument.cpp">
       <Filter>Modules</Filter>
     </ClCompile>
+    <ClCompile Include="RenderSettings.cpp">
+      <Filter>Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

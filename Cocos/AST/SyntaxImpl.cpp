@@ -28,6 +28,7 @@ THE SOFTWARE.
 #include "SyntaxGraphs.h"
 #include "SyntaxUtils.h"
 #include "TypescriptGraph.h"
+#include "CodeConfigs.h"
 
 namespace Cocos::Meta {
 
@@ -40,6 +41,16 @@ std::pmr::string Member::getMemberName() const {
         name.insert(name.begin(), '_');
         return name;
     }
+}
+
+std::pmr::string Member::getTypescriptMemberName() const {
+    if (mTypescriptMemberName.empty()) {
+        return getMemberName();
+    }
+    if (mPublic) {
+        return mTypescriptMemberName;
+    }
+    return "_" + mTypescriptMemberName;
 }
 
 std::pmr::string SyntaxGraph::getMemberName(std::string_view memberName, bool bPublic) const {
@@ -412,6 +423,22 @@ bool SyntaxGraph::isPoolObject(vertex_descriptor vertID) const noexcept {
         [&](const auto&) {
             return false;
         });
+}
+
+bool SyntaxGraph::isPoolType(vertex_descriptor vertID, std::string_view typeModulePath) const noexcept {
+    const auto& g = *this;
+    const auto& modulePath = get(g.modulePaths, g, vertID);
+    if (typeModulePath != modulePath) {
+        return false;
+    }
+    if (g.isTypescriptValueType(vertID)) {
+        return false;
+    }
+    const auto parentID = parent(vertID, g);
+    if (parentID != SyntaxGraph::null_vertex() && holds_tag<Graph_>(parentID, g)) {
+        return false;
+    }
+    return true;
 }
 
 bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept {
@@ -2346,7 +2373,7 @@ std::pmr::string Graph::getTypescriptVertexDereference(std::string_view v,
     pmr_ostringstream oss(std::ios_base::out, scratch);
 
     if (isVector()) {
-        oss << "this._vertices[" << v << "]";
+        oss << "this." << gNameVertices << "[" << v << "]";
     } else {
         oss << v;
     }
@@ -2357,20 +2384,20 @@ std::pmr::string Graph::getTypescriptVertexDereference(std::string_view v,
 std::string_view Graph::getTypescriptOutEdgeList(bool bAddressable) const {
     if (bAddressable) {
         if (mAliasGraph) {
-            return "_outEdges";
+            return gNameOutEdgeList;
         } else {
-            return "_children";
+            return gNameChildrenList;
         }
     } else {
-        return "_outEdges";
+        return gNameOutEdgeList;
     }
 }
 
 std::string_view Graph::getTypescriptInEdgeList(bool bAddressable) const {
     if (bAddressable) {
-        return "_parents";
+        return gNameParentsList;
     } else {
-        return "_inEdges";
+        return gNameInEdgeList;
     }
 }
 
