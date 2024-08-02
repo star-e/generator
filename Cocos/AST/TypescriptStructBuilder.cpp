@@ -587,7 +587,19 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             }
         }
 
+        const bool bNoInitial
+            = m.mOptional
+            || g.isOptional(memberID)
+            || (traits.mStructInterface && sEnableMake);
+
+        const bool needDeclare
+            = (!bNeedIntial || bNoInitial)
+            && !traits.mStructInterface;
+
         OSS;
+        if (needDeclare) {
+            oss << "declare ";
+        }
         if (!m.mPublic) {
             oss << "private ";
         }
@@ -604,7 +616,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             oss << commentBegin << "reference" << commentEnd << " ";
         }
         if (bNeedIntial) {
-            if (m.mOptional || g.isOptional(memberID) || (traits.mStructInterface && sEnableMake)) {
+            if (bNoInitial) {
                 oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";";
                 if (g.isTypescriptValueType(memberID)) {
                     oss << " " << commentBegin
