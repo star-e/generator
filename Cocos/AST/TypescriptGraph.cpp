@@ -466,18 +466,24 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                 OSS << "}\n";
             }
             if (true) { // IncidenceGraph
+                OSS << "/** Out edge list */\n";
                 OSS << "readonly " << gNameOutEdgeList << ": " << outEdgeType << "[] = [];\n";
             }
             if (true) { // BidirectionalGraph
+                OSS << "/** In edge list */\n";
                 OSS << "readonly " << gNameInEdgeList << ": " << outEdgeType << "[] = [];\n";
             }
             if (s.needReferenceEdges()) {
+                OSS << "/** Child edge list */\n";
                 OSS << "readonly " << gNameChildrenList << ": " << outRefType << "[] = [];\n";
-                OSS << "readonly " << gNameParentsList<< ": " << outRefType << "[] = [];\n";
+                OSS << "/** Parent edge list */\n";
+                OSS << "readonly " << gNameParentsList << ": " << outRefType << "[] = [];\n";
             }
             if (s.isPolymorphic()) {
+                OSS << "/** Polymorphic object Id */\n";
                 OSS << "readonly " << gNamePolymorphicID << ": " << name << "Value;\n";
-                OSS << "" << gNameObject << ": "<< name << "Object;\n";
+                OSS << "/** Polymorphic object */\n";
+                OSS << "" << gNameObject << ": " << name << "Object;\n";
             }
             if (false && s.mNamed)
                 OSS << "readonly _name: string;\n";
