@@ -14,6 +14,9 @@ const auto* const gNamePolymorphicID = "t";
 const auto* const gNameObject = "j";
 const auto* const gNameGetComponent = "m";
 
+const auto* const gNameVertexTypeIndex = "w";
+const auto* const gNameVertexHolds = "h";
+
 const auto* const gNameGraphSource = "source";
 const auto* const gNameGraphTarget = "target";
 

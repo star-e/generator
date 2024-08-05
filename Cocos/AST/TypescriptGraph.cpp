@@ -1903,7 +1903,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             enumType += "Value";
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// PolymorphicGraph\n";
-            OSS << "holds (id: " << enumType << ", v: " << vertexDescType << "): boolean {\n";
+            OSS << gNameVertexHolds  << " (id: " << enumType << ", v: " << vertexDescType << "): boolean {\n";
             {
                 INDENT();
                 if (s.isVector()) {
@@ -1914,7 +1914,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "id (v: " << vertexDescType << "): " << enumType << " {\n";
+            OSS << gNameVertexTypeIndex << " (v: " << vertexDescType << "): " << enumType << " {\n";
             {
                 INDENT();
                 if (s.isVector()) {

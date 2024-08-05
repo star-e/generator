@@ -1017,7 +1017,7 @@ std::pmr::string generateGraphSerialization_ts(
             OSS << "for (const v of g.vertices()) {\n";
             {
                 INDENT();
-                OSS << "switch (g.id(v)) {\n";
+                OSS << "switch (g." << gNameVertexTypeIndex << "(v)) {\n";
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     std::pmr::string numTypes("num", scratch);
                     numTypes.append(c.mMemberName.substr(1));
@@ -1043,7 +1043,8 @@ std::pmr::string generateGraphSerialization_ts(
         {
             INDENT();
             if (s.isPolymorphic()) {
-                outputSaveSerializable(oss, space, ns, g, sizeID, "g.id(v)", 0, false, scratch);
+                outputSaveSerializable(oss, space, ns, g, sizeID,
+                    "g." + std::string(gNameVertexTypeIndex) + "(v)", 0, false, scratch);
             }
             if (s.isAddressable()) {
                 outputSaveSerializable(oss, space, ns, g, sizeID, "g.getParent(v)", 0, false, scratch);
@@ -1056,7 +1057,7 @@ std::pmr::string generateGraphSerialization_ts(
                 outputSaveSerializable(oss, space, ns, g, componentID, componentVar, 0, false, scratch);
             }
             if (s.isPolymorphic()) {
-                OSS << "switch (g.id(v)) {\n";
+                OSS << "switch (g." << gNameVertexTypeIndex << "(v)) {\n";
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     const auto objectID = locate(c.mValue, g);
                     const auto tagID = locate(c.mTag, g);
