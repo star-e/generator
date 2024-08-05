@@ -948,20 +948,22 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     OSS << "// type edge_descriptor = EPD;\n";
                     imports.emplace("EPD");
                 }
-                // Directional
-                OSS << "readonly directed_category: directional = directional.bidirectional;\n";
-                imports.emplace("directional");
+                if (!gReduceCode) {
+                    // Directional
+                    OSS << "readonly directed_category: directional = directional.bidirectional;\n";
+                    imports.emplace("directional");
 
-                // Edge parallel
-                OSS << "readonly edge_parallel_category: parallel = parallel.allow;\n";
-                imports.emplace("parallel");
+                    // Edge parallel
+                    OSS << "readonly edge_parallel_category: parallel = parallel.allow;\n";
+                    imports.emplace("parallel");
 
-                // Traversal
-                OSS << "readonly traversal_category: traversal = traversal.incidence\n";
-                OSS << "    | traversal.bidirectional\n";
-                OSS << "    | traversal.adjacency\n";
-                OSS << "    | traversal.vertex_list;\n";
-                imports.emplace("traversal");
+                    // Traversal
+                    OSS << "readonly traversal_category: traversal = traversal.incidence\n";
+                    OSS << "    | traversal.bidirectional\n";
+                    OSS << "    | traversal.adjacency\n";
+                    OSS << "    | traversal.vertex_list;\n";
+                    imports.emplace("traversal");
+                }
             }
         } // Graph Basics
 
