@@ -20,10 +20,10 @@ const auto* const gNameVertexHolds = "h";
 const auto* const gNameGraphSource = "source";
 const auto* const gNameGraphTarget = "target";
 
-const auto* const gNameOutEdges = "outEdges";
-const auto* const gNameOutDegree = "outDegree";
+const auto* const gNameOutEdges = "oe";
+const auto* const gNameOutDegree = "od";
 
-const auto* const gNameInEdges = "inEdges";
-const auto* const gNameInDegree = "inDegree";
+const auto* const gNameInEdges = "ie";
+const auto* const gNameInDegree = "id";
 
 } // namespace Cocos::Meta
