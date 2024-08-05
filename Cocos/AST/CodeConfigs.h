@@ -12,5 +12,6 @@ const auto* const gNameChildrenList = "c";
 const auto* const gNameParentsList = "p";
 const auto* const gNamePolymorphicID = "t";
 const auto* const gNameObject = "j";
+const auto* const gNameGetComponent = "m";
 
 } // namespace Cocos::Meta

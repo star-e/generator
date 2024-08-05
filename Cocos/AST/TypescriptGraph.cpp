@@ -1780,35 +1780,38 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (!s.mComponents.empty()) { // ComponentGraph
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// ComponentGraph\n";
-            OSS << "component<T extends " << name << "Component> (id: T, v: "
-                << vertexDescType << "): " << name << "ComponentType[T] {\n";
-            {
-                INDENT();
-                OSS << "switch (id) {\n";
-                for (const auto& c : s.mComponents) {
-                    auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
-                    OSS << "case " << name << "Component."
-                        << getTypescriptTagType(c.mName, scratch) << ":\n";
+            if (!gReduceCode) {
+                OSS << gNameGetComponent;
+                oss << "<T extends " << name << "Component> (id: T, v: "
+                    << vertexDescType << "): " << name << "ComponentType[T] {\n";
+                {
                     INDENT();
-                    if (s.isVector()) {
-                        OSS << "return this."
-                            << g.getMemberName(c.mMemberName, false)
-                            << "[v] as " << name << "ComponentType[T];\n";
-                    } else {
-                        OSS << "return v."
-                            << g.getMemberName(c.mMemberName, false)
-                            << " as " << name << "ComponentType[T];\n";
+                    OSS << "switch (id) {\n";
+                    for (const auto& c : s.mComponents) {
+                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        OSS << "case " << name << "Component."
+                            << getTypescriptTagType(c.mName, scratch) << ":\n";
+                        INDENT();
+                        if (s.isVector()) {
+                            OSS << "return this."
+                                << g.getMemberName(c.mMemberName, false)
+                                << "[v] as " << name << "ComponentType[T];\n";
+                        } else {
+                            OSS << "return v."
+                                << g.getMemberName(c.mMemberName, false)
+                                << " as " << name << "ComponentType[T];\n";
+                        }
                     }
-                }
-                OSS << "default:\n";
-                if (gThrow) {
-                    OSS << "    throw Error('component not found');\n";
-                } else {
-                    OSS << "    return undefined;\n";
+                    OSS << "default:\n";
+                    if (gThrow) {
+                        OSS << "    throw Error('component not found');\n";
+                    } else {
+                        OSS << "    return undefined;\n";
+                    }
+                    OSS << "}\n";
                 }
                 OSS << "}\n";
             }
-            OSS << "}\n";
 
             if (!gReduceCode) {
                 OSS << "componentMap<T extends " << name << "Component> (id: T): " << name << "ComponentPropertyMap[T] {\n";
