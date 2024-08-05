@@ -17,4 +17,10 @@ const auto* const gNameGetComponent = "m";
 const auto* const gNameGraphSource = "source";
 const auto* const gNameGraphTarget = "target";
 
+const auto* const gNameOutEdges = "outEdges";
+const auto* const gNameOutDegree = "outDegree";
+
+const auto* const gNameInEdges = "inEdges";
+const auto* const gNameInDegree = "inDegree";
+
 } // namespace Cocos::Meta

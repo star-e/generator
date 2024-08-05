@@ -1023,7 +1023,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "outEdges (v: " << vertexDescType << "): " << outEdgeIter << " {\n";
+            OSS << gNameOutEdges << " (v: " << vertexDescType << "): " << outEdgeIter << " {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1036,7 +1036,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "outDegree (v: " << vertexDescType << "): number {\n";
+            OSS << gNameOutDegree << " (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1052,7 +1052,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// BidirectionalGraph\n";
             OSS << "// type in_edge_iterator = " << inEdgeIter << ";\n";
-            OSS << "inEdges (v: " << vertexDescType << "): " << inEdgeIter << " {\n";
+            OSS << gNameInEdges << " (v: " << vertexDescType << "): " << inEdgeIter << " {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1065,7 +1065,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "inDegree (v: " << vertexDescType << "): number {\n";
+            OSS << gNameInDegree << " (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1079,7 +1079,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "degree (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
-                OSS << "return this.outDegree(v) + this.inDegree(v);\n";
+                OSS << "return this." << gNameOutDegree << "(v) + this." << gNameInDegree << "(v);\n";
             }
             OSS << "}\n";
         }
@@ -1108,7 +1108,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "adjacentVertices (v: " << vertexDescType << "): " << adjIter << " {\n";
             {
                 INDENT();
-                OSS << "return new " << adjIter << "(this, this.outEdges(v));\n";
+                OSS << "return new " << adjIter << "(this, this." << gNameOutEdges << "(v));\n";
             }
             OSS << "}\n";
         }
@@ -1151,7 +1151,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     OSS << "for (const v of this.vertices()) {\n";
                     {
                         INDENT();
-                        OSS << "numEdges += this.outDegree(v);\n";
+                        OSS << "numEdges += this." << gNameOutDegree << "(v);\n";
                     }
                     OSS << "}\n";
                     OSS << "return numEdges;\n";
