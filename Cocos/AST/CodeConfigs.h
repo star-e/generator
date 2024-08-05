@@ -14,4 +14,7 @@ const auto* const gNamePolymorphicID = "t";
 const auto* const gNameObject = "j";
 const auto* const gNameGetComponent = "m";
 
+const auto* const gNameGraphSource = "source";
+const auto* const gNameGraphTarget = "target";
+
 } // namespace Cocos::Meta

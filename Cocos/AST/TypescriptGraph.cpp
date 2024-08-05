@@ -236,21 +236,30 @@ void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph& 
 
 void outputNullVertex(std::ostream& oss, std::pmr::string& space,
     const Graph& s, std::string_view vertexDescType) {
-    if (s.isVector()) {
-        OSS << "nullVertex (): " << vertexDescType << " { ";
+    if (gReduceCode) {
+        OSS << "/** null vertex descriptor */\n";
+        if (s.isVector()) {
+            OSS << "readonly N = 0xFFFFFFFF;\n";
+        } else {
+            OSS << "readonly N = null;\n";
+        }
     } else {
-        OSS << "nullVertex (): null { ";
+        if (s.isVector()) {
+            OSS << "nullVertex (): " << vertexDescType << " { ";
+        } else {
+            OSS << "nullVertex (): null { ";
+        }
+        visit(
+            overload(
+                [&](Vector_) {
+                    oss << "return 0xFFFFFFFF;";
+                },
+                [&](List_) {
+                    oss << "return null;";
+                }),
+            s.mVertexListType);
+        oss << " }\n";
     }
-    visit(
-        overload(
-            [&](Vector_) {
-                oss << "return 0xFFFFFFFF;";
-            },
-            [&](List_) {
-                oss << "return null;";
-            }),
-        s.mVertexListType);
-    oss << " }\n";
 }
 
 void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::string_view name,
@@ -919,7 +928,6 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (true) { // Graph Basics
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// Graph\n";
-            OSS << "// type vertex_descriptor = " << vertexDescType << ";\n";
             outputNullVertex(oss, space, s, vertexDescType);
 
             // Edge
@@ -1001,14 +1009,14 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "source (e: " << edgeDescType << "): " << vertexDescType << " {\n";
+            OSS << gNameGraphSource << " (e: " << edgeDescType << "): " << vertexDescType << " {\n";
             {
                 INDENT();
                 OSS << "return e.source as " << vertexDescType << ";\n";
             }
             OSS << "}\n";
 
-            OSS << "target (e: " << edgeDescType << "): " << vertexDescType << " {\n";
+            OSS << gNameGraphTarget << " (e: " << edgeDescType << "): " << vertexDescType << " {\n";
             {
                 INDENT();
                 OSS << "return e.target as " << vertexDescType << ";\n";
