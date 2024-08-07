@@ -1014,7 +1014,7 @@ std::pmr::string generateGraphSerialization_ts(
                 numTypes.append(c.mMemberName.substr(1));
                 OSS << "let " << numTypes << " = 0;\n";
             }
-            OSS << "for (const v of g.vertices()) {\n";
+            OSS << "for (const v of g." << gNameGetVertices << "()) {\n";
             {
                 INDENT();
                 OSS << "switch (g." << gNameVertexTypeIndex << "(v)) {\n";
@@ -1039,7 +1039,7 @@ std::pmr::string generateGraphSerialization_ts(
                 outputSaveSerializable(oss, space, ns, g, sizeID, numTypes, 0, false, scratch);
             }
         }
-        OSS << "for (const v of g.vertices()) {\n";
+        OSS << "for (const v of g." << gNameGetVertices << "()) {\n";
         {
             INDENT();
             if (s.isPolymorphic()) {

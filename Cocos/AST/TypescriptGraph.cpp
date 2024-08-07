@@ -1116,7 +1116,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (true) { // VertexList Graph
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// VertexListGraph\n";
-            OSS << "vertices (): IterableIterator<" << vertexDescType << "> {\n";
+            OSS << gNameGetVertices  << " (): IterableIterator<" << vertexDescType << "> {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1148,7 +1148,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 {
                     INDENT();
                     OSS << "let numEdges = 0;\n";
-                    OSS << "for (const v of this.vertices()) {\n";
+                    OSS << "for (const v of this." << gNameGetVertices << "()) {\n";
                     {
                         INDENT();
                         OSS << "numEdges += this." << gNameOutDegree << "(v);\n";
