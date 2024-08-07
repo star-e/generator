@@ -1144,7 +1144,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             } else {
                 OSS << "//-----------------------------------------------------------------\n";
                 OSS << "// EdgeListGraph\n";
-                OSS << "numEdges (): number {\n";
+                OSS << gNameNumEdges << " (): number {\n";
                 {
                     INDENT();
                     OSS << "let numEdges = 0;\n";

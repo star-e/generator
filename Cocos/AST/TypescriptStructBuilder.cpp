@@ -1004,7 +1004,7 @@ std::pmr::string generateGraphSerialization_ts(
     {
         INDENT();
         OSS << "const numVertices = g." << gNameNumVertices << "();\n";
-        OSS << "const numEdges = g.numEdges();\n";
+        OSS << "const numEdges = g." << gNameNumEdges << "();\n";
         const auto sizeID = locate("/uint32_t", g);
         outputSaveSerializable(oss, space, ns, g, sizeID, "numVertices", 0, false, scratch);
         outputSaveSerializable(oss, space, ns, g, sizeID, "numEdges", 0, false, scratch);

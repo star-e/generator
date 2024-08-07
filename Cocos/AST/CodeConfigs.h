@@ -33,4 +33,7 @@ const auto* const gNameAdjacentVertices = "adj";
 const auto* const gNameGetVertices = "v";
 const auto* const gNameNumVertices = "nv";
 
+const auto* const gNameGetEdges = "e";
+const auto* const gNameNumEdges = "ne";
+
 } // namespace Cocos::Meta
