@@ -1126,7 +1126,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
             }
             OSS << "}\n";
-            OSS << "numVertices (): number {\n";
+            OSS << gNameNumVertices << " (): number {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {

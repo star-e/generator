@@ -1003,7 +1003,7 @@ std::pmr::string generateGraphSerialization_ts(
     OSS << "export function save" << cppName << " (a: OutputArchive, g: " << cppName << "): void {\n";
     {
         INDENT();
-        OSS << "const numVertices = g.numVertices();\n";
+        OSS << "const numVertices = g." << gNameNumVertices << "();\n";
         OSS << "const numEdges = g.numEdges();\n";
         const auto sizeID = locate("/uint32_t", g);
         outputSaveSerializable(oss, space, ns, g, sizeID, "numVertices", 0, false, scratch);
