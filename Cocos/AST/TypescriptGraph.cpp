@@ -1076,7 +1076,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "degree (v: " << vertexDescType << "): number {\n";
+            OSS << gNameDegree << " (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
                 OSS << "return this." << gNameOutDegree << "(v) + this." << gNameInDegree << "(v);\n";

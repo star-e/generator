@@ -26,4 +26,6 @@ const auto* const gNameOutDegree = "od";
 const auto* const gNameInEdges = "ie";
 const auto* const gNameInDegree = "id";
 
+const auto* const gNameDegree = "d";
+
 } // namespace Cocos::Meta
