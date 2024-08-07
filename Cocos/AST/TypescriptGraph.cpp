@@ -1105,7 +1105,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "// type adjacency_iterator = " << adjIter << ";\n";
 
-            OSS << "adjacentVertices (v: " << vertexDescType << "): " << adjIter << " {\n";
+            OSS << gNameAdjacentVertices << " (v: " << vertexDescType << "): " << adjIter << " {\n";
             {
                 INDENT();
                 OSS << "return new " << adjIter << "(this, this." << gNameOutEdges << "(v));\n";

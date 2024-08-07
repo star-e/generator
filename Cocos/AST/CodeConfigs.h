@@ -28,4 +28,6 @@ const auto* const gNameInDegree = "id";
 
 const auto* const gNameDegree = "d";
 
+const auto* const gNameAdjacentVertices = "adj";
+
 } // namespace Cocos::Meta
