@@ -465,7 +465,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             OSS << "}\n";
         }
         {
-            OSS << "reset (): void {\n";
+            OSS << gNameReset << " (): void {\n";
             {
                 INDENT();
                 for (const auto& vertID : make_range(vertices(g))) {
@@ -540,12 +540,12 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                             }
                         } else if (pCntr){
                             int count = 0;
-                            OSS << "v.reset(";
+                            OSS << "v." << gNameReset << "(";
                             outputConstructionParams(oss, space, count, builder, false,
                                 g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, false, scratch);
                             oss << ");\n";
                         } else {
-                            OSS << "v.reset();\n"; 
+                            OSS << "v." << gNameReset << "();\n"; 
                         }
                     } else {
                         OSS << "v.clear();\n"; 

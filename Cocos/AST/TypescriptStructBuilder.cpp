@@ -341,7 +341,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             }
             count = 0;
             OSS;
-            oss << "reset (";
+            oss << gNameReset << " (";
             if (!inherits.empty()) {
                 Expects(inherits.size() == 1);
                 const auto& base = inherits.front();
@@ -418,7 +418,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                                     OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                                 } else {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset(";
+                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "(";
                                     if (!sResetHasDefaultParameters) {
                                         // get cntr
                                         const Constructor* pCntr = nullptr;
@@ -455,7 +455,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                             OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                         } else {
-                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset();\n";
+                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "();\n";
                         }
                     }
                     ++i;

@@ -6,6 +6,9 @@ static constexpr bool sReduceTypescriptMemberFunction = true;
 static constexpr bool sEnablePoolSettings = false;
 static constexpr bool sUseCreatePool = true;
 static constexpr bool gReduceCode = true;
+
+const auto* const gNameReset = "reset";
+
 const auto* const gNameVertices = "x";
 const auto* const gNameOutEdgeList = "o";
 const auto* const gNameInEdgeList = "i";
