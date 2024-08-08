@@ -398,6 +398,13 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         OSS << "}\n";
     }
 
+    if (sUseCreatePool) {
+        oss << "\n";
+        OSS << "function createPool<T> (Constructor: new() => T): RecyclePool<T> {\n";
+        OSS << "    return new RecyclePool<T>(() => new Constructor(), 16);\n";
+        OSS << "}\n";
+    }
+
     oss << "\n";
     OSS << "export class " << typeModulePath.substr(1) << "ObjectPool {\n";
     {
@@ -568,8 +575,12 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             if (sEnablePoolSettings) {
                 oss << ";\n";
             } else {
-                oss << " = new RecyclePool<" << name
-                    << ">(() => new " << name << "(), " << sPoolBatchSize << ");\n";
+                if (sUseCreatePool) {
+                    oss << " = createPool(" << name << ");\n";
+                } else {
+                    oss << " = new RecyclePool<" << name
+                        << ">(() => new " << name << "(), " << sPoolBatchSize << ");\n";
+                }
             }
         }
         if (kOutputPoolDebug) {
