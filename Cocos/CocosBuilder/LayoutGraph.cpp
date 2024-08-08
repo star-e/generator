@@ -45,7 +45,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 #include "cocos/renderer/gfx-base/GFXPipelineLayout.h"
 )",
-        .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
+        .mTypescriptInclude = R"(import type { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
 )"
 // import { equalObjectArray, equalValueArray, equalObjectMap, equalValueMap } from './utils';

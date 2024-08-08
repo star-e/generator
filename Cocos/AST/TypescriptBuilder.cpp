@@ -34,6 +34,78 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+std::pmr::string outputImports_ts(
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    Features features,
+    bool importType,
+    const std::string_view tsModule,
+    const PmrSet<std::pmr::string>& imported,
+    std::pmr::set<std::pmr::string>& moduleImports,
+    std::pmr::memory_resource* scratch) {
+    pmr_ostringstream oss(std::ios::out, scratch);
+    std::pmr::string space(scratch);
+    const auto& typescriptFolder = builder.mTypescriptFolder;
+    std::filesystem::path tsPath = typescriptFolder / moduleInfo.mTypescriptFolder / moduleInfo.mTypescriptFilePrefix;
+
+    const auto& mg = builder.mModuleGraph;
+    const auto& g = builder.mSyntaxGraph;
+    const auto targetID = locate(tsModule, mg);
+    const auto targetPath = get_path(targetID, mg, scratch);
+    const auto targetName = get(mg.names, mg, targetID);
+    const auto& target = get(mg.modules, mg, targetID);
+    moduleImports.emplace(targetPath);
+    if (importType) {
+        OSS << "import type { ";
+    } else {
+        OSS << "import { ";
+    }
+    int count = 0;
+    for (const auto& type : imported) {
+        auto vertID = locate(type, g);
+        auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+
+        if (count++)
+            oss << ", ";
+        oss << tsName;
+
+        if ((features & Features::Serialization) && (target.mFeatures & Features::Serialization)) {
+            if (holds_tag<Struct_>(vertID, g)) {
+                if (count++) {
+                    oss << ", ";
+                }
+                oss << "save" << tsName;
+                oss << ", load" << tsName;
+            }
+        }
+        const auto& traits = get(g.traits, g, vertID);
+        if (false && (traits.mFlags & EQUAL) && !(traits.mFlags & NO_EQUAL)) {
+            if (count++) {
+                oss << ", ";
+            }
+            oss << "equal" << tsName;
+        }
+    }
+
+    if (!importType) {
+        if ((features & TsPool) && (target.mFeatures & TsPool)) {
+            oss << ", " << targetName << "ObjectPool";
+        }
+    }
+
+    oss << " } from '";
+
+    std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
+    oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
+    oss << "';\n";
+
+    if (count == 0) {
+        return std::pmr::string{ scratch };
+    }
+
+    return oss.str();
+}
+
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
     const ModuleBuilder& builder,

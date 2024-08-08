@@ -58,12 +58,16 @@ extra_arguments = %(android_headers)s %(clang_headers)s %(cxxgenerator_headers)s
     OSS << "cpp_headers =" << m.mToJsCppHeaders;
     {
         auto modulePath = get_path(moduleID, mg, scratch);
-        auto imported = g.getImportedTypes(modulePath, scratch);
+        auto imported = g.getImportedTypes(modulePath, false, scratch);
         for (const auto& [depPath, types] : imported) {
             auto depID = locate(depPath, mg);
             const auto& dep = get(mg.modules, mg, depID);
 
-            for (const auto& type : types) {
+            for (const auto& type : types.mImportedTypes) {
+                auto typeID = locate(type, g);
+                Expects(g.isJsb(typeID, mg));
+            }
+            for (const auto& type : types.mImported) {
                 auto typeID = locate(type, g);
                 Expects(g.isJsb(typeID, mg));
             }

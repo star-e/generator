@@ -63,7 +63,7 @@ class ReflectionProbe;
 
 } // namespace cc
 )",
-        .mTypescriptInclude = R"(import { OutputArchive, InputArchive } from './archive';
+        .mTypescriptInclude = R"(import type { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock } from './serialization';
 )"
     ) {

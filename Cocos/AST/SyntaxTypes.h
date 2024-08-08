@@ -1095,6 +1095,26 @@ struct Comment {
     PmrMap<std::pmr::string, std::pmr::string> mParameterComments;
 };
 
+struct ImportedTypes {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mImportedTypes.get_allocator().resource());
+    }
+
+    ImportedTypes(const allocator_type& alloc);
+    ImportedTypes(ImportedTypes&& rhs, const allocator_type& alloc);
+    ImportedTypes(ImportedTypes const& rhs, const allocator_type& alloc);
+
+    ImportedTypes(ImportedTypes&& rhs) = default;
+    ImportedTypes(ImportedTypes const& rhs) = delete;
+    ImportedTypes& operator=(ImportedTypes&& rhs) = default;
+    ImportedTypes& operator=(ImportedTypes const& rhs) = default;
+    ~ImportedTypes() noexcept;
+
+    PmrSet<std::pmr::string> mImportedTypes;
+    PmrSet<std::pmr::string> mImported;
+};
+
 struct SyntaxGraph {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept;
@@ -1363,8 +1383,8 @@ struct SyntaxGraph {
 
     std::pmr::string getTypedParameterName(const Parameter& p, bool bPublic, bool bFull = false, bool bOptional = false, bool bReturn = false) const;
 
-    PmrMap<std::pmr::string, PmrSet<std::pmr::string>> getImportedTypes(
-        std::string_view modulePath, std::pmr::memory_resource* mr) const;
+    PmrMap<std::pmr::string, ImportedTypes> getImportedTypes(
+        std::string_view modulePath, bool enableSerialization, std::pmr::memory_resource* mr) const;
 
     // ContinuousContainer
     void reserve(vertices_size_type sz);

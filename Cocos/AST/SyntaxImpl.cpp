@@ -2237,37 +2237,28 @@ std::pmr::string SyntaxGraph::getTypedParameterName(
 namespace {
 
 void addImported(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g,
-    std::string_view modulePath,
-    PmrMap<std::pmr::string, PmrSet<std::pmr::string>>& imported) {
+    bool forceImport, std::string_view modulePath, bool needImport,
+    PmrMap<std::pmr::string, ImportedTypes>& imported) {
 
     const auto& path = get(g.modulePaths, g, vertID);
     if (!path.empty() && path != modulePath) {
-        imported[path].emplace(g.getTypePath(vertID, imported.get_allocator().resource()));
+        if (needImport || forceImport) {
+            imported[path].mImported.emplace(g.getTypePath(vertID, imported.get_allocator().resource()));
+        } else {
+            imported[path].mImportedTypes.emplace(g.getTypePath(vertID, imported.get_allocator().resource()));
+        }
     }
 
     visit_vertex(
         vertID, g,
         [&](const Composition_ auto& s) {
-            if (false) { // non-recursive
-                for (const Member& m : s.mMembers) {
-                    auto memberID = locate(m.mTypePath, g);
-                    addImported(memberID, g, modulePath, imported);
-                }
-                for (const Method& m : s.mMethods) {
-                    for (const auto& param : m.mParameters) {
-                        auto paramID = locate(param.mTypePath, g);
-                        addImported(paramID, g, modulePath, imported);
-                    }
-                    auto paramID = locate(m.mReturnType.mTypePath, g);
-                    addImported(paramID, g, modulePath, imported);
-                }
-            }
+            // noop, non-recursive
         },
         [&](const Instance& s) {
             for (const auto& p : s.mParameters) {
                 auto typePath = removeCvPointerRef(p);
                 auto paramID = locate(typePath, g);
-                addImported(paramID, g, modulePath, imported);
+                addImported(paramID, g, forceImport, modulePath, false, imported);
             }
         },
         [](const auto&) {});
@@ -2275,9 +2266,10 @@ void addImported(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g,
 
 }
 
-PmrMap<std::pmr::string, PmrSet<std::pmr::string>> SyntaxGraph::getImportedTypes(
-    std::string_view modulePath, std::pmr::memory_resource* mr) const {
-    PmrMap<std::pmr::string, PmrSet<std::pmr::string>> imported(mr);
+PmrMap<std::pmr::string, ImportedTypes> SyntaxGraph::getImportedTypes(
+    std::string_view modulePath, bool enableSerialization, std::pmr::memory_resource* mr) const {
+    PmrMap<std::pmr::string, ImportedTypes> imported(mr);
+    const bool forceImport = enableSerialization;
 
     const auto& g = *this;
     for (const auto& vertID : make_range(vertices(g))) {
@@ -2285,19 +2277,31 @@ PmrMap<std::pmr::string, PmrSet<std::pmr::string>> SyntaxGraph::getImportedTypes
         if (path != modulePath)
             continue;
 
+        const auto& traits = get(g.traits, g, vertID);
+
         visit_vertex(vertID, g,
             [&](const Composition_ auto& s) {
                 for (const Member& m : s.mMembers) {
                     auto memberID = locate(m.mTypePath, g);
-                    addImported(memberID, g, modulePath, imported);
+                    if (m.mNullable) {
+                        addImported(memberID, g, false, modulePath, false, imported);
+                    } else {
+                        bool needImport = holds_tag<Enum_>(memberID, g);
+                        if (holds_tag<Struct_>(memberID, g)) {
+                            if (s.mConstructors.empty() || s.mConstructors.front().mHasDefault) {
+                                needImport = true;
+                            }
+                        }
+                        addImported(memberID, g, forceImport, modulePath, needImport, imported);
+                    }
                 }
                 for (const Method& m : s.mMethods) {
                     for (const auto& param : m.mParameters) {
                         auto paramID = locate(param.mTypePath, g);
-                        addImported(paramID, g, modulePath, imported);
+                        addImported(paramID, g, false, modulePath, false, imported);
                     }
                     auto paramID = locate(m.mReturnType.mTypePath, g);
-                    addImported(paramID, g, modulePath, imported);
+                    addImported(paramID, g, false, modulePath, false, imported);
                 }
             },
             [](const auto&) {});
@@ -2307,22 +2311,28 @@ PmrMap<std::pmr::string, PmrSet<std::pmr::string>> SyntaxGraph::getImportedTypes
             [&](const Graph& s) {
                 if (!s.mVertexProperty.empty()) {
                     auto typeID = locate(s.mVertexProperty, g);
-                    addImported(typeID, g, modulePath, imported);
+                    addImported(typeID, g, false, modulePath, false, imported);
                 }
                 if (!s.mEdgeProperty.empty()) {
                     auto typeID = locate(s.mEdgeProperty, g);
-                    addImported(typeID, g, modulePath, imported);
+                    addImported(typeID, g, false, modulePath, false, imported);
                 }
                 for (const auto& c : s.mComponents) {
                     auto typeID = locate(c.mValuePath, g);
-                    addImported(typeID, g, modulePath, imported);
+                    addImported(typeID, g, false, modulePath, false, imported);
                 }
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     auto typeID = locate(c.mValue, g);
-                    addImported(typeID, g, modulePath, imported);
+                    addImported(typeID, g, false, modulePath, false, imported);
                 }
             },
             [](const auto&) {});
+    }
+
+    for (auto& [name, imported] : imported) {
+        for (const auto& type : imported.mImported) {
+            imported.mImportedTypes.erase(type);
+        }
     }
     return imported;
 }
