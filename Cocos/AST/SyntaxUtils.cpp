@@ -484,6 +484,18 @@ std::pmr::string camelToVariable(std::string_view camelName,
     return name;
 }
 
+std::pmr::string camelToShortVariable(std::string_view camelName,
+    std::pmr::memory_resource* scratch) {
+    std::pmr::string name(scratch);
+    for (uint32_t i = 0; i != camelName.size(); ++i) {
+        if (std::isupper(camelName[i])) {
+            name.push_back(tolower(camelName[i]));
+            continue;
+        }
+    }
+    return name;
+}
+
 std::pmr::string getParameterName(std::string_view member,
     std::pmr::memory_resource* scratch) {
     if (member.size() < 2)

@@ -405,6 +405,8 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         OSS << "}\n";
     }
 
+    PmrMap<std::pmr::string, std::pmr::string> shortNameIndex(scratch);
+
     oss << "\n";
     OSS << "export class " << typeModulePath.substr(1) << "ObjectPool {\n";
     {
@@ -468,17 +470,27 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             OSS << gNameReset << " (): void {\n";
             {
                 INDENT();
+                PmrMap<std::pmr::string, uint32_t> names(scratch);
                 for (const auto& vertID : make_range(vertices(g))) {
                     if (!g.isPoolType(vertID, typeModulePath)) {
                         continue;
                     }
                     auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-                    OSS << "this._" << camelToVariable(name, scratch) << ".reset();\n";
+                    auto shortName = camelToShortVariable(name, scratch);
+                    auto id = names[shortName]++;
+                    if (id) {
+                        shortName.append(std::to_string(id));
+                    }
+                    OSS << "this." << shortName << ".reset(); // " << name << "\n";
+                    auto res = shortNameIndex.emplace(shortName, name);
+                    Ensures(res.second);
                 }
             }
             OSS << "}\n";
         }
+
         if (true) { // create
+            PmrMap<std::pmr::string, uint32_t> names(scratch);
             for (const auto& vertID : make_range(vertices(g))) {
                 if (!g.isPoolType(vertID, typeModulePath)) {
                     continue;
@@ -520,16 +532,22 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 }
                 {
                     INDENT();
+                    auto shortName = camelToShortVariable(name, scratch);
+                    auto id = names[shortName]++;
+                    if (id) {
+                        shortName.append(std::to_string(id));
+                    }
+                    Expects(shortNameIndex.at(shortName) == name);
                     if (kOutputPoolDebug) {
                         OSS << "let v: " << name << ";\n";
                         OSS << "if (isDebug) {\n";
                         OSS << "    v = new " << name << "();\n";
                         OSS << "} else {\n";
-                        OSS << "    v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                        OSS << "    v = this." << shortName << ".add(); // " << name << "\n";
                         OSS << "    v._pool = true;\n";
                         OSS << "}\n";
                     } else {
-                        OSS << "const v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                        OSS << "const v = this." << shortName << ".add(); // " << name << "\n";
                     }
 
                     if (pStruct) {
@@ -565,13 +583,19 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             }
         }
 
+        PmrMap<std::pmr::string, uint32_t> names(scratch);
         for (const auto& vertID : make_range(vertices(g))) {
             if (!g.isPoolType(vertID, typeModulePath)) {
                 continue;
             }
             auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-            OSS << "private readonly _" << camelToVariable(name, scratch)
-                << ": RecyclePool<" << name << ">";
+            auto shortName = camelToShortVariable(name, scratch);
+            auto id = names[shortName]++;
+            if (id) {
+                shortName.append(std::to_string(id));
+            }
+            Expects(shortNameIndex.at(shortName) == name);
+            OSS << "private readonly " << shortName << ": RecyclePool<" << name << ">";
             if (sEnablePoolSettings) {
                 oss << ";\n";
             } else {
