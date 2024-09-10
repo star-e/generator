@@ -1331,6 +1331,7 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
                 oss << ", ";
             const auto& m = s.mMembers.at(k);
             auto memberID = locate(m.mTypePath, g);
+            const auto& memberTraits = get(g.traits, g, memberID);
             if (m.mTypePath == "/std/pmr/string") {
                 bNoexcept = false;
                 oss << "std::string_view " << getParameterName(m.mMemberName, scratch);
@@ -1339,14 +1340,14 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
                 oss << "std::u8string_view " << getParameterName(m.mMemberName, scratch);
             } else {
                 auto name = g.getDependentName(mCurrentNamespace, memberID, scratch, scratch);
-                if (m.mConst) {
+                if (m.mConst || memberTraits.mTrivial) {
                     oss << "const ";
                 }
                 oss << getCppPath(name, scratch);
                 if (m.mPointer) {
                     oss << "*";
                 }
-                if (m.mReference) {
+                if (m.mReference || memberTraits.mTrivial) {
                     oss << "&";
                 }
                 oss << " " << getParameterName(m.mMemberName, scratch);
