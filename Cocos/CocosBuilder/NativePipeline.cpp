@@ -346,21 +346,20 @@ void recordCommandBuffer(
                 (ProbeHelperQueue, mProbeQueue, _)
                 (RenderInstancingQueue, mOpaqueInstancingQueue, _)
                 (RenderInstancingQueue, mTransparentInstancingQueue, _)
+                (const scene::Camera*, mCamera, nullptr)
                 (SceneFlags, mSceneFlags, SceneFlags::NONE)
-                (uint32_t, mSubpassOrPassLayoutID, 0xFFFFFFFF)
                 (uint32_t, mLightByteOffset, 0xFFFFFFFF)
                 //(ccstd::pmr::vector<ScenePass>, mScenePassQueue, _)
                 //(ccstd::pmr::vector<RenderBatchPack>, mBatchingQueue, _)
                 //(ccstd::pmr::vector<uint32_t>, mInstancingQueue, _)
                 //((PmrFlatMap<ScenePassHandle, PmrUniquePtr<RenderInstancePack>>), mInstancePacks, _)
             );
-            CNTR(mSceneFlags, mSubpassOrPassLayoutID);
             MEMBER_FUNCTIONS(R"(
 void sort();
 void clear() noexcept;
 bool empty() const noexcept;
 void recordCommands(
-    gfx::CommandBuffer *cmdBuffer, gfx::RenderPass *renderPass, uint32_t subpassIndex) const;
+    gfx::CommandBuffer *cmdBuffer, gfx::RenderPass *renderPass, uint32_t subpassIndex, SceneFlags sceneFlags) const;
 )");
         }
 
@@ -527,12 +526,19 @@ gfx::Buffer* createFromCpuBuffer();
 })");
         }
 
-        STRUCT(NativeRenderQueueDesc) {
+        STRUCT(NativeRenderQueueKey, .mFlags = EQUAL | HASH_COMBINE) {
+            PUBLIC(
+                (FrustumCullingID, mFrustumCulledResultID, _)
+                (LightBoundsCullingID, mLightBoundsCulledResultID, _)
+                (uint32_t, mQueueLayoutID, 0xFFFFFFFF)
+            );
+        }
+
+        STRUCT(NativeRenderQueueQuery) {
             PUBLIC(
                 (FrustumCullingID, mFrustumCulledResultID, _)
                 (LightBoundsCullingID, mLightBoundsCulledResultID, _)
                 (NativeRenderQueueID, mRenderQueueTarget, _)
-                (scene::LightType, mLightType, scene::LightType::UNKNOWN)
             );
         }
 
@@ -551,8 +557,9 @@ gfx::Buffer* createFromCpuBuffer();
                 ((ccstd::pmr::unordered_map<const scene::RenderScene*, LightBoundsCulling>), mLightBoundsCullings, _)
                 (ccstd::pmr::vector<LightBoundsCullingResult>, mLightBoundsCullingResults, _)
 
+                ((ccstd::pmr::unordered_map<NativeRenderQueueKey, NativeRenderQueueID>), mRenderQueueIndex, _)
                 (ccstd::pmr::vector<NativeRenderQueue>, mRenderQueues, _)
-                ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueDesc>), mRenderQueueIndex, _)
+                ((PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueQuery>), mRenderQueueQueryIndex, _)
                 (uint32_t, mNumFrustumCulling, 0)
                 (uint32_t, mNumLightBoundsCulling, 0)
                 (uint32_t, mNumRenderQueues, 0)
@@ -565,11 +572,12 @@ void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const N
 private:
 FrustumCullingID getOrCreateFrustumCulling(const SceneData& sceneData);
 LightBoundsCullingID getOrCreateLightBoundsCulling(const SceneData& sceneData, FrustumCullingID frustumCullingID);
-NativeRenderQueueID createRenderQueue(SceneFlags sceneFlags, LayoutGraphData::vertex_descriptor subpassOrPassLayoutID);
-void collectCullingQueries(const RenderGraph& rg, const LayoutGraphData& lg);
+NativeRenderQueueID getOrCreateRenderQueue(
+    const NativeRenderQueueKey& renderQueueKey, SceneFlags sceneFlags, const scene::Camera* camera);
+void collectCullingQueries(const RenderGraph& rg);
 void batchFrustumCulling(const NativePipeline& ppl);
 void batchLightBoundsCulling();
-void fillRenderQueues(const RenderGraph& rg, const pipeline::PipelineSceneData& pplSceneData);
+void fillRenderQueues();
 public:
 )");
         }
