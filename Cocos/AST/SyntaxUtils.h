@@ -79,6 +79,9 @@ std::string_view removeCvPointerRef(std::string_view typePath);
 std::pmr::string camelToVariable(std::string_view name,
     std::pmr::memory_resource* scratch);
 
+std::pmr::string camelToShortVariable(std::string_view camelName,
+    std::pmr::memory_resource* scratch);
+
 std::pmr::string getParameterName(std::string_view member,
     std::pmr::memory_resource* scratch);
 

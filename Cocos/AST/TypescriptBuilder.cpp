@@ -34,6 +34,78 @@ THE SOFTWARE.
 
 namespace Cocos::Meta {
 
+std::pmr::string outputImports_ts(
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    Features features,
+    bool importType,
+    const std::string_view tsModule,
+    const PmrSet<std::pmr::string>& imported,
+    std::pmr::set<std::pmr::string>& moduleImports,
+    std::pmr::memory_resource* scratch) {
+    pmr_ostringstream oss(std::ios::out, scratch);
+    std::pmr::string space(scratch);
+    const auto& typescriptFolder = builder.mTypescriptFolder;
+    std::filesystem::path tsPath = typescriptFolder / moduleInfo.mTypescriptFolder / moduleInfo.mTypescriptFilePrefix;
+
+    const auto& mg = builder.mModuleGraph;
+    const auto& g = builder.mSyntaxGraph;
+    const auto targetID = locate(tsModule, mg);
+    const auto targetPath = get_path(targetID, mg, scratch);
+    const auto targetName = get(mg.names, mg, targetID);
+    const auto& target = get(mg.modules, mg, targetID);
+    moduleImports.emplace(targetPath);
+    if (importType) {
+        OSS << "import type { ";
+    } else {
+        OSS << "import { ";
+    }
+    int count = 0;
+    for (const auto& type : imported) {
+        auto vertID = locate(type, g);
+        auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+
+        if (count++)
+            oss << ", ";
+        oss << tsName;
+
+        if ((features & Features::Serialization) && (target.mFeatures & Features::Serialization)) {
+            if (holds_tag<Struct_>(vertID, g)) {
+                if (count++) {
+                    oss << ", ";
+                }
+                oss << "save" << tsName;
+                oss << ", load" << tsName;
+            }
+        }
+        const auto& traits = get(g.traits, g, vertID);
+        if (false && (traits.mFlags & EQUAL) && !(traits.mFlags & NO_EQUAL)) {
+            if (count++) {
+                oss << ", ";
+            }
+            oss << "equal" << tsName;
+        }
+    }
+
+    if (!importType) {
+        if ((features & TsPool) && (target.mFeatures & TsPool)) {
+            oss << ", " << targetName << "ObjectPool";
+        }
+    }
+
+    oss << " } from '";
+
+    std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
+    oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
+    oss << "';\n";
+
+    if (count == 0) {
+        return std::pmr::string{ scratch };
+    }
+
+    return oss.str();
+}
+
 void outputTypescript(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
     const ModuleBuilder& builder,
@@ -326,6 +398,15 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
         OSS << "}\n";
     }
 
+    if (sUseCreatePool) {
+        oss << "\n";
+        OSS << "function createPool<T> (Constructor: new() => T): RecyclePool<T> {\n";
+        OSS << "    return new RecyclePool<T>(() => new Constructor(), 16);\n";
+        OSS << "}\n";
+    }
+
+    PmrMap<std::pmr::string, std::pmr::string> shortNameIndex(scratch);
+
     oss << "\n";
     OSS << "export class " << typeModulePath.substr(1) << "ObjectPool {\n";
     {
@@ -386,20 +467,30 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             OSS << "}\n";
         }
         {
-            OSS << "reset (): void {\n";
+            OSS << gNameReset << " (): void {\n";
             {
                 INDENT();
+                PmrMap<std::pmr::string, uint32_t> names(scratch);
                 for (const auto& vertID : make_range(vertices(g))) {
                     if (!g.isPoolType(vertID, typeModulePath)) {
                         continue;
                     }
                     auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-                    OSS << "this._" << camelToVariable(name, scratch) << ".reset();\n";
+                    auto shortName = camelToShortVariable(name, scratch);
+                    auto id = names[shortName]++;
+                    if (id) {
+                        shortName.append(std::to_string(id));
+                    }
+                    OSS << "this." << shortName << ".reset(); // " << name << "\n";
+                    auto res = shortNameIndex.emplace(shortName, name);
+                    Ensures(res.second);
                 }
             }
             OSS << "}\n";
         }
+
         if (true) { // create
+            PmrMap<std::pmr::string, uint32_t> names(scratch);
             for (const auto& vertID : make_range(vertices(g))) {
                 if (!g.isPoolType(vertID, typeModulePath)) {
                     continue;
@@ -441,16 +532,22 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 }
                 {
                     INDENT();
+                    auto shortName = camelToShortVariable(name, scratch);
+                    auto id = names[shortName]++;
+                    if (id) {
+                        shortName.append(std::to_string(id));
+                    }
+                    Expects(shortNameIndex.at(shortName) == name);
                     if (kOutputPoolDebug) {
                         OSS << "let v: " << name << ";\n";
                         OSS << "if (isDebug) {\n";
                         OSS << "    v = new " << name << "();\n";
                         OSS << "} else {\n";
-                        OSS << "    v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                        OSS << "    v = this." << shortName << ".add(); // " << name << "\n";
                         OSS << "    v._pool = true;\n";
                         OSS << "}\n";
                     } else {
-                        OSS << "const v = this._" << camelToVariable(name, scratch) << ".add();\n";
+                        OSS << "const v = this." << shortName << ".add(); // " << name << "\n";
                     }
 
                     if (pStruct) {
@@ -461,12 +558,12 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                             }
                         } else if (pCntr){
                             int count = 0;
-                            OSS << "v.reset(";
+                            OSS << "v." << gNameReset << "(";
                             outputConstructionParams(oss, space, count, builder, false,
                                 g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, false, scratch);
                             oss << ");\n";
                         } else {
-                            OSS << "v.reset();\n"; 
+                            OSS << "v." << gNameReset << "();\n"; 
                         }
                     } else {
                         OSS << "v.clear();\n"; 
@@ -486,18 +583,28 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             }
         }
 
+        PmrMap<std::pmr::string, uint32_t> names(scratch);
         for (const auto& vertID : make_range(vertices(g))) {
             if (!g.isPoolType(vertID, typeModulePath)) {
                 continue;
             }
             auto name = g.getTypescriptTypename(vertID, scratch, scratch);
-            OSS << "private readonly _" << camelToVariable(name, scratch)
-                << ": RecyclePool<" << name << ">";
+            auto shortName = camelToShortVariable(name, scratch);
+            auto id = names[shortName]++;
+            if (id) {
+                shortName.append(std::to_string(id));
+            }
+            Expects(shortNameIndex.at(shortName) == name);
+            OSS << "private readonly " << shortName << ": RecyclePool<" << name << ">";
             if (sEnablePoolSettings) {
                 oss << ";\n";
             } else {
-                oss << " = new RecyclePool<" << name
-                    << ">(() => new " << name << "(), " << sPoolBatchSize << ");\n";
+                if (sUseCreatePool) {
+                    oss << " = createPool(" << name << ");\n";
+                } else {
+                    oss << " = new RecyclePool<" << name
+                        << ">(() => new " << name << "(), " << sPoolBatchSize << ");\n";
+                }
             }
         }
         if (kOutputPoolDebug) {

@@ -81,7 +81,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
                 (uint32_t, mSlotID, 0)
                 (gfx::ShaderStageFlagBit, mShaderStageFlags, gfx::ShaderStageFlagBit::NONE)
             );
-            builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
+            //builder.setMemberFlags(vertID, "mClearColor", NOT_ELEMENT);
             builder.setMemberFlags(vertID, "mSlotID", NOT_ELEMENT);
             TS_INIT(mAccessType, AccessType.WRITE);
             TS_INIT(mLoadOp, LoadOp.LOAD);

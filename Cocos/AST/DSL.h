@@ -100,6 +100,10 @@ builder.addEnumElement(vertID, \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
         Traits{ .mClass = true, .mImport = true, __VA_ARGS__ }); true)
 
+#define IMPORT_CLASS_TRIVIAL(NAME) \
+    if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
+        Traits{ .mClass = true, .mImport = true, .mTrivial = true, __VA_ARGS__ }); true)
+
 #define IMPORT_PMR_CLASS(NAME, ...) \
     if (auto s = builder.addStruct(BOOST_PP_STRINGIZE(NAME),\
         Traits{ .mClass = true, .mImport = true, .mPmr = true, __VA_ARGS__ }); true)

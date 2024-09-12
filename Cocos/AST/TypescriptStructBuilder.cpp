@@ -341,7 +341,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             }
             count = 0;
             OSS;
-            oss << "reset (";
+            oss << gNameReset << " (";
             if (!inherits.empty()) {
                 Expects(inherits.size() == 1);
                 const auto& base = inherits.front();
@@ -418,7 +418,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                                     OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                                 } else {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset(";
+                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "(";
                                     if (!sResetHasDefaultParameters) {
                                         // get cntr
                                         const Constructor* pCntr = nullptr;
@@ -455,7 +455,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                             OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                         } else {
-                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".reset();\n";
+                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "();\n";
                         }
                     }
                     ++i;
@@ -1003,8 +1003,8 @@ std::pmr::string generateGraphSerialization_ts(
     OSS << "export function save" << cppName << " (a: OutputArchive, g: " << cppName << "): void {\n";
     {
         INDENT();
-        OSS << "const numVertices = g.numVertices();\n";
-        OSS << "const numEdges = g.numEdges();\n";
+        OSS << "const numVertices = g." << gNameNumVertices << "();\n";
+        OSS << "const numEdges = g." << gNameNumEdges << "();\n";
         const auto sizeID = locate("/uint32_t", g);
         outputSaveSerializable(oss, space, ns, g, sizeID, "numVertices", 0, false, scratch);
         outputSaveSerializable(oss, space, ns, g, sizeID, "numEdges", 0, false, scratch);
@@ -1014,10 +1014,10 @@ std::pmr::string generateGraphSerialization_ts(
                 numTypes.append(c.mMemberName.substr(1));
                 OSS << "let " << numTypes << " = 0;\n";
             }
-            OSS << "for (const v of g.vertices()) {\n";
+            OSS << "for (const v of g." << gNameGetVertices << "()) {\n";
             {
                 INDENT();
-                OSS << "switch (g.id(v)) {\n";
+                OSS << "switch (g." << gNameVertexTypeIndex << "(v)) {\n";
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     std::pmr::string numTypes("num", scratch);
                     numTypes.append(c.mMemberName.substr(1));
@@ -1039,11 +1039,12 @@ std::pmr::string generateGraphSerialization_ts(
                 outputSaveSerializable(oss, space, ns, g, sizeID, numTypes, 0, false, scratch);
             }
         }
-        OSS << "for (const v of g.vertices()) {\n";
+        OSS << "for (const v of g." << gNameGetVertices << "()) {\n";
         {
             INDENT();
             if (s.isPolymorphic()) {
-                outputSaveSerializable(oss, space, ns, g, sizeID, "g.id(v)", 0, false, scratch);
+                outputSaveSerializable(oss, space, ns, g, sizeID,
+                    "g." + std::string(gNameVertexTypeIndex) + "(v)", 0, false, scratch);
             }
             if (s.isAddressable()) {
                 outputSaveSerializable(oss, space, ns, g, sizeID, "g.getParent(v)", 0, false, scratch);
@@ -1056,7 +1057,7 @@ std::pmr::string generateGraphSerialization_ts(
                 outputSaveSerializable(oss, space, ns, g, componentID, componentVar, 0, false, scratch);
             }
             if (s.isPolymorphic()) {
-                OSS << "switch (g.id(v)) {\n";
+                OSS << "switch (g." << gNameVertexTypeIndex << "(v)) {\n";
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     const auto objectID = locate(c.mValue, g);
                     const auto tagID = locate(c.mTag, g);

@@ -108,6 +108,16 @@ std::pmr::string generateNames_ts(
     bool bPublicFormat,
     std::pmr::memory_resource* scratch);
 
+std::pmr::string outputImports_ts(
+    const ModuleBuilder& builder,
+    const ModuleInfo& moduleInfo,
+    Features features,
+    bool importType,
+    const std::string_view tsModule,
+    const PmrSet<std::pmr::string>& imported,
+    std::pmr::set<std::pmr::string>& moduleImports,
+    std::pmr::memory_resource* scratch);
+
 static constexpr bool kOutputPoolDebug = false;
 static constexpr bool sEnableMake = true;
 static constexpr bool sEnableOptionalAssign = false;

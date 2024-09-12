@@ -236,21 +236,30 @@ void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph& 
 
 void outputNullVertex(std::ostream& oss, std::pmr::string& space,
     const Graph& s, std::string_view vertexDescType) {
-    if (s.isVector()) {
-        OSS << "nullVertex (): " << vertexDescType << " { ";
+    if (gReduceCode) {
+        OSS << "/** null vertex descriptor */\n";
+        if (s.isVector()) {
+            OSS << "readonly N = 0xFFFFFFFF;\n";
+        } else {
+            OSS << "readonly N = null;\n";
+        }
     } else {
-        OSS << "nullVertex (): null { ";
+        if (s.isVector()) {
+            OSS << "nullVertex (): " << vertexDescType << " { ";
+        } else {
+            OSS << "nullVertex (): null { ";
+        }
+        visit(
+            overload(
+                [&](Vector_) {
+                    oss << "return 0xFFFFFFFF;";
+                },
+                [&](List_) {
+                    oss << "return null;";
+                }),
+            s.mVertexListType);
+        oss << " }\n";
     }
-    visit(
-        overload(
-            [&](Vector_) {
-                oss << "return 0xFFFFFFFF;";
-            },
-            [&](List_) {
-                oss << "return null;";
-            }),
-        s.mVertexListType);
-    oss << " }\n";
 }
 
 void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::string_view name,
@@ -919,7 +928,6 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (true) { // Graph Basics
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// Graph\n";
-            OSS << "// type vertex_descriptor = " << vertexDescType << ";\n";
             outputNullVertex(oss, space, s, vertexDescType);
 
             // Edge
@@ -948,20 +956,22 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     OSS << "// type edge_descriptor = EPD;\n";
                     imports.emplace("EPD");
                 }
-                // Directional
-                OSS << "readonly directed_category: directional = directional.bidirectional;\n";
-                imports.emplace("directional");
+                if (!gReduceCode) {
+                    // Directional
+                    OSS << "readonly directed_category: directional = directional.bidirectional;\n";
+                    imports.emplace("directional");
 
-                // Edge parallel
-                OSS << "readonly edge_parallel_category: parallel = parallel.allow;\n";
-                imports.emplace("parallel");
+                    // Edge parallel
+                    OSS << "readonly edge_parallel_category: parallel = parallel.allow;\n";
+                    imports.emplace("parallel");
 
-                // Traversal
-                OSS << "readonly traversal_category: traversal = traversal.incidence\n";
-                OSS << "    | traversal.bidirectional\n";
-                OSS << "    | traversal.adjacency\n";
-                OSS << "    | traversal.vertex_list;\n";
-                imports.emplace("traversal");
+                    // Traversal
+                    OSS << "readonly traversal_category: traversal = traversal.incidence\n";
+                    OSS << "    | traversal.bidirectional\n";
+                    OSS << "    | traversal.adjacency\n";
+                    OSS << "    | traversal.vertex_list;\n";
+                    imports.emplace("traversal");
+                }
             }
         } // Graph Basics
 
@@ -999,21 +1009,21 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "source (e: " << edgeDescType << "): " << vertexDescType << " {\n";
+            OSS << gNameGraphSource << " (e: " << edgeDescType << "): " << vertexDescType << " {\n";
             {
                 INDENT();
                 OSS << "return e.source as " << vertexDescType << ";\n";
             }
             OSS << "}\n";
 
-            OSS << "target (e: " << edgeDescType << "): " << vertexDescType << " {\n";
+            OSS << gNameGraphTarget << " (e: " << edgeDescType << "): " << vertexDescType << " {\n";
             {
                 INDENT();
                 OSS << "return e.target as " << vertexDescType << ";\n";
             }
             OSS << "}\n";
 
-            OSS << "outEdges (v: " << vertexDescType << "): " << outEdgeIter << " {\n";
+            OSS << gNameOutEdges << " (v: " << vertexDescType << "): " << outEdgeIter << " {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1026,7 +1036,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "outDegree (v: " << vertexDescType << "): number {\n";
+            OSS << gNameOutDegree << " (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1042,7 +1052,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// BidirectionalGraph\n";
             OSS << "// type in_edge_iterator = " << inEdgeIter << ";\n";
-            OSS << "inEdges (v: " << vertexDescType << "): " << inEdgeIter << " {\n";
+            OSS << gNameInEdges << " (v: " << vertexDescType << "): " << inEdgeIter << " {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1055,7 +1065,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "inDegree (v: " << vertexDescType << "): number {\n";
+            OSS << gNameInDegree << " (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1066,10 +1076,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "degree (v: " << vertexDescType << "): number {\n";
+            OSS << gNameDegree << " (v: " << vertexDescType << "): number {\n";
             {
                 INDENT();
-                OSS << "return this.outDegree(v) + this.inDegree(v);\n";
+                OSS << "return this." << gNameOutDegree << "(v) + this." << gNameInDegree << "(v);\n";
             }
             OSS << "}\n";
         }
@@ -1095,10 +1105,10 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "// type adjacency_iterator = " << adjIter << ";\n";
 
-            OSS << "adjacentVertices (v: " << vertexDescType << "): " << adjIter << " {\n";
+            OSS << gNameAdjacentVertices << " (v: " << vertexDescType << "): " << adjIter << " {\n";
             {
                 INDENT();
-                OSS << "return new " << adjIter << "(this, this.outEdges(v));\n";
+                OSS << "return new " << adjIter << "(this, this." << gNameOutEdges << "(v));\n";
             }
             OSS << "}\n";
         }
@@ -1106,7 +1116,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (true) { // VertexList Graph
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// VertexListGraph\n";
-            OSS << "vertices (): IterableIterator<" << vertexDescType << "> {\n";
+            OSS << gNameGetVertices  << " (): IterableIterator<" << vertexDescType << "> {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1116,7 +1126,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 }
             }
             OSS << "}\n";
-            OSS << "numVertices (): number {\n";
+            OSS << gNameNumVertices << " (): number {\n";
             {
                 INDENT();
                 if (bVectorVertexDescriptor) {
@@ -1134,14 +1144,14 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             } else {
                 OSS << "//-----------------------------------------------------------------\n";
                 OSS << "// EdgeListGraph\n";
-                OSS << "numEdges (): number {\n";
+                OSS << gNameNumEdges << " (): number {\n";
                 {
                     INDENT();
                     OSS << "let numEdges = 0;\n";
-                    OSS << "for (const v of this.vertices()) {\n";
+                    OSS << "for (const v of this." << gNameGetVertices << "()) {\n";
                     {
                         INDENT();
-                        OSS << "numEdges += this.outDegree(v);\n";
+                        OSS << "numEdges += this." << gNameOutDegree << "(v);\n";
                     }
                     OSS << "}\n";
                     OSS << "return numEdges;\n";
@@ -1778,35 +1788,38 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
         if (!s.mComponents.empty()) { // ComponentGraph
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// ComponentGraph\n";
-            OSS << "component<T extends " << name << "Component> (id: T, v: "
-                << vertexDescType << "): " << name << "ComponentType[T] {\n";
-            {
-                INDENT();
-                OSS << "switch (id) {\n";
-                for (const auto& c : s.mComponents) {
-                    auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
-                    OSS << "case " << name << "Component."
-                        << getTypescriptTagType(c.mName, scratch) << ":\n";
+            if (!gReduceCode) {
+                OSS << gNameGetComponent;
+                oss << "<T extends " << name << "Component> (id: T, v: "
+                    << vertexDescType << "): " << name << "ComponentType[T] {\n";
+                {
                     INDENT();
-                    if (s.isVector()) {
-                        OSS << "return this."
-                            << g.getMemberName(c.mMemberName, false)
-                            << "[v] as " << name << "ComponentType[T];\n";
-                    } else {
-                        OSS << "return v."
-                            << g.getMemberName(c.mMemberName, false)
-                            << " as " << name << "ComponentType[T];\n";
+                    OSS << "switch (id) {\n";
+                    for (const auto& c : s.mComponents) {
+                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        OSS << "case " << name << "Component."
+                            << getTypescriptTagType(c.mName, scratch) << ":\n";
+                        INDENT();
+                        if (s.isVector()) {
+                            OSS << "return this."
+                                << g.getMemberName(c.mMemberName, false)
+                                << "[v] as " << name << "ComponentType[T];\n";
+                        } else {
+                            OSS << "return v."
+                                << g.getMemberName(c.mMemberName, false)
+                                << " as " << name << "ComponentType[T];\n";
+                        }
                     }
-                }
-                OSS << "default:\n";
-                if (gThrow) {
-                    OSS << "    throw Error('component not found');\n";
-                } else {
-                    OSS << "    return undefined;\n";
+                    OSS << "default:\n";
+                    if (gThrow) {
+                        OSS << "    throw Error('component not found');\n";
+                    } else {
+                        OSS << "    return undefined;\n";
+                    }
+                    OSS << "}\n";
                 }
                 OSS << "}\n";
             }
-            OSS << "}\n";
 
             if (!gReduceCode) {
                 OSS << "componentMap<T extends " << name << "Component> (id: T): " << name << "ComponentPropertyMap[T] {\n";
@@ -1890,7 +1903,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             enumType += "Value";
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// PolymorphicGraph\n";
-            OSS << "holds (id: " << enumType << ", v: " << vertexDescType << "): boolean {\n";
+            OSS << gNameVertexHolds  << " (id: " << enumType << ", v: " << vertexDescType << "): boolean {\n";
             {
                 INDENT();
                 if (s.isVector()) {
@@ -1901,7 +1914,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             }
             OSS << "}\n";
 
-            OSS << "id (v: " << vertexDescType << "): " << enumType << " {\n";
+            OSS << gNameVertexTypeIndex << " (v: " << vertexDescType << "): " << enumType << " {\n";
             {
                 INDENT();
                 if (s.isVector()) {

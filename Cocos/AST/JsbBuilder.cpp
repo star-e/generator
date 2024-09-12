@@ -201,6 +201,9 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
                 }
                 OSS << "}\n";
             },
+            [&](const Enum& s) {
+                // noop
+            },
             [&](const auto&) {
                 Expects(false);
             });
@@ -284,6 +287,9 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
                     OSS << "return true;\n";
                 }
                 OSS << "}\n";
+            },
+            [&](const Enum& s) {
+                // noop
             },
             [&](const auto&) {
                 Expects(false);

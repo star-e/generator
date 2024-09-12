@@ -683,6 +683,20 @@ Comment::Comment(Comment const& rhs, const allocator_type& alloc)
 
 Comment::~Comment() noexcept = default;
 
+ImportedTypes::ImportedTypes(const allocator_type& alloc)
+    : mImportedTypes(alloc)
+    , mImported(alloc) {}
+
+ImportedTypes::ImportedTypes(ImportedTypes&& rhs, const allocator_type& alloc)
+    : mImportedTypes(std::move(rhs.mImportedTypes), alloc)
+    , mImported(std::move(rhs.mImported), alloc) {}
+
+ImportedTypes::ImportedTypes(ImportedTypes const& rhs, const allocator_type& alloc)
+    : mImportedTypes(rhs.mImportedTypes, alloc)
+    , mImported(rhs.mImported, alloc) {}
+
+ImportedTypes::~ImportedTypes() noexcept = default;
+
 SyntaxGraph::allocator_type SyntaxGraph::get_allocator() const noexcept {
     return allocator_type(mVertices.get_allocator().resource());
 }

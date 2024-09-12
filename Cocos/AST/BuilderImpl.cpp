@@ -1593,22 +1593,33 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         std::pmr::set<std::pmr::string> moduleImports(scratch);
         int count = 0;
         const bool bPublicFormat = !!(features & PublicFormat);
+        const bool bSerialization = (features & Features::Serialization);
         if (bPublicFormat) {
-            auto imported = g.getImportedTypes(modulePath, scratch);
+            auto imported = g.getImportedTypes(modulePath, bSerialization, scratch);
             PmrSet<std::pmr::string> defaultTypes(scratch);
             PmrMap<std::string, PmrSet<std::pmr::string>> importedNamespaces(scratch);
             for (const auto& m : imported) {
                 const auto targetID = locate(m.first, mModuleGraph);
                 const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
                 if (target.mTypescriptNamespace.empty()) {
-                    for (const auto& type : m.second) {
+                    for (const auto& type : m.second.mImported) {
+                        auto vertID = locate(type, g);
+                        auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+                        defaultTypes.emplace(tsName);
+                    }
+                    for (const auto& type : m.second.mImportedTypes) {
                         auto vertID = locate(type, g);
                         auto tsName = g.getTypescriptTypename(type, scratch, scratch);
                         defaultTypes.emplace(tsName);
                     }
                 } else {
                     auto& tsNs = importedNamespaces[target.mTypescriptNamespace];
-                    for (const auto& type : m.second) {
+                    for (const auto& type : m.second.mImported) {
+                        auto vertID = locate(type, g);
+                        auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+                        tsNs.emplace(tsName);
+                    }
+                    for (const auto& type : m.second.mImportedTypes) {
                         auto vertID = locate(type, g);
                         auto tsName = g.getTypescriptTypename(type, scratch, scratch);
                         tsNs.emplace(tsName);
@@ -1651,42 +1662,18 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 oss << "\n";
             }
         } else {
-            auto imported = g.getImportedTypes(modulePath, scratch);
+            auto imported = g.getImportedTypes(modulePath, bSerialization, scratch);
             for (const auto& m : imported) {
-                const auto targetID = locate(m.first, mModuleGraph);
-                const auto targetPath = get_path(targetID, mg, scratch);
-                const auto targetName = get(mg.names, mg, targetID);
-                const auto& target = get(mModuleGraph.modules, mModuleGraph, targetID);
-                moduleImports.emplace(targetPath);
-                OSS << "import { ";
-                int count = 0;
-                for (const auto& type : m.second) {
-                    if (count++)
-                        oss << ", ";
-                    auto vertID = locate(type, g);
-                    auto tsName = g.getTypescriptTypename(type, scratch, scratch);
-                    oss << tsName;
-                    if ((features & Features::Serialization) && (target.mFeatures & Features::Serialization)) {
-                        if (holds_tag<Struct_>(vertID, g)) {
-                            oss << ", save" << tsName;
-                            oss << ", load" << tsName;
-                        }
-                    }
-                    const auto& traits = get(g.traits, g, vertID);
-                    if (false && (traits.mFlags & EQUAL) && !(traits.mFlags & NO_EQUAL)) {
-                        oss << ", equal" << tsName;
-                    }
-                }
+                copyString(oss, space,
+                    outputImports_ts(
+                        *this, moduleInfo, features, true,
+                        m.first, m.second.mImportedTypes, moduleImports, scratch));
 
-                if ((features & TsPool) && (target.mFeatures & TsPool)) {
-                    oss << ", " << targetName << "ObjectPool";
-                }
+                copyString(oss, space,
+                    outputImports_ts(
+                        *this, moduleInfo, features, false,
+                        m.first, m.second.mImported, moduleImports, scratch));
 
-                oss << " } from '";
-
-                std::filesystem::path tsPath1 = typescriptFolder / target.mTypescriptFolder / target.mTypescriptFilePrefix;
-                oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
-                oss << "';\n";
             }
 
             if (!m.mTypescriptInclude.empty()) {

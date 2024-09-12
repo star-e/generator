@@ -225,6 +225,7 @@ template <> struct IsInstantiation<Instance> { static constexpr bool value = tru
 enum class ImplEnum : uint32_t;
 
 struct Comment;
+struct ImportedTypes;
 struct SyntaxGraph;
 
 enum Features : uint32_t;
