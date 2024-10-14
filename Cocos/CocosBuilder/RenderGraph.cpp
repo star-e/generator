@@ -157,8 +157,15 @@ bool hasSideEffects() const noexcept {
                 (uint32_t, mNumBackBuffers, 0)
                 (uint32_t, mGeneration, 0xFFFFFFFF)
                 (bool, mIsDepthStencil, false)
+                ([[nullable]] gfx::Texture*, mTexture, nullptr)
             );
+            builder.setMemberFlags(vertID, "mTexture", IMPL_DETAIL);
             CNTR(mSwapchain, mIsDepthStencil);
+            MEMBER_FUNCTIONS(R"(
+static gfx::Texture* getColorTexture(gfx::Swapchain* swapchain) noexcept;
+static gfx::Texture* getColorTexture(scene::RenderWindow* renderWindow) noexcept;
+static gfx::Texture* getDepthStencilTexture(gfx::Swapchain* swapchain) noexcept;
+)");
         }
 
         STRUCT(ResourceStates, .mFlags = POOL_OBJECT) {

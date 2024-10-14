@@ -399,6 +399,9 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
 
                 for (uint32_t i = 0; const auto& m : members) {
+                    if (m.mFlags & IMPL_DETAIL) {
+                        continue;
+                    }
                     bool bFound = false;
                     if (pCntr) {
                         for (const auto& id : pCntr->mIndices) {
@@ -442,7 +445,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         }
                     }
                     if (!bFound) {
-                        auto memberID = locate(m.mTypePath, g);
+                        const auto memberID = locate(m.mTypePath, g);
                         if (typescriptMemberNeedAssign(g, m, memberID)) {
                             OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
                                 << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
