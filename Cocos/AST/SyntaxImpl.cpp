@@ -1656,6 +1656,21 @@ bool SyntaxGraph::moduleHasType(std::string_view modulePath, std::string_view ty
     return false;
 }
 
+bool SyntaxGraph::moduleHasVariant(std::string_view modulePath) const {
+    const auto& g = *this;
+    bool hasVariant = false;
+    for (const auto& vertID : make_range(vertices(g))) {
+        const auto& path = get(g.modulePaths, g, vertID);
+        if (path == modulePath) {
+            if (holds_tag<Variant_>(vertID, g)) {
+                hasVariant = true;
+                break;
+            }
+        }
+    }
+    return hasVariant;
+}
+
 bool SyntaxGraph::moduleHasGraph(std::string_view modulePath) const {
     const auto& g = *this;
     bool hasGraph = false;

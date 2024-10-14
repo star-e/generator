@@ -1229,8 +1229,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         pmr_ostringstream oss(std::ios_base::out, scratch);
         std::pmr::string space(scratch);
         outputComment(oss);
-        OSS << "// clang-format off\n";
         OSS << "#pragma once\n";
+        OSS << "// clang-format off\n";
+        int count = 0;
         const auto included = getIndirectIncludes(moduleID, mg, scratch);
         for (const auto& require : m.mRequires) {
             auto moduleID = locate(mg.null_vertex(), require, mg);
@@ -1241,10 +1242,16 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             if (dep.mFilePrefix.ends_with(".h")) {
                 // TODO:
             } else {
+                if (count++ == 0) {
+                    OSS << "// IWYU pragma: begin_exports\n";
+                }
                 OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Fwd.h\"\n";
             }
         }
-        if (mBoost) {
+        if (count) {
+            OSS << "// IWYU pragma: end_exports\n";
+        }
+        if (mBoost && g.moduleHasVariant(modulePath)) {
             OSS << "#include \"cocos/base/std/variant.h\"\n";
         }
         copyString(oss, m.mFwdHeader);

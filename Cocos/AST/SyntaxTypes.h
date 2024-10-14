@@ -1339,6 +1339,7 @@ struct SyntaxGraph {
 
     bool moduleHasType(std::string_view modulePath, std::string_view typePath) const;
 
+    bool moduleHasVariant(std::string_view modulePath) const;
     bool moduleHasGraph(std::string_view modulePath) const;
     bool moduleHasGraphSerialization(std::string_view modulePath) const;
 
