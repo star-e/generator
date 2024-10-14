@@ -311,7 +311,7 @@ void recordCommandBuffer(
             MEMBER_FUNCTIONS(R"(
 static LayoutGraphData::vertex_descriptor getDefaultId(const LayoutGraphData &lg);
 
-inline void clear() noexcept {
+void clear() noexcept {
     probeMap.clear();
 }
 

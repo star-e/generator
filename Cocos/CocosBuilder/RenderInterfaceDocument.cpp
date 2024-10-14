@@ -243,10 +243,6 @@ For list of constants, please check CCCamera in cc-global.chunk.
 具体常量见cc-global.chunk中的CCCamera.
 @param camera @en The camera instance to be set. @zh 当前相机
 )");
-        METHOD_COMMENT(setBuiltinShadowMapConstants, R"(@en Same as setBuiltinDirectionalLightConstants
-@zh 同setBuiltinDirectionalLightConstants
-@param light @en The main light. @zh 主光
-)");
         METHOD_COMMENT(setBuiltinDirectionalLightConstants, R"(@en Set builtin directional light and shadow constants.
 For list of constants, please check CCShadow in cc-shadow.chunk and CCCamera in cc-global.chunk.
 @zh 设置内置方向光与阴影常量。

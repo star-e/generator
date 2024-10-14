@@ -226,12 +226,9 @@ virtual void setArrayBuffer(const ccstd::string& name, const ArrayBuffer* arrayB
 
 virtual void setBuffer(const ccstd::string& name, gfx::Buffer* buffer) = 0;
 virtual void setTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
-[[deprecated]] virtual void setReadWriteBuffer(const ccstd::string& name, gfx::Buffer* buffer) = 0;
-[[deprecated]] virtual void setReadWriteTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
 virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
 
 virtual void setBuiltinCameraConstants(const scene::Camera* camera) = 0;
-[[deprecated]] virtual void setBuiltinShadowMapConstants(const scene::DirectionalLight* light) = 0;
 virtual void setBuiltinDirectionalLightConstants(const scene::DirectionalLight* light, const scene::Camera* camera) = 0;
 virtual void setBuiltinSphereLightConstants(const scene::SphereLight* light, const scene::Camera* camera) = 0;
 virtual void setBuiltinSpotLightConstants(const scene::SpotLight* light, const scene::Camera* camera) = 0;
@@ -260,7 +257,6 @@ virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &colo
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[experimental]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
 )");
-// [[experimental]] virtual void addRenderPassTexture(const ccstd::string& name, const ccstd::string& slotName, [[optional]] gfx::Sampler* sampler = nullptr, uint32_t plane = 0) = 0;
         }
 
         INTERFACE(BasicRenderPassBuilder) {
@@ -473,8 +469,6 @@ virtual MultisampleRenderPassBuilder *addMultisampleRenderPass(uint32_t width, u
 virtual ComputePassBuilder *addComputePass(const ccstd::string& passName) = 0;
 [[beta]] virtual void addUploadPass(ccstd::vector<UploadPair>& uploadPairs) = 0;
 virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
-[[experimental]] virtual void addBuiltinGpuCullingPass(const scene::Camera* camera, const std::string& hzbName = "", [[optional]] const scene::Light* light = nullptr) = 0;
-[[experimental]] virtual void addBuiltinHzbGenerationPass(const std::string& sourceDepthStencilName, const std::string& targetHzbName) = 0;
 
 [[experimental]] virtual uint32_t addCustomBuffer(const ccstd::string& name, const gfx::BufferInfo& info, const std::string& type) = 0;
 [[experimental]] virtual uint32_t addCustomTexture(const ccstd::string& name, const gfx::TextureInfo& info, const std::string& type) = 0;
