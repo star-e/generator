@@ -501,7 +501,7 @@ std::pmr::string removeVertex(const CppGraphBuilder& builder,
                         OSS << "}\n";
                     }
 
-                    OSS << "impl::removeVectorVertex(const_cast<" << name << "&>(g), u, "
+                    OSS << "impl::removeVectorVertex(g, u, "
                         << name << "::directed_category{});\n";
 
                     if (!s.mComponents.empty()) {

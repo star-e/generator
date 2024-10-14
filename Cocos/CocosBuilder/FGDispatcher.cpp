@@ -39,7 +39,7 @@ void buildFGDispatcher(ModuleBuilder& builder, Features features) {
         .mJsbHeaders = R"(#include "cocos/bindings/auto/jsb_gfx_auto.h")",
         .mRequires = { "RenderGraph", "LayoutGraph", "Gfx" },
         .mHeader = R"(#include "gfx-base/GFXDef-common.h"
-#include <variant>)",
+)",
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);
