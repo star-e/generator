@@ -47,6 +47,10 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 )",
         .mTypescriptInclude = R"(import type { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
+
+function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
+    info.bindings.length = 0;
+}
 )"
 // import { equalObjectArray, equalValueArray, equalObjectMap, equalValueMap } from './utils';
     ) {

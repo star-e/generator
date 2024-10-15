@@ -51,8 +51,23 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 #include "cocos/core/assets/Material.h"
 )",
-//        .mTypescriptInclude = R"(import { equalObjectArray, equalValueArray, equalObjectMap, equalValueMap } from './utils';
-//)",
+        .mTypescriptInclude = R"(
+function resetColor (v: Color): void {
+    v.x = 0;
+    v.y = 0;
+    v.z = 0;
+    v.w = 0;
+}
+
+function resetViewport (v: Viewport): void {
+    v.left = 0;
+    v.top = 0;
+    v.width = 0;
+    v.height = 0;
+    v.minDepth = 0;
+    v.maxDepth = 1;
+}
+)",
     ) {
         NAMESPACE_BEG(cc);
         NAMESPACE_BEG(render);

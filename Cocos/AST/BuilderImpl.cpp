@@ -1682,16 +1682,15 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                         m.first, m.second.mImported, moduleImports, scratch));
 
             }
-
-            if (!m.mTypescriptInclude.empty()) {
-                copyString(oss, space, m.mTypescriptInclude);
-                ++count;
-            }
             if (features & TsPool) {
                 OSS << "import { RecyclePool } from '";
                 std::filesystem::path tsPath1 = typescriptFolder / "cocos/core" / "memop";
                 oss << getRelativePath(tsPath.generic_string(), tsPath1.generic_string(), scratch);
                 oss << "';\n";
+                ++count;
+            }
+            if (!m.mTypescriptInclude.empty()) {
+                copyString(oss, space, m.mTypescriptInclude);
                 ++count;
             }
             if (count || !imported.empty())

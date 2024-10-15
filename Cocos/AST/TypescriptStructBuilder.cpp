@@ -421,7 +421,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                                     OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                                 } else {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "(";
+                                    const auto name = extractName(m.mTypePath);
+                                    int count = 0;
+                                    if (memberTraits.mImport) {
+                                        OSS << "reset" << name << "(this." << g.getMemberName(m.mMemberName, m.mPublic);
+                                        count = 1;
+                                    } else {
+                                        OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "(";
+                                    }
                                     if (!sResetHasDefaultParameters) {
                                         // get cntr
                                         const Constructor* pCntr = nullptr;
@@ -434,7 +441,6 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                             }
                                         }
                                         if (pStruct && pCntr) {
-                                            int count = 0;
                                             outputConstructionParams(oss, space, count, builder, false,
                                                 g, pStruct->mMembers, *pCntr, true, true, bPublicFormat, true, scratch);
                                         }
@@ -458,7 +464,13 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                             OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
                         } else {
-                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "();\n";
+                            const auto& memberTraits = get(g.traits, g, memberID);
+                            if (memberTraits.mImport) {
+                                std::string_view name = extractName(m.mTypePath);
+                                OSS << "reset" << name << "(this." << g.getMemberName(m.mMemberName, m.mPublic) << ");\n";
+                            } else {
+                                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "();\n";
+                            }
                         }
                     }
                     ++i;
