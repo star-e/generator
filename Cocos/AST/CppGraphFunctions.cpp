@@ -2701,8 +2701,67 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
             }
             OSS << "}\n";
         };
-        generateGetValue(false);
-        generateGetValue(true);
+
+        if (false) {
+            generateGetValue(false);
+            generateGetValue(true);
+        }
+
+        auto outputVisit2 = [&](bool bConst) {
+            std::string_view ns = mStruct.mCurrentNamespace;
+            oss << "\n";
+            OSS << "template <class... Ts>\n";
+            OSS << "auto visitObject(" << name << "::vertex_descriptor v, ";
+            if (bConst) {
+                oss << "const ";
+            }
+            oss << name << "&g, Ts&&... args) {\n";
+            {
+                INDENT();
+                OSS << "using vertex_descriptor = " << name << "::vertex_descriptor;\n";
+
+                OSS << "auto visitor = Overloaded{ std::forward<Ts>(args)... };\n";
+                Expects(s.isVector());
+                if (bConst) {
+                    OSS << "const auto& var = g._vertices[v].handle;\n";
+                } else {
+                    OSS << "auto& var = g._vertices[v].handle;\n";
+                }
+                OSS << "switch (var.index()) {\n";
+                {
+                    int count = 0;
+                    for (const auto& c : s.mPolymorphic.mConcepts) {
+                        OSS << "case " << count << ":\n";
+                        if (c.isIntrusive()) {
+                            OSS << "    return visitor("
+                                << "ccstd::get<"
+                                << handleElemType(c, ns, true) << ">(var)"
+                                << ".value);\n";
+                        } else {
+                            if (s.isVector()) {
+                                OSS << "    return visitor(g." << g.getMemberName(c.mMemberName, true) << "["
+                                    << "ccstd::get<"
+                                    << handleElemType(c, ns, true) << ">(var)"
+                                    << ".value]);\n";
+                            } else {
+                                OSS << "    return visitor(*";
+                                oss << "ccstd::get<"
+                                    << handleElemType(c, ns, true) << ">(var)";
+                                oss << ".value);\n";
+                            }
+                        }
+                        ++count;
+                    }
+                    OSS << "default:\n";
+                    OSS << "    std::terminate();\n";
+                }
+                OSS << "}\n";
+            }
+            OSS << "}\n";
+        };
+
+        outputVisit2(true);
+        outputVisit2(false);
 
         auto generateHold = [&](bool bTag) {
             oss << "\n";
