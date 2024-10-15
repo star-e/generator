@@ -840,6 +840,9 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) co
                     const auto& memberID = locate(member.mTypePath, g);
                     if (memberID == vertID)
                         continue;
+                    if (member.mPointer || member.mReference) {
+                        continue;
+                    }
                     if (hasType(memberID, typeID))
                         return true;
                 }
@@ -864,6 +867,9 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) co
                     const auto& memberID = locate(member.mTypePath, g);
                     if (memberID == vertID)
                         continue;
+                    if (member.mPointer || member.mReference) {
+                        continue;
+                    }
                     if (hasType(memberID, typeID))
                         return true;
                 }
@@ -872,6 +878,10 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) co
             [&](const Instance& s) {
                 for (const auto& paramType : s.mParameters) {
                     const auto& paramID = locate(paramType, g);
+                    if (paramID == g.null_vertex()) {
+                        // TODO(hyde): handle paramType has *
+                        continue;
+                    }
                     if (hasType(paramID, typeID))
                         return true;
                 }
