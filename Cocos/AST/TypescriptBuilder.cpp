@@ -269,13 +269,11 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                             } else if (memberTraits.mStructInterface && sEnableMake) {
                                 OSS << memberName << ": make" << memberType << "(),\n";
                             } else {
-                                if (g.isTypescriptValueType(memberID)) {
-                                    OSS << memberName << ": "
-                                        << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ",\n";
-                                } else if (m.mNullable) {
+                                if (m.mNullable) {
                                     OSS << memberName << ": null,\n";
                                 } else {
-                                    Expects(false);
+                                    OSS << memberName << ": "
+                                        << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ",\n";
                                 }
                             }
                         }

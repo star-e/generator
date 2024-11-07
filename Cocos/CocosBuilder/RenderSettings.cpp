@@ -65,10 +65,18 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (bool, mEnabled, false)
                 ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
-                (float, mFocusDistance, 0)
-                (float, mFocusRange, 0)
-                (float, mBokehRadius, 1)
+                (float, mMinRange, 0)
+                (float, mMaxRange, 50)
+                (float, mBlurRadius, 1)
+                (float, mIntensity, 1)
+                (mutable Vec3, mFocusPos, _)
+
+                //(float, mFocusDistance, 0)
+                //(float, mFocusRange, 0)
+                //(float, mBokehRadius, 1)
             );
+
+            TS_INIT(mFocusPos, new Vec3(0, 0, 0));
         }
 
         STRUCT(Bloom, .mStructInterface = true) {

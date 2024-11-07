@@ -619,9 +619,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
             oss << "private ";
         }
         bool bTypscriptPointer = g.isTypescriptPointer(memberID);
-        if (m.mMutable) {
-            oss << commentBegin << "mutable" << commentEnd << " ";
-        } else if (!m.mPointer && !bTypscriptPointer && !m.mOptional && !m.mNullable && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
+        if (!m.mMutable && !m.mPointer && !bTypscriptPointer && !m.mOptional && !m.mNullable && (m.mReference || m.mConst || !g.isTypescriptValueType(memberID))) {
             oss << "readonly ";
         } else if (bTypscriptPointer) {
             oss << commentBegin << "refcount" << commentEnd << " ";

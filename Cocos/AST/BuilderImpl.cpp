@@ -605,10 +605,10 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
                 boost::algorithm::replace_first(typeName, " const", "");
                 boost::algorithm::trim(typeName);
             }
-        } else {
-            if (bMutable) {
-                m.mMutable = true;
-            }
+        }
+
+        if (bMutable) {
+            m.mMutable = true;
         }
 
         auto vertID = g.lookupType(mCurrentScope, typeName, scratch);
