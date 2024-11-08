@@ -475,6 +475,34 @@ virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 )");
         }
 
+        INTERFACE(PipelinePassBuilder) {
+            PUBLIC_METHODS(R"(
+virtual uint32_t getConfigOrder() const = 0;
+virtual uint32_t getRenderOrder() const = 0;
+)");
+            TS_FUNCTIONS(R"(resetCamera? (cameraConfigs: { [name: string]: any }): void;
+configCamera? (
+    camera: Readonly<Camera>,
+    pplConfigs: { readonly [name: string]: any },
+    cameraConfigs: { [name: string]: any }): void;
+windowResize? (
+    ppl: BasicPipeline,
+    pplConfigs: { readonly [name: string]: any },
+    cameraConfigs: { readonly [name: string]: any },
+    window: RenderWindow,
+    camera: Camera,
+    width: number,
+    height: number): void;
+setup? (
+    ppl: BasicPipeline,
+    pplConfigs: { readonly [name: string]: any },
+    cameraConfigs: { readonly [name: string]: any },
+    camera: Camera,
+    context: { [name: string]: any },
+    prevRenderPass?: BasicRenderPassBuilder): BasicRenderPassBuilder | undefined;
+)");
+        }
+
         INTERFACE(PipelineBuilder) {
             PUBLIC_METHODS(R"(
 [[?]] virtual void windowResize(BasicPipeline* pipeline, scene::RenderWindow* window, scene::Camera* camera, uint32_t width, uint32_t height) = 0;
