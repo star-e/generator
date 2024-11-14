@@ -61,23 +61,23 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(DepthOfField, .mStructInterface = true) {
-            PUBLIC(
-                (bool, mEnabled, false)
-                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
-                (float, mMinRange, 0)
-                (float, mMaxRange, 50)
-                (float, mBlurRadius, 1)
-                (float, mIntensity, 1)
-                (mutable Vec3, mFocusPos, _)
+        //STRUCT(DepthOfField, .mStructInterface = true) {
+        //    PUBLIC(
+        //        (bool, mEnabled, false)
+        //        ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
+        //        (float, mMinRange, 0)
+        //        (float, mMaxRange, 50)
+        //        (float, mBlurRadius, 1)
+        //        (float, mIntensity, 1)
+        //        (mutable Vec3, mFocusPos, _)
 
-                //(float, mFocusDistance, 0)
-                //(float, mFocusRange, 0)
-                //(float, mBokehRadius, 1)
-            );
+        //        //(float, mFocusDistance, 0)
+        //        //(float, mFocusRange, 0)
+        //        //(float, mBokehRadius, 1)
+        //    );
 
-            TS_INIT(mFocusPos, new Vec3(0, 0, 0));
-        }
+        //    TS_INIT(mFocusPos, new Vec3(0, 0, 0));
+        //}
 
         STRUCT(Bloom, .mStructInterface = true) {
             PUBLIC(
@@ -135,7 +135,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
                 //(HBAO, mHBAO, _)
                 (bool, mEnableShadingScale, false)
                 (float, mShadingScale, 0.5)
-                (DepthOfField, mDepthOfField, _)
+                //(DepthOfField, mDepthOfField, _)
                 (Bloom, mBloom, _)
                 (ToneMapping, mToneMapping, _)
                 (ColorGrading, mColorGrading, _)

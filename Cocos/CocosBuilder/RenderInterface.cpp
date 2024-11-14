@@ -480,8 +480,7 @@ virtual void addMovePass(const ccstd::vector<MovePair>& movePairs) = 0;
 virtual uint32_t getConfigOrder() const = 0;
 virtual uint32_t getRenderOrder() const = 0;
 )");
-            TS_FUNCTIONS(R"(resetCamera? (cameraConfigs: { [name: string]: any }): void;
-configCamera? (
+            TS_FUNCTIONS(R"(configCamera? (
     camera: Readonly<Camera>,
     pplConfigs: { readonly [name: string]: any },
     cameraConfigs: { [name: string]: any }): void;
