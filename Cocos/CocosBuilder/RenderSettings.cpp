@@ -50,16 +50,16 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(HBAO, .mStructInterface = true) {
-            PUBLIC(
-                (bool, mEnabled, false)
-                (float, mRadiusScale, 1)
-                (float, mAngleBiasDegree, 10)
-                (float, mBlurSharpness, 3)
-                (float, mAoSaturation, 1)
-                (bool, mNeedBlur, false)
-            );
-        }
+        //STRUCT(HBAO, .mStructInterface = true) {
+        //    PUBLIC(
+        //        (bool, mEnabled, false)
+        //        (float, mRadiusScale, 1)
+        //        (float, mAngleBiasDegree, 10)
+        //        (float, mBlurSharpness, 3)
+        //        (float, mAoSaturation, 1)
+        //        (bool, mNeedBlur, false)
+        //    );
+        //}
 
         //STRUCT(DepthOfField, .mStructInterface = true) {
         //    PUBLIC(
@@ -79,17 +79,17 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         //    TS_INIT(mFocusPos, new Vec3(0, 0, 0));
         //}
 
-        STRUCT(Bloom, .mStructInterface = true) {
-            PUBLIC(
-                (bool, mEnabled, false)
-                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
-                (bool, mEnableAlphaMask, false)
-                //(bool, mUseHdrIlluminance, false)
-                (uint32_t, mIterations, 3)
-                (float, mThreshold, 0.8)
-                (float, mIntensity, 2.3)
-            );
-        }
+        //STRUCT(Bloom, .mStructInterface = true) {
+        //    PUBLIC(
+        //        (bool, mEnabled, false)
+        //        ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
+        //        (bool, mEnableAlphaMask, false)
+        //        //(bool, mUseHdrIlluminance, false)
+        //        (uint32_t, mIterations, 3)
+        //        (float, mThreshold, 0.8)
+        //        (float, mIntensity, 2.3)
+        //    );
+        //}
 
         STRUCT(ColorGrading, .mStructInterface = true) {
             PUBLIC(
@@ -100,20 +100,20 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             );
         }
 
-        STRUCT(FSR, .mStructInterface = true) {
-            PUBLIC(
-                (bool, mEnabled, false)
-                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
-                (float, mSharpness, 0.8)
-            );
-        }
+        //STRUCT(FSR, .mStructInterface = true) {
+        //    PUBLIC(
+        //        (bool, mEnabled, false)
+        //        ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
+        //        (float, mSharpness, 0.8)
+        //    );
+        //}
 
-        STRUCT(FXAA, .mStructInterface = true) {
-            PUBLIC(
-                (bool, mEnabled, false)
-                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
-            );
-        }
+        //STRUCT(FXAA, .mStructInterface = true) {
+        //    PUBLIC(
+        //        (bool, mEnabled, false)
+        //        ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
+        //    );
+        //}
 
         STRUCT(ToneMapping, .mStructInterface = true) {
             PUBLIC(
@@ -136,11 +136,11 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
                 (bool, mEnableShadingScale, false)
                 (float, mShadingScale, 0.5)
                 //(DepthOfField, mDepthOfField, _)
-                (Bloom, mBloom, _)
+                //(Bloom, mBloom, _)
                 (ToneMapping, mToneMapping, _)
                 (ColorGrading, mColorGrading, _)
-                (FSR, mFsr, _)
-                (FXAA, mFxaa, _)
+                //(FSR, mFsr, _)
+                //(FXAA, mFxaa, _)
                 //([[nullable]] IntrusivePtr<Material>, mCopyMaterial, _)
             );
         }
