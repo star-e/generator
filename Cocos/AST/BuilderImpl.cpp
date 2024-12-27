@@ -1826,7 +1826,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 }
                 oss << type;
             }
-            oss << " } from './" << m.mTypescriptFilePrefix << "'\n";
+            oss << " } from './" << m.mTypescriptFilePrefix << "';\n";
         }
 
         copyString(oss, space, oss2.str());
