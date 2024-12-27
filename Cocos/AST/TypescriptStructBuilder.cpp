@@ -409,25 +409,29 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                 bFound = true;
                                 auto memberID = locate(m.mTypePath, g);
                                 const auto& memberTraits = get(g.traits, g, memberID);
+                                auto memberName = g.getMemberName(m.mMemberName, m.mPublic);
+                                if (m.mOptional) {
+                                    memberName.append("?");
+                                }
                                 if (g.isTypescriptValueType(memberID) || m.mNullable || g.isTypescriptPointer(memberID)) {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
+                                    OSS << "this." << memberName
                                         << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
                                 } else if (g.isTypescriptTypedArray(memberID)) {
-                                    OSS << "// " << g.getMemberName(m.mMemberName, m.mPublic)
+                                    OSS << "// " << memberName
                                         << ": " << g.getTypescriptTypename(memberID, scratch, scratch)
                                         << " size unchanged\n";
                                 } else if (g.isTypescriptArray(memberID, scratch)) {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".length = 0;\n";
+                                    OSS << "this." << memberName << ".length = 0;\n";
                                 } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
-                                    OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
+                                    OSS << "this." << memberName << ".clear();\n";
                                 } else {
                                     const auto name = extractName(m.mTypePath);
                                     int count = 0;
                                     if (memberTraits.mImport) {
-                                        OSS << "reset" << name << "(this." << g.getMemberName(m.mMemberName, m.mPublic);
+                                        OSS << "reset" << name << "(this." << memberName;
                                         count = 1;
                                     } else {
-                                        OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "(";
+                                        OSS << "this." << memberName << "." << gNameReset << "(";
                                     }
                                     if (!sResetHasDefaultParameters) {
                                         // get cntr
@@ -452,24 +456,28 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                     }
                     if (!bFound) {
                         const auto memberID = locate(m.mTypePath, g);
+                        auto memberName = g.getMemberName(m.mMemberName, m.mPublic);
+                        if (m.mOptional) {
+                            memberName.append("?");
+                        }
                         if (typescriptMemberNeedAssign(g, m, memberID)) {
-                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic)
+                            OSS << "this." << memberName
                                 << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
                         } else if (g.isTypescriptTypedArray(memberID)) {
-                            OSS << "// " << g.getMemberName(m.mMemberName, m.mPublic)
+                            OSS << "// " << memberName
                                 << ": " << g.getTypescriptTypename(memberID, scratch, scratch)
                                 << " size unchanged\n";
                         } else if (g.isTypescriptArray(memberID, scratch)) {
-                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".length = 0;\n";
+                            OSS << "this." << memberName << ".length = 0;\n";
                         } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
-                            OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << ".clear();\n";
+                            OSS << "this." << memberName << ".clear();\n";
                         } else {
                             const auto& memberTraits = get(g.traits, g, memberID);
                             if (memberTraits.mImport) {
                                 std::string_view name = extractName(m.mTypePath);
-                                OSS << "reset" << name << "(this." << g.getMemberName(m.mMemberName, m.mPublic) << ");\n";
+                                OSS << "reset" << name << "(this." << memberName << ");\n";
                             } else {
-                                OSS << "this." << g.getMemberName(m.mMemberName, m.mPublic) << "." << gNameReset << "();\n";
+                                OSS << "this." << memberName << "." << gNameReset << "();\n";
                             }
                         }
                     }

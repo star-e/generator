@@ -80,6 +80,7 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
         STRUCT(DescriptorDB) {
             PUBLIC(
                 ((ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>), mBlocks, _)
+                ((ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorGroupBlock>), mGroupBlocks, _)
             );
         }
 
@@ -195,9 +196,48 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
             CNTR(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
         }
 
+        STRUCT(DescriptorGroupBlockData) {
+            PUBLIC(
+                (DescriptorTypeOrder, mType, DescriptorTypeOrder::UNIFORM_BUFFER)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+                (AccessType, mAccessType, AccessType::READ)
+                (ViewDimension, mViewDimension, ViewDimension::TEX2D)
+                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
+                (uint32_t, mOffset, 0)
+                (uint32_t, mCapacity, 0)
+                (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
+            );
+            TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            TS_INIT(mFormat, Format.UNKNOWN);
+            CNTR(mType, mVisibility, mAccessType, mViewDimension, mFormat, mCapacity);
+        }
+
+        STRUCT(DescriptorGroupLayoutData, .mFlags = NO_COPY) {
+            PUBLIC(
+                (uint32_t, mSlot, 0xFFFFFFFF)
+                (uint32_t, mCapacity, 0)
+                (uint32_t, mUniformBlockCapacity, 0)
+                (uint32_t, mSamplerTextureCapacity, 0)
+                (ccstd::pmr::vector<DescriptorGroupBlockData>, mDescriptorGroupBlocks, _)
+                ((PmrUnorderedMap<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
+                ((PmrFlatMap<NameLocalID, uint32_t>), mBindingMap, _)
+            );
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            CNTR(mSlot, mCapacity, mDescriptorGroupBlocks, mUniformBlocks, mBindingMap);
+        }
+
+        STRUCT(DescriptorGroupData, .mFlags = NO_COPY) {
+            PUBLIC(
+                (DescriptorGroupLayoutData, mDescriptorGroupLayoutData, _)
+            );
+            CNTR(mDescriptorGroupLayoutData);
+        }
+
         STRUCT(PipelineLayoutData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
+                ((ccstd::pmr::map<UpdateFrequency, DescriptorGroupData>), mDescriptorGroups, _)
             );
         }
 

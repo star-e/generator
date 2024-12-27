@@ -94,7 +94,24 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         ENUM_CLASS(ResourceDimension, .mFlags = TS_ENUM_OBJECT) {
             ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
         }
-        
+
+        ENUM_CLASS(ViewDimension, .mFlags = TS_ENUM_OBJECT) {
+            ENUMS(
+                UNKNOWN,
+                BUFFER,
+                TEX1D,
+                TEX1DARRAY,
+                TEX2D,
+                TEX2DARRAY,
+                TEX2DMS,
+                TEX2DMSARRAY,
+                TEX3D,
+                TEXCUBE,
+                TEXCUBEARRAY,
+                RAYTRACING_ACCELERATION_STRUCTURE
+            );
+        }
+
         FLAG_CLASS(ResourceFlags, .mFlags = TS_ENUM_OBJECT) {
             FLAGS(
                 (NONE, 0)
@@ -240,6 +257,31 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
             TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
             CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
+        }
+
+        STRUCT(DescriptorGroupBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
+            PUBLIC(
+                (UpdateFrequency, mUpdateFrequency, _)
+                (ParameterType, mParameterType, _)
+                (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+                (AccessType, mAccessType, AccessType::READ)
+                (ViewDimension, mViewDimension, ViewDimension::TEX2D)
+                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
+            );
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
+            TS_INIT(mFormat, Format.UNKNOWN);
+            CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility, mAccessType, mViewDimension, mFormat);
+        }
+
+        STRUCT(DescriptorGroupBlock) {
+            PUBLIC(
+                ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
+                ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
+                (uint32_t, mCapacity, 0)
+                (uint32_t, mCount, 0)
+            );
         }
 
         // RenderGraph
