@@ -134,14 +134,20 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
                 (ParameterType, mParameterType, _)
                 (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                (AccessType, mAccessType, AccessType::READ)
-                (ViewDimension, mViewDimension, ViewDimension::TEX2D)
+                (gfx::MemoryAccessBit, mAccessType, gfx::MemoryAccessBit::READ_ONLY)
+                (gfx::ViewDimension, mViewDimension, gfx::ViewDimension::UNKNOWN)
+                (gfx::SampleType, mSampleType, gfx::SampleType::FLOAT)
                 (gfx::Format, mFormat, gfx::Format::UNKNOWN)
             );
-            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
             TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+
+            TS_INIT(mAccessType, MemoryAccessBit.READ_ONLY);
+            TS_INIT(mViewDimension, ViewDimension.UNKNOWN);
+            TS_INIT(mSampleType, SampleType.FLOAT);
             TS_INIT(mFormat, Format.UNKNOWN);
-            CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility, mAccessType, mViewDimension, mFormat);
+
+            CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility, mAccessType, mViewDimension, mSampleType, mFormat);
         }
 
         STRUCT(DescriptorGroupBlock) {
@@ -175,7 +181,7 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
         STRUCT(DescriptorDB) {
             PUBLIC(
                 ((ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>), mBlocks, _)
-                //((ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorGroupBlock>), mGroupBlocks, _)
+                ((ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorGroupBlock>), mGroupBlocks, _)
             );
         }
 
@@ -260,10 +266,19 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (uint32_t, mOffset, 0)
                 (uint32_t, mCapacity, 0)
+                (gfx::MemoryAccessBit, mAccessType, gfx::MemoryAccessBit::READ_ONLY)
+                (gfx::ViewDimension, mViewDimension,gfx::ViewDimension::UNKNOWN)
+                (gfx::SampleType, mSampleType, gfx::SampleType::FLOAT)
+                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
                 (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
             );
             TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            TS_INIT(mAccessType, MemoryAccessBit.READ_ONLY);
+            TS_INIT(mViewDimension, ViewDimension.UNKNOWN);
+            TS_INIT(mSampleType, SampleType.FLOAT);
+            TS_INIT(mFormat, Format.UNKNOWN);
+            CNTR(mType, mVisibility, mCapacity, mAccessType, mViewDimension, mSampleType, mFormat);
             CNTR(mType, mVisibility, mCapacity);
         }
 
@@ -291,48 +306,50 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
             CNTR(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
         }
 
-        STRUCT(DescriptorGroupBlockData) {
-            PUBLIC(
-                (DescriptorTypeOrder, mType, DescriptorTypeOrder::UNIFORM_BUFFER)
-                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                (AccessType, mAccessType, AccessType::READ)
-                (ViewDimension, mViewDimension, ViewDimension::TEX2D)
-                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
-                (uint32_t, mOffset, 0)
-                (uint32_t, mCapacity, 0)
-                (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
-            );
-            TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);
-            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            TS_INIT(mFormat, Format.UNKNOWN);
-            CNTR(mType, mVisibility, mAccessType, mViewDimension, mFormat, mCapacity);
-        }
+        //STRUCT(DescriptorGroupBlockData) {
+        //    PUBLIC(
+        //        (DescriptorTypeOrder, mType, DescriptorTypeOrder::UNIFORM_BUFFER)
+        //        (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+        //        (AccessType, mAccessType, AccessType::READ)
+        //        (ViewDimension, mViewDimension, ViewDimension::TEX2D)
+        //        (gfx::SampleType, mSampleType, gfx::SampleType::FLOAT)
+        //        (gfx::Format, mFormat, gfx::Format::UNKNOWN)
+        //        (uint32_t, mOffset, 0)
+        //        (uint32_t, mCapacity, 0)
+        //        (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
+        //    );
+        //    TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);
+        //    TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+        //    TS_INIT(mFormat, Format.UNKNOWN);
+        //    TS_INIT(mSampleType, SampleType.FLOAT);
+        //    CNTR(mType, mVisibility, mAccessType, mViewDimension, mSampleType, mFormat, mCapacity);
+        //}
 
-        STRUCT(DescriptorGroupLayoutData, .mFlags = NO_COPY) {
-            PUBLIC(
-                (uint32_t, mSlot, 0xFFFFFFFF)
-                (uint32_t, mCapacity, 0)
-                (uint32_t, mUniformBlockCapacity, 0)
-                (uint32_t, mSamplerTextureCapacity, 0)
-                (ccstd::pmr::vector<DescriptorGroupBlockData>, mDescriptorGroupBlocks, _)
-                ((PmrUnorderedMap<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
-                ((PmrFlatMap<NameLocalID, uint32_t>), mBindingMap, _)
-            );
-            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            CNTR(mSlot, mCapacity, mDescriptorGroupBlocks, mUniformBlocks, mBindingMap);
-        }
+        //STRUCT(DescriptorGroupLayoutData, .mFlags = NO_COPY) {
+        //    PUBLIC(
+        //        (uint32_t, mSlot, 0xFFFFFFFF)
+        //        (uint32_t, mCapacity, 0)
+        //        (uint32_t, mUniformBlockCapacity, 0)
+        //        (uint32_t, mSamplerTextureCapacity, 0)
+        //        (ccstd::pmr::vector<DescriptorGroupBlockData>, mDescriptorGroupBlocks, _)
+        //        ((PmrUnorderedMap<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
+        //        ((PmrFlatMap<NameLocalID, uint32_t>), mBindingMap, _)
+        //    );
+        //    TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+        //    CNTR(mSlot, mCapacity, mDescriptorGroupBlocks, mUniformBlocks, mBindingMap);
+        //}
 
-        STRUCT(DescriptorGroupData, .mFlags = NO_COPY) {
-            PUBLIC(
-                (DescriptorGroupLayoutData, mDescriptorGroupLayoutData, _)
-            );
-            CNTR(mDescriptorGroupLayoutData);
-        }
+        //STRUCT(DescriptorGroupData, .mFlags = NO_COPY) {
+        //    PUBLIC(
+        //        (DescriptorGroupLayoutData, mDescriptorGroupLayoutData, _)
+        //    );
+        //    CNTR(mDescriptorGroupLayoutData);
+        //}
 
         STRUCT(PipelineLayoutData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
-                ((ccstd::pmr::map<UpdateFrequency, DescriptorGroupData>), mDescriptorGroups, _)
+                ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorGroups, _)
             );
         }
 

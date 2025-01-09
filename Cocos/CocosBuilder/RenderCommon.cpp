@@ -95,23 +95,6 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
         }
 
-        ENUM_CLASS(ViewDimension, .mFlags = TS_ENUM_OBJECT) {
-            ENUMS(
-                UNKNOWN,
-                BUFFER,
-                TEX1D,
-                TEX1DARRAY,
-                TEX2D,
-                TEX2DARRAY,
-                TEX2DMS,
-                TEX2DMSARRAY,
-                TEX3D,
-                TEXCUBE,
-                TEXCUBEARRAY,
-                RAYTRACING_ACCELERATION_STRUCTURE
-            );
-        }
-
         FLAG_CLASS(ResourceFlags, .mFlags = TS_ENUM_OBJECT) {
             FLAGS(
                 (NONE, 0)
@@ -172,6 +155,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         }
 
         ENUM_CLASS(AccessType, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(READ, READ_WRITE, WRITE);
         }
 
