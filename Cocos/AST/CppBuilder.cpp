@@ -855,7 +855,12 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 if (!e.mUnderlyingType.empty()) {
                     oss << " : " << e.mUnderlyingType;
                 }
-                oss << " {\n";
+                oss << " {";
+                if (e.mIsFlags) {
+                    oss << " // NOLINT(performance-enum-size)\n";
+                } else {
+                    oss << "\n";
+                }
                 if (!e.mIsFlags) {
                     size_t maxLength = 0;
                     for (const auto& v : e.mValues) {

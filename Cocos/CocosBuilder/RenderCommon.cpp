@@ -70,20 +70,24 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         NAMESPACE_BEG(render);
         
         ENUM_CLASS(UpdateFrequency, .mFlags = TS_NAME | TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(PER_INSTANCE, PER_BATCH, PER_PHASE, PER_PASS, COUNT);
         }
 
         ENUM_CLASS(ParameterType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(CONSTANTS, CBV, UAV, SRV, TABLE, SSV);
         }
 
         TAGS((_), RasterPass_, RasterSubpass_, ComputeSubpass_, Compute_, Resolve_, Copy_, Move_, Raytrace_);
 
         ENUM_CLASS(ResourceResidency, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(MANAGED, MEMORYLESS, PERSISTENT, EXTERNAL, BACKBUFFER);
         }
 
         ENUM_CLASS(QueueHint, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(NONE, OPAQUE, MASK, BLEND);
             builder.addEnumElement(vertID, "RENDER_OPAQUE", "OPAQUE", true);
             builder.addEnumElement(vertID, "RENDER_CUTOUT", "MASK", true);
@@ -91,6 +95,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         }
 
         ENUM_CLASS(ResourceDimension, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
         }
 
@@ -113,6 +118,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         TAGS((_), Buffer_, Texture_);
 
         ENUM_CLASS(TaskType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(SYNC, ASYNC);
         }
 
@@ -144,12 +150,13 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         }
 
         ENUM_CLASS(LightingMode) {
-            UNDERLYING_TYPE(uint32_t);
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(NONE, DEFAULT, CLUSTERED);
         }
 
         // RenderGraph
         ENUM_CLASS(AttachmentType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(RENDER_TARGET, DEPTH_STENCIL, SHADING_RATE);
         }
 
@@ -159,6 +166,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         }
 
         ENUM_CLASS(ClearValueType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(NONE, FLOAT_TYPE, INT_TYPE);
         }
 

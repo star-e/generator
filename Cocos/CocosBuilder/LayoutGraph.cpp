@@ -74,6 +74,7 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
         //}
 
         ENUM_CLASS(DescriptorTypeOrder, .mFlags = TS_NAME) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(
                 UNIFORM_BUFFER,
                 DYNAMIC_UNIFORM_BUFFER,
@@ -197,7 +198,7 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
         }
 
         ENUM_CLASS(RenderPassType) {
-            UNDERLYING_TYPE(uint32_t);
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(SINGLE_RENDER_PASS, RENDER_PASS, RENDER_SUBPASS);
         }
 

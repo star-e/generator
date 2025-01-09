@@ -455,6 +455,7 @@ gfx::Buffer* createFromCpuBuffer();
         }
         
         ENUM_CLASS(ResourceType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(STORAGE_BUFFER, STORAGE_IMAGE);
         }
 
