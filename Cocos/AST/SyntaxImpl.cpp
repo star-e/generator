@@ -827,7 +827,7 @@ bool SyntaxGraph::hasVirtualInheritance(vertex_descriptor vertID) const noexcept
     return hasVirtual;
 }
 
-bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID, bool hasCppImpl) const noexcept {
+bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept {
     if (vertID == typeID)
         return true;
 
@@ -843,13 +843,7 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID, bo
                     if (member.mPointer || member.mReference) {
                         continue;
                     }
-                    if (hasType(memberID, typeID, hasCppImpl)) {
-                        if (hasCppImpl) {
-                            if (g.isPmr(vertID)) {
-                                return true;
-                            }
-                            return false;
-                        }
+                    if (hasType(memberID, typeID)) {
                         return true;
                     }
                 }
@@ -860,14 +854,14 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID, bo
                     const auto& componentID = locate(component.mValuePath, g);
                     if (componentID == vertID)
                         continue;
-                    if (hasType(componentID, typeID, hasCppImpl))
+                    if (hasType(componentID, typeID))
                         return true;
                 }
                 for (const auto& c : s.mPolymorphic.mConcepts) {
                     const auto& objectID = locate(c.mValue, g);
                     if (objectID == vertID)
                         continue;
-                    if (hasType(objectID, typeID, hasCppImpl))
+                    if (hasType(objectID, typeID))
                         return true;
                 }
                 for (const auto& member : s.mMembers) {
@@ -877,7 +871,7 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID, bo
                     if (member.mPointer || member.mReference) {
                         continue;
                     }
-                    if (hasType(memberID, typeID, hasCppImpl))
+                    if (hasType(memberID, typeID))
                         return true;
                 }
                 return false;
@@ -889,7 +883,7 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID, bo
                         // TODO(hyde): handle paramType has *
                         continue;
                     }
-                    if (hasType(paramID, typeID, hasCppImpl))
+                    if (hasType(paramID, typeID))
                         return true;
                 }
                 return false;
@@ -1604,7 +1598,7 @@ bool SyntaxGraph::moduleHasMap(std::string_view modulePath, std::string_view map
 }
 
 bool SyntaxGraph::moduleHasContainer(
-    std::string_view modulePath, std::string_view typePath, bool hasCppImpl) const {
+    std::string_view modulePath, std::string_view typePath) const {
     const auto& g = *this;
 
     for (const auto& vertID : make_range(vertices(g))) {
@@ -1619,9 +1613,6 @@ bool SyntaxGraph::moduleHasContainer(
                             if (holds_tag<Instance_>(memberID, g)) {
                                 const auto& inst = get<Instance>(memberID, g);
                                 if (inst.mTemplate == typePath) {
-                                    if (hasCppImpl) {
-                                        return isPmr;
-                                    }
                                     return true;
                                 }
                             }
@@ -1634,9 +1625,6 @@ bool SyntaxGraph::moduleHasContainer(
                             if (holds_tag<Instance_>(componentID, g)) {
                                 const auto& inst = get<Instance>(componentID, g);
                                 if (inst.mTemplate == typePath) {
-                                    if (hasCppImpl) {
-                                        return isPmr;
-                                    }
                                     return true;
                                 }
                             }
@@ -1647,9 +1635,6 @@ bool SyntaxGraph::moduleHasContainer(
                             if (holds_tag<Instance_>(objectID, g)) {
                                 const auto& inst = get<Instance>(objectID, g);
                                 if (inst.mTemplate == typePath) {
-                                    if (hasCppImpl) {
-                                        return isPmr;
-                                    }
                                     return true;
                                 }
                             }
@@ -1660,9 +1645,6 @@ bool SyntaxGraph::moduleHasContainer(
                             if (holds_tag<Instance_>(memberID, g)) {
                                 const auto& inst = get<Instance>(memberID, g);
                                 if (inst.mTemplate == typePath) {
-                                    if (hasCppImpl) {
-                                        return isPmr;
-                                    }
                                     return true;
                                 }
                             }
@@ -1679,13 +1661,13 @@ bool SyntaxGraph::moduleHasContainer(
     return false;
 }
 
-bool SyntaxGraph::moduleHasType(std::string_view modulePath, std::string_view typePath, bool hasCppImpl) const {
+bool SyntaxGraph::moduleHasType(std::string_view modulePath, std::string_view typePath) const {
     const auto& g = *this;
     const auto typeID = locate(typePath, g);
     for (const auto& vertID : make_range(vertices(g))) {
         const auto& path = get(g.modulePaths, g, vertID);
         if (path == modulePath) {
-            if (hasType(vertID, typeID, hasCppImpl))
+            if (hasType(vertID, typeID))
                 return true;
         }
     }
