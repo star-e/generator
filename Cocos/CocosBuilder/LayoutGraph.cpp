@@ -41,7 +41,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "layout-graph",
         .mRequires = { "Gfx", "RenderCommon" },
-        .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
+        .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
+#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 #include "cocos/renderer/gfx-base/GFXPipelineLayout.h"
 )",

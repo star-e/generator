@@ -1288,7 +1288,7 @@ struct SyntaxGraph {
     bool hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept;
     bool hasHeader(vertex_descriptor vertID) const noexcept;
     bool hasVirtualInheritance(vertex_descriptor vertID) const noexcept;
-    bool hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept;
+    bool hasType(vertex_descriptor vertID, vertex_descriptor typeID, bool hasCppImpl) const noexcept;
     bool hasConsecutiveParameters(vertex_descriptor vertID, const Constructor& cntr) const noexcept;
     std::pmr::vector<BaseConstructor> getBaseConstructors(vertex_descriptor vertID) const;
 
@@ -1335,13 +1335,14 @@ struct SyntaxGraph {
 
     bool moduleHasMap(std::string_view modulePath, std::string_view mapPath) const;
 
-    bool moduleHasContainer(std::string_view modulePath, std::string_view typePath) const;
+    bool moduleHasContainer(std::string_view modulePath, std::string_view typePath, bool hasCppImpl = false) const;
 
-    bool moduleHasType(std::string_view modulePath, std::string_view typePath) const;
+    bool moduleHasType(std::string_view modulePath, std::string_view typePath, bool hasCppImpl) const;
 
     bool moduleHasVariant(std::string_view modulePath) const;
     bool moduleHasGraph(std::string_view modulePath) const;
     bool moduleHasGraphSerialization(std::string_view modulePath) const;
+    bool moduleHasPolymorphicGraph(std::string_view modulePath) const;
 
     bool moduleUsesHashCombine(std::string_view modulePath) const;
 

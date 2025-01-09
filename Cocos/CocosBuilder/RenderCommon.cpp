@@ -51,7 +51,6 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mTypescriptFilePrefix = "types",
         .mRequires = { "Gfx" },
         .mHeader = R"(#include "cocos/scene/Light.h"
-#include "cocos/base/std/container/map.h"
 
 namespace cc {
 

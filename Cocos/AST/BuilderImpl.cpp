@@ -1313,6 +1313,13 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             if (features & Features::Fwd) {
                 OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Fwd.h\"\n";
             }
+            if (g.moduleHasContainer(modulePath, "/cc/IntrusivePtr")) {
+                OSS << "#include \"cocos/base/Ptr.h\"\n";
+            }
+            if (g.moduleHasContainer(modulePath, "/uint32_t")
+                || g.moduleHasContainer(modulePath, "/int32_t")) {
+                OSS << "#include <cstdint>\n";
+            }
             const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
                 auto moduleID = locate(mg.null_vertex(), require, mg);
@@ -1372,7 +1379,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 || g.moduleHasContainer(modulePath, "/cc/PmrUnorderedStringMultiSet")) {
                 OSS << "#include \"cocos/renderer/pipeline/custom/details/Set.h\"\n";
             }
-            if (g.moduleHasType(modulePath, "/ccstd/pmr/string")) {
+            if (g.moduleHasType(modulePath, "/ccstd/pmr/string", false)) {
                 OSS << "#include \"cocos/base/std/container/string.h\"\n";
             }
             if (g.moduleHasContainer(modulePath, "/boost/container/pmr/list")) {
@@ -1404,6 +1411,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             std::pmr::string space(scratch);
             outputComment(oss);
             OSS << "// clang-format off\n";
+            if (g.moduleHasContainer(modulePath, "/cc/IntrusivePtr", true)) {
+                OSS << "#include \"cocos/base/Ptr.h\"\n";
+            }
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
             copyString(oss, generateTypes_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
@@ -1857,6 +1867,12 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             outputComment(oss);
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Serialization.h\"\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
+
+            const bool hasGraph = g.moduleHasGraphSerialization(modulePath);
+            if (hasGraph && g.moduleHasType(modulePath, "/ccstd/pmr/string", false)) {
+                OSS << "#include \"cocos/base/std/container/string.h\"\n";
+            }
+            OSS << "#include \"cocos/renderer/pipeline/custom/ArchiveTypes.h\"\n";
             const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
                 auto moduleID = locate(mg.null_vertex(), require, mg);
@@ -1865,14 +1881,27 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 const auto& dep = get(mg.modules, mg, moduleID);
                 auto ccDepFolder = std::string_view(dep.mFolder);
                 if (!dep.mFilePrefix.ends_with(".h")) {
+                    OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Types.h\"\n";
                     OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Serialization.h\"\n";
                 }
             }
-            if (features & Features::Graphs && g.moduleHasGraphSerialization(modulePath)) {
+            if ((features & Features::Graphs) && hasGraph) {
                 OSS << "#include \"" << m.mFolder << "/" << m.mFilePrefix << "Graphs.h\"\n";
+                if (g.moduleHasPolymorphicGraph(modulePath)) {
+                    OSS << "#include \"cocos/renderer/pipeline/custom/details/Overload.h\"\n";
+                }
                 OSS << "#include \"" << ccFolder << "/details/Range.h\"\n";
             }
             OSS << "#include \"" << ccFolder << "/details/SerializationUtils.h\"\n";
+
+            if (hasGraph) {
+                oss << "\n";
+                OSS << "#include <boost/property_map/property_map.hpp>\n";
+                OSS << "#include <limits>\n";
+                OSS << "#include <stdexcept>\n";
+                OSS << "#include <type_traits>\n";
+                OSS << "#include <utility>\n";
+            }
             copyString(oss, generateSerialization_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, false, scratch, scratch));
             updateFile(filename, reorderIncludes(oss.str(), scratch));
         }

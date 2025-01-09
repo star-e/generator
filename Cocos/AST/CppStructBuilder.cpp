@@ -1332,6 +1332,9 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
             const auto& m = s.mMembers.at(k);
             auto memberID = locate(m.mTypePath, g);
             const auto& memberTraits = get(g.traits, g, memberID);
+            if (g.isPmr(memberID) && !m.mPointer && !m.mReference) {
+                bNoexcept = false;
+            }
             if (m.mTypePath == "/std/pmr/string") {
                 bNoexcept = false;
                 oss << "std::string_view " << getParameterName(m.mMemberName, scratch);
