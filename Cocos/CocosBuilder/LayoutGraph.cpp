@@ -304,6 +304,13 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorGroups, _)
             );
+            TS_FUNCTIONS(R"(getSets (isWebGPU: boolean): Map<UpdateFrequency, DescriptorSetData> {
+    return isWebGPU ? this.descriptorGroups : this.descriptorSets;
+}
+getSet (frequency: UpdateFrequency, isWebGPU: boolean): DescriptorSetData | undefined {
+    return isWebGPU ? this.descriptorGroups.get(frequency) : this.descriptorSets.get(frequency);
+}
+)");
         }
 
         STRUCT(ShaderBindingData, .mFlags = NO_COPY) {
