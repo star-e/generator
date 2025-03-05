@@ -96,7 +96,7 @@ using namespace cc::render;
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "pipeline",
         .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData",
-            "Assets", "PassUtils", "Customization" },
+            "Assets", "PassUtils" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
 #include "cocos/core/ArrayBuffer.h"
 
@@ -521,6 +521,100 @@ virtual uint32_t getSubpassID(uint32_t passID, const ccstd::string& name) const 
 virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name) const = 0;
 )");
         }
+
+    ENUM_CLASS(DataType) {
+        UNDERLYING_TYPE(uint32_t);
+        builder.setEnumOutputAll(vertID, true);
+        ENUMS(
+            UNKNOWN,
+
+            DATA_TYPE,
+            STRING,
+            VOID_POINTER,
+            BOOL,
+
+            STRING_LIST,
+            DATA_TYPE_LIST,
+            PARAMETER_LIST,
+
+            FUNCTION_POINTER,
+            MEMORY_DELETER,
+            STATUS_CALLBACK,
+            FRAME_COMPLETION_CALLBACK,
+
+            LIBRARY,
+            DEVICE,
+            OBJECT,
+            ARRAY,
+            ARRAY1D,
+            ARRAY2D,
+            ARRAY3D,
+            CAMERA,
+            FRAME,
+            GEOMETRY,
+            GROUP,
+            INSTANCE,
+            LIGHT,
+            MATERIAL,
+            RENDERER,
+            SURFACE,
+            SAMPLER,
+            SPATIAL_FIELD,
+            VOLUME,
+            WORLD
+        );
+        const std::string_view dataTypes[] = {
+            "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64",
+            "FIXED8", "UFIXED8", "FIXED16", "UFIXED16", "FIXED32", "UFIXED32", "FIXED64", "UFIXED64",
+            "FLOAT16", "FLOAT32", "FLOAT64"
+        };
+        for (const auto& type : dataTypes) {
+            builder.addEnumElement(vertID, type, "");
+            builder.addEnumElement(vertID, std::string(type) + "_VEC2", "");
+            builder.addEnumElement(vertID, std::string(type) + "_VEC3", "");
+            builder.addEnumElement(vertID, std::string(type) + "_VEC4", "");
+        }
+
+        ENUMS2(
+            (UFIXED8_RGBA_SRGB, 2003)
+            (UFIXED8_RGB_SRGB, 2002)
+            (UFIXED8_RA_SRGB, 2001)
+            (UFIXED8_R_SRGB, 2000)
+        );
+
+        const std::string_view boxTypes[] = {
+            "INT32", "FLOAT32", "FLOAT64"
+        };
+        for (const auto& type : boxTypes) {
+            builder.addEnumElement(vertID, std::string(type) + "_BOX1", "");
+            builder.addEnumElement(vertID, std::string(type) + "_BOX2", "");
+            builder.addEnumElement(vertID, std::string(type) + "_BOX3", "");
+            builder.addEnumElement(vertID, std::string(type) + "_BOX4", "");
+        }
+
+        ENUMS(
+            UINT64_REGION1,
+            UINT64_REGION2,
+            UINT64_REGION3,
+            UINT64_REGION4,
+            FLOAT32_MAT2,
+            FLOAT32_MAT3,
+            FLOAT32_MAT4,
+            FLOAT32_MAT2x3,
+            FLOAT32_MAT3x4,
+            FLOAT32_QUAT_IJKW
+        );
+
+        SET_ENUM_VALUE(DATA_TYPE, 100);
+        SET_ENUM_VALUE(STRING_LIST, 150);
+        SET_ENUM_VALUE(FUNCTION_POINTER, 200);
+        SET_ENUM_VALUE(LIBRARY, 500);
+        SET_ENUM_VALUE(INT8, 1000);
+        SET_ENUM_VALUE(INT32_BOX1, 2004);
+        SET_ENUM_VALUE(FLOAT64_BOX1, 2208);
+        SET_ENUM_VALUE(UINT64_REGION1, 2104);
+        SET_ENUM_VALUE(FLOAT32_MAT2, 2012);
+    }
 
         CLASS(Factory, .mExport = false) {
             MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);

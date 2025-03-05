@@ -400,6 +400,13 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addFlag(std::string_view name, Tra
     return vertID;
 }
 
+void ModuleBuilder::setEnumOutputAll(SyntaxGraph::vertex_descriptor vertID, bool bOutputAll) {
+    auto& g = mSyntaxGraph;
+    Expects(holds_tag<Enum_>(vertID, g));
+    auto& e = get_by_tag<Enum_>(vertID, g);
+    e.mForceOutputAll = bOutputAll;
+}
+
 void ModuleBuilder::addEnumElement(SyntaxGraph::vertex_descriptor vertID,
     std::string_view name, std::string_view value, bool bAlias) {
     auto& g = mSyntaxGraph;
@@ -414,6 +421,24 @@ void ModuleBuilder::addEnumElement(SyntaxGraph::vertex_descriptor vertID,
     v.mValue = value;
     v.mAlias = bAlias;
     e.mValues.emplace_back(std::move(v));
+}
+
+void ModuleBuilder::setEnumElementValue(SyntaxGraph::vertex_descriptor vertID,
+    std::string_view name, std::string_view value) {
+    auto& g = mSyntaxGraph;
+    Expects(holds_tag<Enum_>(vertID, g));
+
+    if (value == "_")
+        value = {};
+
+    auto& e = get_by_tag<Enum_>(vertID, g);
+
+    for (auto& v : e.mValues) {
+        if (v.mName == name) {
+            v.mValue = value;
+            break;
+        }
+    }
 }
 
 void ModuleBuilder::setEnumUnderlyingType(SyntaxGraph::vertex_descriptor vertID,

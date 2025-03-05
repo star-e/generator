@@ -859,29 +859,57 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
                 if (e.mIsFlags) {
                     oss << " // NOLINT(performance-enum-size)\n";
                 } else {
-                    oss << "\n";
+                    if (e.mUnderlyingType == "uint32_t") {
+                        oss << " // NOLINT(performance-enum-size)\n";
+                    } else {
+                        oss << "\n";
+                    }
                 }
                 if (!e.mIsFlags) {
                     size_t maxLength = 0;
                     for (const auto& v : e.mValues) {
                         maxLength = std::max(maxLength, v.mName.size());
                     }
+                    uint32_t value = 0;
                     for (const auto& v : e.mValues) {
                         if (!v.mComment.empty()) {
                             INDENT();
                             outputEnumComment(oss, space, g, vertID, v);
                         }
                         if (v.mValue.empty()) {
-                            oss << "    " << v.mName << ",";
+                            if (e.mForceOutputAll) {
+                                OSS << "    " << v.mName << " = " << value << ",";
+                                ++value;
+                            } else {
+                                OSS << "    " << v.mName << ",";
+                            }
                         } else {
-                            oss << "    " << v.mName << " = "
-                                << v.mValue << ",";
+                            oss << "    " << v.mName << " = " << v.mValue << ",";
+                            if (e.mForceOutputAll) {
+                                value = std::stoi(std::string(v.mValue)) + 1;
+                            }
                         }
-                        if (false && sFormat) {
-                            oss << std::pmr::string(maxLength - v.mName.size(), ' ') << " // NOLINT\n";
-                        } else {
-                            oss << "\n";
+                        int count = 0;
+                        if (boost::algorithm::contains(v.mName, "_") && containsLowercase(v.mName)) {
+                            if (count++ == 0) {
+                                oss << " // NOLINT(";
+                            } else {
+                                oss << ", ";
+                            }
+                            oss << "readability-identifier-naming";
                         }
+                        if (v.mName.ends_with("_l")) {
+                            if (count++ == 0) {
+                                oss << " // NOLINT(";
+                            } else {
+                                oss << ", ";
+                            }
+                            oss << "misc-confusable-identifiers";
+                        }
+                        if (count) {
+                            oss << ")";
+                        }
+                        oss << "\n";
                     }
                 } else {
                     size_t maxLength = 0;

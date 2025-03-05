@@ -57,6 +57,11 @@ THE SOFTWARE.
 #define ENUM_MEMBER(r, _, i, MEMBER)       \
     builder.addEnumElement(vertID, BOOST_PP_STRINGIZE(MEMBER), "");
 
+#define ENUM_MEMBER2(r, _, i, MEMBER) \
+    builder.addEnumElement(vertID, \
+        BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 0, MEMBER)), \
+        BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2, 1, MEMBER)));
+
 #define ENUM(NAME, ...) \
     if (auto vertID = builder.addEnum(BOOST_PP_STRINGIZE(NAME), Traits{ __VA_ARGS__ }); true)
 
@@ -65,6 +70,12 @@ THE SOFTWARE.
 
 #define ENUMS(...) \
     BOOST_PP_SEQ_FOR_EACH_I(ENUM_MEMBER, _, BOOST_PP_TUPLE_TO_SEQ((__VA_ARGS__)))
+
+#define ENUMS2(SEQ) \
+    BOOST_PP_SEQ_FOR_EACH_I(ENUM_MEMBER2, _, BOOST_PP_VARIADIC_SEQ_TO_SEQ(SEQ))
+
+#define SET_ENUM_VALUE(NAME, VALUE) \
+builder.setEnumElementValue(vertID, BOOST_PP_STRINGIZE(NAME), BOOST_PP_STRINGIZE(VALUE))
 
 #define UNDERLYING_TYPE(NAME) \
     builder.setEnumUnderlyingType(vertID, BOOST_PP_STRINGIZE(NAME))

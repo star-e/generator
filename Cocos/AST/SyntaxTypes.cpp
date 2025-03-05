@@ -167,6 +167,7 @@ Enum::Enum(Enum&& rhs, const allocator_type& alloc)
     : mIsFlags(std::move(rhs.mIsFlags))
     , mEnumOperator(std::move(rhs.mEnumOperator))
     , mHasName(std::move(rhs.mHasName))
+    , mForceOutputAll(std::move(rhs.mForceOutputAll))
     , mUnderlyingType(std::move(rhs.mUnderlyingType), alloc)
     , mValues(std::move(rhs.mValues), alloc) {}
 
@@ -174,6 +175,7 @@ Enum::Enum(Enum const& rhs, const allocator_type& alloc)
     : mIsFlags(rhs.mIsFlags)
     , mEnumOperator(rhs.mEnumOperator)
     , mHasName(rhs.mHasName)
+    , mForceOutputAll(rhs.mForceOutputAll)
     , mUnderlyingType(rhs.mUnderlyingType, alloc)
     , mValues(rhs.mValues, alloc) {}
 

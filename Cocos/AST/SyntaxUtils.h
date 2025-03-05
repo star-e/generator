@@ -113,4 +113,9 @@ std::pmr::string getRelativePath(std::string_view current, std::string_view targ
 
 void removeCustomAttributes(std::pmr::string& str, std::string_view apiDLL);
 
+
+inline bool containsLowercase(std::string_view str) noexcept {
+    return std::any_of(str.begin(), str.end(), ::islower);
+}
+
 }

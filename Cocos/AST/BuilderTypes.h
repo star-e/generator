@@ -421,8 +421,11 @@ struct ModuleBuilder {
     SyntaxGraph::vertex_descriptor addValue(std::string_view name);
     SyntaxGraph::vertex_descriptor addEnum(std::string_view name, Traits traits = {});
     SyntaxGraph::vertex_descriptor addFlag(std::string_view name, Traits traits = {});
+    void setEnumOutputAll(SyntaxGraph::vertex_descriptor vertID, bool bOutputAll);
     void addEnumElement(SyntaxGraph::vertex_descriptor vertID,
         std::string_view name, std::string_view value, bool bAlias = false);
+    void setEnumElementValue(SyntaxGraph::vertex_descriptor vertID,
+        std::string_view name, std::string_view value);
     void setEnumUnderlyingType(SyntaxGraph::vertex_descriptor vertID, std::string_view type);
     void setEnumMemberExport(SyntaxGraph::vertex_descriptor vertID, std::string_view name, bool bExport);
     SyntaxGraph::vertex_descriptor addTag(std::string_view name, bool bEntity = true,

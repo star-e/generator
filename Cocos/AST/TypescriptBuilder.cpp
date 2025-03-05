@@ -143,6 +143,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             if (!comment.mComment.empty()) {
                 outputComment(oss, space, comment.mComment);
             }
+
             OSS << "export ";
             if (!(traits.mFlags & TS_ENUM_OBJECT)) {
                 oss << "const ";
@@ -150,6 +151,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             oss << "enum " << name << " {\n";
             {
                 INDENT();
+                uint32_t value = 0;
                 for (const auto& v : e.mValues) {
                     if (!v.mExport) {
                         continue;
@@ -158,8 +160,19 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                         outputEnumComment(oss, space, g, vertID, v);
                     }
                     OSS << v.mName;
-                    if (!v.mValue.empty()) {
+
+                    if (v.mValue.empty()) {
+                        if (e.mForceOutputAll) {
+                            oss << " = " << value;
+                            ++value;
+                        } else {
+                            // noop
+                        }
+                    } else {
                         oss << " = " << v.mValue;
+                        if (e.mForceOutputAll) {
+                            value = std::stoi(std::string(v.mValue)) + 1;
+                        }
                     }
                     oss << ",\n";
                 }

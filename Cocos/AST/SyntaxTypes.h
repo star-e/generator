@@ -296,6 +296,7 @@ struct Enum {
     bool mIsFlags = false;
     bool mEnumOperator = true;
     bool mHasName = true;
+    bool mForceOutputAll = false;
     std::pmr::string mUnderlyingType;
     std::pmr::vector<EnumValue> mValues;
 };
