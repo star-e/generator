@@ -1785,6 +1785,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         pmr_ostringstream oss2(std::ios_base::out, scratch);
         outputComment(oss2);
         oss2 << "/* eslint-disable max-len */\n";
+        if (!m.mTypescriptHeader.empty()) {
+            copyString(oss2, space, m.mTypescriptHeader);
+        }
         if (graphImports.empty()) {
             if (g.moduleHasGraph(modulePath)) {
                 oss2 << "import * as impl from './graph';\n";

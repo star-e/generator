@@ -1536,6 +1536,7 @@ struct ModuleInfo {
     std::vector<std::string> mRequires;
     std::string mFwdHeader;
     std::string mHeader;
+    std::string mTypescriptHeader;
     std::string mTypescriptInclude;
     std::string mTail;
 };

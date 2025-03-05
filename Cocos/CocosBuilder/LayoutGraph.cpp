@@ -46,6 +46,8 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 #include "cocos/renderer/gfx-base/GFXPipelineLayout.h"
 )",
+        .mTypescriptHeader = R"(import { HTML5 } from 'internal:constants';
+)",
         .mTypescriptInclude = R"(import type { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
 
@@ -72,6 +74,17 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
         //        SUBPASS_INPUT
         //    );
         //}
+
+        ENUM_CLASS(LayoutType) {
+            UNDERLYING_TYPE(uint8_t);
+            ENUMS(VULKAN, WEBGPU);
+        }
+
+        STRUCT(Layout, .mFlags = NO_SERIALIZATION | SKIP_RESET) {
+            TS_FUNCTIONS(R"(static type = LayoutType.VULKAN;
+static isWebGPU = false;
+)");
+        }
 
         ENUM_CLASS(DescriptorTypeOrder, .mFlags = TS_NAME) {
             UNDERLYING_TYPE(uint8_t);
@@ -304,11 +317,11 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorGroups, _)
             );
-            TS_FUNCTIONS(R"(getSets (isWebGPU: boolean): Map<UpdateFrequency, DescriptorSetData> {
-    return isWebGPU ? this.descriptorGroups : this.descriptorSets;
+            TS_FUNCTIONS(R"(getSets (): Map<UpdateFrequency, DescriptorSetData> {
+    return HTML5 && Layout.isWebGPU ? this.descriptorGroups : this.descriptorSets;
 }
-getSet (frequency: UpdateFrequency, isWebGPU: boolean): DescriptorSetData | undefined {
-    return isWebGPU ? this.descriptorGroups.get(frequency) : this.descriptorSets.get(frequency);
+getSet (frequency: UpdateFrequency): DescriptorSetData | undefined {
+    return HTML5 && Layout.isWebGPU ? this.descriptorGroups.get(frequency) : this.descriptorSets.get(frequency);
 }
 )");
         }
