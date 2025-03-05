@@ -616,6 +616,18 @@ virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name)
         SET_ENUM_VALUE(FLOAT32_MAT2, 2012);
     }
 
+    STRUCT(Parameter) {
+        PUBLIC(
+            (ccstd::string, mName, _)
+            (DataType, mType, DataType::UNKNOWN)
+        );
+    }
+
+    ENUM_CLASS(WaitMask) {
+        UNDERLYING_TYPE(uint32_t);
+        ENUMS(NO_WAIT, WAIT);
+    }
+
         CLASS(Factory, .mExport = false) {
             MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
 static void destroy(RenderingModule* renderingModule) noexcept;

@@ -412,6 +412,7 @@ struct ModuleBuilder {
     TypeHandle openNamespace(std::string_view namespaceSuffix);
     ModuleHandle openModule(std::string_view modulePath, ModuleInfo info = {});
 
+    void declare(std::string_view name);
     SyntaxGraph::vertex_descriptor addDefine(std::string_view name, std::string_view content = {});
     SyntaxGraph::vertex_descriptor addConcept(std::string_view name, std::string_view parent = {});
     SyntaxGraph::vertex_descriptor addAlias(std::string_view name, std::string_view type);

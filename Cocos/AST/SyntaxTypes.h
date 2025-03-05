@@ -1305,7 +1305,7 @@ struct SyntaxGraph {
     // general
     std::pmr::string getMemberName(std::string_view memberName, bool bPublic) const;
 
-    std::pmr::string getTypePath(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
+    std::pmr::string getTypePath(vertex_descriptor vertID) const;
 
     vertex_descriptor lookupIdentifier(std::string_view currentScope, std::string_view dependentName,
         std::pmr::memory_resource* scratch) const;
@@ -1468,6 +1468,7 @@ struct SyntaxGraph {
     std::pmr::vector<Variant> mVariants;
     std::pmr::vector<Instance> mInstances;
     // Members
+    PmrMap<std::pmr::string, uint32_t> mDeclared;
     std::pmr::memory_resource* mScratch = nullptr;
     // Path
     PmrMap<std::pmr::string, uint32_t> mPathIndex;

@@ -229,7 +229,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
         if (traits.mImport)
             continue;
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto ns = g.getNamespace(vertID, scratch);
 
         auto outputNs = [&]() {
@@ -435,7 +435,7 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
         if (traits.mImport)
             continue;
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto ns = g.getNamespace(vertID, scratch);
 
         auto outputNs = [&]() {
@@ -1466,7 +1466,7 @@ std::pmr::string generateGraphs_h(std::string_view projectName,
         std::pmr::string apiDLL(moduleInfo.mAPI, scratch);
         apiDLL.append("_API ");
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto ns = g.getNamespace(vertID, scratch);
         auto bNewNamespace = outputNamespaces(oss, space, context, ns);
 
@@ -1579,7 +1579,7 @@ std::pmr::string generateReflection_h(std::string_view projectName,
         if (traits.mImport)
             continue;
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto ns = g.getNamespace(vertID, scratch);
 
         auto outputNs = [&]() {
@@ -1690,7 +1690,7 @@ std::pmr::string generateReflection_cpp(std::string_view projectName,
         if (traits.mImport)
             continue;
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto ns = g.getNamespace(vertID, scratch);
 
         auto outputNs = [&]() {

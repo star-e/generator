@@ -56,7 +56,7 @@ CppStructBuilder::CppStructBuilder(const SyntaxGraph* syntaxGraph, const ModuleG
     , mProjectName(projectName, alloc) {
     const auto& g = *mSyntaxGraph;
     auto* scratch = get_allocator().resource();
-    mCurrentPath = g.getTypePath(mCurrentVertex, scratch);
+    mCurrentPath = g.getTypePath(mCurrentVertex);
     mName = getDependentPath(mCurrentNamespace, mCurrentPath);
     const auto& mod = get(mModuleGraph->modules, *mModuleGraph, mCurrentModule);
     mAPI = mod.mAPI;

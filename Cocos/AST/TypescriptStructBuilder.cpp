@@ -1016,7 +1016,7 @@ std::pmr::string generateGraphSerialization_ts(
     std::pmr::string space(scratch);
     Expects(s.isVector());
 
-    auto typePath = g.getTypePath(vertID, scratch);
+    auto typePath = g.getTypePath(vertID);
     auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
     auto cppName = getCppPath(typeName, scratch);
     const auto& name = get(g.names, g, vertID);
@@ -1282,7 +1282,7 @@ std::pmr::string generateSerialization_ts(
         if (traits.mFlags & GenerationFlags::NO_SERIALIZATION)
             continue;
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
         auto cppName = getCppPath(typeName, scratch);
         const auto& name = get(g.names, g, vertID);
@@ -1492,7 +1492,7 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
     if ((traits.mFlags & GenerationFlags::NO_EQUAL) || !(traits.mFlags & GenerationFlags::EQUAL))
         return;
 
-    auto typePath = g.getTypePath(vertID, scratch);
+    auto typePath = g.getTypePath(vertID);
     auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
     auto cppName = getCppPath(typeName, scratch);
     const auto& name = get(g.names, g, vertID);

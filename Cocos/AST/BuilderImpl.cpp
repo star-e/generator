@@ -206,6 +206,25 @@ ModuleHandle ModuleBuilder::openModule(std::string_view name, ModuleInfo info) {
     return appendModulePath(*this, name, vertID);
 }
 
+void ModuleBuilder::declare(std::string_view name) {
+    auto& g = mSyntaxGraph;
+    auto scratch = mScratch;
+
+    auto parentID = locate(mCurrentScope, g);
+    Expects(parentID == SyntaxGraph::null_vertex()
+        || holds_tag<Namespace_>(parentID, g)
+        || holds_tag<Struct_>(parentID, g)
+        || holds_tag<Graph_>(parentID, g));
+
+    Expects(locate(parentID, name, g) == g.null_vertex());
+
+    auto typePath = g.getTypePath(parentID);
+    typePath.append("/");
+    typePath.append(name);
+
+    g.mDeclared.emplace(typePath, g.null_vertex());
+}
+
 SyntaxGraph::vertex_descriptor ModuleBuilder::addDefine(std::string_view name, std::string_view content) {
     auto& g = mSyntaxGraph;
     auto scratch = mScratch;
@@ -241,7 +260,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addConcept(std::string_view name, 
         auto superType = convertTypename(parent, scratch);
         auto superID = g.lookupType(mCurrentScope, superType, scratch);
         Expects(superID != g.null_vertex());
-        superTypePath = g.getTypePath(superID, scratch);
+        superTypePath = g.getTypePath(superID);
     }
 
     auto vertID = add_vertex(Concept_{},
@@ -274,7 +293,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addAlias(std::string_view name, st
             g.instantiate(mCurrentScope, adlPath, scratch);
         }
         auto typeID = g.lookupType(mCurrentScope, adlPath, scratch);
-        typePath = g.getTypePath(typeID, g.get_allocator().resource());
+        typePath = g.getTypePath(typeID);
     }
 
     auto vertID = add_vertex(Alias_{},
@@ -490,7 +509,7 @@ SyntaxGraph::vertex_descriptor ModuleBuilder::addTag(std::string_view name, bool
         auto conceptName = convertTypename(c, scratch);
         auto conceptID = g.lookupIdentifier(mCurrentScope, conceptName, scratch);
         Expects(conceptID != g.null_vertex());
-        auto conceptPath = g.getTypePath(conceptID, g.get_allocator().resource());
+        auto conceptPath = g.getTypePath(conceptID);
         constraints.mConcepts.emplace_back(conceptPath);
     }
 
@@ -539,7 +558,7 @@ void ModuleBuilder::addInherits(SyntaxGraph::vertex_descriptor vertID,
     const auto& baseTraits = get(g.traits, g, baseID);
     auto& inherits = get(g.inherits, g, vertID);
 
-    auto typePath = g.getTypePath(baseID, g.get_allocator().resource());
+    auto typePath = g.getTypePath(baseID);
     inherits.mBases.emplace_back(std::move(typePath), bVirtual, bImplements);
     auto& traits = get(g.traits, g, vertID);
     traits.mClass = true;
@@ -641,7 +660,7 @@ Member& ModuleBuilder::addMember(SyntaxGraph::vertex_descriptor vertID, bool bPu
             Expects(m.mPointer || m.mReference);
             m.mTypePath = typeName;
         } else {
-            auto typePath = g.getTypePath(vertID, scratch);
+            auto typePath = g.getTypePath(vertID);
             m.mTypePath = std::move(typePath);
         }
 
@@ -821,7 +840,7 @@ void ModuleBuilder::addConstraints(SyntaxGraph::vertex_descriptor typeID, std::s
     }
 
     auto& constraints = get(g.constraints, g, typeID);
-    auto supertypePath = g.getTypePath(conceptID, mScratch);
+    auto supertypePath = g.getTypePath(conceptID);
     constraints.mConcepts.emplace_back(supertypePath);
 }
 
@@ -944,7 +963,7 @@ void ModuleBuilder::addGraphComponent(SyntaxGraph::vertex_descriptor vertID,
     }
 
     auto valueID = g.lookupType(mCurrentScope, typeName, scratch);
-    auto valuePath = g.getTypePath(valueID, g.get_allocator().resource());
+    auto valuePath = g.getTypePath(valueID);
 
     auto& c = s.mComponents.emplace_back();
     c.mName = name;
@@ -978,10 +997,10 @@ void ModuleBuilder::addGraphPolymorphic(SyntaxGraph::vertex_descriptor vertID,
     }
 
     auto tagID = g.lookupType(mCurrentScope, tagName, scratch);
-    auto tagPath = g.getTypePath(tagID, g.get_allocator().resource());
+    auto tagPath = g.getTypePath(tagID);
 
     auto valueID = g.lookupType(mCurrentScope, typeName, scratch);
-    auto typePath = g.getTypePath(valueID, g.get_allocator().resource());
+    auto typePath = g.getTypePath(valueID);
 
     auto& c = s.mPolymorphic.mConcepts.emplace_back();
     c.mTag = tagPath;
@@ -1019,10 +1038,10 @@ void ModuleBuilder::addVertexMap(SyntaxGraph::vertex_descriptor vertID,
     }
 
     auto mapID = g.lookupType(mCurrentScope, mapName, scratch);
-    auto mapPath = g.getTypePath(mapID, g.get_allocator().resource());
+    auto mapPath = g.getTypePath(mapID);
 
     auto keyID = g.lookupType(mCurrentScope, keyName, scratch);
-    auto keyPath = g.getTypePath(keyID, g.get_allocator().resource());
+    auto keyPath = g.getTypePath(keyID);
 
     auto& map = s.mVertexMaps.emplace_back();
     map.mMapType = mapPath;
@@ -1078,10 +1097,10 @@ void ModuleBuilder::addVertexBimap(SyntaxGraph::vertex_descriptor vertID,
     }
 
     auto mapID = g.lookupType(mCurrentScope, mapName, scratch);
-    auto mapPath = g.getTypePath(mapID, g.get_allocator().resource());
+    auto mapPath = g.getTypePath(mapID);
 
     auto keyID = g.lookupType(mCurrentScope, keyName, scratch);
-    auto keyPath = g.getTypePath(keyID, g.get_allocator().resource());
+    auto keyPath = g.getTypePath(keyID);
 
     auto& map = s.mVertexMaps.emplace_back();
     map.mMapType = mapPath;
@@ -2060,7 +2079,7 @@ int ModuleBuilder::compile() {
                         if (memberID == g.null_vertex()) {
                             throw std::out_of_range("type cannot be resolved");
                         } else {
-                            m.mTypePath = g.getTypePath(memberID, g.get_allocator().resource());
+                            m.mTypePath = g.getTypePath(memberID);
                         }
                     }
                 }

@@ -85,7 +85,7 @@ bool SyntaxGraph::isIntrusivePtr(vertex_descriptor vertID) const noexcept {
     auto scratch = mScratch;
     const auto& g = *this;
     if (g.isInstantiation(vertID)) {
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         std::pmr::string container(scratch);
         std::pmr::vector<std::pmr::string> parameters(scratch);
         extractTemplate(typePath, container, parameters);
@@ -1126,11 +1126,10 @@ bool SyntaxGraph::isPathPmr(const Graph& s) const noexcept {
     }
 }
 
-std::pmr::string SyntaxGraph::getTypePath(vertex_descriptor vertID,
-    std::pmr::memory_resource* mr) const {
+std::pmr::string SyntaxGraph::getTypePath(vertex_descriptor vertID) const {
     const auto& g = *this;
     Expects(vertID != g.null_vertex());
-    auto path = get_path(vertID, g, mr);
+    auto path = get_path(vertID, g, mScratch);
     Ensures(!path.empty());
     Ensures(path.front() == '/');
     return path;
@@ -1233,7 +1232,7 @@ std::pmr::string SyntaxGraph::getTypePath(
         if (vertID == g.null_vertex()) {
             throw std::out_of_range("identifier not found");
         }
-        auto result = getTypePath(vertID, mr);
+        auto result = getTypePath(vertID);
         if (bVolatile) {
             result.insert(0, "volatile ");
         }
@@ -1282,7 +1281,7 @@ std::pmr::string SyntaxGraph::getTypePath(
 std::pmr::string SyntaxGraph::getDependentName(std::string_view ns, vertex_descriptor vertID,
     std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const {
     if (!isInstanceDependent(vertID)) {
-        auto typePath = getTypePath(vertID, mr);
+        auto typePath = getTypePath(vertID);
         auto dependentName = getDependentPath(ns, typePath);
         typePath.erase(0, typePath.size() - dependentName.size());
         if (!typePath.empty() && typePath.front() == '/') {
@@ -1291,7 +1290,7 @@ std::pmr::string SyntaxGraph::getDependentName(std::string_view ns, vertex_descr
         return typePath;
     }
     const auto& g = *this;
-    const auto typePath = getTypePath(vertID, scratch);
+    const auto typePath = getTypePath(vertID);
     std::pmr::string name(scratch);
     std::pmr::vector<std::pmr::string> parameters(scratch);
     auto suffix = extractTemplate(typePath, name, parameters);
@@ -1366,7 +1365,7 @@ std::pmr::string SyntaxGraph::getNamespace(vertex_descriptor vertID, std::pmr::m
         return std::pmr::string(mr);
     } else {
         Expects(holds_tag<Namespace_>(parentID, g));
-        return g.getTypePath(parentID, mr);
+        return g.getTypePath(parentID);
     }
 }
 
@@ -1384,7 +1383,7 @@ std::pmr::string SyntaxGraph::getScope(vertex_descriptor vertID, std::pmr::memor
             Expects(false);
         });
 
-    return g.getTypePath(vertID, mr);
+    return g.getTypePath(vertID);
 }
 
 std::pair<std::string_view, std::string_view>
@@ -1562,7 +1561,7 @@ void SyntaxGraph::propagate(vertex_descriptor vertID, GenerationFlags flags) {
 SyntaxGraph::vertex_descriptor SyntaxGraph::getTemplate(
     vertex_descriptor instanceID, std::pmr::memory_resource* scratch) const {
     const auto& g = *this;
-    auto typePath = g.getTypePath(instanceID, scratch);
+    auto typePath = g.getTypePath(instanceID);
     auto templateName = getTemplateName(typePath);
     auto vertID = locate(templateName, g);
     Ensures(vertID != g.null_vertex());
@@ -2294,9 +2293,9 @@ void addImported(SyntaxGraph::vertex_descriptor vertID, const SyntaxGraph& g,
     const auto& path = get(g.modulePaths, g, vertID);
     if (!path.empty() && path != modulePath) {
         if (needImport || forceImport) {
-            imported[path].mImported.emplace(g.getTypePath(vertID, imported.get_allocator().resource()));
+            imported[path].mImported.emplace(g.getTypePath(vertID));
         } else {
-            imported[path].mImportedTypes.emplace(g.getTypePath(vertID, imported.get_allocator().resource()));
+            imported[path].mImportedTypes.emplace(g.getTypePath(vertID));
         }
     }
 

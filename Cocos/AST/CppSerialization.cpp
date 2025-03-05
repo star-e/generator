@@ -73,7 +73,7 @@ std::pmr::string generateSerialization_h(
         if (traits.mFlags & GenerationFlags::NO_SERIALIZATION)
             continue;
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
         auto cppName = getCppPath(typeName, scratch);
         const auto& name = get(g.names, g, vertID);
@@ -153,7 +153,7 @@ std::pmr::string generateSerialization_cpp(
         if (traits.mFlags & GenerationFlags::NO_SERIALIZATION)
             continue;
 
-        auto typePath = g.getTypePath(vertID, scratch);
+        auto typePath = g.getTypePath(vertID);
         auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
         auto cppName = getCppPath(typeName, scratch);
         const auto& name = get(g.names, g, vertID);
