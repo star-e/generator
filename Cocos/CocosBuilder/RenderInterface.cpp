@@ -628,6 +628,12 @@ virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name)
         ENUMS(NO_WAIT, WAIT);
     }
 
+    INTERFACE(RenderObject) {
+        PUBLIC_METHODS(R"(
+virtual void destroy() noexcept = 0;
+)");
+    }
+
         CLASS(Factory, .mExport = false) {
             MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
 static void destroy(RenderingModule* renderingModule) noexcept;
