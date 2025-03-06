@@ -1977,6 +1977,21 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID) co
                 Expects(!paramName.empty());
                 result.append(paramName);
                 result.append("[]");   
+            } else if (g.isTypescriptVariant(vertID)) {
+                int count = 0;
+                for (const auto& param : instance.mParameters) {
+                    std::string_view paramPath = param;
+                    if (paramPath.back() == '*') {
+                        paramPath = paramPath.substr(0, paramPath.size() - 1);
+                    }
+                    auto paramID = locate(paramPath, g);
+                    Expects(paramID != g.null_vertex());
+                    auto paramName = g.getTypescriptTypename(paramID);
+                    if (count++) {
+                        result.append(" | ");
+                    }
+                    result.append(paramName);
+                }
             } else {
                 if (templateTS.mName == "_") {
                     // is removed

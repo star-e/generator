@@ -98,7 +98,6 @@ using namespace cc::render;
         .mRequires = { "Gfx", "RenderCommon", "Camera", "PipelineSceneData",
             "Assets", "PassUtils" },
         .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
-#include "cocos/base/Data.h"
 #include "cocos/core/ArrayBuffer.h"
 #include "cocos/core/TypedArray.h"
 
@@ -648,11 +647,11 @@ virtual void destroy() noexcept = 0;
     INTERFACE(RenderGeometry) {
         INHERITS(RenderObject);
         PUBLIC_METHODS(R"(
-virtual void setPrimitiveColor(DataType type, const Uint8Array& color) = 0;
-virtual void setPrimitiveAttribute0(DataType type, Float32Array attribute) = 0;
-virtual void setPrimitiveAttribute1(DataType type, Float32Array attribute) = 0;
-virtual void setPrimitiveAttribute2(DataType type, Float32Array attribute) = 0;
-virtual void setPrimitiveAttribute3(DataType type, Float32Array attribute) = 0;
+virtual void setPrimitiveColor(DataType type, const BufferView& color) = 0;
+virtual void setPrimitiveAttribute0(DataType type, const BufferView& attribute) = 0;
+virtual void setPrimitiveAttribute1(DataType type, const BufferView& attribute) = 0;
+virtual void setPrimitiveAttribute2(DataType type, const BufferView& attribute) = 0;
+virtual void setPrimitiveAttribute3(DataType type, const BufferView& attribute) = 0;
 virtual void setPrimitiveId(Uint32Array id) = 0;
 )");
     }
@@ -660,14 +659,14 @@ virtual void setPrimitiveId(Uint32Array id) = 0;
     INTERFACE(RenderGeometryCone) {
         INHERITS(RenderGeometry);
         PUBLIC_METHODS(R"(
-virtual void setVertexPosition(Float32Array position) = 0;
-virtual void setVertexRadius(Float32Array radius) = 0;
-virtual void setVertexCap(Uint8Array cap) = 0;
-virtual void setVertexColor(DataType type, Uint8Array color) = 0;
-virtual void setVertexAttribute0(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute1(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute2(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute3(DataType type, Float32Array attribute) = 0;
+virtual void setVertexPosition(const BufferView& position) = 0;
+virtual void setVertexRadius(const BufferView& radius) = 0;
+virtual void setVertexCap(const BufferView& cap) = 0;
+virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
 virtual void setPrimitiveIndex(Uint32Array index) = 0;
 virtual void setCaps(const ccstd::string& caps) = 0;
 )");
@@ -676,13 +675,13 @@ virtual void setCaps(const ccstd::string& caps) = 0;
     INTERFACE(RenderGeometryCurve) {
         INHERITS(RenderGeometry);
         PUBLIC_METHODS(R"(
-virtual void setVertexPosition(Float32Array position) = 0;
-virtual void setVertexRadius(Float32Array radius) = 0;
-virtual void setVertexColor(DataType type, Uint8Array color) = 0;
-virtual void setVertexAttribute0(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute1(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute2(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute3(DataType type, Float32Array attribute) = 0;
+virtual void setVertexPosition(const BufferView& position) = 0;
+virtual void setVertexRadius(const BufferView& radius) = 0;
+virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
 virtual void setPrimitiveIndex(Uint32Array index) = 0;
 virtual void setRadius(float radius) = 0;
 )");
@@ -691,15 +690,15 @@ virtual void setRadius(float radius) = 0;
     INTERFACE(RenderGeometryCylinder) {
         INHERITS(RenderGeometry);
         PUBLIC_METHODS(R"(
-virtual void setVertexPosition(Float32Array position) = 0;
-virtual void setVertexCap(Uint8Array cap) = 0;
-virtual void setVertexColor(DataType type, Uint8Array color) = 0;
-virtual void setVertexAttribute0(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute1(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute2(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute3(DataType type, Float32Array attribute) = 0;
+virtual void setVertexPosition(const BufferView& position) = 0;
+virtual void setVertexCap(const BufferView& cap) = 0;
+virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
 virtual void setPrimitiveIndex(Uint32Array index) = 0;
-virtual void setPrimitiveRadius(Float32Array radius) = 0;
+virtual void setPrimitiveRadius(const BufferView& radius) = 0;
 virtual void setRadius(float radius) = 0;
 virtual void setCaps(const ccstd::string& caps) = 0;
 )");
@@ -708,14 +707,14 @@ virtual void setCaps(const ccstd::string& caps) = 0;
     INTERFACE(RenderGeometryQuad) {
         INHERITS(RenderGeometry);
         PUBLIC_METHODS(R"(
-virtual void setVertexPosition(Float32Array position) = 0;
-virtual void setVertexNormal(DataType type, Uint8Array normal) = 0;
-virtual void setVertexTangent(DataType type, Uint8Array tangent) = 0;
-virtual void setVertexColor(DataType type, Uint8Array color) = 0;
-virtual void setVertexAttribute0(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute1(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute2(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute3(DataType type, Float32Array attribute) = 0;
+virtual void setVertexPosition(const BufferView& position) = 0;
+virtual void setVertexNormal(DataType type, const BufferView& normal) = 0;
+virtual void setVertexTangent(DataType type, const BufferView& tangent) = 0;
+virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
 virtual void setPrimitiveIndex(Uint32Array index) = 0;
 )");
     }
@@ -723,13 +722,13 @@ virtual void setPrimitiveIndex(Uint32Array index) = 0;
     INTERFACE(RenderGeometrySphere) {
         INHERITS(RenderGeometry);
         PUBLIC_METHODS(R"(
-virtual void setVertexPosition(Float32Array position) = 0;
-virtual void setVertexRadius(Float32Array radius) = 0;
-virtual void setVertexColor(DataType type, Uint8Array color) = 0;
-virtual void setVertexAttribute0(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute1(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute2(DataType type, Float32Array attribute) = 0;
-virtual void setVertexAttribute3(DataType type, Float32Array attribute) = 0;
+virtual void setVertexPosition(const BufferView& position) = 0;
+virtual void setVertexRadius(const BufferView& radius) = 0;
+virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
 virtual void setPrimitiveIndex(Uint32Array index) = 0;
 virtual void setRadius(float radius) = 0;
 )");
@@ -738,15 +737,15 @@ virtual void setRadius(float radius) = 0;
     INTERFACE(RenderGeometryTriangle) {
         INHERITS(RenderGeometry);
         PUBLIC_METHODS(R"(
-virtual void setVertexPosition(ccstd::variant<Float32Array, BufferView> position) = 0;
-virtual void setVertexNormal(DataType type, ccstd::variant<Uint8Array, BufferView> normal) = 0;
-virtual void setVertexTangent(DataType type, ccstd::variant<Uint8Array, BufferView> tangent) = 0;
-virtual void setVertexColor(DataType type, ccstd::variant<Uint8Array, BufferView> color) = 0;
-virtual void setVertexAttribute0(DataType type, ccstd::variant<Float32Array, BufferView> attribute) = 0;
-virtual void setVertexAttribute1(DataType type, ccstd::variant<Float32Array, BufferView> attribute) = 0;
-virtual void setVertexAttribute2(DataType type, ccstd::variant<Float32Array, BufferView> attribute) = 0;
-virtual void setVertexAttribute3(DataType type, ccstd::variant<Float32Array, BufferView> attribute) = 0;
-virtual void setPrimitiveIndex(ccstd::variant<Uint32Array, BufferView> index) = 0;
+virtual void setVertexPosition(const BufferView& position) = 0;
+virtual void setVertexNormal(DataType type, const BufferView& normal) = 0;
+virtual void setVertexTangent(DataType type, const BufferView& tangent) = 0;
+virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
+virtual void setPrimitiveIndex(const BufferView& index) = 0;
 )");
     }
 
