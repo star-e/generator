@@ -74,7 +74,7 @@ std::pmr::string generateSerialization_h(
             continue;
 
         auto typePath = g.getTypePath(vertID);
-        auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+        auto typeName = g.getDependentName(ns, vertID);
         auto cppName = getCppPath(typeName, scratch);
         const auto& name = get(g.names, g, vertID);
 
@@ -154,7 +154,7 @@ std::pmr::string generateSerialization_cpp(
             continue;
 
         auto typePath = g.getTypePath(vertID);
-        auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+        auto typeName = g.getDependentName(ns, vertID);
         auto cppName = getCppPath(typeName, scratch);
         const auto& name = get(g.names, g, vertID);
 
@@ -187,7 +187,7 @@ std::pmr::string generateSerialization_cpp(
                             }
                             if (g.isTypescriptPointer(memberID) || m.mPointer) {
                                 OSS << "// skip, " << m.getMemberName() << ": "
-                                    << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
+                                    << g.getDependentCppName(ns, memberID) << "\n";
                                 continue;
                             }
                             OSS << "save(ar, v." << m.getMemberName() << ");\n";
@@ -213,7 +213,7 @@ std::pmr::string generateSerialization_cpp(
                             }
                             if (g.isTypescriptPointer(memberID) || m.mPointer) {
                                 OSS << "// skip, " << m.getMemberName() << ": "
-                                    << g.getDependentCppName(ns, memberID, scratch, scratch) << "\n";
+                                    << g.getDependentCppName(ns, memberID) << "\n";
                                 continue;
                             }
                             OSS << "load(ar, v." << m.getMemberName() << ");\n";

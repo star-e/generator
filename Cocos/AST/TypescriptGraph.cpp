@@ -91,11 +91,11 @@ std::string generateAddEdge(const Graph* ptr, std::string_view name,
         OSS << "this._edges.add(edge);\n";
     }
 
-    auto outEdgeList = g.getTypescriptVertexDereference("u", scratch)
+    auto outEdgeList = g.getTypescriptVertexDereference("u")
                            .append(".")
                            .append(g.getTypescriptOutEdgeList(addressable));
 
-    auto inEdgeList = g.getTypescriptVertexDereference("v", scratch)
+    auto inEdgeList = g.getTypescriptVertexDereference("v")
                           .append(".")
                           .append(g.getTypescriptInEdgeList(addressable));
 
@@ -124,7 +124,7 @@ void outputRemoveEdge(std::ostream& oss, std::pmr::string& space, const Graph& s
     auto inEdgeList = s.getTypescriptInEdgeList(bReferenceGraph);
 
     {
-        OSS << "const source = " << s.getTypescriptVertexDereference("u", scratch) << ";\n";
+        OSS << "const source = " << s.getTypescriptVertexDereference("u") << ";\n";
         if (s.needEdgeList() && !bReferenceGraph) {
             OSS << "for (let i = 0; i !== source." << outEdgeList << ".length;) {\n";
             OSS << "    if (source." << outEdgeList << "[i].edge === e.edge) {\n";
@@ -147,7 +147,7 @@ void outputRemoveEdge(std::ostream& oss, std::pmr::string& space, const Graph& s
     }
 
     {
-        OSS << "const target = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
+        OSS << "const target = " << s.getTypescriptVertexDereference("v") << ";\n";
         if (s.needEdgeList() && !bReferenceGraph) {
             OSS << "for (let i = 0; i !== target." << inEdgeList << ".length;) {\n";
             OSS << "    if (target." << inEdgeList << "[i].edge === e.edge) {\n";
@@ -202,7 +202,7 @@ void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph& 
     std::pmr::set<std::pmr::string>& imports,
     std::pmr::memory_resource* scratch) {
     {
-        auto source = s.getTypescriptVertexDereference("u", scratch);
+        auto source = s.getTypescriptVertexDereference("u");
         OSS << "const source = " << source << ";\n";
         if (s.needEdgeList() && !bReferenceGraph) {
             OSS << "// remove all edges from edge list\n";
@@ -222,7 +222,7 @@ void outputRemoveEdges(std::ostream& oss, std::pmr::string& space, const Graph& 
                 << "source." << s.getTypescriptOutEdgeList(bReferenceGraph) << ".filter(oe => oe.target !== v);\n";
         }
 
-        auto target = s.getTypescriptVertexDereference("v", scratch);
+        auto target = s.getTypescriptVertexDereference("v");
         OSS << "// remove in edges of v\n";
         OSS << "const target = " << target << ";\n";
         if (true) {
@@ -294,7 +294,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
             auto enumName = getTypescriptTagType(extractName(c.mTag), scratch);
-            auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+            auto typeName = g.getTypescriptTypename(c.mValue);
             OSS << "[" << name << "Value." << enumName << "]: " << typeName << "\n";
         }
     }
@@ -306,7 +306,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
         INDENT();
         for (const auto& c : s.mPolymorphic.mConcepts) {
             auto name = getTypescriptTagType(extractName(c.mTag), scratch);
-            auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+            auto typeName = g.getTypescriptTypename(c.mValue);
 
             OSS << getVariableName(name, scratch) << "(value: "
                 << typeName << "): unknown;\n";
@@ -322,7 +322,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
                 oss << "\n";
                 oss << "| ";
             }
-            auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+            auto typeName = g.getTypescriptTypename(c.mValue);
             oss << typeName;
         }
         oss << ";\n";
@@ -332,7 +332,7 @@ void outputGraphPolymorphics(std::ostream& oss, std::pmr::string& space, std::st
             if (count++) {
                 oss << " | ";
             }
-            auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+            auto typeName = g.getTypescriptTypename(c.mValue);
             oss << typeName;
         }
         oss << ";\n";
@@ -357,7 +357,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
     {
         INDENT();
         for (const auto& c : s.mComponents) {
-            auto typeName = g.getTypescriptTypename(c.mValuePath, scratch, scratch);
+            auto typeName = g.getTypescriptTypename(c.mValuePath);
             OSS << "[" << name << "Component." << getTypescriptTagType(c.mName, scratch) << "]: " << typeName << ";\n";
         }
     }
@@ -369,7 +369,7 @@ void outputGraphComponents(std::ostream& oss, std::pmr::string& space, std::stri
         {
             INDENT();
             for (const auto& c : s.mComponents) {
-                auto typeName = g.getTypescriptTypename(c.mValuePath, scratch, scratch);
+                auto typeName = g.getTypescriptTypename(c.mValuePath);
                 OSS << "[" << name << "Component." << getTypescriptTagType(c.mName, scratch) << "]: " << name << convertTag(c.mName) << "Map;\n";
             }
         }
@@ -433,7 +433,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                         } else {
                             oss << "\n";
                         }
-                        OSS << "readonly property: " << s.getTypescriptVertexPropertyType(g, scratch, scratch);
+                        OSS << "readonly property: " << s.getTypescriptVertexPropertyType(g);
                     }
                     if (s.isComponentInVertex()) {
                         for (const auto& c : s.mComponents) {
@@ -443,7 +443,7 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
                                 oss << "\n";
                             }
                             OSS << "readonly " << g.getMemberName(c.mMemberName, true);
-                            oss << ": " << c.getTypescriptComponentType(g, scratch, scratch);
+                            oss << ": " << c.getTypescriptComponentType(g);
                         }
                     }
                 }
@@ -497,12 +497,12 @@ void outputGraphVertex(std::ostream& oss, std::pmr::string& space,
             if (false && s.mNamed)
                 OSS << "readonly _name: string;\n";
             if (!s.mVertexProperty.empty()) {
-                OSS << "readonly _property: " << s.getTypescriptVertexPropertyType(g, scratch, scratch) << ";\n";
+                OSS << "readonly _property: " << s.getTypescriptVertexPropertyType(g) << ";\n";
             }
             if (s.isComponentInVertex()) {
                 for (const auto& c : s.mComponents) {
                     OSS << "readonly " << g.getMemberName(c.mMemberName, false);
-                    oss << ": " << c.getTypescriptComponentType(g, scratch, scratch) << ";\n";
+                    oss << ": " << c.getTypescriptComponentType(g) << ";\n";
                 }
             }
         }
@@ -559,11 +559,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
     std::pmr::string space(scratch);
 
     auto epID = locate(s.mEdgeProperty, g);
-    auto edgeProperty = g.getTypescriptTypename(epID, scratch, scratch);
+    auto edgeProperty = g.getTypescriptTypename(epID);
     auto vpID = locate(s.mVertexProperty, g);
-    auto vertexProperty = g.getTypescriptTypename(vpID, scratch, scratch);
+    auto vertexProperty = g.getTypescriptTypename(vpID);
 
-    auto vertexDescType = s.getTypescriptVertexDescriptorType(name, scratch);
+    auto vertexDescType = s.getTypescriptVertexDescriptorType(name);
     auto nullableVertexDescType = vertexDescType;
     if (!s.isVector()) {
         nullableVertexDescType += " | null";
@@ -759,7 +759,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 if (count++)
                     oss << "\n";
                 auto vertID = locate(s.mVertexProperty, g);
-                auto tsType = g.getTypescriptTypename(vertID, scratch, scratch);
+                auto tsType = g.getTypescriptTypename(vertID);
                 auto member = std::pmr::string(get(g.names, g, vertID), scratch);
                 member.front() = tolower(member.front());
                 outputPropertyMap(vertID, nullptr, "VertexProperty", true, "vertices", vertexName, "_property", tsType);
@@ -770,7 +770,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     if (count++)
                         oss << "\n";
                     auto vertID = locate(c.mValuePath, g);
-                    auto componentType = g.getTypescriptTypename(vertID, scratch, scratch);
+                    auto componentType = g.getTypescriptTypename(vertID);
                     Expects(!c.mMemberName.empty());
                     auto member = g.getMemberName(c.mMemberName, true);
                     outputPropertyMap(vertID, &c, convertTag(c.mName), false, member, componentType,
@@ -908,7 +908,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             Expects(s.mVertexMaps.size() == 1);
             const auto& map = s.mVertexMaps.front();
             const auto keyID = locate(map.mKeyType, g);
-            const auto keyType = g.getTypescriptTypename(keyID, scratch, scratch);
+            const auto keyType = g.getTypescriptTypename(keyID);
             oss << "\n";
             if (gImpl) {
                 OSS << ", impl.UuidGraph<" << keyType << ">";
@@ -1209,8 +1209,8 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
                     if (!m.mDefaultValue.empty()) {
                         OSS << "this." << memberName << " = "
-                            << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
-                    } else if (g.isTypescriptArray(memberID, scratch)) {
+                            << g.getTypescriptInitialValue(memberID, m) << ";\n";
+                    } else if (g.isTypescriptArray(memberID)) {
                         OSS << "this." << memberName << ".length = 0;\n";
                     } else if (g.isTypescriptPointer(memberID)) {
                         OSS << "this." << memberName << " = null;\n";
@@ -1317,7 +1317,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     for (const auto& c : s.mComponents) {
                         if (count++ == 0)
                             oss << '\n';
-                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        auto componentType = c.getTypescriptComponentType(g);
                         OSS << getTagVariableName(c.mName, scratch) << ": " << componentType << ",\n";
                     }
                     if (s.isReference()) {
@@ -1440,7 +1440,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         }
                         oss << "\n";
                     }
-                    OSS << "const vert = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
+                    OSS << "const vert = " << s.getTypescriptVertexDereference("v") << ";\n";
 
                     auto outputClearEdges = [&](bool bOutputSeperated) {
                         auto outEdgeList = s.getTypescriptOutEdgeList(bOutputSeperated);
@@ -1461,7 +1461,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                                 key.append(vertexDescType);
                             }
                             OSS << "const target = "
-                                << s.getTypescriptVertexDereference(key, scratch) << ";\n";
+                                << s.getTypescriptVertexDereference(key) << ";\n";
 
                             if (true) {
                                 outputRemoveOutEdge(oss, space, "target", inEdgeList, "target", "v", false);
@@ -1493,7 +1493,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                                 key.append(vertexDescType);
                             }
                             OSS << "const source = "
-                                << s.getTypescriptVertexDereference(key, scratch) << ";\n";
+                                << s.getTypescriptVertexDereference(key) << ";\n";
                             if (true) {
                                 outputRemoveOutEdge(oss, space, "source", outEdgeList, "target", "v", false);
                             } else {
@@ -1562,7 +1562,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         OSS << "for (let v = 0; v !== sz; ++v) {\n";
                         {
                             INDENT();
-                            OSS << "const vert = " << s.getTypescriptVertexDereference("v", scratch) << ";\n";
+                            OSS << "const vert = " << s.getTypescriptVertexDereference("v") << ";\n";
                             if (gImpl) {
                                 OSS << "impl.reindexEdgeList(vert." << s.getTypescriptOutEdgeList(false) << ", u);\n";
                                 OSS << "impl.reindexEdgeList(vert." << s.getTypescriptInEdgeList(false) << ", u);\n";
@@ -1691,7 +1691,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 OSS << "// PropertyGraph\n";
                 if (!s.mVertexProperty.empty()) {
                     OSS << "vertexProperty (v: " << vertexDescType << "): "
-                        << s.getTypescriptVertexPropertyType(g, scratch, scratch) << " {\n";
+                        << s.getTypescriptVertexPropertyType(g) << " {\n";
                     {
                         INDENT();
                         if (s.isVector()) {
@@ -1762,7 +1762,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                         OSS << "// Components\n";
                     }
                     for (const auto& c : s.mComponents) {
-                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        auto componentType = c.getTypescriptComponentType(g);
                         auto member = g.getMemberName(c.mMemberName, false);
                         OSS << "case '" << getTypescriptTagType(c.mName, scratch) << "':\n";
                         Expects(c.isValid());
@@ -1796,7 +1796,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     INDENT();
                     OSS << "switch (id) {\n";
                     for (const auto& c : s.mComponents) {
-                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        auto componentType = c.getTypescriptComponentType(g);
                         OSS << "case " << name << "Component."
                             << getTypescriptTagType(c.mName, scratch) << ":\n";
                         INDENT();
@@ -1827,7 +1827,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     INDENT();
                     OSS << "switch (id) {\n";
                     for (const auto& c : s.mComponents) {
-                        auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                        auto componentType = c.getTypescriptComponentType(g);
                         auto member = g.getMemberName(c.mMemberName, false);
 
                         OSS << "case " << name << "Component."
@@ -1856,7 +1856,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             if (true) {
                 for (const auto& c : s.mComponents) {
                     const auto componentID = locate(c.mValuePath, g);
-                    auto componentType = c.getTypescriptComponentType(g, scratch, scratch);
+                    auto componentType = c.getTypescriptComponentType(g);
                     auto member = g.getMemberName(c.mMemberName, false);
                     auto bNeedNameSetter = !(s.mNamedConcept.mComponent && s.mNamedConcept.mComponentName == c.mName && s.mAddressable);
                     if (!bNeedNameSetter) {
@@ -1999,7 +1999,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 OSS << "switch (vert." << gNamePolymorphicID << ") {\n";
 
                 for (const auto& c : s.mPolymorphic.mConcepts) {
-                    auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+                    auto typeName = g.getTypescriptTypename(c.mValue);
                     const auto& tagName = getTypescriptTagType(extractName(c.mTag), scratch);
 
                     OSS << "case " << name << "Value." << getTypescriptTagType(extractName(c.mTag), scratch) << ":\n";
@@ -2019,7 +2019,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
 
             auto generatePolymorphicGetters = [&](bool bTry) {
                 for (const auto& c : s.mPolymorphic.mConcepts) {
-                    auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+                    auto typeName = g.getTypescriptTypename(c.mValue);
                     auto tagName = getTypescriptTagType(extractName(c.mTag), scratch);
                     if (bTry) {
                         OSS << "tryGet";
@@ -2466,7 +2466,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             Expects(s.mVertexMaps.size() == 1);
             const auto& map = s.mVertexMaps.front();
             const auto keyID = locate(map.mKeyType, g);
-            const auto keyType = g.getTypescriptTypename(keyID, scratch, scratch);
+            const auto keyType = g.getTypescriptTypename(keyID);
 
             OSS << "//-----------------------------------------------------------------\n";
             OSS << "// UuidGraph\n";
@@ -2524,7 +2524,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     Expects(!c.mMemberName.empty());
                     auto vertID = locate(c.mValuePath, g);
                     OSS << "readonly " << g.getMemberName(c.mMemberName, false)
-                        << ": " << c.getTypescriptComponentType(g, scratch, scratch)
+                        << ": " << c.getTypescriptComponentType(g)
                         << "[] = [];\n";
                 }
             }
@@ -2534,7 +2534,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
             Expects(s.mVertexMaps.size() == 1);
             const auto& map = s.mVertexMaps.front();
             const auto keyID = locate(map.mKeyType, g);
-            const auto keyType = g.getTypescriptTypename(keyID, scratch, scratch);
+            const auto keyType = g.getTypescriptTypename(keyID);
             auto componentID = locate(map.mComponentName, g);
             const auto member = g.getMemberName(map.mMemberName, false);
             std::pmr::string mapType(scratch);
@@ -2543,11 +2543,11 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                 const auto& mapName = map.mMapType.substr(1);
                 mapType.append(mapName).append("<").append(keyName).append(",vertex_descriptor>");
             }
-            auto ns = g.getScope(vertID, scratch);
-            auto mapID = g.lookupType(ns, mapType, scratch);
+            auto ns = g.getScope(vertID);
+            auto mapID = g.lookupType(ns, mapType);
             Expects(mapID != g.null_vertex());
-            OSS << "readonly " << member << ": " << g.getTypescriptTypename(mapID, scratch, scratch)
-                << " = new " << g.getTypescriptTypename(mapID, scratch, scratch) << "();\n";
+            OSS << "readonly " << member << ": " << g.getTypescriptTypename(mapID)
+                << " = new " << g.getTypescriptTypename(mapID) << "();\n";
         }
 
         // GraphMembers

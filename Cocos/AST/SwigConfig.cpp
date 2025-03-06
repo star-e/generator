@@ -46,7 +46,7 @@ std::pmr::string generateSwigConfig(const ModuleBuilder& builder, uint32_t modul
     copyString(oss, space, m.mToJsCppHeaders);
     {
         auto modulePath = get_path(moduleID, mg, scratch);
-        auto imported = g.getImportedTypes(modulePath, false, scratch);
+        auto imported = g.getImportedTypes(mg, modulePath, false);
         for (const auto& [depPath, types] : imported) {
             auto depID = locate(depPath, mg);
             const auto& dep = get(mg.modules, mg, depID);
@@ -98,7 +98,7 @@ std::pmr::string generateSwigConfig(const ModuleBuilder& builder, uint32_t modul
             if (moduleID1 != moduleID)
                 continue;
 
-            auto fullName = g.getDependentCppName("", vertID, scratch, scratch);
+            auto fullName = g.getDependentCppName("", vertID);
             const auto& traits = get(g.traits, g, vertID);
 
             if (traits.mImport)
@@ -181,7 +181,7 @@ std::pmr::string generateSwigConfig(const ModuleBuilder& builder, uint32_t modul
         auto outputParam = [&](const Method& m) {
             std::ostringstream oss;
             auto retID = locate(m.mReturnType.mTypePath, g);
-            oss << g.getDependentCppName("", retID, scratch, scratch);
+            oss << g.getDependentCppName("", retID);
             if (m.mReturnType.mPointer) {
                 oss << "*";
             }
@@ -207,7 +207,7 @@ std::pmr::string generateSwigConfig(const ModuleBuilder& builder, uint32_t modul
                 continue;
 
             std::pmr::set<std::pmr::string> functions(scratch);
-            auto fullName = g.getDependentCppName("", vertID, scratch, scratch);
+            auto fullName = g.getDependentCppName("", vertID);
 
             visit_vertex(
                 vertID, g,

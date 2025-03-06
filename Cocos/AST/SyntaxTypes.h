@@ -637,9 +637,7 @@ struct Component {
     bool isVector() const noexcept {
         return mVector;
     }
-    std::pmr::string getTypescriptComponentType(const SyntaxGraph& g,
-        std::pmr::memory_resource* mr,
-        std::pmr::memory_resource* scratch) const noexcept;
+    std::pmr::string getTypescriptComponentType(const SyntaxGraph& g) const noexcept;
 
     std::pmr::string mName;
     std::pmr::string mValuePath;
@@ -993,16 +991,13 @@ struct Graph {
     // Typescript
     std::string_view getTypescriptNullVertex() const;
 
-    std::pmr::string getTypescriptVertexPropertyType(const SyntaxGraph& g,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const noexcept;
+    std::pmr::string getTypescriptVertexPropertyType(const SyntaxGraph& g) const noexcept;
 
-    std::pmr::string getTypescriptVertexDescriptorType(std::string_view tsName,
-        std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypescriptVertexDescriptorType(std::string_view tsName) const;
     std::string_view getTypescriptEdgeDescriptorType() const;
     std::string_view getTypescriptReferenceDescriptorType() const;
 
-    std::pmr::string getTypescriptVertexDereference(std::string_view v,
-        std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypescriptVertexDereference(std::string_view v) const;
 
     std::string_view getTypescriptOutEdgeList(bool bAddressable) const;
     std::string_view getTypescriptInEdgeList(bool bAddressable) const;
@@ -1268,7 +1263,7 @@ struct SyntaxGraph {
     bool isComposition(vertex_descriptor vertID) const noexcept;
     bool isString(vertex_descriptor vertID) const noexcept;
     bool isUtf8(vertex_descriptor vertID) const noexcept;
-    bool isPair(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const noexcept;
+    bool isPair(vertex_descriptor vertID) const noexcept;
     bool isOptional(vertex_descriptor vertID) const noexcept;
     bool isPoolObject(vertex_descriptor vertID) const noexcept;
     bool isPoolType(vertex_descriptor vertID, std::string_view modulePath) const noexcept;
@@ -1307,32 +1302,26 @@ struct SyntaxGraph {
 
     std::pmr::string getTypePath(vertex_descriptor vertID) const;
 
-    vertex_descriptor lookupIdentifier(std::string_view currentScope, std::string_view dependentName,
-        std::pmr::memory_resource* scratch) const;
+    vertex_descriptor lookupIdentifier(std::string_view currentScope, std::string_view dependentName) const;
 
-    std::pmr::string getTypePath(std::string_view currentScope, std::string_view dependentName,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypePath(std::string_view currentScope, std::string_view dependentName) const;
 
-    std::pmr::string getDependentName(std::string_view ns, vertex_descriptor vertID,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+    std::pmr::string getDependentName(std::string_view ns, vertex_descriptor vertID) const;
 
-    std::pmr::string getDependentCppName(std::string_view ns, vertex_descriptor vertID,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+    std::pmr::string getDependentCppName(std::string_view ns, vertex_descriptor vertID) const;
 
-    vertex_descriptor lookupType(std::string_view currentScope, std::string_view dependentName,
-        std::pmr::memory_resource* scratch) const;
+    vertex_descriptor lookupType(std::string_view currentScope, std::string_view dependentName) const;
 
-    std::pmr::string getNamespace(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
-    std::pmr::string getScope(vertex_descriptor vertID, std::pmr::memory_resource* mr) const;
+    std::pmr::string getNamespace(vertex_descriptor vertID) const;
+    std::pmr::string getScope(vertex_descriptor vertID) const;
 
     std::pair<std::string_view, std::string_view> splitTypePath(std::string_view typePath) const;
 
-    void instantiate(std::string_view currentScope, std::string_view dependentName,
-        std::pmr::memory_resource* scratch);
+    void instantiate(std::string_view currentScope, std::string_view dependentName);
 
     void propagate(vertex_descriptor vertID, GenerationFlags flags = {});
 
-    vertex_descriptor getTemplate(vertex_descriptor instanceID, std::pmr::memory_resource* scratch) const;
+    vertex_descriptor getTemplate(vertex_descriptor instanceID) const;
 
     bool moduleHasMap(std::string_view modulePath, std::string_view mapPath) const;
 
@@ -1356,38 +1345,33 @@ struct SyntaxGraph {
     bool isTypescriptBoolean(vertex_descriptor vertID) const;
     bool isTypescriptNumber(vertex_descriptor vertID) const;
     bool isTypescriptString(vertex_descriptor vertID) const;
-    bool isTypescriptArray(vertex_descriptor vertID, std::pmr::memory_resource* scratch) const;
+    bool isTypescriptArray(vertex_descriptor vertID) const;
     bool isTypescriptTypedArray(vertex_descriptor vertID) const;
     bool isTypescriptSet(vertex_descriptor vertID) const;
     bool isTypescriptMap(vertex_descriptor vertID) const;
     bool isTypescriptPointer(vertex_descriptor vertID) const;
+    bool isTypescriptVariant(vertex_descriptor vertID) const;
 
-    std::pmr::string getTypescriptTypename(vertex_descriptor vertID,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypescriptTypename(vertex_descriptor vertID) const;
 
-    std::pmr::string getTypescriptTypename(std::string_view typePath,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypescriptTypename(std::string_view typePath) const;
 
-    std::pmr::string getTypescriptTagName(vertex_descriptor vertID,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypescriptTagName(vertex_descriptor vertID) const;
 
-    std::pmr::string getTypescriptTagName(std::string_view typePath,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypescriptTagName(std::string_view typePath) const;
 
     std::pmr::string getTypescriptInitialValue(vertex_descriptor vertID,
         std::string_view tsDefaultValue, std::string_view cppDefautValue, bool bPointer) const;
     std::pmr::string getTypescriptInitialValue(
-        vertex_descriptor vertID, const Member& member,
-        std::pmr::memory_resource* mr, std::pmr::memory_resource* scratch) const;
+        vertex_descriptor vertID, const Member& member) const;
 
-    std::pmr::string getTypescriptGraphPolymorphicVariant(const Graph& s,
-        std::pmr::memory_resource* mr,
-        std::pmr::memory_resource* scratch) const;
+    std::pmr::string getTypescriptGraphPolymorphicVariant(const Graph& s) const;
 
     std::pmr::string getTypedParameterName(const Parameter& p, bool bPublic, bool bFull = false, bool bOptional = false, bool bReturn = false) const;
 
     PmrMap<std::pmr::string, ImportedTypes> getImportedTypes(
-        std::string_view modulePath, bool enableSerialization, std::pmr::memory_resource* mr) const;
+        const ModuleGraph& mg,
+        std::string_view modulePath, bool enableSerialization) const;
 
     // ContinuousContainer
     void reserve(vertices_size_type sz);

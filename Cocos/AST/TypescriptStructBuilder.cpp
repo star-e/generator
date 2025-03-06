@@ -58,7 +58,7 @@ void outputContainer(std::ostream& oss, std::pmr::string& space,
             }
         }
         OSS << "}\n";
-    } else if (g.isTypescriptArray(paramID, g.get_allocator().resource())) {
+    } else if (g.isTypescriptArray(paramID)) {
         OSS << "for (const v" << level << " of ";
         if (level == 1) {
             oss << "v";
@@ -91,7 +91,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
     std::pmr::memory_resource* scratch) {
     const auto& traits = get(g.traits, g, vertID);
     const int maxParams = 4;
-    const auto& name = g.getTypescriptTypename(vertID, scratch, scratch);
+    const auto& name = g.getTypescriptTypename(vertID);
 
     for (const auto& m : members) {
         if (m.mFlags & IMPL_DETAIL)
@@ -123,7 +123,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
                     }
                     OSS << "}\n";
                     OSS << memberName << ".clear();\n";
-                } else if (g.isTypescriptArray(memberID, scratch)) {
+                } else if (g.isTypescriptArray(memberID)) {
                     OSS << "for (const v of " << memberName << ") {\n";
                     {
                         INDENT();
@@ -146,7 +146,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
         } else {
             if (g.isTypescriptValueType(memberID)) {
                 OSS << memberName;
-                oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n"; 
+                oss << " = " << g.getTypescriptInitialValue(memberID, m) << ";\n"; 
             } else {
                 if (m.mNullable) {
                     OSS << memberName << " = null;\n";
@@ -197,7 +197,7 @@ void outputConstructionParams(
                 bool bSkip = bReset
                     && (!typescriptMemberNeedAssign(g, m, memberID)
                         || g.isTypescriptTypedArray(memberID)
-                        || g.isTypescriptArray(memberID, scratch)
+                        || g.isTypescriptArray(memberID)
                         || g.isTypescriptMap(memberID)
                         || g.isTypescriptSet(memberID));
 
@@ -207,17 +207,17 @@ void outputConstructionParams(
                 }
                 outputComma();
 
-                auto memberType = g.getTypescriptTypename(memberID, scratch, scratch);
+                auto memberType = g.getTypescriptTypename(memberID);
                 if (bArgument) {
                     if (bReset && bHasDefaultParameters) {
-                        oss << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                        oss << g.getTypescriptInitialValue(memberID, m);
                     } else {
                         oss << g.getMemberName(m.mMemberName, true);
                     }
                 } else {
                     if (bHasDefaultParameters && cntr.mHasDefault) {
                         oss << builder.getTypedMemberName(bPublicFormat, m, true);
-                        oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch);
+                        oss << " = " << g.getTypescriptInitialValue(memberID, m);
                     } else {
                         oss << builder.getTypedMemberName(bPublicFormat, m, true, true);
                     }
@@ -245,7 +245,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     std::pmr::memory_resource* scratch) {
     const auto& traits = get(g.traits, g, vertID);
     const int maxParams = 4;
-    const auto& name = g.getTypescriptTypename(vertID, scratch, scratch);
+    const auto& name = g.getTypescriptTypename(vertID);
     {
         int count = 0;
         bool bChangeLine = false;
@@ -419,9 +419,9 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                                         << " = " << g.getMemberName(m.mMemberName, true) << ";\n";
                                 } else if (g.isTypescriptTypedArray(memberID)) {
                                     OSS << "// " << memberName
-                                        << ": " << g.getTypescriptTypename(memberID, scratch, scratch)
+                                        << ": " << g.getTypescriptTypename(memberID)
                                         << " size unchanged\n";
-                                } else if (g.isTypescriptArray(memberID, scratch)) {
+                                } else if (g.isTypescriptArray(memberID)) {
                                     OSS << "this." << memberName << ".length = 0;\n";
                                 } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                                     OSS << "this." << memberName << ".clear();\n";
@@ -463,12 +463,12 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                         }
                         if (typescriptMemberNeedAssign(g, m, memberID)) {
                             OSS << "this." << memberName
-                                << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                                << " = " << g.getTypescriptInitialValue(memberID, m) << ";\n";
                         } else if (g.isTypescriptTypedArray(memberID)) {
                             OSS << "// " << memberName
-                                << ": " << g.getTypescriptTypename(memberID, scratch, scratch)
+                                << ": " << g.getTypescriptTypename(memberID)
                                 << " size unchanged\n";
-                        } else if (g.isTypescriptArray(memberID, scratch)) {
+                        } else if (g.isTypescriptArray(memberID)) {
                             OSS << "this." << memberName << ".length = 0;\n";
                         } else if (g.isTypescriptMap(memberID) || g.isTypescriptSet(memberID) || holds_tag<Graph_>(memberID, g)) {
                             OSS << "this." << memberName << ".clear();\n";
@@ -642,14 +642,14 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";";
                 if (g.isTypescriptValueType(memberID)) {
                     oss << " " << commentBegin
-                        << g.getTypescriptInitialValue(memberID, m, scratch, scratch)
+                        << g.getTypescriptInitialValue(memberID, m)
                         << commentEnd << "\n";
                 } else {
                     oss << "\n";
                 }
             } else {
                 oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic);
-                oss << " = " << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                oss << " = " << g.getTypescriptInitialValue(memberID, m) << ";\n";
             }
         } else {
             oss << builder.getTypedMemberName(bPublicFormat, m, m.mPublic, true) << ";\n";
@@ -687,7 +687,7 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
     std::pmr::memory_resource* scratch) {
     if (g.isTypescriptPointer(vertID)) {
         OSS << "// skip, " << varName << ": "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID) << "\n";
         return;
     }
     const auto& traits = get(g.traits, g, vertID);
@@ -711,7 +711,7 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
         }
     } else if (g.isTypescriptMap(vertID)) {
         outputSaveMap(oss, space, ns, g, vertID, varName, depth, scratch);
-    } else if (g.isTypescriptArray(vertID, scratch) || g.isTypescriptSet(vertID)) {
+    } else if (g.isTypescriptArray(vertID) || g.isTypescriptSet(vertID)) {
         outputSaveCollection(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (holds_tag<Struct_>(vertID, g)
         || holds_tag<Value_>(vertID, g)
@@ -719,13 +719,13 @@ void outputSaveSerializable(std::ostream& oss, std::pmr::string& space, std::str
         const auto& memberName = get(g.names, g, vertID);
         if (isKey && (traits.mFlags & STRING_KEY)) {
             OSS << "save" << memberName << "(a, JSON.parse(" << varName << ") as "
-                << g.getTypescriptTypename(vertID, scratch, scratch) << ");\n";
+                << g.getTypescriptTypename(vertID) << ");\n";
         } else {
             OSS << "save" << memberName << "(a, " << varName << ");\n";
         }
     } else {
         OSS << "// skip: " << varName << ": "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID) << "\n";
     }
 }
 
@@ -741,14 +741,14 @@ void outputSaveCollection(std::ostream& oss, std::pmr::string& space, std::strin
         } else {
             OSS << "a.writeNumber(" << varName << ".size); // ";
         }
-        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        oss << g.getTypescriptTypename(vertID) << "\n";
     } else {
         if (sReduceTypescriptMemberFunction) {
             OSS << "a.n(" << varName << ".length); // ";
         } else {
             OSS << "a.writeNumber(" << varName << ".length); // ";
         }
-        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        oss << g.getTypescriptTypename(vertID) << "\n";
     }
     OSS << "for (const v" << depth << " of " << varName << ") {\n";
     {
@@ -775,7 +775,7 @@ void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     } else {
         OSS << "a.writeNumber(" << varName << ".size); // ";
     }
-    oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+    oss << g.getTypescriptTypename(vertID) << "\n";
     OSS << "for (const [k" << depth << ", v" << depth << "] of " << varName << ") {\n";
     {
         INDENT();
@@ -815,7 +815,7 @@ void outputLoadSerializable(std::ostream& oss, std::pmr::string& space, std::str
     std::pmr::memory_resource* scratch) {
     if (g.isTypescriptPointer(vertID)) {
         OSS << "// skip, " << varName << ": "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID) << "\n";
         return;
     }
     const auto& traits = get(g.traits, g, vertID);
@@ -839,14 +839,14 @@ void outputLoadSerializable(std::ostream& oss, std::pmr::string& space, std::str
         }
     } else if (g.isTypescriptMap(vertID)) {
         outputLoadMap(oss, space, ns, g, vertID, varName, depth, scratch);
-    } else if (g.isTypescriptArray(vertID, scratch) || g.isTypescriptSet(vertID)) {
+    } else if (g.isTypescriptArray(vertID) || g.isTypescriptSet(vertID)) {
         outputLoadCollection(oss, space, ns, g, vertID, varName, depth, scratch);
     } else if (holds_tag<Struct_>(vertID, g) || holds_tag<Value_>(vertID, g)) {
         const auto& memberName = get(g.names, g, vertID);
         OSS << "load" << memberName << "(a, " << varName << ");\n";
     } else {
         OSS << "// skip: " << varName << ": "
-            << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+            << g.getTypescriptTypename(vertID) << "\n";
     }
 }
 
@@ -865,7 +865,7 @@ void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::strin
         } else {
             OSS << sizeName << " = a.readNumber(); // ";
         }
-        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        oss << g.getTypescriptTypename(vertID) << "\n";
     } else {
         sizeName.append(std::to_string(depth));
         if (sReduceTypescriptMemberFunction) {
@@ -873,7 +873,7 @@ void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::strin
         } else {
             OSS << "const " << sizeName << " = a.readNumber(); // ";
         }
-        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        oss << g.getTypescriptTypename(vertID) << "\n";
     }
 
     // elememt
@@ -886,7 +886,7 @@ void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::strin
     counterName.append(std::to_string(depth));
 
     std::pmr::string paramName(scratch);
-    bool bArray = g.isTypescriptArray(vertID, scratch);
+    bool bArray = g.isTypescriptArray(vertID);
     paramName.append("v");
     paramName.append(std::to_string(depth));
 
@@ -913,7 +913,7 @@ void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::strin
             outputLoadSerializable(oss, space, ns, g, paramID, lhsName, depth, scratch);
         } else {
             OSS << "const " << paramName << " = new "
-                << g.getTypescriptTypename(paramID, scratch, scratch) << "();\n";
+                << g.getTypescriptTypename(paramID) << "();\n";
             outputLoadSerializable(oss, space, ns, g, paramID, paramName, depth, scratch);
         }
         if (bArray) {
@@ -942,7 +942,7 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
         } else {
             OSS << sizeName << " = a.readNumber(); // ";
         }
-        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        oss << g.getTypescriptTypename(vertID) << "\n";
     } else {
         sizeName.append(std::to_string(depth));
         if (sReduceTypescriptMemberFunction) {
@@ -950,7 +950,7 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
         } else {
             OSS << "const " << sizeName << " = a.readNumber(); // ";
         }
-        oss << g.getTypescriptTypename(vertID, scratch, scratch) << "\n";
+        oss << g.getTypescriptTypename(vertID) << "\n";
     }
 
     // elememt
@@ -985,7 +985,7 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
             outputLoadSerializable(oss, space2, ns, g, keyID, "", depth, scratch);
         } else {
             OSS << "const " << keyName << " = new "
-                << g.getTypescriptTypename(keyID, scratch, scratch) << "();\n";
+                << g.getTypescriptTypename(keyID) << "();\n";
             outputLoadSerializable(oss, space, ns, g, keyID, keyName, depth, scratch);
         }
 
@@ -995,7 +995,7 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
             outputLoadSerializable(oss, space2, ns, g, valueID, "", depth, scratch);
         } else {
             OSS << "const " << valueName << " = new "
-                << g.getTypescriptTypename(valueID, scratch, scratch) << "();\n";
+                << g.getTypescriptTypename(valueID) << "();\n";
             outputLoadSerializable(oss, space, ns, g, valueID, valueName, depth, scratch);
         }
         const auto& keyTraits = get(g.traits, g, keyID);
@@ -1017,7 +1017,7 @@ std::pmr::string generateGraphSerialization_ts(
     Expects(s.isVector());
 
     auto typePath = g.getTypePath(vertID);
-    auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+    auto typeName = g.getDependentName(ns, vertID);
     auto cppName = getCppPath(typeName, scratch);
     const auto& name = get(g.names, g, vertID);
 
@@ -1086,7 +1086,7 @@ std::pmr::string generateGraphSerialization_ts(
                     const auto& tagName = get(g.names, g, tagID);
                     std::pmr::string objectVar(scratch);
                     if (gReduceCode) {
-                        auto typeName = g.getTypescriptTypename(c.mValue, scratch, scratch);
+                        auto typeName = g.getTypescriptTypename(c.mValue);
                         objectVar.append("g.x[v].j as ");
                         objectVar.append(typeName);
                         objectVar.append("");
@@ -1159,7 +1159,7 @@ std::pmr::string generateGraphSerialization_ts(
                 } else {
                     componentVar.append(getTagVariableName(c.mName, scratch));
                     OSS << "const " << componentVar << " = new "
-                        << g.getTypescriptTypename(componentID, scratch, scratch) << "();\n";
+                        << g.getTypescriptTypename(componentID) << "();\n";
                 }
                 outputLoadSerializable(oss, space, ns, g, componentID, componentVar, 0, scratch);
             }
@@ -1181,7 +1181,7 @@ std::pmr::string generateGraphSerialization_ts(
                             outputLoadSerializable(oss, space, ns, g, objectID, "const " + objectVar, 0, scratch);
                         } else {
                             OSS << "const " << objectVar << " = new "
-                                << g.getTypescriptTypename(objectID, scratch, scratch) << "();\n";
+                                << g.getTypescriptTypename(objectID) << "();\n";
                             outputLoadSerializable(oss, space, ns, g, objectID, objectVar, 0, scratch);
                         }
                         OSS << "g.addVertex<" << typeName << ">(" << typeName << ", " << objectVar;
@@ -1283,7 +1283,7 @@ std::pmr::string generateSerialization_ts(
             continue;
 
         auto typePath = g.getTypePath(vertID);
-        auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+        auto typeName = g.getDependentName(ns, vertID);
         auto cppName = getCppPath(typeName, scratch);
         const auto& name = get(g.names, g, vertID);
 
@@ -1319,7 +1319,7 @@ std::pmr::string generateSerialization_ts(
                             }
                             if (m.mPointer) {
                                 OSS << "// skip, v." << m.getMemberName() << ": "
-                                    << g.getTypescriptTypename(memberID, scratch, scratch) << "\n";
+                                    << g.getTypescriptTypename(memberID) << "\n";
                                 continue;
                             }
                             std::pmr::string memberVar("v.", scratch);
@@ -1348,10 +1348,10 @@ std::pmr::string generateSerialization_ts(
                             }
                             if (m.mPointer) {
                                 OSS << "// skip, v." << m.getMemberName() << ": "
-                                    << g.getTypescriptTypename(memberID, scratch, scratch) << "\n";
+                                    << g.getTypescriptTypename(memberID) << "\n";
                                 continue;
                             }
-                            if (g.isTypescriptArray(memberID, scratch)
+                            if (g.isTypescriptArray(memberID)
                                 || g.isTypescriptMap(memberID)
                                 || g.isTypescriptSet(memberID)) {
                                 if (numContainer++ == 0) {
@@ -1389,7 +1389,7 @@ std::pmr::string generateNames_ts(
     std::pmr::string space(scratch);
     const auto funcSpace = bPublicFormat ? "" : " ";
     const auto& g = builder.mSyntaxGraph;
-    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+    auto name = g.getTypescriptTypename(vertID);
     const auto& traits = get(g.traits, g, vertID);
     const auto& comment = get(g.comments, g, vertID);
     if (traits.mImport)
@@ -1452,7 +1452,7 @@ getChainedArrayValueID(const SyntaxGraph& g,
         if (g.isTypescriptMap(vertID) || g.isTypescriptValueType(vertID)) {
             return g.null_vertex();
         }
-        if (g.isTypescriptArray(vertID, scratch)) {
+        if (g.isTypescriptArray(vertID)) {
             const auto& instance = get<Instance>(vertID, g);
             Expects(!instance.mParameters.empty());
             Expects(instance.mParameters.size() == 1);
@@ -1469,7 +1469,7 @@ bool isEqualType(const SyntaxGraph& g,
     const SyntaxGraph::vertex_descriptor vertID,
     std::pmr::memory_resource* scratch) {
     return g.isTypescriptValueType(vertID)
-        || g.isTypescriptArray(vertID, scratch)
+        || g.isTypescriptArray(vertID)
         || g.isTypescriptMap(vertID)
         || holds_tag<Struct_>(vertID, g)
         || holds_tag<Graph_>(vertID, g);
@@ -1493,7 +1493,7 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
         return;
 
     auto typePath = g.getTypePath(vertID);
-    auto typeName = g.getDependentName(ns, vertID, scratch, scratch);
+    auto typeName = g.getDependentName(ns, vertID);
     auto cppName = getCppPath(typeName, scratch);
     const auto& name = get(g.names, g, vertID);
 
@@ -1529,7 +1529,7 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
                     std::pmr::string rhs("rhs.", scratch);
                     rhs.append(m.getMemberName());
 
-                    auto memberName = g.getTypescriptTypename(memberID, scratch, scratch);
+                    auto memberName = g.getTypescriptTypename(memberID);
                         
                     if (count++ == 0) {
                         OSS << "return ";
@@ -1540,7 +1540,7 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
                     
                     if (g.isTypescriptValueType(memberID)) {
                         oss << lhs << " === " << rhs;
-                    } else if (g.isTypescriptArray(memberID, scratch)) {
+                    } else if (g.isTypescriptArray(memberID)) {
                         const auto& instance = get<Instance>(memberID, g);
                         Expects(!instance.mParameters.empty());
                         Expects(instance.mParameters.size() == 1);
@@ -1556,7 +1556,7 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
                             if (realValueID == g.null_vertex()) {
                                 throw std::runtime_error("array of unknown is not supported");
                             }
-                            const auto& valueName = g.getTypescriptTypename(realValueID, scratch, scratch);
+                            const auto& valueName = g.getTypescriptTypename(realValueID);
                             oss << "equalObjectArray(" << lhs << ", " << rhs << ", equal" << valueName << ")";
                         }
                     } else if (g.isTypescriptMap(memberID)) {
@@ -1577,14 +1577,14 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
                             if (realValueID == g.null_vertex()) {
                                 throw std::runtime_error("array of unknown is not supported");
                             }
-                            const auto& valueName = g.getTypescriptTypename(realValueID, scratch, scratch);
+                            const auto& valueName = g.getTypescriptTypename(realValueID);
                             oss << "equalObjectMap(" << lhs << ", " << rhs << ", equal" << valueName << ")";
                         }
                     } else if (holds_tag<Struct_>(memberID, g) || holds_tag<Graph_>(memberID, g)) {
                         oss << "equal" << memberName << "(" << lhs << ", " << rhs << ")";
                     } else {
                         oss << "/* skip: " << m.getMemberName() << ": "
-                            << g.getTypescriptTypename(vertID, scratch, scratch) << " */";
+                            << g.getTypescriptTypename(vertID) << " */";
                     }
                 }
                 if (count) {

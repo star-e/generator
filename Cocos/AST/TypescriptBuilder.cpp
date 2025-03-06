@@ -63,7 +63,7 @@ std::pmr::string outputImports_ts(
     int count = 0;
     for (const auto& type : imported) {
         auto vertID = locate(type, g);
-        auto tsName = g.getTypescriptTypename(type, scratch, scratch);
+        auto tsName = g.getTypescriptTypename(type);
 
         if (count++)
             oss << ", ";
@@ -117,7 +117,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
     std::pmr::memory_resource* scratch) {
     const auto funcSpace = bPublicFormat ? "" : " ";
     const auto& g = builder.mSyntaxGraph;
-    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+    auto name = g.getTypescriptTypename(vertID);
     const auto& traits = get(g.traits, g, vertID);
     const auto& comment = get(g.comments, g, vertID);
     if (traits.mImport)
@@ -286,7 +286,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                                     OSS << memberName << ": null,\n";
                                 } else {
                                     OSS << memberName << ": "
-                                        << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ",\n";
+                                        << g.getTypescriptInitialValue(memberID, m) << ",\n";
                                 }
                             }
                         }
@@ -318,7 +318,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                                 const auto typescriptFullName = memberType + (m.mNullable ? " | null" : "");
                                 OSS << "if (!value." << memberName << ") {\n";
                                 OSS << "    (value." << memberName << " as " << memberType << ") = "
-                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                                    << g.getTypescriptInitialValue(memberID, m) << ";\n";
                                 OSS << "} else {\n";
                                 OSS << "    fillRequired" << memberType << "(value." << memberName << ");\n";
                                 OSS << "}\n";
@@ -326,11 +326,11 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                         } else {
                             if (sEnableOptionalAssign) {
                                 OSS << "value." << memberName << " ??= "
-                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                                    << g.getTypescriptInitialValue(memberID, m) << ";\n";
                             } else {
                                 OSS << "if (value." << memberName << " === undefined) {\n";
                                 OSS << "    value." << memberName << " = "
-                                    << g.getTypescriptInitialValue(memberID, m, scratch, scratch) << ";\n";
+                                    << g.getTypescriptInitialValue(memberID, m) << ";\n";
                                 OSS << "}\n";
                             }
                         }
@@ -351,7 +351,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 {
                     INDENT();
                     for (const auto& param : s.mVariants) {
-                        OSS << g.getTypescriptTagName(param.mTypePath, scratch, scratch) << ",\n";
+                        OSS << g.getTypescriptTagName(param.mTypePath) << ",\n";
                     }
                 }
                 OSS << "}\n";
@@ -393,7 +393,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                     if (!g.isPoolType(vertID, typeModulePath)) {
                         continue;
                     }
-                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                    auto name = g.getTypescriptTypename(vertID);
                     OSS << "this." << camelToVariable(name, scratch) << "BatchSize = batchSize;\n";
                 }
             }
@@ -402,7 +402,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                 if (!g.isPoolType(vertID, typeModulePath)) {
                     continue;
                 }
-                auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                auto name = g.getTypescriptTypename(vertID);
                 OSS << camelToVariable(name, scratch) << "BatchSize = " << sPoolBatchSize << ";\n";
             }
         }
@@ -468,7 +468,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                         if (!g.isPoolType(vertID, typeModulePath)) {
                             continue;
                         }
-                        auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                        auto name = g.getTypescriptTypename(vertID);
                         OSS << "this._" << camelToVariable(name, scratch)
                             << " = new RecyclePool<" << name << ">(() => new " << name << "(), settings."
                             << camelToVariable(name, scratch) << "BatchSize);\n";
@@ -486,7 +486,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                     if (!g.isPoolType(vertID, typeModulePath)) {
                         continue;
                     }
-                    auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                    auto name = g.getTypescriptTypename(vertID);
                     auto shortName = camelToShortVariable(name, scratch);
                     auto id = names[shortName]++;
                     if (id) {
@@ -507,7 +507,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
                     continue;
                 }
                 const auto& traits = get(g.traits, g, vertID);
-                auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+                auto name = g.getTypescriptTypename(vertID);
 
                 // get cntr
                 const Constructor* pCntr = nullptr;
@@ -599,7 +599,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
             if (!g.isPoolType(vertID, typeModulePath)) {
                 continue;
             }
-            auto name = g.getTypescriptTypename(vertID, scratch, scratch);
+            auto name = g.getTypescriptTypename(vertID);
             auto shortName = camelToShortVariable(name, scratch);
             auto id = names[shortName]++;
             if (id) {

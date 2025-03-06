@@ -49,6 +49,22 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         }
     }
 
+    MODULE(TypedArray,
+        .mFolder = "cocos/core",
+        .mFilePrefix = "TypedArray.h",
+        .mTypescriptFolder = "",
+        .mTypescriptFilePrefix = "",
+    ) {
+        IMPORT_CLASS(Int8Array, .mFlags = JSB);
+        IMPORT_CLASS(Int16Array, .mFlags = JSB);
+        IMPORT_CLASS(Int32Array, .mFlags = JSB);
+        IMPORT_CLASS(Uint8Array, .mFlags = JSB);
+        IMPORT_CLASS(Uint16Array, .mFlags = JSB);
+        IMPORT_CLASS(Uint32Array, .mFlags = JSB);
+        IMPORT_CLASS(Float32Array, .mFlags = JSB);
+        IMPORT_CLASS(Float64Array, .mFlags = JSB);
+    }
+
     MODULE(Scene,
         .mTypescriptFolder = "cocos/render-scene",
         .mTypescriptFilePrefix = "scene", ) {

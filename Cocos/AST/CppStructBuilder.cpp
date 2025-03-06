@@ -71,7 +71,7 @@ std::pmr::string CppStructBuilder::getDependentName(SyntaxGraph::vertex_descript
     const auto& g = *mSyntaxGraph;
     auto* scratch = get_allocator().resource();
 
-    auto name = mSyntaxGraph->getDependentName(mCurrentNamespace, vertID, scratch, scratch);
+    auto name = mSyntaxGraph->getDependentName(mCurrentNamespace, vertID);
     if (holds_tag<Tag_>(vertID, g)) {
         Expects(!name.empty());
         Expects(name.back() == '_');
@@ -84,13 +84,12 @@ std::pmr::string CppStructBuilder::getDependentName(SyntaxGraph::vertex_descript
 
 std::pmr::string CppStructBuilder::getDependentName(std::string_view typePath) const {
     const auto& g = *mSyntaxGraph;
-    auto* scratch = get_allocator().resource();
     Expects(!typePath.empty());
     auto vertID = g.null_vertex();
     if (typePath.front() == '/') {
         vertID = locate(typePath, g);
     } else {
-        vertID = g.lookupType(mCurrentNamespace, typePath, scratch);
+        vertID = g.lookupType(mCurrentNamespace, typePath);
     }
     Ensures(vertID != g.null_vertex());
     return getDependentName(vertID);
@@ -132,9 +131,9 @@ std::pmr::string CppStructBuilder::getImplName(std::string_view ns) const {
     if (ns != ".") {
         cn = ns;
     } else {
-        cn = g.getNamespace(mCurrentVertex, scratch);
+        cn = g.getNamespace(mCurrentVertex);
     }
-    auto name = g.getDependentName(cn, mCurrentVertex, scratch, scratch);
+    auto name = g.getDependentName(cn, mCurrentVertex);
     if (holds_tag<Tag_>(mCurrentVertex, g)) {
         Expects(!name.empty());
         Expects(name.back() == '_');
@@ -272,7 +271,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
         auto& content = f.mMembers.emplace_back();
         {
             pmr_ostringstream oss(std::ios::out, scratch);
-            auto name = g.getDependentName(ns, memberID, scratch, scratch);
+            auto name = g.getDependentName(ns, memberID);
             if (name.empty()) {
                 // if dependent name is empty, the scope is the same of input type
                 name = get(g.names, g, vertID);
@@ -313,7 +312,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 if (holds_tag<Enum_>(memberID, g)) {
                     pmr_ostringstream oss(std::ios::out, scratch);
                     const auto& e = get<Enum>(memberID, g);
-                    const auto enumType = g.getDependentCppName(ns, memberID, scratch, scratch);
+                    const auto enumType = g.getDependentCppName(ns, memberID);
                     Expects(!e.mValues.empty());
                     oss << enumType << "::" << e.mValues.front().mName;
                     content.mDefaultValue = oss.str();
@@ -332,7 +331,7 @@ std::pmr::string CppStructBuilder::generateMembers() const {
     pmr_ostringstream oss(std::ios_base::out, scratch);
     std::pmr::string space(scratch);
     const auto& g = *mSyntaxGraph;
-    auto scope = g.getScope(mCurrentVertex, scratch);
+    auto scope = g.getScope(mCurrentVertex);
     visit_vertex(
         mCurrentVertex, g,
         [&](const Composition_ auto& s) {
@@ -516,7 +515,7 @@ void generateCntr(std::ostream& oss, std::pmr::string& space,
         for (const auto& baseCntr : baseCntrs) {
             const auto baseID = baseCntr.mBaseID;
             const auto baseName = g.getDependentCppName(
-                cpp.mCurrentNamespace, baseID, scratch, scratch);
+                cpp.mCurrentNamespace, baseID);
             bool bPmr = g.isPmr(baseID);
             if (count++) {
                 oss << "\n";
@@ -644,7 +643,7 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
         std::pmr::string rhs("rhs.", scratch);
         rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
-            auto templateID = g.getTemplate(memberID, scratch);
+            auto templateID = g.getTemplate(memberID);
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
@@ -711,7 +710,7 @@ void generateCopy(std::ostream& oss, std::pmr::string& space,
         std::pmr::string rhs("rhs.", scratch);
         rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
-            auto templateID = g.getTemplate(memberID, scratch);
+            auto templateID = g.getTemplate(memberID);
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
@@ -753,7 +752,7 @@ void generateMoveAssign(std::ostream& oss, std::pmr::string& space,
         std::pmr::string rhs("rhs.", scratch);
         rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
-            auto templateID = g.getTemplate(memberID, scratch);
+            auto templateID = g.getTemplate(memberID);
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
@@ -789,7 +788,7 @@ void generateCopyAssign(std::ostream& oss, std::pmr::string& space,
         std::pmr::string rhs("rhs.", scratch);
         rhs.append(m.getMemberName());
         if (g.isInstantiation(memberID)) {
-            auto templateID = g.getTemplate(memberID, scratch);
+            auto templateID = g.getTemplate(memberID);
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
@@ -1342,7 +1341,7 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
                 bNoexcept = false;
                 oss << "std::u8string_view " << getParameterName(m.mMemberName, scratch);
             } else {
-                auto name = g.getDependentName(mCurrentNamespace, memberID, scratch, scratch);
+                auto name = g.getDependentName(mCurrentNamespace, memberID);
                 if (m.mConst || memberTraits.mTrivial) {
                     oss << "const ";
                 }
@@ -1366,7 +1365,7 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
                 const auto baseID = baseCntr.mBaseID;
                 for (const auto& param : baseCntr.mParameters) {
                     const auto paramID = locate(param.mTypePath, g);
-                    auto name = g.getDependentName(mCurrentNamespace, paramID, scratch, scratch);
+                    auto name = g.getDependentName(mCurrentNamespace, paramID);
 
                     if (count++) {
                         oss << ", ";

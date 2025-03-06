@@ -80,11 +80,11 @@ void parseParameter(ModuleBuilder& builder, std::string_view& parameters, Parame
     }
     auto& g = builder.mSyntaxGraph;
     if (isInstance(typeName)) {
-        g.instantiate(builder.mCurrentScope, typeName, scratch);
+        g.instantiate(builder.mCurrentScope, typeName);
     }
 
     param.mTypePath = g.getTypePath(builder.mCurrentScope,
-        typeName, scratch, scratch);
+        typeName);
     Expects(locate(param.mTypePath, g) != g.null_vertex());
 }
 

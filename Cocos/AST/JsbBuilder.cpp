@@ -37,8 +37,8 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
         if (g.isDerived(vertID))
             continue;
 
-        auto cppName = g.getDependentCppName(ns, vertID, scratch, scratch);
-        auto tsName = g.getTypescriptTypename(vertID, scratch, scratch);
+        auto cppName = g.getDependentCppName(ns, vertID);
+        auto tsName = g.getTypescriptTypename(vertID);
 
         visit_vertex(
             vertID, g,
@@ -83,8 +83,8 @@ std::pmr::string generateJsbConversions_h(const ModuleBuilder& builder, uint32_t
         if (g.isDerived(vertID))
             continue;
 
-        auto cppName = g.getDependentCppName(ns, vertID, scratch, scratch);
-        auto tsName = g.getTypescriptTypename(vertID, scratch, scratch);
+        auto cppName = g.getDependentCppName(ns, vertID);
+        auto tsName = g.getTypescriptTypename(vertID);
 
         visit_vertex(
             vertID, g,
@@ -151,8 +151,8 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
         if (g.isDerived(vertID))
             continue;
 
-        auto cppName = g.getDependentCppName(ns, vertID, scratch, scratch);
-        auto tsName = g.getTypescriptTypename(vertID, scratch, scratch);
+        auto cppName = g.getDependentCppName(ns, vertID);
+        auto tsName = g.getTypescriptTypename(vertID);
 
         visit_vertex(
             vertID, g,
@@ -232,8 +232,8 @@ std::pmr::string generateJsbConversions_cpp(const ModuleBuilder& builder, uint32
         if (g.isDerived(vertID))
             continue;
 
-        auto cppName = g.getDependentCppName(ns, vertID, scratch, scratch);
-        auto tsName = g.getTypescriptTypename(vertID, scratch, scratch);
+        auto cppName = g.getDependentCppName(ns, vertID);
+        auto tsName = g.getTypescriptTypename(vertID);
         const auto& name = get(g.names, g, vertID); 
         visit_vertex(
             vertID, g,

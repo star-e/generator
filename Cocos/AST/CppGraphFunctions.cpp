@@ -4165,7 +4165,7 @@ void outputVectorGraphLoad(std::ostream& oss, std::pmr::string& space,
             tagName.pop_back();
             auto tagVar = getTagVariableName(c.mName, scratch);
             auto valueID = locate(c.mValuePath, g);
-            auto valueName = g.getDependentCppName(ns, valueID, scratch, scratch);
+            auto valueName = g.getDependentCppName(ns, valueID);
 
             OSS << valueName << " " << tagVar;
             if (g.isPmr(valueID)) {
@@ -4193,7 +4193,7 @@ void outputVectorGraphLoad(std::ostream& oss, std::pmr::string& space,
                     {
                         INDENT();
                         auto typeID = locate(c.mValue, g);
-                        auto typeName = g.getDependentCppName(ns, typeID, scratch, scratch);
+                        auto typeName = g.getDependentCppName(ns, typeID);
                         OSS << typeName << " val";
                         if (g.isPmr(typeID)) {
                             oss << "(g.get_allocator());\n";

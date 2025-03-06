@@ -186,7 +186,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
         const auto& c = get<Concept>(vertID, g);
         const auto& name = get(g.names, g, vertID);
 
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
 
         auto outputNs = [&]() {
             auto bNewNamespace = outputNamespaces(oss, space, context, ns);
@@ -202,7 +202,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
         oss << "template <typename T> concept " << name << " = ";
         if (!c.mParentPath.empty()) {
             auto parentID = locate(c.mParentPath, g);
-            auto superType = g.getDependentName(ns, parentID, scratch, scratch);
+            auto superType = g.getDependentName(ns, parentID);
             oss << getCppPath(superType, scratch) << "<T> && ";
         }
         oss << "Is" << convertTag(name) << "<T>::value;\n";
@@ -230,7 +230,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
             continue;
 
         auto typePath = g.getTypePath(vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
 
         auto outputNs = [&]() {
             auto bNewNamespace = outputNamespaces(oss, space, context, ns);
@@ -254,7 +254,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
                     std::pmr::vector<std::pmr::string> outputs(scratch);
 
                     while (conceptID != g.null_vertex()) {
-                        const auto& conceptName = g.getDependentName(ns, conceptID, scratch, scratch);
+                        const auto& conceptName = g.getDependentName(ns, conceptID);
                         std::pmr::string traitName(conceptName, scratch);
                         auto pos = traitName.rfind('/');
                         if (pos != traitName.npos) {
@@ -273,8 +273,8 @@ std::pmr::string generateFwd_h(std::string_view projectName,
                     }
 
                     for (auto iter = outputs.rbegin(); iter != outputs.rend(); ++iter) {
-                        auto ns = g.getNamespace(conceptID0, scratch);
-                        if (ns == g.getNamespace(vertID, scratch)) {
+                        auto ns = g.getNamespace(conceptID0);
+                        if (ns == g.getNamespace(vertID)) {
                             OSS << "template <> struct " << getCppPath(*iter, scratch) << "<"
                                 << name << "> { static constexpr bool value = true; };\n";
                             prevConstraints = true;
@@ -299,7 +299,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
                 lineBreak(BreakType::Alias);
 
                 auto typeID = locate(s.mTypePath, g);
-                auto typeName = g.getDependentName(ns, typeID, scratch, scratch);
+                auto typeName = g.getDependentName(ns, typeID);
                 OSS << "using " << name << " = " << getCppPath(typeName, scratch) << ";\n";
             },
             [&](const Enum& e) {
@@ -362,16 +362,16 @@ std::pmr::string generateFwd_h(std::string_view projectName,
     if (!constrains.empty()) {
         for (const auto& [conceptPath, typeIDs] : constrains) {
             auto conceptID = locate(conceptPath, g);
-            auto ns = g.getNamespace(conceptID, scratch);
+            auto ns = g.getNamespace(conceptID);
             outputNamespaces(oss, space, context, ns);
-            auto conceptPath = g.getDependentName(ns, conceptID, scratch, scratch);
+            auto conceptPath = g.getDependentName(ns, conceptID);
             auto conceptName = getCppPath(conceptPath, scratch);
             Expects(!conceptName.empty() && conceptName.back() == '_');
             conceptName.pop_back();
             for (int count = 0; const auto& typeID : typeIDs) {
                 if (count++ == 0)
                     oss << "\n";
-                auto typePath = g.getDependentName(ns, typeID, scratch, scratch);
+                auto typePath = g.getDependentName(ns, typeID);
                 auto name = getCppPath(typePath, scratch);
                 OSS << "template <> struct Is" << conceptName << "<"
                     << name << "> { static constexpr bool value = true; };\n";
@@ -392,7 +392,7 @@ std::pmr::string generateFwd_h(std::string_view projectName,
 
             const auto& traits = get(g.traits, g, vertID);
             if (traits.mFlags & GenerationFlags::HASH_COMBINE) {
-                auto name = getCppPath(g.getDependentName("/std", vertID, scratch, scratch), scratch);
+                auto name = getCppPath(g.getDependentName("/std", vertID), scratch);
                 oss << "\n";
                 OSS << "template <>\n";
                 OSS << "struct hash<" << name << "> {\n";
@@ -436,7 +436,7 @@ std::pmr::string generateNames_h(const SyntaxGraph& g,
             continue;
 
         auto typePath = g.getTypePath(vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
 
         auto outputNs = [&]() {
             auto bNewNamespace = outputNamespaces(oss, space, context, ns);
@@ -660,7 +660,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
         const std::pmr::map<SyntaxGraph::vertex_descriptor, SyntaxGraph::vertex_descriptor>& bases,
         const std::pmr::set<SyntaxGraph::vertex_descriptor>& overrided) {
         auto apiDLL = mAPI;
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
         for (const auto baseID : baseIDs) {
             if (!overrided.contains(baseID)) {
                 continue;
@@ -671,7 +671,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
             }
 
             const auto& baseTraits = get(g.traits, g, baseID);
-            const auto name = g.getDependentCppName(ns, implID, scratch, scratch);
+            const auto name = g.getDependentCppName(ns, implID);
             visit_vertex(
                 baseID, g,
                 [&](const Composition_ auto& s) {
@@ -836,7 +836,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
         const auto& name = get(g.names, g, vertID);
         const auto& traits = get(g.traits, g, vertID);
         const auto& comment = get(g.comments, g, vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
         CppStructBuilder cpp(&g, &mModuleGraph, vertID, mModuleID, ns, mProjectName, scratch);
 
         auto bNewNamespace = outputNamespaces(oss, space, mContext, ns);
@@ -1061,7 +1061,7 @@ struct VisitorTypes_h : boost::dfs_visitor<> {
 
         const auto& name = get(g.names, g, vertID);
         const auto& traits = get(g.traits, g, vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
         CppStructBuilder cpp(&g, &mModuleGraph, vertID, mModuleID, ns, mProjectName, scratch);
 
         visit_vertex(
@@ -1265,7 +1265,7 @@ struct VisitorTypes_cpp : boost::dfs_visitor<> {
         const auto& g = g0.mGraph;
         const auto& name = get(g.names, g, vertID);
         const auto& traits = get(g.traits, g, vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
         const auto& mg = mModuleGraph;
         const auto moduleID = mModuleID;
         CppStructBuilder cpp(&g, &mModuleGraph, vertID, moduleID, ns, mProjectName, scratch);
@@ -1362,7 +1362,7 @@ std::pmr::string generateTypes_h(std::string_view projectName,
                 vertID, g,
                 [&](const Composition_ auto& s) {
                     if (traits.mFlags & GenerationFlags::HASH_COMBINE) {
-                        auto name = getCppPath(g.getDependentName("/std", vertID, scratch, scratch), scratch);
+                        auto name = getCppPath(g.getDependentName("/std", vertID), scratch);
                         oss << "\n";
                         OSS << "inline hash_t hash<" << name << ">::operator()(const " << name << "& val) const noexcept {\n";
                         {
@@ -1467,7 +1467,7 @@ std::pmr::string generateGraphs_h(std::string_view projectName,
         apiDLL.append("_API ");
 
         auto typePath = g.getTypePath(vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
         auto bNewNamespace = outputNamespaces(oss, space, context, ns);
 
         const auto& name = get(g.names, g, vertID);
@@ -1527,7 +1527,7 @@ std::pmr::string generateGraphs_h(std::string_view projectName,
 
         const auto& traits = get(g.traits, g, vertID);
 
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
         auto bNewNamespace = outputNamespaces(oss, space, context, ns);
 
         const auto& name = get(g.names, g, vertID);
@@ -1580,7 +1580,7 @@ std::pmr::string generateReflection_h(std::string_view projectName,
             continue;
 
         auto typePath = g.getTypePath(vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
 
         auto outputNs = [&]() {
             auto bNewNamespace = outputNamespaces(oss, space, context, ns);
@@ -1691,7 +1691,7 @@ std::pmr::string generateReflection_cpp(std::string_view projectName,
             continue;
 
         auto typePath = g.getTypePath(vertID);
-        auto ns = g.getNamespace(vertID, scratch);
+        auto ns = g.getNamespace(vertID);
 
         auto outputNs = [&]() {
             auto bNewNamespace = outputNamespaces(oss, space, context, ns);
@@ -1773,7 +1773,7 @@ std::pmr::string generateReflection_cpp(std::string_view projectName,
                         INDENT();
                         for (const auto& param : s.mVariants) {
                             auto varID = locate(param.mTypePath, g);
-                            auto varName = getCppPath(g.getDependentName(ns, varID, scratch, scratch), scratch);
+                            auto varName = getCppPath(g.getDependentName(ns, varID), scratch);
                             visit_vertex(
                                 varID, g,
                                 [&](const Tag& t) {

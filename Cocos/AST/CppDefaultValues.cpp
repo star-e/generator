@@ -206,6 +206,7 @@ void addCppDefaultValues(ModuleBuilder& builder) {
         CLASS(string, .mFlags = JSB);
         CONTAINER(vector, .mFlags = JSB);
         CONTAINER(optional);
+        CONTAINER(variant);
         MAP(map);
         MAP(unordered_map);
         NAMESPACE(pmr) {

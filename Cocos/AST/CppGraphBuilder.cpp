@@ -104,7 +104,7 @@ std::pmr::string CppGraphBuilder::graphType(std::string_view ns) const {
     const auto& g = *mStruct.mSyntaxGraph;
     const auto vertID = mStruct.mCurrentVertex;
     auto scratch = get_allocator().resource();
-    auto name = g.getDependentName(ns, vertID, scratch, scratch);
+    auto name = g.getDependentName(ns, vertID);
     return getCppPath(name, scratch);
 }
 
@@ -113,7 +113,7 @@ std::pmr::string CppGraphBuilder::vertexDesc(std::string_view ns) const {
     const auto& g = *mStruct.mSyntaxGraph;
     const auto vertID = mStruct.mCurrentVertex;
     auto scratch = get_allocator().resource();
-    auto name = g.getDependentName(ns, vertID, scratch, scratch);
+    auto name = g.getDependentName(ns, vertID);
     if (name.empty()) {
         name.append("vertex_descriptor");
     } else {
@@ -135,7 +135,7 @@ std::pmr::string CppGraphBuilder::vertexType(std::string_view ns) const {
     const auto& g = *mStruct.mSyntaxGraph;
     auto scratch = get_allocator().resource();
     auto name = getCppPath(g.getDependentName(
-        ns, mStruct.mCurrentVertex, scratch, scratch), scratch);
+        ns, mStruct.mCurrentVertex), scratch);
     if (name.empty()) {
         oss << "Vertex";
     } else {
@@ -172,7 +172,7 @@ std::pmr::string CppGraphBuilder::vertexPropertyType(std::string_view ns) const 
 
     auto vpID = locate(s.mVertexProperty, g);
 
-    return getCppPath(g.getDependentName(ns, vpID, scratch, scratch), scratch);
+    return getCppPath(g.getDependentName(ns, vpID), scratch);
 }
 
 std::pmr::string CppGraphBuilder::edgePropertyType(std::string_view ns) const {
@@ -182,7 +182,7 @@ std::pmr::string CppGraphBuilder::edgePropertyType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
 
     auto epID = locate(s.mEdgeProperty, g);
-    return getCppPath(g.getDependentName(ns, epID, scratch, scratch), scratch);
+    return getCppPath(g.getDependentName(ns, epID), scratch);
 }
 
 std::pmr::string CppGraphBuilder::objectListType(std::string_view ns) const {
@@ -192,7 +192,7 @@ std::pmr::string CppGraphBuilder::objectListType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     auto vecID = locate(s.mVertexListPath, g);
-    oss << getCppPath(g.getDependentName(ns, vecID, scratch, scratch), scratch) << "<Object>";
+    oss << getCppPath(g.getDependentName(ns, vecID), scratch) << "<Object>";
     return oss.str();
 }
 
@@ -203,7 +203,7 @@ std::pmr::string CppGraphBuilder::vertexListType(std::string_view ns) const {
     const auto& s = *mGraph;
     auto scratch = get_allocator().resource();
     auto vecID = locate(s.mVertexListPath, g);
-    oss << getCppPath(g.getDependentName(ns, vecID, scratch, scratch), scratch) << "<Vertex>";
+    oss << getCppPath(g.getDependentName(ns, vecID), scratch) << "<Vertex>";
     return oss.str();
 }
 
@@ -215,11 +215,11 @@ std::pmr::string CppGraphBuilder::edgeListType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
 
     auto listID = locate(s.mEdgeListPath, g);
-    oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
+    oss << getCppPath(g.getDependentName(ns, listID), scratch);
     oss << "<";
 
     const auto vertID = mStruct.mCurrentVertex;
-    auto name = g.getDependentName(ns, vertID, scratch, scratch);
+    auto name = g.getDependentName(ns, vertID);
     if (name.empty()) {
         name.append("edge_type");
     } else {
@@ -259,7 +259,7 @@ std::pmr::string CppGraphBuilder::outEdgeListType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
 
     auto listID = locate(s.mOutEdgeListPath, g);
-    oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
+    oss << getCppPath(g.getDependentName(ns, listID), scratch);
     oss << "<OutEdge>";
     return oss.str();
 }
@@ -331,7 +331,7 @@ std::pmr::string CppGraphBuilder::inEdgeListType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
 
     auto listID = locate(s.mOutEdgeListPath, g);
-    oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
+    oss << getCppPath(g.getDependentName(ns, listID), scratch);
     oss << "<InEdge>";
     return oss.str();
 }
@@ -371,7 +371,7 @@ std::pmr::string CppGraphBuilder::childListType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
 
     auto listID = locate(s.mOutEdgeListPath, g);
-    oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
+    oss << getCppPath(g.getDependentName(ns, listID), scratch);
     if (s.mAliasGraph) {
         oss << "<OutEdge>";
     } else {
@@ -423,7 +423,7 @@ std::pmr::string CppGraphBuilder::parentListType(std::string_view ns) const {
     auto scratch = get_allocator().resource();
 
     auto listID = locate(s.mOutEdgeListPath, g);
-    oss << getCppPath(g.getDependentName(ns, listID, scratch, scratch), scratch);
+    oss << getCppPath(g.getDependentName(ns, listID), scratch);
     if (s.mAliasGraph) {
         oss << "<InEdge>";
     } else {
@@ -521,7 +521,7 @@ std::pmr::string CppGraphBuilder::valueType(std::string_view ns) const {
         if (count++)
             oss << ", ";
         auto conceptID = locate(c.mValue, g);
-        oss << getCppPath(g.getDependentName(ns, conceptID, scratch, scratch), scratch);
+        oss << getCppPath(g.getDependentName(ns, conceptID), scratch);
         oss << "*";
     }
     oss << ">";
@@ -546,7 +546,7 @@ std::pmr::string CppGraphBuilder::constValueType(std::string_view ns) const {
             oss << ", ";
         oss << "const ";
         auto conceptID = locate(c.mValue, g);
-        oss << getCppPath(g.getDependentName(ns, conceptID, scratch, scratch), scratch);
+        oss << getCppPath(g.getDependentName(ns, conceptID), scratch);
         oss << "*";
     }
     oss << ">";
@@ -566,7 +566,7 @@ std::pmr::string CppGraphBuilder::handleElemType(const PolymorphicPair& pair,
     auto valueID = locate(pair.mValue, g);
     
     auto tagName = cpp.getDependentName(tagID);
-    auto valueName = getCppPath(g.getDependentName(ns, valueID, scratch, scratch), scratch);
+    auto valueName = getCppPath(g.getDependentName(ns, valueID), scratch);
 
     oss << "impl::ValueHandle<" << tagName << ", ";
     if (pair.mMemberName.empty()) {
@@ -581,7 +581,7 @@ std::pmr::string CppGraphBuilder::handleElemType(const PolymorphicPair& pair,
             }
         } else {
             auto vecID = locate(pair.mContainerPath, g);
-            auto vecType = getCppPath(g.getDependentName(ns, vecID, scratch, scratch), scratch);
+            auto vecType = getCppPath(g.getDependentName(ns, vecID), scratch);
             oss << vecType << "<" << valueName << ">::iterator";
         }
     }
