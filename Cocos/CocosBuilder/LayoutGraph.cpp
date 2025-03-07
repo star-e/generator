@@ -46,7 +46,7 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 #include "cocos/renderer/gfx-base/GFXPipelineLayout.h"
 )",
-        .mTypescriptHeader = R"(import { HTML5 } from 'internal:constants';
+        .mTypescriptHeader = R"(import { COCOS_RUNTIME, HTML5 } from 'internal:constants';
 )",
         .mTypescriptInclude = R"(import type { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
@@ -318,10 +318,10 @@ static isWebGPU = false;
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorGroups, _)
             );
             TS_FUNCTIONS(R"(getSets (): Map<UpdateFrequency, DescriptorSetData> {
-    return HTML5 && Layout.isWebGPU ? this.descriptorGroups : this.descriptorSets;
+    return (COCOS_RUNTIME || HTML5) && Layout.isWebGPU ? this.descriptorGroups : this.descriptorSets;
 }
 getSet (frequency: UpdateFrequency): DescriptorSetData | undefined {
-    return HTML5 && Layout.isWebGPU ? this.descriptorGroups.get(frequency) : this.descriptorSets.get(frequency);
+    return (COCOS_RUNTIME || HTML5) && Layout.isWebGPU ? this.descriptorGroups.get(frequency) : this.descriptorSets.get(frequency);
 }
 )");
         }
