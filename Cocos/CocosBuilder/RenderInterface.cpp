@@ -639,6 +639,7 @@ virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name)
     }
 
     INTERFACE(RenderObject) {
+        INHERITS(RefCounted);
         PUBLIC_METHODS(R"(
 virtual void destroy() noexcept = 0;
 )");
@@ -746,6 +747,175 @@ virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0
 virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
 virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
 virtual void setPrimitiveIndex(const BufferView& index) = 0;
+)");
+    }
+
+    INTERFACE(RenderSampler) {
+        INHERITS(RenderObject);
+    }
+
+    INTERFACE(RenderSamplerImage1D) {
+        INHERITS(RenderSampler);
+        PUBLIC_METHODS(R"(
+virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+virtual void setInTransform(const Mat4& inTransform) = 0;
+virtual void setInOffset(const Vec4& inOffset) = 0;
+virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
+virtual void setFilter(const ccstd::string& filter) = 0;
+virtual void setWrapMode(const ccstd::string& wrapMode) = 0;
+virtual void setOutTransform(const Mat4& outTransform) = 0;
+virtual void setOutOffset(const Vec4& outOffset) = 0;
+)");
+    }
+
+    INTERFACE(RenderSamplerImage2D) {
+        INHERITS(RenderSampler);
+        PUBLIC_METHODS(R"(
+virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+virtual void setInTransform(const Mat4& inTransform) = 0;
+virtual void setInOffset(const Vec4& inOffset) = 0;
+virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
+virtual void setFilter(const ccstd::string& filter) = 0;
+virtual void setWrapMode1(const ccstd::string& wrapMode) = 0;
+virtual void setWrapMode2(const ccstd::string& wrapMode) = 0;
+virtual void setOutTransform(const Mat4& outTransform) = 0;
+virtual void setOutOffset(const Vec4& outOffset) = 0;
+)");
+    }
+
+    INTERFACE(RenderSamplerImage3D) {
+        INHERITS(RenderSampler);
+        PUBLIC_METHODS(R"(
+virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+virtual void setInTransform(const Mat4& inTransform) = 0;
+virtual void setInOffset(const Vec4& inOffset) = 0;
+virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
+virtual void setFilter(const ccstd::string& filter) = 0;
+virtual void setWrapMode1(const ccstd::string& wrapMode) = 0;
+virtual void setWrapMode2(const ccstd::string& wrapMode) = 0;
+virtual void setWrapMode3(const ccstd::string& wrapMode) = 0;
+virtual void setOutTransform(const Mat4& outTransform) = 0;
+virtual void setOutOffset(const Vec4& outOffset) = 0;
+)");
+    }
+
+    INTERFACE(RenderSamplerPrimitive) {
+        INHERITS(RenderSampler);
+        PUBLIC_METHODS(R"(
+virtual void setArray(DataType type, Uint8Array array) = 0;
+virtual void setInOffset(uint64_t inOffset) = 0;
+)");
+    }
+
+    INTERFACE(RenderSamplerTransform) {
+        INHERITS(RenderSampler);
+        PUBLIC_METHODS(R"(
+virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+virtual void setOutTransform(const Mat4& outTransform) = 0;
+virtual void setOutOffset(const Vec4& outOffset) = 0;
+)");
+    }
+
+    INTERFACE(RenderMaterial) {
+        INHERITS(RenderObject);
+    }
+
+    INTERFACE(RenderMaterialMatte) {
+        INHERITS(RenderMaterial);
+        PUBLIC_METHODS(R"(
+virtual void setColor(IntrusivePtr<RenderSampler> color) = 0;
+virtual void setColorValue(const Vec3& color) = 0;
+virtual void setOpacity(IntrusivePtr<RenderSampler> opacity) = 0;
+virtual void setOpacityValue(float opacity) = 0;
+virtual void setAlphaMode(const ccstd::string& alphaMode) = 0;
+virtual void setAlphaCutoff(float alphaCutoff) = 0;
+)");
+    }
+
+    INTERFACE(RenderMaterialPhysicallyBased) {
+        INHERITS(RenderMaterial);
+        PUBLIC_METHODS(R"(
+virtual void setBaseColor(IntrusivePtr<RenderSampler> baseColor) = 0;
+virtual void setBaseColorValue(const Vec3& baseColor) = 0;
+virtual void setOpacity(IntrusivePtr<RenderSampler> opacity) = 0;
+virtual void setOpacityValue(float opacity) = 0;
+virtual void setMetallic(IntrusivePtr<RenderSampler> metallic) = 0;
+virtual void setMetallicValue(float metallic) = 0;
+virtual void setRoughness(IntrusivePtr<RenderSampler> roughness) = 0;
+virtual void setRoughnessValue(float roughness) = 0;
+
+virtual void setNormal(const IntrusivePtr<RenderSampler>& normal) = 0;
+
+virtual void setEmissive(IntrusivePtr<RenderSampler> emissive) = 0;
+virtual void setEmissiveValue(const Vec3& emissive) = 0;
+
+virtual void setOcclusion(const IntrusivePtr<RenderSampler>& occlusion) = 0;
+
+virtual void setAlphaMode(const ccstd::string& alphaMode) = 0;
+virtual void setAlphaCutoff(float alphaCutoff) = 0;
+
+virtual void setSpecular(IntrusivePtr<RenderSampler> specular) = 0;
+virtual void setSpecularValue(float specular) = 0;
+virtual void setSpecularColor(IntrusivePtr<RenderSampler> specular) = 0;
+virtual void setSpecularColorValue(const Vec3& specular) = 0;
+
+virtual void setClearcoat(IntrusivePtr<RenderSampler> clearcoat) = 0;
+virtual void setClearcoatValue(float clearcoat) = 0;
+virtual void setClearcoatRoughness(IntrusivePtr<RenderSampler> clearcoatRoughness) = 0;
+virtual void setClearcoatRoughnessValue(float clearcoatRoughness) = 0;
+virtual void setClearcoatNormal(const IntrusivePtr<RenderSampler>& clearcoatNormal) = 0;
+
+virtual void setTransmission(IntrusivePtr<RenderSampler> transmission) = 0;
+virtual void setTransmissionValue(float transmission) = 0;
+
+virtual void setIor(float ior) = 0;
+
+virtual void setThickness(IntrusivePtr<RenderSampler> thickness) = 0;
+virtual void setThicknessValue(float thickness) = 0;
+
+virtual void setAttenuationDistance(float attenuationDistance) = 0;
+virtual void setAttenuationColor(const Vec3& attenuationColor) = 0;
+
+virtual void setSheenColor(IntrusivePtr<RenderSampler> sheenColor) = 0;
+virtual void setSheenColorValue(const Vec3& sheenColor) = 0;
+virtual void setSheenRoughness(IntrusivePtr<RenderSampler> sheenRoughness) = 0;
+virtual void setSheenRoughnessValue(float sheenRoughness) = 0;
+
+virtual void setIridescence(IntrusivePtr<RenderSampler> iridescence) = 0;
+virtual void setIridescenceValue(float iridescence) = 0;
+virtual void setIridescenceIor(float iridescenceIor) = 0;
+virtual void setIridescenceThickness(IntrusivePtr<RenderSampler> iridescenceThickness) = 0;
+virtual void setIridescenceThicknessValue(float iridescenceThickness) = 0;
+)");
+    }
+
+    INTERFACE(RenderVolume) {
+        INHERITS(RenderObject);
+    }
+    
+    INTERFACE(RenderSpatialField) {
+        INHERITS(RenderObject);
+    }
+
+    INTERFACE(RenderSpatialFieldStructuredRegular) {
+        INHERITS(RenderSpatialField);
+        PUBLIC_METHODS(R"(
+virtual void setData(DataType type, IntrusivePtr<gfx::Texture> data) = 0;
+virtual void setOrigin(const Vec3& origin) = 0;
+virtual void setSpacing(const Vec3& spacing) = 0;
+virtual void setFilter(const ccstd::string& filter) = 0;
+)");
+    }
+
+    INTERFACE(RenderVolumeTransferFunction1D) {
+        INHERITS(RenderVolume);
+        PUBLIC_METHODS(R"(
+virtual void setValue(const IntrusivePtr<RenderSpatialField>& value) = 0;
+virtual void setValueRange(float rangeMin, float rangeMax) = 0;
+virtual void setColor(DataType type, IntrusivePtr<gfx::Texture> color) = 0;
+virtual void setOpacity(Float32Array opacity) = 0;
+virtual void setOpacityValue(float opacity) = 0;
+virtual void setUnitDistance(float unitDistance) = 0;
 )");
     }
 
