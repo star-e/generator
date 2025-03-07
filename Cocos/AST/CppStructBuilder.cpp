@@ -1058,7 +1058,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     //if (bPmr) {
                     //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
                     //}
-                    OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
+                    OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
                 }
                 break;
             case ImplEnum::Separated:
@@ -1069,7 +1069,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                         //if (bPmr) {
                         //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
                         //}
-                        OSS << api << name << "& operator=(" << name << "&& rhs);\n";
+                        OSS << api << name << "& operator=(" << name << "&& rhs) noexcept;\n";
                     }
                 } else {
                     if (bNoexcept && !bPmr) {
@@ -1078,7 +1078,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                         //if (bPmr) {
                         //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
                         //}
-                        OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
+                        OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
                     }
                 }
                 break;
@@ -1257,7 +1257,7 @@ std::pmr::string CppStructBuilder::generateCppConstructors() const {
             if (bDLL && needMove == ImplEnum::Separated) {
                 if (bPmr && hasPmrOptional) {
                     oss << "\n";
-                    OSS << structName << "& " << structName << "::operator=(" << name << "&& rhs) {\n";
+                    OSS << structName << "& " << structName << "::operator=(" << name << "&& rhs) noexcept {\n";
                     {
                         INDENT();
                         generateMoveAssign(oss, space, *this, g, s, scratch);
@@ -1266,7 +1266,7 @@ std::pmr::string CppStructBuilder::generateCppConstructors() const {
                     OSS << "}\n";
                     needNewLine = true;
                 } else {
-                    OSS << structName << "& " << structName << "::operator=(" << name << "&& rhs) = default;\n";
+                    OSS << structName << "& " << structName << "::operator=(" << name << "&& rhs) noexcept = default;\n";
                     needNewLine = false;
                 }
             }
@@ -1332,6 +1332,9 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
             const auto& m = s.mMembers.at(k);
             auto memberID = locate(m.mTypePath, g);
             const auto& memberTraits = get(g.traits, g, memberID);
+            if (g.isPmr(memberID) && !m.mPointer && !m.mReference) {
+                bNoexcept = false;
+            }
             if (m.mTypePath == "/std/pmr/string") {
                 bNoexcept = false;
                 oss << "std::string_view " << getParameterName(m.mMemberName, scratch);

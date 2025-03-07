@@ -249,6 +249,10 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
     {
         int count = 0;
         bool bChangeLine = false;
+        bool hasPoolReset = (moduleInfo.mFeatures & TsPool)
+            && !g.isInterface(vertID)
+            && !holds_tag<Graph_>(vertID, g)
+            && !(traits.mFlags & SKIP_RESET);
 
         if (!cntrs.empty()) {
             auto& cntr = cntrs.front();
@@ -331,10 +335,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 OSS << "}\n";
             }
         }
-        if ((moduleInfo.mFeatures & TsPool)
-            && !g.isInterface(vertID)
-            && !holds_tag<Graph_>(vertID, g)
-            && !(traits.mFlags & SKIP_RESET)) { // reset
+        if (hasPoolReset) { // reset
             const Constructor* pCntr = nullptr;
             if (!cntrs.empty()) {
                 pCntr = &cntrs.front();
@@ -1404,15 +1405,11 @@ std::pmr::string generateNames_ts(
     if (g.isTypescriptData(name))
         return "";
 
-    auto& currScope = codegen.mScopes.back();
-
     visit_vertex(
         vertID, g,
         [&](const Enum& e) {
             if (!e.mIsFlags && (moduleInfo.mFeatures & Names) && (traits.mFlags & TS_NAME)) {
-                if (currScope.mCount++) {
-                    oss << "\n";
-                }
+                oss << "\n";
                 imports.emplace(name);
                 OSS << "export function get" << name << "Name" << funcSpace << "(e: " << name << "): string {\n";
                 {

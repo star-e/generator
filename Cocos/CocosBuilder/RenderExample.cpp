@@ -41,6 +41,7 @@ void buildRenderExample(ModuleBuilder& builder, Features features) {
         NAMESPACE_BEG(example);
 
         ENUM_CLASS(DependencyType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(ORDER, DATA);
         }
         STRUCT(RenderPassNode) {

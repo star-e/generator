@@ -1303,6 +1303,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             std::pmr::string space(scratch);
             outputComment(oss);
             OSS << "// clang-format off\n";
+            OSS << "// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
             OSS << "#pragma once\n";
 
             if (!moduleInfo.mAPI.empty()) {
@@ -1312,6 +1313,13 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
 
             if (features & Features::Fwd) {
                 OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Fwd.h\"\n";
+            }
+            if (g.moduleHasContainer(modulePath, "/cc/IntrusivePtr")) {
+                OSS << "#include \"cocos/base/Ptr.h\"\n";
+            }
+            if (g.moduleHasContainer(modulePath, "/uint32_t")
+                || g.moduleHasContainer(modulePath, "/int32_t")) {
+                OSS << "#include <cstdint>\n";
             }
             const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
@@ -1386,6 +1394,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             }
             copyString(oss, generateTypes_h(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
             oss << "\n";
+            OSS << "// NOLINTEND(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
             OSS << "// clang-format on\n";
             if (!moduleInfo.mTail.empty()) {
                 copyCppString(oss, space, moduleInfo.mTail);
@@ -1404,10 +1413,12 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             std::pmr::string space(scratch);
             outputComment(oss);
             OSS << "// clang-format off\n";
+            OSS << "// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
             OSS << "#include \"" << m.mFilePrefix << "Types.h\"\n";
 
             copyString(oss, generateTypes_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, scratch, scratch));
             oss << "\n";
+            OSS << "// NOLINTEND(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
             OSS << "// clang-format on\n";
             updateFile(filename1, reorderIncludes(oss.str(), scratch));
         }
@@ -1774,6 +1785,9 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
         pmr_ostringstream oss2(std::ios_base::out, scratch);
         outputComment(oss2);
         oss2 << "/* eslint-disable max-len */\n";
+        if (!m.mTypescriptHeader.empty()) {
+            copyString(oss2, space, m.mTypescriptHeader);
+        }
         if (graphImports.empty()) {
             if (g.moduleHasGraph(modulePath)) {
                 oss2 << "import * as impl from './graph';\n";
@@ -1826,7 +1840,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 }
                 oss << type;
             }
-            oss << " } from './" << m.mTypescriptFilePrefix << "'\n";
+            oss << " } from './" << m.mTypescriptFilePrefix << "';\n";
         }
 
         copyString(oss, space, oss2.str());
@@ -1855,8 +1869,11 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             pmr_ostringstream oss(std::ios_base::out, scratch);
             std::pmr::string space(scratch);
             outputComment(oss);
+            OSS << "// NOLINTBEGIN(misc-include-cleaner)\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Serialization.h\"\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
+
+            OSS << "#include \"cocos/renderer/pipeline/custom/ArchiveTypes.h\"\n";
             const auto included = getIndirectIncludes(moduleID, mg, scratch);
             for (const auto& require : m.mRequires) {
                 auto moduleID = locate(mg.null_vertex(), require, mg);
@@ -1868,12 +1885,15 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                     OSS << "#include \"" << ccDepFolder << "/" << dep.mFilePrefix << "Serialization.h\"\n";
                 }
             }
-            if (features & Features::Graphs && g.moduleHasGraphSerialization(modulePath)) {
+
+            if ((features & Features::Graphs) && g.moduleHasGraphSerialization(modulePath)) {
                 OSS << "#include \"" << m.mFolder << "/" << m.mFilePrefix << "Graphs.h\"\n";
                 OSS << "#include \"" << ccFolder << "/details/Range.h\"\n";
             }
             OSS << "#include \"" << ccFolder << "/details/SerializationUtils.h\"\n";
+
             copyString(oss, generateSerialization_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, false, scratch, scratch));
+            OSS << "// NOLINTEND(misc-include-cleaner)\n";
             updateFile(filename, reorderIncludes(oss.str(), scratch));
         }
     }

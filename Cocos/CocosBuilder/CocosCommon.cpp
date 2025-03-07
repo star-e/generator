@@ -349,6 +349,8 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
                 IMPORT_ENUM(Format);
                 IMPORT_ENUM(FormatType);
                 IMPORT_ENUM(Type);
+                IMPORT_ENUM(SampleType);
+                IMPORT_ENUM(ViewDimension)
 
                 IMPORT_FLAGS(BufferUsageBit);
                 IMPORT_FLAGS(BufferFlagBit);

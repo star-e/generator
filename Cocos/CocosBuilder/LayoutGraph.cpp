@@ -41,9 +41,12 @@ void buildLayoutGraph(ModuleBuilder& builder, Features features) {
         .mTypescriptFolder = "cocos/rendering/custom",
         .mTypescriptFilePrefix = "layout-graph",
         .mRequires = { "Gfx", "RenderCommon" },
-        .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
+        .mHeader = R"(#include "cocos/renderer/gfx-base/GFXDef-common.h"
+#include "cocos/renderer/gfx-base/GFXDescriptorSet.h"
 #include "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h"
 #include "cocos/renderer/gfx-base/GFXPipelineLayout.h"
+)",
+        .mTypescriptHeader = R"(import { HTML5 } from 'internal:constants';
 )",
         .mTypescriptInclude = R"(import type { OutputArchive, InputArchive } from './archive';
 import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';
@@ -58,100 +61,108 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
 
         NAMESPACE_BEG(render);
 
-        if (false) {
-            // Descriptor
-            // See native/cocos/renderer/gfx-validator/DescriptorSetLayoutValidator.cpp
-            //ENUM_CLASS(DescriptorTypeOrder) {
-            //    ENUMS(
-            //        UNIFORM_BLOCK,
-            //        SAMPLER_TEXTURE,
-            //        SAMPLER,
-            //        TEXTURE,
-            //        STORAGE_BUFFER,
-            //        STORAGE_TEXTURE,
-            //        SUBPASS_INPUT
-            //    );
-            //}
-            ENUM_CLASS(DescriptorTypeOrder, .mFlags = TS_NAME) {
-                ENUMS(
-                    UNIFORM_BUFFER,
-                    DYNAMIC_UNIFORM_BUFFER,
-                    SAMPLER_TEXTURE,
-                    SAMPLER,
-                    TEXTURE,
-                    STORAGE_BUFFER,
-                    DYNAMIC_STORAGE_BUFFER,
-                    STORAGE_IMAGE,
-                    INPUT_ATTACHMENT
-                );
-            }
+        // Descriptor
+        // See native/cocos/renderer/gfx-validator/DescriptorSetLayoutValidator.cpp
+        //ENUM_CLASS(DescriptorTypeOrder) {
+        //    ENUMS(
+        //        UNIFORM_BLOCK,
+        //        SAMPLER_TEXTURE,
+        //        SAMPLER,
+        //        TEXTURE,
+        //        STORAGE_BUFFER,
+        //        STORAGE_TEXTURE,
+        //        SUBPASS_INPUT
+        //    );
+        //}
 
-            STRUCT(Descriptor, .mFlags = JSB) {
-                PUBLIC(
-                    (gfx::Type, mType, gfx::Type::UNKNOWN)
-                    (uint32_t, mCount, 1)
-                );
-                TS_INIT(mType, Type.UNKNOWN);
-                CNTR(mType);
-            }
+        ENUM_CLASS(LayoutType) {
+            UNDERLYING_TYPE(uint8_t);
+            ENUMS(VULKAN, WEBGPU);
+        }
 
-            STRUCT(DescriptorBlock) {
-                PUBLIC(
-                    ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
-                    ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
-                    //((ccstd::map<gfx::Type, Descriptor>), mMerged, _)
-                    (uint32_t, mCapacity, 0)
-                    (uint32_t, mCount, 0)
-                );
-            }
+        STRUCT(Layout, .mFlags = NO_SERIALIZATION | SKIP_RESET) {
+            TS_FUNCTIONS(R"(static type = LayoutType.VULKAN;
+static isWebGPU = false;
+)");
+        }
 
-            STRUCT(DescriptorBlockFlattened, .mFlags = JSB) {
-                PUBLIC(
-                    (ccstd::vector<ccstd::string>, mDescriptorNames, _)
-                    (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
-                    (ccstd::vector<Descriptor>, mDescriptors, _)
-                    (ccstd::vector<gfx::UniformBlock>, mUniformBlocks, _)
-                    (uint32_t, mCapacity, 0)
-                    (uint32_t, mCount, 0)
-                );
-            }
+        ENUM_CLASS(DescriptorTypeOrder, .mFlags = TS_NAME) {
+            UNDERLYING_TYPE(uint8_t);
+            ENUMS(
+                UNIFORM_BUFFER,
+                DYNAMIC_UNIFORM_BUFFER,
+                SAMPLER_TEXTURE,
+                SAMPLER,
+                TEXTURE,
+                STORAGE_BUFFER,
+                DYNAMIC_STORAGE_BUFFER,
+                STORAGE_IMAGE,
+                INPUT_ATTACHMENT
+            );
+        }
 
-            STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
-                PUBLIC(
-                    (UpdateFrequency, mUpdateFrequency, _)
-                    (ParameterType, mParameterType, _)
-                    (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
-                    (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                );
-                TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-                TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
-                CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
-            }
+        STRUCT(Descriptor, .mFlags = JSB) {
+            PUBLIC(
+                (gfx::Type, mType, gfx::Type::UNKNOWN)
+                (uint32_t, mCount, 1)
+            );
+            TS_INIT(mType, Type.UNKNOWN);
+            CNTR(mType);
+        }
 
-            STRUCT(DescriptorGroupBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
-                PUBLIC(
-                    (UpdateFrequency, mUpdateFrequency, _)
-                    (ParameterType, mParameterType, _)
-                    (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
-                    (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                    (AccessType, mAccessType, AccessType::READ)
-                    (ViewDimension, mViewDimension, ViewDimension::TEX2D)
-                    (gfx::Format, mFormat, gfx::Format::UNKNOWN)
-                );
-                TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-                TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
-                TS_INIT(mFormat, Format.UNKNOWN);
-                CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility, mAccessType, mViewDimension, mFormat);
-            }
+        STRUCT(DescriptorBlock) {
+            PUBLIC(
+                ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
+                ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
+                //((ccstd::map<gfx::Type, Descriptor>), mMerged, _)
+                (uint32_t, mCapacity, 0)
+                (uint32_t, mCount, 0)
+            );
+        }
 
-            STRUCT(DescriptorGroupBlock) {
-                PUBLIC(
-                    ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
-                    ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
-                    (uint32_t, mCapacity, 0)
-                    (uint32_t, mCount, 0)
-                );
-            }
+        STRUCT(DescriptorBlockFlattened, .mFlags = JSB) {
+            PUBLIC(
+                (ccstd::vector<ccstd::string>, mDescriptorNames, _)
+                (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
+                (ccstd::vector<Descriptor>, mDescriptors, _)
+                (ccstd::vector<gfx::UniformBlock>, mUniformBlocks, _)
+                (uint32_t, mCapacity, 0)
+                (uint32_t, mCount, 0)
+            );
+        }
+
+        STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
+            PUBLIC(
+                (UpdateFrequency, mUpdateFrequency, _)
+                (ParameterType, mParameterType, _)
+                (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+            );
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
+            CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
+        }
+
+        STRUCT(DescriptorGroupBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
+            PUBLIC(
+                (UpdateFrequency, mUpdateFrequency, _)
+                (ParameterType, mParameterType, _)
+                (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
+                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
+                (gfx::MemoryAccessBit, mAccessType, gfx::MemoryAccessBit::READ_ONLY)
+                (gfx::ViewDimension, mViewDimension, gfx::ViewDimension::UNKNOWN)
+                (gfx::SampleType, mSampleType, gfx::SampleType::FLOAT)
+                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
+            );
+            TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
+            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+
+            TS_INIT(mAccessType, MemoryAccessBit.READ_ONLY);
+            TS_INIT(mViewDimension, ViewDimension.UNKNOWN);
+            TS_INIT(mSampleType, SampleType.FLOAT);
+            TS_INIT(mFormat, Format.UNKNOWN);
+
+            CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility, mAccessType, mViewDimension, mSampleType, mFormat);
         }
 
         if (false) {
@@ -176,7 +187,7 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
         STRUCT(DescriptorDB) {
             PUBLIC(
                 ((ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>), mBlocks, _)
-                //((ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorGroupBlock>), mGroupBlocks, _)
+                ((ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorBlock>), mGroupBlocks, _)
             );
         }
 
@@ -191,7 +202,7 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
         }
 
         ENUM_CLASS(RenderPassType) {
-            UNDERLYING_TYPE(uint32_t);
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(SINGLE_RENDER_PASS, RENDER_PASS, RENDER_SUBPASS);
         }
 
@@ -261,10 +272,19 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
                 (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
                 (uint32_t, mOffset, 0)
                 (uint32_t, mCapacity, 0)
+                (gfx::MemoryAccessBit, mAccessType, gfx::MemoryAccessBit::READ_ONLY)
+                (gfx::ViewDimension, mViewDimension,gfx::ViewDimension::UNKNOWN)
+                (gfx::SampleType, mSampleType, gfx::SampleType::FLOAT)
+                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
                 (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
             );
             TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);
             TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
+            TS_INIT(mAccessType, MemoryAccessBit.READ_ONLY);
+            TS_INIT(mViewDimension, ViewDimension.UNKNOWN);
+            TS_INIT(mSampleType, SampleType.FLOAT);
+            TS_INIT(mFormat, Format.UNKNOWN);
+            CNTR(mType, mVisibility, mCapacity, mAccessType, mViewDimension, mSampleType, mFormat);
             CNTR(mType, mVisibility, mCapacity);
         }
 
@@ -292,49 +312,18 @@ function resetDescriptorSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
             CNTR(mDescriptorSetLayoutData, mDescriptorSetLayout, mDescriptorSet);
         }
 
-        STRUCT(DescriptorGroupBlockData) {
-            PUBLIC(
-                (DescriptorTypeOrder, mType, DescriptorTypeOrder::UNIFORM_BUFFER)
-                (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                (AccessType, mAccessType, AccessType::READ)
-                (ViewDimension, mViewDimension, ViewDimension::TEX2D)
-                (gfx::Format, mFormat, gfx::Format::UNKNOWN)
-                (uint32_t, mOffset, 0)
-                (uint32_t, mCapacity, 0)
-                (ccstd::pmr::vector<DescriptorData>, mDescriptors, _)
-            );
-            TS_INIT(mType, DescriptorTypeOrder.UNIFORM_BUFFER);
-            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            TS_INIT(mFormat, Format.UNKNOWN);
-            CNTR(mType, mVisibility, mAccessType, mViewDimension, mFormat, mCapacity);
-        }
-
-        STRUCT(DescriptorGroupLayoutData, .mFlags = NO_COPY) {
-            PUBLIC(
-                (uint32_t, mSlot, 0xFFFFFFFF)
-                (uint32_t, mCapacity, 0)
-                (uint32_t, mUniformBlockCapacity, 0)
-                (uint32_t, mSamplerTextureCapacity, 0)
-                (ccstd::pmr::vector<DescriptorGroupBlockData>, mDescriptorGroupBlocks, _)
-                ((PmrUnorderedMap<NameLocalID, gfx::UniformBlock>), mUniformBlocks, _)
-                ((PmrFlatMap<NameLocalID, uint32_t>), mBindingMap, _)
-            );
-            TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-            CNTR(mSlot, mCapacity, mDescriptorGroupBlocks, mUniformBlocks, mBindingMap);
-        }
-
-        STRUCT(DescriptorGroupData, .mFlags = NO_COPY) {
-            PUBLIC(
-                (DescriptorGroupLayoutData, mDescriptorGroupLayoutData, _)
-            );
-            CNTR(mDescriptorGroupLayoutData);
-        }
-
         STRUCT(PipelineLayoutData, .mFlags = NO_COPY) {
             PUBLIC(
                 ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorSets, _)
-                ((ccstd::pmr::map<UpdateFrequency, DescriptorGroupData>), mDescriptorGroups, _)
+                ((ccstd::pmr::map<UpdateFrequency, DescriptorSetData>), mDescriptorGroups, _)
             );
+            TS_FUNCTIONS(R"(getSets (): Map<UpdateFrequency, DescriptorSetData> {
+    return HTML5 && Layout.isWebGPU ? this.descriptorGroups : this.descriptorSets;
+}
+getSet (frequency: UpdateFrequency): DescriptorSetData | undefined {
+    return HTML5 && Layout.isWebGPU ? this.descriptorGroups.get(frequency) : this.descriptorSets.get(frequency);
+}
+)");
         }
 
         STRUCT(ShaderBindingData, .mFlags = NO_COPY) {

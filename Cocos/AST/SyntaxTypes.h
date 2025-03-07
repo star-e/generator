@@ -1342,6 +1342,7 @@ struct SyntaxGraph {
     bool moduleHasVariant(std::string_view modulePath) const;
     bool moduleHasGraph(std::string_view modulePath) const;
     bool moduleHasGraphSerialization(std::string_view modulePath) const;
+    bool moduleHasPolymorphicGraph(std::string_view modulePath) const;
 
     bool moduleUsesHashCombine(std::string_view modulePath) const;
 
@@ -1535,6 +1536,7 @@ struct ModuleInfo {
     std::vector<std::string> mRequires;
     std::string mFwdHeader;
     std::string mHeader;
+    std::string mTypescriptHeader;
     std::string mTypescriptInclude;
     std::string mTail;
 };

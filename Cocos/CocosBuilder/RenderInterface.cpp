@@ -183,8 +183,9 @@ virtual void onGlobalPipelineStateChanged() = 0;
 [[skip]] virtual bool isRenderQueueReset() const = 0;
 )");
         }
-                
+
         ENUM_CLASS(PipelineType, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(BASIC, STANDARD);
         }
 

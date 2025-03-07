@@ -51,7 +51,6 @@ void buildRenderCommon(ModuleBuilder& builder, Features features) {
         .mTypescriptFilePrefix = "types",
         .mRequires = { "Gfx" },
         .mHeader = R"(#include "cocos/scene/Light.h"
-#include "cocos/base/std/container/map.h"
 
 namespace cc {
 
@@ -71,20 +70,24 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         NAMESPACE_BEG(render);
         
         ENUM_CLASS(UpdateFrequency, .mFlags = TS_NAME | TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(PER_INSTANCE, PER_BATCH, PER_PHASE, PER_PASS, COUNT);
         }
 
         ENUM_CLASS(ParameterType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(CONSTANTS, CBV, UAV, SRV, TABLE, SSV);
         }
 
         TAGS((_), RasterPass_, RasterSubpass_, ComputeSubpass_, Compute_, Resolve_, Copy_, Move_, Raytrace_);
 
         ENUM_CLASS(ResourceResidency, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(MANAGED, MEMORYLESS, PERSISTENT, EXTERNAL, BACKBUFFER);
         }
 
         ENUM_CLASS(QueueHint, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(NONE, OPAQUE, MASK, BLEND);
             builder.addEnumElement(vertID, "RENDER_OPAQUE", "OPAQUE", true);
             builder.addEnumElement(vertID, "RENDER_CUTOUT", "MASK", true);
@@ -92,24 +95,8 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         }
 
         ENUM_CLASS(ResourceDimension, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(BUFFER, TEXTURE1D, TEXTURE2D, TEXTURE3D);
-        }
-
-        ENUM_CLASS(ViewDimension, .mFlags = TS_ENUM_OBJECT) {
-            ENUMS(
-                UNKNOWN,
-                BUFFER,
-                TEX1D,
-                TEX1DARRAY,
-                TEX2D,
-                TEX2DARRAY,
-                TEX2DMS,
-                TEX2DMSARRAY,
-                TEX3D,
-                TEXCUBE,
-                TEXCUBEARRAY,
-                RAYTRACING_ACCELERATION_STRUCTURE
-            );
         }
 
         FLAG_CLASS(ResourceFlags, .mFlags = TS_ENUM_OBJECT) {
@@ -131,6 +118,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         TAGS((_), Buffer_, Texture_);
 
         ENUM_CLASS(TaskType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(SYNC, ASYNC);
         }
 
@@ -162,20 +150,23 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
         }
 
         ENUM_CLASS(LightingMode) {
-            UNDERLYING_TYPE(uint32_t);
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(NONE, DEFAULT, CLUSTERED);
         }
 
         // RenderGraph
         ENUM_CLASS(AttachmentType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(RENDER_TARGET, DEPTH_STENCIL, SHADING_RATE);
         }
 
         ENUM_CLASS(AccessType, .mFlags = TS_ENUM_OBJECT) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(READ, READ_WRITE, WRITE);
         }
 
         ENUM_CLASS(ClearValueType) {
+            UNDERLYING_TYPE(uint8_t);
             ENUMS(NONE, FLOAT_TYPE, INT_TYPE);
         }
 
@@ -189,103 +180,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
             CNTR(mLight, mLevel, mCulledByLight, mProbe);
             CNTR(mLight, mLevel);
         }
-        
-        if (true) {
-             // Descriptor
-            // See native/cocos/renderer/gfx-validator/DescriptorSetLayoutValidator.cpp
-            //ENUM_CLASS(DescriptorTypeOrder) {
-            //    ENUMS(
-            //        UNIFORM_BLOCK,
-            //        SAMPLER_TEXTURE,
-            //        SAMPLER,
-            //        TEXTURE,
-            //        STORAGE_BUFFER,
-            //        STORAGE_TEXTURE,
-            //        SUBPASS_INPUT
-            //    );
-            //}
-            ENUM_CLASS(DescriptorTypeOrder, .mFlags = TS_NAME) {
-                ENUMS(
-                    UNIFORM_BUFFER,
-                    DYNAMIC_UNIFORM_BUFFER,
-                    SAMPLER_TEXTURE,
-                    SAMPLER,
-                    TEXTURE,
-                    STORAGE_BUFFER,
-                    DYNAMIC_STORAGE_BUFFER,
-                    STORAGE_IMAGE,
-                    INPUT_ATTACHMENT
-                );
-            }
 
-            STRUCT(Descriptor, .mFlags = JSB) {
-                PUBLIC(
-                    (gfx::Type, mType, gfx::Type::UNKNOWN)
-                    (uint32_t, mCount, 1)
-                );
-                TS_INIT(mType, Type.UNKNOWN);
-                CNTR(mType);
-            }
-
-            STRUCT(DescriptorBlock) {
-                PUBLIC(
-                    ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
-                    ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
-                    //((ccstd::map<gfx::Type, Descriptor>), mMerged, _)
-                    (uint32_t, mCapacity, 0)
-                    (uint32_t, mCount, 0)
-                );
-            }
-
-            STRUCT(DescriptorBlockFlattened, .mFlags = JSB) {
-                PUBLIC(
-                    (ccstd::vector<ccstd::string>, mDescriptorNames, _)
-                    (ccstd::vector<ccstd::string>, mUniformBlockNames, _)
-                    (ccstd::vector<Descriptor>, mDescriptors, _)
-                    (ccstd::vector<gfx::UniformBlock>, mUniformBlocks, _)
-                    (uint32_t, mCapacity, 0)
-                    (uint32_t, mCount, 0)
-                );
-            }
-
-            STRUCT(DescriptorBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
-                PUBLIC(
-                    (UpdateFrequency, mUpdateFrequency, _)
-                    (ParameterType, mParameterType, _)
-                    (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
-                    (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                );
-                TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-                TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
-                CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility);
-            }
-
-            STRUCT(DescriptorGroupBlockIndex, .mFlags = LESS | JSB | STRING_KEY | SKIP_RESET) {
-                PUBLIC(
-                    (UpdateFrequency, mUpdateFrequency, _)
-                    (ParameterType, mParameterType, _)
-                    (DescriptorTypeOrder, mDescriptorType, DescriptorTypeOrder::UNIFORM_BUFFER)
-                    (gfx::ShaderStageFlagBit, mVisibility, gfx::ShaderStageFlagBit::NONE)
-                    (AccessType, mAccessType, AccessType::READ)
-                    (ViewDimension, mViewDimension, ViewDimension::TEX2D)
-                    (gfx::Format, mFormat, gfx::Format::UNKNOWN)
-                );
-                TS_INIT(mVisibility, ShaderStageFlagBit.NONE);
-                TS_INIT(mDescriptorType, DescriptorTypeOrder.UNIFORM_BUFFER);
-                TS_INIT(mFormat, Format.UNKNOWN);
-                CNTR(mUpdateFrequency, mParameterType, mDescriptorType, mVisibility, mAccessType, mViewDimension, mFormat);
-            }
-
-            STRUCT(DescriptorGroupBlock) {
-                PUBLIC(
-                    ((ccstd::map<ccstd::string, Descriptor>), mDescriptors, _)
-                    ((ccstd::map<ccstd::string, gfx::UniformBlock>), mUniformBlocks, _)
-                    (uint32_t, mCapacity, 0)
-                    (uint32_t, mCount, 0)
-                );
-            }
-        }
-       
         // RenderGraph
         FLAG_CLASS(ResolveFlags) {
             FLAGS(
