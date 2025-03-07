@@ -919,6 +919,233 @@ virtual void setUnitDistance(float unitDistance) = 0;
 )");
     }
 
+    INTERFACE(RenderLight) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+virtual void setColor(const Vec3& color) = 0;
+virtual void setVisible(bool visible) = 0;
+)");
+    }
+
+    INTERFACE(RenderLightDirectional) {
+        INHERITS(RenderLight);
+        PUBLIC_METHODS(R"(
+virtual void setDirection(const Vec3& direction) = 0;
+virtual void setIrradiance(float irradiance) = 0;
+virtual void setAngularDiameter(float angularDiameter) = 0;
+virtual void setRadiance(float radiance) = 0;
+)");
+    }
+
+    INTERFACE(RenderLightHDRI) {
+        INHERITS(RenderLight);
+        PUBLIC_METHODS(R"(
+virtual void setUp(const Vec3& up) = 0;
+virtual void setDirection(const Vec3& direction) = 0;
+virtual void setRadiance(Float32Array radiance) = 0;
+virtual void setLayout(const ccstd::string& layout) = 0;
+virtual void setScale(float scale) = 0;
+)");
+    }
+
+    INTERFACE(RenderLightPoint) {
+        INHERITS(RenderLight);
+        PUBLIC_METHODS(R"(
+virtual void setPosition(const Vec3& position) = 0;
+virtual void setIntensity(float intensity) = 0;
+virtual void setPower(float power) = 0;
+virtual void setRadius(float radius) = 0;
+virtual void setRadiance(float radiance) = 0;
+)");
+    }
+
+    INTERFACE(RenderLightQuad) {
+        INHERITS(RenderLight);
+        PUBLIC_METHODS(R"(
+virtual void setPosition(const Vec3& position) = 0;
+virtual void setEdge1(const Vec3& edge1) = 0;
+virtual void setEdge2(const Vec3& edge2) = 0;
+virtual void setIntensity(float intensity) = 0;
+virtual void setPower(float power) = 0;
+virtual void setRadiance(float radiance) = 0;
+virtual void setSide(const ccstd::string& side) = 0;
+virtual void setIntensityDistribution(DataType type, Float32Array intensityDistribution) = 0;
+)");
+    }
+
+    INTERFACE(RenderLightRing) {
+        INHERITS(RenderLight);
+        PUBLIC_METHODS(R"(
+virtual void setPosition(const Vec3& position) = 0;
+virtual void setDirection(const Vec3& direction) = 0;
+virtual void setOpeningAngle(float openingAngle) = 0;
+virtual void setFalloffAngle(float falloffAngle) = 0;
+virtual void setIntensity(float intensity) = 0;
+virtual void setPower(float power) = 0;
+virtual void setRadius(float radius) = 0;
+virtual void setInnerRadius(float innerRadius) = 0;
+virtual void setRadiance(float radiance) = 0;
+virtual void setIntensityDistribution(DataType type, Float32Array intensityDistribution) = 0;
+virtual void setC0(const Vec3& c0) = 0;
+)");
+    }
+    
+    INTERFACE(RenderSurface) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+virtual void setGeometry(const IntrusivePtr<RenderGeometry>& geometry) = 0;
+virtual void setMaterial(const IntrusivePtr<RenderMaterial>& material) = 0;
+virtual void setId(uint32_t id) = 0;
+)");
+    }
+    
+    INTERFACE(RenderGroup) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+virtual void setSurface(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
+virtual void setVolume(ccstd::vector<IntrusivePtr<RenderVolume>>&& volume) = 0;
+virtual void setLight(ccstd::vector<IntrusivePtr<RenderLight>>&& light) = 0;
+
+virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
+)");
+    }
+
+    INTERFACE(RenderInstance) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+virtual void setGroup(const IntrusivePtr<RenderGroup>& group) = 0;
+virtual void setTransform(const Mat4& transform) = 0;
+
+virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
+)");
+    }
+// virtual void setId(uint32_t id) = 0;
+
+    INTERFACE(RenderInstanceTransform) {
+        INHERITS(RenderInstance);
+    }
+
+    INTERFACE(RenderInstanceMotionTransform) {
+        INHERITS(RenderInstance);
+        PUBLIC_METHODS(R"(
+virtual void setMotionTransform(Float32Array transform) = 0;
+virtual void setTime(float timeMin, float timeMax) = 0;
+)");
+    }
+
+    INTERFACE(RenderInstanceMotionScaleRotationTranslation) {
+        INHERITS(RenderInstance);
+        PUBLIC_METHODS(R"(
+virtual void setMotionScale(Float32Array scale) = 0;
+virtual void setMotionRotation(Float32Array rotation) = 0;
+virtual void setMotionTranslation(Float32Array translation) = 0;
+virtual void setTime(float timeMin, float timeMax) = 0;
+)");
+    }
+    
+    INTERFACE(RenderWorld) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+virtual bool isEmpty() const = 0;
+
+virtual void setInstance(ccstd::vector<IntrusivePtr<RenderInstance>>&& instance) = 0;
+virtual void setSurface(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
+virtual void setVolume(ccstd::vector<IntrusivePtr<RenderVolume>>&& volume) = 0;
+virtual void setLight(ccstd::vector<IntrusivePtr<RenderLight>>&& light) = 0;
+
+virtual void addInstance(const IntrusivePtr<RenderInstance>& instance) = 0;
+virtual void addSurface(const IntrusivePtr<RenderSurface>& surface) = 0;
+
+virtual void removeInstance(const IntrusivePtr<RenderInstance>& instance) = 0;
+virtual void removeSurface(const IntrusivePtr<RenderSurface>& surface) = 0;
+
+virtual void addInstances(ccstd::vector<IntrusivePtr<RenderInstance>>&& instance) = 0;
+virtual void addSurfaces(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
+
+virtual void removeInstances(const ccstd::vector<IntrusivePtr<RenderInstance>>& instance) = 0;
+virtual void removeSurfaces(const ccstd::vector<IntrusivePtr<RenderSurface>>& surface) = 0;
+
+virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
+)");
+    }
+
+    INTERFACE(RenderCamera) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+virtual void setPosition(const Vec3& position) = 0;
+virtual void setDirection(const Vec3& direction) = 0;
+virtual void setUp(const Vec3& up) = 0;
+virtual void setImageRegion(const Vec4& imageRegion) = 0;
+virtual void setApertureRadius(float apertureRadius) = 0;
+virtual void setFocusDistance(float focusDistance) = 0;
+virtual void setShutter(const Vec2& shutter) = 0;
+)");
+    }
+
+    INTERFACE(RenderCameraPerspective) {
+        INHERITS(RenderCamera);
+        PUBLIC_METHODS(R"(
+virtual void setFovy(float fovy) = 0;
+virtual void setAspect(float aspect) = 0;
+virtual void setNear(float near) = 0;
+virtual void setFar(float far) = 0;
+)");
+    }
+
+    INTERFACE(RenderCameraOmnidirectional) {
+        INHERITS(RenderCamera);
+        PUBLIC_METHODS(R"(
+virtual void setLayout(const ccstd::string& layout) = 0;
+)");
+    }
+
+    INTERFACE(RenderCameraOrthographic) {
+        INHERITS(RenderCamera);
+        PUBLIC_METHODS(R"(
+virtual void setAspect(float aspect) = 0;
+virtual void setHeight(float height) = 0;
+virtual void setNear(float near) = 0;
+virtual void setFar(float far) = 0;
+)");
+    }
+    
+    INTERFACE(Renderer) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+virtual void setBackground(const Vec4& background) = 0;
+virtual void setAmbientColor(const Vec3& ambientColor) = 0;
+virtual void setAmbientRadiance(float ambientRadiance) = 0;
+
+virtual const ccstd::vector<ccstd::string>& getExtension(WaitMask waitMask) const = 0;
+)");
+    }
+    
+    INTERFACE(RenderDevice) {
+        INHERITS(RenderObject);
+        PUBLIC_METHODS(R"(
+[[getter]] virtual int32_t getVersion() const noexcept = 0;
+[[getter]] virtual uint64_t getGeometryMaxIndex() const = 0;
+[[getter]] virtual ccstd::vector<ccstd::string> getExtension() const = 0;
+virtual ccstd::vector<ccstd::string> getObjectSubtypes(DataType objectType) const = 0;
+
+virtual IntrusivePtr<RenderCamera> createCamera(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<Renderer> createRenderer(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<RenderWorld> createWorld() = 0;
+virtual IntrusivePtr<RenderInstance> createInstance(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<RenderGroup> createGroup() = 0;
+virtual IntrusivePtr<RenderLight> createLight(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<RenderSurface> createSurface() = 0;
+virtual IntrusivePtr<RenderGeometry> createGeometry(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<RenderSampler> createSampler(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<RenderMaterial> createMaterial(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<RenderVolume> createVolume(const ccstd::string& subtype) = 0;
+virtual IntrusivePtr<RenderSpatialField> createSpatialField(const ccstd::string& subtype) = 0;
+)");
+    }
+// virtual IntrusivePtr<RenderFrame> createFrame() = 0;
+// virtual Property getObjectInfo(DataType objectType, const ccstd::string& objectSubtype, const ccstd::string& infoName, DataType infoType) const = 0;
+// virtual Property getParameterInfo(DataType objectType, const ccstd::string& objectSubtype, const ccstd::string& parameterName, DataType parameterType, const ccstd::string& infoName, DataType infoType) const = 0;
+
         CLASS(Factory, .mExport = false) {
             MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
 static void destroy(RenderingModule* renderingModule) noexcept;
