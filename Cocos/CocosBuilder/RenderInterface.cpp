@@ -292,7 +292,7 @@ virtual void resolveDepthStencil(const ccstd::string& source, const ccstd::strin
 //        }
 
         INTERFACE(BasicPipeline) {
-            INHERITS(PipelineRuntime);
+            INHERITS(PipelineRuntime, Setter);
             PUBLIC_METHODS(R"(
 [[getter]] virtual PipelineType getType() const = 0;
 [[getter]] virtual PipelineCapabilities getCapabilities() const = 0;

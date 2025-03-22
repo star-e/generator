@@ -561,6 +561,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             PUBLIC(
                 ((PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>), mIndex, _)
                 (ccstd::pmr::vector<RenderGraph::vertex_descriptor>, mSortedVertices, _)
+                (RenderData, mGlobalRenderData, _)
             );
             MEMBER_FUNCTIONS(R"(
 vertex_descriptor getPassID(vertex_descriptor nodeID) const;

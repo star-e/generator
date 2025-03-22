@@ -1225,7 +1225,7 @@ std::pmr::string generateGraph(const ModuleBuilder& builder,
                     } else if (g.isTypescriptMap(memberID)) {
                         OSS << "this." << memberName << ".clear();\n";
                     } else {
-                        OSS << "this." << memberName << ".clear();\n";
+                        OSS << "this." << memberName << ".reset();\n";
                     }
                     ++numCleared;
                     ++i;
