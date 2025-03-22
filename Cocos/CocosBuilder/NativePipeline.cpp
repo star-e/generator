@@ -611,6 +611,21 @@ void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
 )");
         }
 
+        STRUCT(DescriptorSetKey, .mFlags = EQUAL | HASH_COMBINE | LESS | NO_DEFAULT_CNTR) {
+            PUBLIC(
+                (uint32_t, mNodeID, 0xFFFFFFFF)
+                (UpdateFrequency, mFrequency, UpdateFrequency::PER_INSTANCE)
+            );
+            CNTR(mNodeID, mFrequency);
+        }
+        
+        STRUCT(DescriptorSetContext, .mFlags = NO_COPY) {
+            PUBLIC(
+                (IntrusivePtr<gfx::DescriptorSet>, mDescriptorSet, _)
+            );
+            CNTR(mDescriptorSet);
+        }
+
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
                 (std::unique_ptr<gfx::DefaultResource>, mDefaultResource, _)
@@ -621,6 +636,7 @@ void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
                 (QuadResource, mFullscreenQuad, _)
                 (SceneCulling, mSceneCulling, _)
                 (LightResource, mLightResources, _)
+                ((ccstd::pmr::unordered_map<DescriptorSetKey, DescriptorSetContext>), mGraphNodeContexts, _)
             );
             MEMBER_FUNCTIONS(R"(
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
