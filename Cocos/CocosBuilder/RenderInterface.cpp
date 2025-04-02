@@ -522,629 +522,629 @@ virtual uint32_t getSubpassID(uint32_t passID, const ccstd::string& name) const 
 virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name) const = 0;
 )");
         }
-
-    ENUM_CLASS(DataType) {
-        UNDERLYING_TYPE(uint32_t);
-        builder.setEnumOutputAll(vertID, true);
-        ENUMS(
-            UNKNOWN,
-
-            DATA_TYPE,
-            STRING,
-            VOID_POINTER,
-            BOOL,
-
-            STRING_LIST,
-            DATA_TYPE_LIST,
-            PARAMETER_LIST,
-
-            FUNCTION_POINTER,
-            MEMORY_DELETER,
-            STATUS_CALLBACK,
-            FRAME_COMPLETION_CALLBACK,
-
-            LIBRARY,
-            DEVICE,
-            OBJECT,
-            ARRAY,
-            ARRAY1D,
-            ARRAY2D,
-            ARRAY3D,
-            CAMERA,
-            FRAME,
-            GEOMETRY,
-            GROUP,
-            INSTANCE,
-            LIGHT,
-            MATERIAL,
-            RENDERER,
-            SURFACE,
-            SAMPLER,
-            SPATIAL_FIELD,
-            VOLUME,
-            WORLD
-        );
-        const std::string_view dataTypes[] = {
-            "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64",
-            "FIXED8", "UFIXED8", "FIXED16", "UFIXED16", "FIXED32", "UFIXED32", "FIXED64", "UFIXED64",
-            "FLOAT16", "FLOAT32", "FLOAT64"
-        };
-        for (const auto& type : dataTypes) {
-            builder.addEnumElement(vertID, type, "");
-            builder.addEnumElement(vertID, std::string(type) + "_VEC2", "");
-            builder.addEnumElement(vertID, std::string(type) + "_VEC3", "");
-            builder.addEnumElement(vertID, std::string(type) + "_VEC4", "");
-        }
-
-        ENUMS2(
-            (UFIXED8_RGBA_SRGB, 2003)
-            (UFIXED8_RGB_SRGB, 2002)
-            (UFIXED8_RA_SRGB, 2001)
-            (UFIXED8_R_SRGB, 2000)
-        );
-
-        const std::string_view boxTypes[] = {
-            "INT32", "FLOAT32", "FLOAT64"
-        };
-        for (const auto& type : boxTypes) {
-            builder.addEnumElement(vertID, std::string(type) + "_BOX1", "");
-            builder.addEnumElement(vertID, std::string(type) + "_BOX2", "");
-            builder.addEnumElement(vertID, std::string(type) + "_BOX3", "");
-            builder.addEnumElement(vertID, std::string(type) + "_BOX4", "");
-        }
-
-        ENUMS(
-            UINT64_REGION1,
-            UINT64_REGION2,
-            UINT64_REGION3,
-            UINT64_REGION4,
-            FLOAT32_MAT2,
-            FLOAT32_MAT3,
-            FLOAT32_MAT4,
-            FLOAT32_MAT2x3,
-            FLOAT32_MAT3x4,
-            FLOAT32_QUAT_IJKW
-        );
-
-        SET_ENUM_VALUE(DATA_TYPE, 100);
-        SET_ENUM_VALUE(STRING_LIST, 150);
-        SET_ENUM_VALUE(FUNCTION_POINTER, 200);
-        SET_ENUM_VALUE(LIBRARY, 500);
-        SET_ENUM_VALUE(INT8, 1000);
-        SET_ENUM_VALUE(INT32_BOX1, 2004);
-        SET_ENUM_VALUE(FLOAT64_BOX1, 2208);
-        SET_ENUM_VALUE(UINT64_REGION1, 2104);
-        SET_ENUM_VALUE(FLOAT32_MAT2, 2012);
-    }
-
-    STRUCT(Parameter) {
-        PUBLIC(
-            (ccstd::string, mName, _)
-            (DataType, mType, DataType::UNKNOWN)
-        );
-    }
-
-    ENUM_CLASS(WaitMask) {
-        UNDERLYING_TYPE(uint32_t);
-        ENUMS(NO_WAIT, WAIT);
-    }
-
-    STRUCT(BufferView) {
-        PUBLIC(
-            ([[nullable]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
-            (uint64_t, mBufferOffset, 0)
-            (uint64_t, mSizeInBytes, 0)
-            (uint64_t, mStrideInBytes, 0)
-        );
-    }
-
-    INTERFACE(RenderObject) {
-        INHERITS(RefCounted);
-        PUBLIC_METHODS(R"(
-virtual void destroy() noexcept = 0;
-)");
-    }
-
-    INTERFACE(RenderGeometry) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual void setPrimitiveColor(DataType type, const BufferView& color) = 0;
-virtual void setPrimitiveAttribute0(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveAttribute1(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveAttribute2(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveAttribute3(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveId(Uint32Array id) = 0;
-)");
-    }
-
-    INTERFACE(RenderGeometryCone) {
-        INHERITS(RenderGeometry);
-        PUBLIC_METHODS(R"(
-virtual void setVertexPosition(const BufferView& position) = 0;
-virtual void setVertexRadius(const BufferView& radius) = 0;
-virtual void setVertexCap(const BufferView& cap) = 0;
-virtual void setVertexColor(DataType type, const BufferView& color) = 0;
-virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveIndex(Uint32Array index) = 0;
-virtual void setCaps(const ccstd::string& caps) = 0;
-)");
-    }
-
-    INTERFACE(RenderGeometryCurve) {
-        INHERITS(RenderGeometry);
-        PUBLIC_METHODS(R"(
-virtual void setVertexPosition(const BufferView& position) = 0;
-virtual void setVertexRadius(const BufferView& radius) = 0;
-virtual void setVertexColor(DataType type, const BufferView& color) = 0;
-virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveIndex(Uint32Array index) = 0;
-virtual void setRadius(float radius) = 0;
-)");
-    }
-    
-    INTERFACE(RenderGeometryCylinder) {
-        INHERITS(RenderGeometry);
-        PUBLIC_METHODS(R"(
-virtual void setVertexPosition(const BufferView& position) = 0;
-virtual void setVertexCap(const BufferView& cap) = 0;
-virtual void setVertexColor(DataType type, const BufferView& color) = 0;
-virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveIndex(Uint32Array index) = 0;
-virtual void setPrimitiveRadius(const BufferView& radius) = 0;
-virtual void setRadius(float radius) = 0;
-virtual void setCaps(const ccstd::string& caps) = 0;
-)");
-    }
-
-    INTERFACE(RenderGeometryQuad) {
-        INHERITS(RenderGeometry);
-        PUBLIC_METHODS(R"(
-virtual void setVertexPosition(const BufferView& position) = 0;
-virtual void setVertexNormal(DataType type, const BufferView& normal) = 0;
-virtual void setVertexTangent(DataType type, const BufferView& tangent) = 0;
-virtual void setVertexColor(DataType type, const BufferView& color) = 0;
-virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveIndex(Uint32Array index) = 0;
-)");
-    }
-
-    INTERFACE(RenderGeometrySphere) {
-        INHERITS(RenderGeometry);
-        PUBLIC_METHODS(R"(
-virtual void setVertexPosition(const BufferView& position) = 0;
-virtual void setVertexRadius(const BufferView& radius) = 0;
-virtual void setVertexColor(DataType type, const BufferView& color) = 0;
-virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveIndex(Uint32Array index) = 0;
-virtual void setRadius(float radius) = 0;
-)");
-    }
-
-    INTERFACE(RenderGeometryTriangle) {
-        INHERITS(RenderGeometry);
-        PUBLIC_METHODS(R"(
-virtual void setVertexPosition(const BufferView& position) = 0;
-virtual void setVertexNormal(DataType type, const BufferView& normal) = 0;
-virtual void setVertexTangent(DataType type, const BufferView& tangent) = 0;
-virtual void setVertexColor(DataType type, const BufferView& color) = 0;
-virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
-virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
-virtual void setPrimitiveIndex(const BufferView& index) = 0;
-)");
-    }
-
-    INTERFACE(RenderSampler) {
-        INHERITS(RenderObject);
-    }
-
-    INTERFACE(RenderSamplerImage1D) {
-        INHERITS(RenderSampler);
-        PUBLIC_METHODS(R"(
-virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
-virtual void setInTransform(const Mat4& inTransform) = 0;
-virtual void setInOffset(const Vec4& inOffset) = 0;
-virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
-virtual void setFilter(const ccstd::string& filter) = 0;
-virtual void setWrapMode(const ccstd::string& wrapMode) = 0;
-virtual void setOutTransform(const Mat4& outTransform) = 0;
-virtual void setOutOffset(const Vec4& outOffset) = 0;
-)");
-    }
-
-    INTERFACE(RenderSamplerImage2D) {
-        INHERITS(RenderSampler);
-        PUBLIC_METHODS(R"(
-virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
-virtual void setInTransform(const Mat4& inTransform) = 0;
-virtual void setInOffset(const Vec4& inOffset) = 0;
-virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
-virtual void setFilter(const ccstd::string& filter) = 0;
-virtual void setWrapMode1(const ccstd::string& wrapMode) = 0;
-virtual void setWrapMode2(const ccstd::string& wrapMode) = 0;
-virtual void setOutTransform(const Mat4& outTransform) = 0;
-virtual void setOutOffset(const Vec4& outOffset) = 0;
-)");
-    }
-
-    INTERFACE(RenderSamplerImage3D) {
-        INHERITS(RenderSampler);
-        PUBLIC_METHODS(R"(
-virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
-virtual void setInTransform(const Mat4& inTransform) = 0;
-virtual void setInOffset(const Vec4& inOffset) = 0;
-virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
-virtual void setFilter(const ccstd::string& filter) = 0;
-virtual void setWrapMode1(const ccstd::string& wrapMode) = 0;
-virtual void setWrapMode2(const ccstd::string& wrapMode) = 0;
-virtual void setWrapMode3(const ccstd::string& wrapMode) = 0;
-virtual void setOutTransform(const Mat4& outTransform) = 0;
-virtual void setOutOffset(const Vec4& outOffset) = 0;
-)");
-    }
-
-    INTERFACE(RenderSamplerPrimitive) {
-        INHERITS(RenderSampler);
-        PUBLIC_METHODS(R"(
-virtual void setArray(DataType type, Uint8Array array) = 0;
-virtual void setInOffset(uint64_t inOffset) = 0;
-)");
-    }
-
-    INTERFACE(RenderSamplerTransform) {
-        INHERITS(RenderSampler);
-        PUBLIC_METHODS(R"(
-virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
-virtual void setOutTransform(const Mat4& outTransform) = 0;
-virtual void setOutOffset(const Vec4& outOffset) = 0;
-)");
-    }
-
-    INTERFACE(RenderMaterial) {
-        INHERITS(RenderObject);
-    }
-
-    INTERFACE(RenderMaterialMatte) {
-        INHERITS(RenderMaterial);
-        PUBLIC_METHODS(R"(
-virtual void setColor(IntrusivePtr<RenderSampler> color) = 0;
-virtual void setColorValue(const Vec3& color) = 0;
-virtual void setOpacity(IntrusivePtr<RenderSampler> opacity) = 0;
-virtual void setOpacityValue(float opacity) = 0;
-virtual void setAlphaMode(const ccstd::string& alphaMode) = 0;
-virtual void setAlphaCutoff(float alphaCutoff) = 0;
-)");
-    }
-
-    INTERFACE(RenderMaterialPhysicallyBased) {
-        INHERITS(RenderMaterial);
-        PUBLIC_METHODS(R"(
-virtual void setBaseColor(IntrusivePtr<RenderSampler> baseColor) = 0;
-virtual void setBaseColorValue(const Vec3& baseColor) = 0;
-virtual void setOpacity(IntrusivePtr<RenderSampler> opacity) = 0;
-virtual void setOpacityValue(float opacity) = 0;
-virtual void setMetallic(IntrusivePtr<RenderSampler> metallic) = 0;
-virtual void setMetallicValue(float metallic) = 0;
-virtual void setRoughness(IntrusivePtr<RenderSampler> roughness) = 0;
-virtual void setRoughnessValue(float roughness) = 0;
-
-virtual void setNormal(const IntrusivePtr<RenderSampler>& normal) = 0;
-
-virtual void setEmissive(IntrusivePtr<RenderSampler> emissive) = 0;
-virtual void setEmissiveValue(const Vec3& emissive) = 0;
-
-virtual void setOcclusion(const IntrusivePtr<RenderSampler>& occlusion) = 0;
-
-virtual void setAlphaMode(const ccstd::string& alphaMode) = 0;
-virtual void setAlphaCutoff(float alphaCutoff) = 0;
-
-virtual void setSpecular(IntrusivePtr<RenderSampler> specular) = 0;
-virtual void setSpecularValue(float specular) = 0;
-virtual void setSpecularColor(IntrusivePtr<RenderSampler> specular) = 0;
-virtual void setSpecularColorValue(const Vec3& specular) = 0;
-
-virtual void setClearcoat(IntrusivePtr<RenderSampler> clearcoat) = 0;
-virtual void setClearcoatValue(float clearcoat) = 0;
-virtual void setClearcoatRoughness(IntrusivePtr<RenderSampler> clearcoatRoughness) = 0;
-virtual void setClearcoatRoughnessValue(float clearcoatRoughness) = 0;
-virtual void setClearcoatNormal(const IntrusivePtr<RenderSampler>& clearcoatNormal) = 0;
-
-virtual void setTransmission(IntrusivePtr<RenderSampler> transmission) = 0;
-virtual void setTransmissionValue(float transmission) = 0;
-
-virtual void setIor(float ior) = 0;
-
-virtual void setThickness(IntrusivePtr<RenderSampler> thickness) = 0;
-virtual void setThicknessValue(float thickness) = 0;
-
-virtual void setAttenuationDistance(float attenuationDistance) = 0;
-virtual void setAttenuationColor(const Vec3& attenuationColor) = 0;
-
-virtual void setSheenColor(IntrusivePtr<RenderSampler> sheenColor) = 0;
-virtual void setSheenColorValue(const Vec3& sheenColor) = 0;
-virtual void setSheenRoughness(IntrusivePtr<RenderSampler> sheenRoughness) = 0;
-virtual void setSheenRoughnessValue(float sheenRoughness) = 0;
-
-virtual void setIridescence(IntrusivePtr<RenderSampler> iridescence) = 0;
-virtual void setIridescenceValue(float iridescence) = 0;
-virtual void setIridescenceIor(float iridescenceIor) = 0;
-virtual void setIridescenceThickness(IntrusivePtr<RenderSampler> iridescenceThickness) = 0;
-virtual void setIridescenceThicknessValue(float iridescenceThickness) = 0;
-)");
-    }
-
-    INTERFACE(RenderVolume) {
-        INHERITS(RenderObject);
-    }
-    
-    INTERFACE(RenderSpatialField) {
-        INHERITS(RenderObject);
-    }
-
-    INTERFACE(RenderSpatialFieldStructuredRegular) {
-        INHERITS(RenderSpatialField);
-        PUBLIC_METHODS(R"(
-virtual void setData(DataType type, IntrusivePtr<gfx::Texture> data) = 0;
-virtual void setOrigin(const Vec3& origin) = 0;
-virtual void setSpacing(const Vec3& spacing) = 0;
-virtual void setFilter(const ccstd::string& filter) = 0;
-)");
-    }
-
-    INTERFACE(RenderVolumeTransferFunction1D) {
-        INHERITS(RenderVolume);
-        PUBLIC_METHODS(R"(
-virtual void setValue(const IntrusivePtr<RenderSpatialField>& value) = 0;
-virtual void setValueRange(float rangeMin, float rangeMax) = 0;
-virtual void setColor(DataType type, IntrusivePtr<gfx::Texture> color) = 0;
-virtual void setOpacity(Float32Array opacity) = 0;
-virtual void setOpacityValue(float opacity) = 0;
-virtual void setUnitDistance(float unitDistance) = 0;
-)");
-    }
-
-    INTERFACE(RenderLight) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual void setColor(const Vec3& color) = 0;
-virtual void setVisible(bool visible) = 0;
-)");
-    }
-
-    INTERFACE(RenderLightDirectional) {
-        INHERITS(RenderLight);
-        PUBLIC_METHODS(R"(
-virtual void setDirection(const Vec3& direction) = 0;
-virtual void setIrradiance(float irradiance) = 0;
-virtual void setAngularDiameter(float angularDiameter) = 0;
-virtual void setRadiance(float radiance) = 0;
-)");
-    }
-
-    INTERFACE(RenderLightHDRI) {
-        INHERITS(RenderLight);
-        PUBLIC_METHODS(R"(
-virtual void setUp(const Vec3& up) = 0;
-virtual void setDirection(const Vec3& direction) = 0;
-virtual void setRadiance(Float32Array radiance) = 0;
-virtual void setLayout(const ccstd::string& layout) = 0;
-virtual void setScale(float scale) = 0;
-)");
-    }
-
-    INTERFACE(RenderLightPoint) {
-        INHERITS(RenderLight);
-        PUBLIC_METHODS(R"(
-virtual void setPosition(const Vec3& position) = 0;
-virtual void setIntensity(float intensity) = 0;
-virtual void setPower(float power) = 0;
-virtual void setRadius(float radius) = 0;
-virtual void setRadiance(float radiance) = 0;
-)");
-    }
-
-    INTERFACE(RenderLightQuad) {
-        INHERITS(RenderLight);
-        PUBLIC_METHODS(R"(
-virtual void setPosition(const Vec3& position) = 0;
-virtual void setEdge1(const Vec3& edge1) = 0;
-virtual void setEdge2(const Vec3& edge2) = 0;
-virtual void setIntensity(float intensity) = 0;
-virtual void setPower(float power) = 0;
-virtual void setRadiance(float radiance) = 0;
-virtual void setSide(const ccstd::string& side) = 0;
-virtual void setIntensityDistribution(DataType type, Float32Array intensityDistribution) = 0;
-)");
-    }
-
-    INTERFACE(RenderLightRing) {
-        INHERITS(RenderLight);
-        PUBLIC_METHODS(R"(
-virtual void setPosition(const Vec3& position) = 0;
-virtual void setDirection(const Vec3& direction) = 0;
-virtual void setOpeningAngle(float openingAngle) = 0;
-virtual void setFalloffAngle(float falloffAngle) = 0;
-virtual void setIntensity(float intensity) = 0;
-virtual void setPower(float power) = 0;
-virtual void setRadius(float radius) = 0;
-virtual void setInnerRadius(float innerRadius) = 0;
-virtual void setRadiance(float radiance) = 0;
-virtual void setIntensityDistribution(DataType type, Float32Array intensityDistribution) = 0;
-virtual void setC0(const Vec3& c0) = 0;
-)");
-    }
-    
-    INTERFACE(RenderSurface) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual void setGeometry(const IntrusivePtr<RenderGeometry>& geometry) = 0;
-virtual void setMaterial(const IntrusivePtr<RenderMaterial>& material) = 0;
-virtual void setId(uint32_t id) = 0;
-)");
-    }
-    
-    INTERFACE(RenderGroup) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual void setSurface(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
-virtual void setVolume(ccstd::vector<IntrusivePtr<RenderVolume>>&& volume) = 0;
-virtual void setLight(ccstd::vector<IntrusivePtr<RenderLight>>&& light) = 0;
-
-virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
-)");
-    }
-
-    INTERFACE(RenderInstance) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual void setGroup(const IntrusivePtr<RenderGroup>& group) = 0;
-virtual void setTransform(const Mat4& transform) = 0;
-
-virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
-)");
-    }
-// virtual void setId(uint32_t id) = 0;
-
-    INTERFACE(RenderInstanceTransform) {
-        INHERITS(RenderInstance);
-    }
-
-    INTERFACE(RenderInstanceMotionTransform) {
-        INHERITS(RenderInstance);
-        PUBLIC_METHODS(R"(
-virtual void setMotionTransform(Float32Array transform) = 0;
-virtual void setTime(float timeMin, float timeMax) = 0;
-)");
-    }
-
-    INTERFACE(RenderInstanceMotionScaleRotationTranslation) {
-        INHERITS(RenderInstance);
-        PUBLIC_METHODS(R"(
-virtual void setMotionScale(Float32Array scale) = 0;
-virtual void setMotionRotation(Float32Array rotation) = 0;
-virtual void setMotionTranslation(Float32Array translation) = 0;
-virtual void setTime(float timeMin, float timeMax) = 0;
-)");
-    }
-    
-    INTERFACE(RenderWorld) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual bool isEmpty() const = 0;
-
-virtual void setInstance(ccstd::vector<IntrusivePtr<RenderInstance>>&& instance) = 0;
-virtual void setSurface(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
-virtual void setVolume(ccstd::vector<IntrusivePtr<RenderVolume>>&& volume) = 0;
-virtual void setLight(ccstd::vector<IntrusivePtr<RenderLight>>&& light) = 0;
-
-virtual void addInstance(const IntrusivePtr<RenderInstance>& instance) = 0;
-virtual void addSurface(const IntrusivePtr<RenderSurface>& surface) = 0;
-
-virtual void removeInstance(const IntrusivePtr<RenderInstance>& instance) = 0;
-virtual void removeSurface(const IntrusivePtr<RenderSurface>& surface) = 0;
-
-virtual void addInstances(ccstd::vector<IntrusivePtr<RenderInstance>>&& instance) = 0;
-virtual void addSurfaces(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
-
-virtual void removeInstances(const ccstd::vector<IntrusivePtr<RenderInstance>>& instance) = 0;
-virtual void removeSurfaces(const ccstd::vector<IntrusivePtr<RenderSurface>>& surface) = 0;
-
-virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
-)");
-    }
-
-    INTERFACE(RenderCamera) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual void setPosition(const Vec3& position) = 0;
-virtual void setDirection(const Vec3& direction) = 0;
-virtual void setUp(const Vec3& up) = 0;
-virtual void setImageRegion(const Vec4& imageRegion) = 0;
-virtual void setApertureRadius(float apertureRadius) = 0;
-virtual void setFocusDistance(float focusDistance) = 0;
-virtual void setShutter(const Vec2& shutter) = 0;
-)");
-    }
-
-    INTERFACE(RenderCameraPerspective) {
-        INHERITS(RenderCamera);
-        PUBLIC_METHODS(R"(
-virtual void setFovy(float fovy) = 0;
-virtual void setAspect(float aspect) = 0;
-virtual void setNear(float near) = 0;
-virtual void setFar(float far) = 0;
-)");
-    }
-
-    INTERFACE(RenderCameraOmnidirectional) {
-        INHERITS(RenderCamera);
-        PUBLIC_METHODS(R"(
-virtual void setLayout(const ccstd::string& layout) = 0;
-)");
-    }
-
-    INTERFACE(RenderCameraOrthographic) {
-        INHERITS(RenderCamera);
-        PUBLIC_METHODS(R"(
-virtual void setAspect(float aspect) = 0;
-virtual void setHeight(float height) = 0;
-virtual void setNear(float near) = 0;
-virtual void setFar(float far) = 0;
-)");
-    }
-    
-    INTERFACE(Renderer) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-virtual void setBackground(const Vec4& background) = 0;
-virtual void setAmbientColor(const Vec3& ambientColor) = 0;
-virtual void setAmbientRadiance(float ambientRadiance) = 0;
-
-virtual const ccstd::vector<ccstd::string>& getExtension(WaitMask waitMask) const = 0;
-)");
-    }
-    
-    INTERFACE(RenderDevice) {
-        INHERITS(RenderObject);
-        PUBLIC_METHODS(R"(
-[[getter]] virtual int32_t getVersion() const noexcept = 0;
-[[getter]] virtual uint64_t getGeometryMaxIndex() const = 0;
-[[getter]] virtual ccstd::vector<ccstd::string> getExtension() const = 0;
-virtual ccstd::vector<ccstd::string> getObjectSubtypes(DataType objectType) const = 0;
-
-virtual IntrusivePtr<RenderCamera> createCamera(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<Renderer> createRenderer(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<RenderWorld> createWorld() = 0;
-virtual IntrusivePtr<RenderInstance> createInstance(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<RenderGroup> createGroup() = 0;
-virtual IntrusivePtr<RenderLight> createLight(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<RenderSurface> createSurface() = 0;
-virtual IntrusivePtr<RenderGeometry> createGeometry(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<RenderSampler> createSampler(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<RenderMaterial> createMaterial(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<RenderVolume> createVolume(const ccstd::string& subtype) = 0;
-virtual IntrusivePtr<RenderSpatialField> createSpatialField(const ccstd::string& subtype) = 0;
-)");
-    }
-// virtual IntrusivePtr<RenderFrame> createFrame() = 0;
-// virtual Property getObjectInfo(DataType objectType, const ccstd::string& objectSubtype, const ccstd::string& infoName, DataType infoType) const = 0;
-// virtual Property getParameterInfo(DataType objectType, const ccstd::string& objectSubtype, const ccstd::string& parameterName, DataType parameterType, const ccstd::string& infoName, DataType infoType) const = 0;
+//
+//    ENUM_CLASS(DataType) {
+//        UNDERLYING_TYPE(uint32_t);
+//        builder.setEnumOutputAll(vertID, true);
+//        ENUMS(
+//            UNKNOWN,
+//
+//            DATA_TYPE,
+//            STRING,
+//            VOID_POINTER,
+//            BOOL,
+//
+//            STRING_LIST,
+//            DATA_TYPE_LIST,
+//            PARAMETER_LIST,
+//
+//            FUNCTION_POINTER,
+//            MEMORY_DELETER,
+//            STATUS_CALLBACK,
+//            FRAME_COMPLETION_CALLBACK,
+//
+//            LIBRARY,
+//            DEVICE,
+//            OBJECT,
+//            ARRAY,
+//            ARRAY1D,
+//            ARRAY2D,
+//            ARRAY3D,
+//            CAMERA,
+//            FRAME,
+//            GEOMETRY,
+//            GROUP,
+//            INSTANCE,
+//            LIGHT,
+//            MATERIAL,
+//            RENDERER,
+//            SURFACE,
+//            SAMPLER,
+//            SPATIAL_FIELD,
+//            VOLUME,
+//            WORLD
+//        );
+//        const std::string_view dataTypes[] = {
+//            "INT8", "UINT8", "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64",
+//            "FIXED8", "UFIXED8", "FIXED16", "UFIXED16", "FIXED32", "UFIXED32", "FIXED64", "UFIXED64",
+//            "FLOAT16", "FLOAT32", "FLOAT64"
+//        };
+//        for (const auto& type : dataTypes) {
+//            builder.addEnumElement(vertID, type, "");
+//            builder.addEnumElement(vertID, std::string(type) + "_VEC2", "");
+//            builder.addEnumElement(vertID, std::string(type) + "_VEC3", "");
+//            builder.addEnumElement(vertID, std::string(type) + "_VEC4", "");
+//        }
+//
+//        ENUMS2(
+//            (UFIXED8_RGBA_SRGB, 2003)
+//            (UFIXED8_RGB_SRGB, 2002)
+//            (UFIXED8_RA_SRGB, 2001)
+//            (UFIXED8_R_SRGB, 2000)
+//        );
+//
+//        const std::string_view boxTypes[] = {
+//            "INT32", "FLOAT32", "FLOAT64"
+//        };
+//        for (const auto& type : boxTypes) {
+//            builder.addEnumElement(vertID, std::string(type) + "_BOX1", "");
+//            builder.addEnumElement(vertID, std::string(type) + "_BOX2", "");
+//            builder.addEnumElement(vertID, std::string(type) + "_BOX3", "");
+//            builder.addEnumElement(vertID, std::string(type) + "_BOX4", "");
+//        }
+//
+//        ENUMS(
+//            UINT64_REGION1,
+//            UINT64_REGION2,
+//            UINT64_REGION3,
+//            UINT64_REGION4,
+//            FLOAT32_MAT2,
+//            FLOAT32_MAT3,
+//            FLOAT32_MAT4,
+//            FLOAT32_MAT2x3,
+//            FLOAT32_MAT3x4,
+//            FLOAT32_QUAT_IJKW
+//        );
+//
+//        SET_ENUM_VALUE(DATA_TYPE, 100);
+//        SET_ENUM_VALUE(STRING_LIST, 150);
+//        SET_ENUM_VALUE(FUNCTION_POINTER, 200);
+//        SET_ENUM_VALUE(LIBRARY, 500);
+//        SET_ENUM_VALUE(INT8, 1000);
+//        SET_ENUM_VALUE(INT32_BOX1, 2004);
+//        SET_ENUM_VALUE(FLOAT64_BOX1, 2208);
+//        SET_ENUM_VALUE(UINT64_REGION1, 2104);
+//        SET_ENUM_VALUE(FLOAT32_MAT2, 2012);
+//    }
+//
+//    STRUCT(Parameter) {
+//        PUBLIC(
+//            (ccstd::string, mName, _)
+//            (DataType, mType, DataType::UNKNOWN)
+//        );
+//    }
+//
+//    ENUM_CLASS(WaitMask) {
+//        UNDERLYING_TYPE(uint32_t);
+//        ENUMS(NO_WAIT, WAIT);
+//    }
+//
+//    STRUCT(BufferView) {
+//        PUBLIC(
+//            ([[nullable]] IntrusivePtr<gfx::Buffer>, mBuffer, _)
+//            (uint64_t, mBufferOffset, 0)
+//            (uint64_t, mSizeInBytes, 0)
+//            (uint64_t, mStrideInBytes, 0)
+//        );
+//    }
+//
+//    INTERFACE(RenderObject) {
+//        INHERITS(RefCounted);
+//        PUBLIC_METHODS(R"(
+//virtual void destroy() noexcept = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderGeometry) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual void setPrimitiveColor(DataType type, const BufferView& color) = 0;
+//virtual void setPrimitiveAttribute0(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveAttribute1(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveAttribute2(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveAttribute3(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveId(Uint32Array id) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderGeometryCone) {
+//        INHERITS(RenderGeometry);
+//        PUBLIC_METHODS(R"(
+//virtual void setVertexPosition(const BufferView& position) = 0;
+//virtual void setVertexRadius(const BufferView& radius) = 0;
+//virtual void setVertexCap(const BufferView& cap) = 0;
+//virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+//virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveIndex(Uint32Array index) = 0;
+//virtual void setCaps(const ccstd::string& caps) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderGeometryCurve) {
+//        INHERITS(RenderGeometry);
+//        PUBLIC_METHODS(R"(
+//virtual void setVertexPosition(const BufferView& position) = 0;
+//virtual void setVertexRadius(const BufferView& radius) = 0;
+//virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+//virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveIndex(Uint32Array index) = 0;
+//virtual void setRadius(float radius) = 0;
+//)");
+//    }
+//    
+//    INTERFACE(RenderGeometryCylinder) {
+//        INHERITS(RenderGeometry);
+//        PUBLIC_METHODS(R"(
+//virtual void setVertexPosition(const BufferView& position) = 0;
+//virtual void setVertexCap(const BufferView& cap) = 0;
+//virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+//virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveIndex(Uint32Array index) = 0;
+//virtual void setPrimitiveRadius(const BufferView& radius) = 0;
+//virtual void setRadius(float radius) = 0;
+//virtual void setCaps(const ccstd::string& caps) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderGeometryQuad) {
+//        INHERITS(RenderGeometry);
+//        PUBLIC_METHODS(R"(
+//virtual void setVertexPosition(const BufferView& position) = 0;
+//virtual void setVertexNormal(DataType type, const BufferView& normal) = 0;
+//virtual void setVertexTangent(DataType type, const BufferView& tangent) = 0;
+//virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+//virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveIndex(Uint32Array index) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderGeometrySphere) {
+//        INHERITS(RenderGeometry);
+//        PUBLIC_METHODS(R"(
+//virtual void setVertexPosition(const BufferView& position) = 0;
+//virtual void setVertexRadius(const BufferView& radius) = 0;
+//virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+//virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveIndex(Uint32Array index) = 0;
+//virtual void setRadius(float radius) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderGeometryTriangle) {
+//        INHERITS(RenderGeometry);
+//        PUBLIC_METHODS(R"(
+//virtual void setVertexPosition(const BufferView& position) = 0;
+//virtual void setVertexNormal(DataType type, const BufferView& normal) = 0;
+//virtual void setVertexTangent(DataType type, const BufferView& tangent) = 0;
+//virtual void setVertexColor(DataType type, const BufferView& color) = 0;
+//virtual void setVertexAttribute0(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute1(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute2(DataType type, const BufferView& attribute) = 0;
+//virtual void setVertexAttribute3(DataType type, const BufferView& attribute) = 0;
+//virtual void setPrimitiveIndex(const BufferView& index) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderSampler) {
+//        INHERITS(RenderObject);
+//    }
+//
+//    INTERFACE(RenderSamplerImage1D) {
+//        INHERITS(RenderSampler);
+//        PUBLIC_METHODS(R"(
+//virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+//virtual void setInTransform(const Mat4& inTransform) = 0;
+//virtual void setInOffset(const Vec4& inOffset) = 0;
+//virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
+//virtual void setFilter(const ccstd::string& filter) = 0;
+//virtual void setWrapMode(const ccstd::string& wrapMode) = 0;
+//virtual void setOutTransform(const Mat4& outTransform) = 0;
+//virtual void setOutOffset(const Vec4& outOffset) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderSamplerImage2D) {
+//        INHERITS(RenderSampler);
+//        PUBLIC_METHODS(R"(
+//virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+//virtual void setInTransform(const Mat4& inTransform) = 0;
+//virtual void setInOffset(const Vec4& inOffset) = 0;
+//virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
+//virtual void setFilter(const ccstd::string& filter) = 0;
+//virtual void setWrapMode1(const ccstd::string& wrapMode) = 0;
+//virtual void setWrapMode2(const ccstd::string& wrapMode) = 0;
+//virtual void setOutTransform(const Mat4& outTransform) = 0;
+//virtual void setOutOffset(const Vec4& outOffset) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderSamplerImage3D) {
+//        INHERITS(RenderSampler);
+//        PUBLIC_METHODS(R"(
+//virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+//virtual void setInTransform(const Mat4& inTransform) = 0;
+//virtual void setInOffset(const Vec4& inOffset) = 0;
+//virtual void setImage(DataType type, IntrusivePtr<gfx::Texture> image) = 0;
+//virtual void setFilter(const ccstd::string& filter) = 0;
+//virtual void setWrapMode1(const ccstd::string& wrapMode) = 0;
+//virtual void setWrapMode2(const ccstd::string& wrapMode) = 0;
+//virtual void setWrapMode3(const ccstd::string& wrapMode) = 0;
+//virtual void setOutTransform(const Mat4& outTransform) = 0;
+//virtual void setOutOffset(const Vec4& outOffset) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderSamplerPrimitive) {
+//        INHERITS(RenderSampler);
+//        PUBLIC_METHODS(R"(
+//virtual void setArray(DataType type, Uint8Array array) = 0;
+//virtual void setInOffset(uint64_t inOffset) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderSamplerTransform) {
+//        INHERITS(RenderSampler);
+//        PUBLIC_METHODS(R"(
+//virtual void setInAttribute(const ccstd::string& inAttribute) = 0;
+//virtual void setOutTransform(const Mat4& outTransform) = 0;
+//virtual void setOutOffset(const Vec4& outOffset) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderMaterial) {
+//        INHERITS(RenderObject);
+//    }
+//
+//    INTERFACE(RenderMaterialMatte) {
+//        INHERITS(RenderMaterial);
+//        PUBLIC_METHODS(R"(
+//virtual void setColor(IntrusivePtr<RenderSampler> color) = 0;
+//virtual void setColorValue(const Vec3& color) = 0;
+//virtual void setOpacity(IntrusivePtr<RenderSampler> opacity) = 0;
+//virtual void setOpacityValue(float opacity) = 0;
+//virtual void setAlphaMode(const ccstd::string& alphaMode) = 0;
+//virtual void setAlphaCutoff(float alphaCutoff) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderMaterialPhysicallyBased) {
+//        INHERITS(RenderMaterial);
+//        PUBLIC_METHODS(R"(
+//virtual void setBaseColor(IntrusivePtr<RenderSampler> baseColor) = 0;
+//virtual void setBaseColorValue(const Vec3& baseColor) = 0;
+//virtual void setOpacity(IntrusivePtr<RenderSampler> opacity) = 0;
+//virtual void setOpacityValue(float opacity) = 0;
+//virtual void setMetallic(IntrusivePtr<RenderSampler> metallic) = 0;
+//virtual void setMetallicValue(float metallic) = 0;
+//virtual void setRoughness(IntrusivePtr<RenderSampler> roughness) = 0;
+//virtual void setRoughnessValue(float roughness) = 0;
+//
+//virtual void setNormal(const IntrusivePtr<RenderSampler>& normal) = 0;
+//
+//virtual void setEmissive(IntrusivePtr<RenderSampler> emissive) = 0;
+//virtual void setEmissiveValue(const Vec3& emissive) = 0;
+//
+//virtual void setOcclusion(const IntrusivePtr<RenderSampler>& occlusion) = 0;
+//
+//virtual void setAlphaMode(const ccstd::string& alphaMode) = 0;
+//virtual void setAlphaCutoff(float alphaCutoff) = 0;
+//
+//virtual void setSpecular(IntrusivePtr<RenderSampler> specular) = 0;
+//virtual void setSpecularValue(float specular) = 0;
+//virtual void setSpecularColor(IntrusivePtr<RenderSampler> specular) = 0;
+//virtual void setSpecularColorValue(const Vec3& specular) = 0;
+//
+//virtual void setClearcoat(IntrusivePtr<RenderSampler> clearcoat) = 0;
+//virtual void setClearcoatValue(float clearcoat) = 0;
+//virtual void setClearcoatRoughness(IntrusivePtr<RenderSampler> clearcoatRoughness) = 0;
+//virtual void setClearcoatRoughnessValue(float clearcoatRoughness) = 0;
+//virtual void setClearcoatNormal(const IntrusivePtr<RenderSampler>& clearcoatNormal) = 0;
+//
+//virtual void setTransmission(IntrusivePtr<RenderSampler> transmission) = 0;
+//virtual void setTransmissionValue(float transmission) = 0;
+//
+//virtual void setIor(float ior) = 0;
+//
+//virtual void setThickness(IntrusivePtr<RenderSampler> thickness) = 0;
+//virtual void setThicknessValue(float thickness) = 0;
+//
+//virtual void setAttenuationDistance(float attenuationDistance) = 0;
+//virtual void setAttenuationColor(const Vec3& attenuationColor) = 0;
+//
+//virtual void setSheenColor(IntrusivePtr<RenderSampler> sheenColor) = 0;
+//virtual void setSheenColorValue(const Vec3& sheenColor) = 0;
+//virtual void setSheenRoughness(IntrusivePtr<RenderSampler> sheenRoughness) = 0;
+//virtual void setSheenRoughnessValue(float sheenRoughness) = 0;
+//
+//virtual void setIridescence(IntrusivePtr<RenderSampler> iridescence) = 0;
+//virtual void setIridescenceValue(float iridescence) = 0;
+//virtual void setIridescenceIor(float iridescenceIor) = 0;
+//virtual void setIridescenceThickness(IntrusivePtr<RenderSampler> iridescenceThickness) = 0;
+//virtual void setIridescenceThicknessValue(float iridescenceThickness) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderVolume) {
+//        INHERITS(RenderObject);
+//    }
+//    
+//    INTERFACE(RenderSpatialField) {
+//        INHERITS(RenderObject);
+//    }
+//
+//    INTERFACE(RenderSpatialFieldStructuredRegular) {
+//        INHERITS(RenderSpatialField);
+//        PUBLIC_METHODS(R"(
+//virtual void setData(DataType type, IntrusivePtr<gfx::Texture> data) = 0;
+//virtual void setOrigin(const Vec3& origin) = 0;
+//virtual void setSpacing(const Vec3& spacing) = 0;
+//virtual void setFilter(const ccstd::string& filter) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderVolumeTransferFunction1D) {
+//        INHERITS(RenderVolume);
+//        PUBLIC_METHODS(R"(
+//virtual void setValue(const IntrusivePtr<RenderSpatialField>& value) = 0;
+//virtual void setValueRange(float rangeMin, float rangeMax) = 0;
+//virtual void setColor(DataType type, IntrusivePtr<gfx::Texture> color) = 0;
+//virtual void setOpacity(Float32Array opacity) = 0;
+//virtual void setOpacityValue(float opacity) = 0;
+//virtual void setUnitDistance(float unitDistance) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderLight) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual void setColor(const Vec3& color) = 0;
+//virtual void setVisible(bool visible) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderLightDirectional) {
+//        INHERITS(RenderLight);
+//        PUBLIC_METHODS(R"(
+//virtual void setDirection(const Vec3& direction) = 0;
+//virtual void setIrradiance(float irradiance) = 0;
+//virtual void setAngularDiameter(float angularDiameter) = 0;
+//virtual void setRadiance(float radiance) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderLightHDRI) {
+//        INHERITS(RenderLight);
+//        PUBLIC_METHODS(R"(
+//virtual void setUp(const Vec3& up) = 0;
+//virtual void setDirection(const Vec3& direction) = 0;
+//virtual void setRadiance(Float32Array radiance) = 0;
+//virtual void setLayout(const ccstd::string& layout) = 0;
+//virtual void setScale(float scale) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderLightPoint) {
+//        INHERITS(RenderLight);
+//        PUBLIC_METHODS(R"(
+//virtual void setPosition(const Vec3& position) = 0;
+//virtual void setIntensity(float intensity) = 0;
+//virtual void setPower(float power) = 0;
+//virtual void setRadius(float radius) = 0;
+//virtual void setRadiance(float radiance) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderLightQuad) {
+//        INHERITS(RenderLight);
+//        PUBLIC_METHODS(R"(
+//virtual void setPosition(const Vec3& position) = 0;
+//virtual void setEdge1(const Vec3& edge1) = 0;
+//virtual void setEdge2(const Vec3& edge2) = 0;
+//virtual void setIntensity(float intensity) = 0;
+//virtual void setPower(float power) = 0;
+//virtual void setRadiance(float radiance) = 0;
+//virtual void setSide(const ccstd::string& side) = 0;
+//virtual void setIntensityDistribution(DataType type, Float32Array intensityDistribution) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderLightRing) {
+//        INHERITS(RenderLight);
+//        PUBLIC_METHODS(R"(
+//virtual void setPosition(const Vec3& position) = 0;
+//virtual void setDirection(const Vec3& direction) = 0;
+//virtual void setOpeningAngle(float openingAngle) = 0;
+//virtual void setFalloffAngle(float falloffAngle) = 0;
+//virtual void setIntensity(float intensity) = 0;
+//virtual void setPower(float power) = 0;
+//virtual void setRadius(float radius) = 0;
+//virtual void setInnerRadius(float innerRadius) = 0;
+//virtual void setRadiance(float radiance) = 0;
+//virtual void setIntensityDistribution(DataType type, Float32Array intensityDistribution) = 0;
+//virtual void setC0(const Vec3& c0) = 0;
+//)");
+//    }
+//    
+//    INTERFACE(RenderSurface) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual void setGeometry(const IntrusivePtr<RenderGeometry>& geometry) = 0;
+//virtual void setMaterial(const IntrusivePtr<RenderMaterial>& material) = 0;
+//virtual void setId(uint32_t id) = 0;
+//)");
+//    }
+//    
+//    INTERFACE(RenderGroup) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual void setSurface(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
+//virtual void setVolume(ccstd::vector<IntrusivePtr<RenderVolume>>&& volume) = 0;
+//virtual void setLight(ccstd::vector<IntrusivePtr<RenderLight>>&& light) = 0;
+//
+//virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderInstance) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual void setGroup(const IntrusivePtr<RenderGroup>& group) = 0;
+//virtual void setTransform(const Mat4& transform) = 0;
+//
+//virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
+//)");
+//    }
+//// virtual void setId(uint32_t id) = 0;
+//
+//    INTERFACE(RenderInstanceTransform) {
+//        INHERITS(RenderInstance);
+//    }
+//
+//    INTERFACE(RenderInstanceMotionTransform) {
+//        INHERITS(RenderInstance);
+//        PUBLIC_METHODS(R"(
+//virtual void setMotionTransform(Float32Array transform) = 0;
+//virtual void setTime(float timeMin, float timeMax) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderInstanceMotionScaleRotationTranslation) {
+//        INHERITS(RenderInstance);
+//        PUBLIC_METHODS(R"(
+//virtual void setMotionScale(Float32Array scale) = 0;
+//virtual void setMotionRotation(Float32Array rotation) = 0;
+//virtual void setMotionTranslation(Float32Array translation) = 0;
+//virtual void setTime(float timeMin, float timeMax) = 0;
+//)");
+//    }
+//    
+//    INTERFACE(RenderWorld) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual bool isEmpty() const = 0;
+//
+//virtual void setInstance(ccstd::vector<IntrusivePtr<RenderInstance>>&& instance) = 0;
+//virtual void setSurface(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
+//virtual void setVolume(ccstd::vector<IntrusivePtr<RenderVolume>>&& volume) = 0;
+//virtual void setLight(ccstd::vector<IntrusivePtr<RenderLight>>&& light) = 0;
+//
+//virtual void addInstance(const IntrusivePtr<RenderInstance>& instance) = 0;
+//virtual void addSurface(const IntrusivePtr<RenderSurface>& surface) = 0;
+//
+//virtual void removeInstance(const IntrusivePtr<RenderInstance>& instance) = 0;
+//virtual void removeSurface(const IntrusivePtr<RenderSurface>& surface) = 0;
+//
+//virtual void addInstances(ccstd::vector<IntrusivePtr<RenderInstance>>&& instance) = 0;
+//virtual void addSurfaces(ccstd::vector<IntrusivePtr<RenderSurface>>&& surface) = 0;
+//
+//virtual void removeInstances(const ccstd::vector<IntrusivePtr<RenderInstance>>& instance) = 0;
+//virtual void removeSurfaces(const ccstd::vector<IntrusivePtr<RenderSurface>>& surface) = 0;
+//
+//virtual geometry::AABB getBounds(WaitMask waitMask) const = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderCamera) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual void setPosition(const Vec3& position) = 0;
+//virtual void setDirection(const Vec3& direction) = 0;
+//virtual void setUp(const Vec3& up) = 0;
+//virtual void setImageRegion(const Vec4& imageRegion) = 0;
+//virtual void setApertureRadius(float apertureRadius) = 0;
+//virtual void setFocusDistance(float focusDistance) = 0;
+//virtual void setShutter(const Vec2& shutter) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderCameraPerspective) {
+//        INHERITS(RenderCamera);
+//        PUBLIC_METHODS(R"(
+//virtual void setFovy(float fovy) = 0;
+//virtual void setAspect(float aspect) = 0;
+//virtual void setNear(float near) = 0;
+//virtual void setFar(float far) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderCameraOmnidirectional) {
+//        INHERITS(RenderCamera);
+//        PUBLIC_METHODS(R"(
+//virtual void setLayout(const ccstd::string& layout) = 0;
+//)");
+//    }
+//
+//    INTERFACE(RenderCameraOrthographic) {
+//        INHERITS(RenderCamera);
+//        PUBLIC_METHODS(R"(
+//virtual void setAspect(float aspect) = 0;
+//virtual void setHeight(float height) = 0;
+//virtual void setNear(float near) = 0;
+//virtual void setFar(float far) = 0;
+//)");
+//    }
+//    
+//    INTERFACE(Renderer) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//virtual void setBackground(const Vec4& background) = 0;
+//virtual void setAmbientColor(const Vec3& ambientColor) = 0;
+//virtual void setAmbientRadiance(float ambientRadiance) = 0;
+//
+//virtual const ccstd::vector<ccstd::string>& getExtension(WaitMask waitMask) const = 0;
+//)");
+//    }
+//    
+//    INTERFACE(RenderDevice) {
+//        INHERITS(RenderObject);
+//        PUBLIC_METHODS(R"(
+//[[getter]] virtual int32_t getVersion() const noexcept = 0;
+//[[getter]] virtual uint64_t getGeometryMaxIndex() const = 0;
+//[[getter]] virtual ccstd::vector<ccstd::string> getExtension() const = 0;
+//virtual ccstd::vector<ccstd::string> getObjectSubtypes(DataType objectType) const = 0;
+//
+//virtual IntrusivePtr<RenderCamera> createCamera(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<Renderer> createRenderer(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<RenderWorld> createWorld() = 0;
+//virtual IntrusivePtr<RenderInstance> createInstance(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<RenderGroup> createGroup() = 0;
+//virtual IntrusivePtr<RenderLight> createLight(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<RenderSurface> createSurface() = 0;
+//virtual IntrusivePtr<RenderGeometry> createGeometry(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<RenderSampler> createSampler(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<RenderMaterial> createMaterial(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<RenderVolume> createVolume(const ccstd::string& subtype) = 0;
+//virtual IntrusivePtr<RenderSpatialField> createSpatialField(const ccstd::string& subtype) = 0;
+//)");
+//    }
+//// virtual IntrusivePtr<RenderFrame> createFrame() = 0;
+//// virtual Property getObjectInfo(DataType objectType, const ccstd::string& objectSubtype, const ccstd::string& infoName, DataType infoType) const = 0;
+//// virtual Property getParameterInfo(DataType objectType, const ccstd::string& objectSubtype, const ccstd::string& parameterName, DataType parameterType, const ccstd::string& infoName, DataType infoType) const = 0;
 
         CLASS(Factory, .mExport = false) {
             MEMBER_FUNCTIONS(R"(static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<unsigned char>& bufferIn);
