@@ -748,6 +748,8 @@ void setCustomContext(std::string_view name);
 
 static void prepareDescriptors(RenderGraphVisitorContext& ctx, RenderGraph::vertex_descriptor passID);
 
+void prepareDescriptorSets(RenderGraph::vertex_descriptor passID);
+
 private:
 ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
 
