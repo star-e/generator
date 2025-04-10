@@ -1,7 +1,7 @@
 #pragma once
 #include <functional>
 #include <compare>
-#include <gsl/gsl_assert>
+#include <gsl/assert>
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/graph/adjacency_iterator.hpp>
 #include <boost/graph/properties.hpp>

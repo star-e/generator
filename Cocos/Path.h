@@ -26,8 +26,8 @@ THE SOFTWARE.
 
 #pragma once
 #include <string>
-#include <gsl/gsl_assert>
-#include <gsl/gsl_util>
+#include <gsl/assert>
+#include <gsl/util>
 
 namespace Cocos {
 

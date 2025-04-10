@@ -25,7 +25,7 @@ THE SOFTWARE.
 */
 
 #pragma once
-#include <gsl/gsl_assert>
+#include <gsl/assert>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
