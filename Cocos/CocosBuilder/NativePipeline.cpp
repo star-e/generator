@@ -626,6 +626,22 @@ void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
             CNTR(mDescriptorSet);
         }
 
+        STRUCT(TextureWithAccessFlags) {
+            PUBLIC(
+                (IntrusivePtr<gfx::Texture>, mTexture, _)
+                (gfx::AccessFlagBit, mAccessFlags, gfx::AccessFlagBit::NONE)
+            );
+        }
+
+        STRUCT(DeviceRenderData, .mFlags = NO_COPY) {
+            PUBLIC(
+                (bool, mHasConstants, false)
+                ((PmrFlatMap<NameLocalID, IntrusivePtr<gfx::Buffer>>), mBuffers, _)
+                ((PmrFlatMap<NameLocalID, TextureWithAccessFlags>), mTextures, _)
+                ((PmrFlatMap<NameLocalID, gfx::Sampler*>), mSamplers, _)
+            );
+        }
+
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
             PUBLIC(
                 (std::unique_ptr<gfx::DefaultResource>, mDefaultResource, _)
@@ -636,7 +652,9 @@ void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
                 (QuadResource, mFullscreenQuad, _)
                 (SceneCulling, mSceneCulling, _)
                 (LightResource, mLightResources, _)
-                ((ccstd::pmr::unordered_map<DescriptorSetKey, DescriptorSetContext>), mGraphNodeContexts, _)
+                ((ccstd::pmr::unordered_map<DescriptorSetKey, DeviceRenderData>), mGraphNodeRenderData, _)
+                ((ccstd::pmr::unordered_map<RenderGraph::vertex_descriptor, PmrFlatMap<NameLocalID, ResourceGraph::vertex_descriptor>>), mResourceGraphIndex, _)
+                //((ccstd::pmr::unordered_map<DescriptorSetKey, DescriptorSetContext>), mGraphNodeContexts, _)
             );
             MEMBER_FUNCTIONS(R"(
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
