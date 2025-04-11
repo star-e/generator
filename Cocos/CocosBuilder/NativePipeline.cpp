@@ -636,6 +636,7 @@ void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
         STRUCT(DeviceRenderData, .mFlags = NO_COPY) {
             PUBLIC(
                 (bool, mHasConstants, false)
+                (bool, mRequired, false)
                 ((PmrFlatMap<NameLocalID, IntrusivePtr<gfx::Buffer>>), mBuffers, _)
                 ((PmrFlatMap<NameLocalID, TextureWithAccessFlags>), mTextures, _)
                 ((PmrFlatMap<NameLocalID, gfx::Sampler*>), mSamplers, _)
@@ -643,6 +644,7 @@ void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
             MEMBER_FUNCTIONS(R"(
 void clear() noexcept {
     hasConstants = false;
+    required = false;
     buffers.clear();
     textures.clear();
     samplers.clear();
