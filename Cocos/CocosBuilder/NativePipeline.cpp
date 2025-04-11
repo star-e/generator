@@ -640,6 +640,17 @@ void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
                 ((PmrFlatMap<NameLocalID, TextureWithAccessFlags>), mTextures, _)
                 ((PmrFlatMap<NameLocalID, gfx::Sampler*>), mSamplers, _)
             );
+            MEMBER_FUNCTIONS(R"(
+void clear() noexcept {
+    hasConstants = false;
+    buffers.clear();
+    textures.clear();
+    samplers.clear();
+}
+bool hasNoData() const noexcept {
+    return !hasConstants && buffers.empty() && textures.empty() && samplers.empty();
+}
+)");
         }
 
         STRUCT(NativeRenderContext, .mFlags = NO_MOVE_NO_COPY | NO_DEFAULT_CNTR) {
