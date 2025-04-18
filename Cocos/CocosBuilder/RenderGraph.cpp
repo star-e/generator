@@ -509,14 +509,20 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
             CNTR(mMaterial, mPassID, mThreadGroupCountX, mThreadGroupCountY, mThreadGroupCountZ);
         }
 
+        ENUM_CLASS(BlitType) {
+            UNDERLYING_TYPE(uint8_t);
+            ENUMS(FULLSCREEN_QUAD, DRAW_2D, DRAW_PROFILE);
+        }
+
         STRUCT(Blit) {
             PUBLIC(
                 ([[nullable]] IntrusivePtr<cc::Material>, mMaterial, _)
                 (uint32_t, mPassID, 0)
                 (SceneFlags, mSceneFlags, _)
-                ([[nullable]] scene::Camera*, mCamera, nullptr)
+                ([[nullable]] const scene::Camera*, mCamera, nullptr)
+                (BlitType, mBlitType, BlitType::FULLSCREEN_QUAD)
             );
-            CNTR(mMaterial, mPassID, mSceneFlags, mCamera);
+            CNTR(mMaterial, mPassID, mSceneFlags, mCamera, mBlitType);
         }
 
         STRUCT(RenderData, .mFlags = NO_COPY) {
