@@ -52,6 +52,7 @@ template <class T>
 using Array4 = std::array<T, 4>;
 
 struct RenderGraphVisitorContext;
+struct FrameGraphDispatcher;
 
 } // namespace render
 
@@ -665,8 +666,9 @@ bool hasNoData() const noexcept {
                 (QuadResource, mFullscreenQuad, _)
                 (SceneCulling, mSceneCulling, _)
                 (LightResource, mLightResources, _)
-                ((ccstd::pmr::unordered_map<DescriptorSetKey, DeviceRenderData>), mGraphNodeRenderData, _)
                 ((ccstd::pmr::unordered_map<RenderGraph::vertex_descriptor, PmrFlatMap<NameLocalID, ResourceGraph::vertex_descriptor>>), mResourceGraphIndex, _)
+                ((ccstd::pmr::unordered_map<DescriptorSetKey, DeviceRenderData>), mGraphNodeRenderData, _)
+                ((ccstd::pmr::unordered_map<DescriptorSetKey, gfx::DescriptorSet*>), mGraphNodeDescriptorSets, _)
                 //((ccstd::pmr::unordered_map<DescriptorSetKey, DescriptorSetContext>), mGraphNodeContexts, _)
             );
             MEMBER_FUNCTIONS(R"(
@@ -779,7 +781,7 @@ void setCustomContext(std::string_view name);
 
 static void prepareDescriptors(RenderGraphVisitorContext& ctx, RenderGraph::vertex_descriptor passID);
 
-void prepareDescriptorSets(RenderGraph::vertex_descriptor passID);
+void prepareDescriptorSets(gfx::CommandBuffer& cmdBuff, const FrameGraphDispatcher& rdg, RenderGraph::vertex_descriptor passID);
 
 private:
 ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
