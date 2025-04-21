@@ -147,6 +147,11 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
                 (NON_BUILTIN, 0x8000)
                 (ALL, 0xFFFFFFFF)
             );
+            builder.addEnumComment(vertID, "OPAQUE_OBJECT", "@deprecated Please use OPAQUE.");
+            builder.addEnumComment(vertID, "CUTOUT_OBJECT", "@deprecated Please use MASK.");
+            builder.addEnumComment(vertID, "TRANSPARENT_OBJECT", "@deprecated Please use BLEND.");
+            builder.addEnumComment(vertID, "UI", "@deprecated Please add 2D node in the render graph.");
+            builder.addEnumComment(vertID, "PROFILER", "@deprecated Please add profiler node in the render graph.");
         }
 
         ENUM_CLASS(LightingMode) {
