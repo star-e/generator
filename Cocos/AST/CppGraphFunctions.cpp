@@ -3663,8 +3663,9 @@ std::pmr::string CppGraphBuilder::generateGraphPropertyMaps_h() const {
                             Expects(false);
                         },
                         [&](Map_) {
-                            OSS << "CC_EXPECTS(relative.substr(0, 1) != \"/\");\n";
-                            OSS << "CC_EXPECTS(relative.empty() || relative.substr(relative.size() - 1) != \"/\");\n";
+                            OSS << "CC_EXPECTS(!relative.empty());\n";
+                            OSS << "CC_EXPECTS(relative.front() != '/');\n";
+                            OSS << "CC_EXPECTS(relative.back() != '/');\n";
                             if (pmr) {
                                 OSS << "auto key = getPath(u, relative, g, mr);\n";
                             } else {
