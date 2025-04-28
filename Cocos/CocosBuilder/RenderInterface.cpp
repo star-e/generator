@@ -292,7 +292,7 @@ virtual void resolveDepthStencil(const ccstd::string& source, const ccstd::strin
 //        }
 
         INTERFACE(BasicPipeline) {
-            INHERITS(PipelineRuntime, Setter);
+            INHERITS(PipelineRuntime);
             PUBLIC_METHODS(R"(
 [[getter]] virtual PipelineType getType() const = 0;
 [[getter]] virtual PipelineCapabilities getCapabilities() const = 0;
@@ -333,6 +333,27 @@ virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
 [[deprecated]] virtual void addBuiltinReflectionProbePass(const scene::Camera *camera) = 0;
 
 [[optional]] virtual gfx::DescriptorSetLayout *getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+
+virtual void setMat4(const ccstd::string& name, const cc::Mat4& mat) = 0;
+virtual void setQuaternion(const ccstd::string& name, const cc::Quaternion& quat) = 0;
+virtual void setColor(const ccstd::string& name, const gfx::Color& color) = 0;
+virtual void setVec4(const ccstd::string& name, const cc::Vec4& vec) = 0;
+virtual void setVec2(const ccstd::string& name, const cc::Vec2& vec) = 0;
+virtual void setFloat(const ccstd::string& name, float v) = 0;
+virtual void setArrayBuffer(const ccstd::string& name, const ArrayBuffer* arrayBuffer) = 0;
+
+virtual void setBuffer(const ccstd::string& name, gfx::Buffer* buffer) = 0;
+virtual void setTexture(const ccstd::string& name, gfx::Texture* texture) = 0;
+virtual void setSampler(const ccstd::string& name, gfx::Sampler* sampler) = 0;
+
+virtual void setBuiltinCameraConstants(const scene::Camera* camera) = 0;
+virtual void setBuiltinDirectionalLightConstants(const scene::DirectionalLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinSphereLightConstants(const scene::SphereLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinSpotLightConstants(const scene::SpotLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinPointLightConstants(const scene::PointLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinRangedDirectionalLightConstants(const scene::RangedDirectionalLight* light, const scene::Camera* camera) = 0;
+virtual void setBuiltinDirectionalLightFrustumConstants(const scene::Camera* camera, const scene::DirectionalLight* light, uint32_t csmLevel = 0) = 0;
+virtual void setBuiltinSpotLightFrustumConstants(const scene::SpotLight* light) = 0;
 )");
         }
 
