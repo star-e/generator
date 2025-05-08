@@ -123,7 +123,6 @@ int main() {
         files.emplace("cocos/renderer/pipeline/custom/NativePipeline.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutorRenderGraph.h");
-        files.emplace("cocos/renderer/pipeline/custom/NativeExecutorDescriptor.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeExecutorDescriptor2.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderGraph.cpp");
         files.emplace("cocos/renderer/pipeline/custom/NativeRenderQueue.cpp");

@@ -454,19 +454,6 @@ gfx::Buffer* createFromCpuBuffer();
             );
             CNTR(mQuadVB, mQuadIB, mQuadIA);
         }
-        
-        ENUM_CLASS(ResourceType) {
-            UNDERLYING_TYPE(uint8_t);
-            ENUMS(STORAGE_BUFFER, STORAGE_IMAGE);
-        }
-
-        STRUCT(SceneResource, .mFlags = NO_COPY) {
-            PUBLIC(
-                ((ccstd::pmr::unordered_map<NameLocalID, ResourceType>), mResourceIndex, _)
-                ((ccstd::pmr::unordered_map<NameLocalID, IntrusivePtr<gfx::Buffer>>), mStorageBuffers, _)
-                ((ccstd::pmr::unordered_map<NameLocalID, IntrusivePtr<gfx::Texture>>), mStorageImages, _)
-            );
-        }
 
         // Render Context
         STRUCT(FrustumCullingKey, .mFlags = EQUAL | HASH_COMBINE) {
@@ -662,14 +649,12 @@ bool hasNoData() const noexcept {
                 (uint64_t, mNextFenceValue, 0)
                 ((ccstd::pmr::map<uint64_t, ResourceGroup>), mResourceGroups, _)
                 ((ccstd::pmr::vector<LayoutGraphNodeResource>), mLayoutGraphResources, _)
-                ((ccstd::pmr::unordered_map<const scene::RenderScene*, SceneResource>), mRenderSceneResources, _)
                 (QuadResource, mFullscreenQuad, _)
                 (SceneCulling, mSceneCulling, _)
                 (LightResource, mLightResources, _)
                 ((ccstd::pmr::unordered_map<RenderGraph::vertex_descriptor, PmrFlatMap<NameLocalID, ResourceGraph::vertex_descriptor>>), mResourceGraphIndex, _)
                 ((ccstd::pmr::unordered_map<DescriptorSetKey, DeviceRenderData>), mGraphNodeRenderData, _)
                 ((ccstd::pmr::unordered_map<DescriptorSetKey, gfx::DescriptorSet*>), mGraphNodeDescriptorSets, _)
-                //((ccstd::pmr::unordered_map<DescriptorSetKey, DescriptorSetContext>), mGraphNodeContexts, _)
             );
             MEMBER_FUNCTIONS(R"(
 void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
@@ -778,8 +763,6 @@ void addCustomRenderQueue(std::string_view name, std::shared_ptr<CustomRenderQue
 void addCustomRenderCommand(std::string_view name, std::shared_ptr<CustomRenderCommand> ptr);
 
 void setCustomContext(std::string_view name);
-
-static void prepareDescriptors(RenderGraphVisitorContext& ctx, RenderGraph::vertex_descriptor passID);
 
 void prepareDescriptorSets(gfx::CommandBuffer& cmdBuff, const FrameGraphDispatcher& rdg, RenderGraph::vertex_descriptor passID);
 
