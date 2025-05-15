@@ -511,7 +511,7 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
 
         ENUM_CLASS(BlitType) {
             UNDERLYING_TYPE(uint8_t);
-            ENUMS(FULLSCREEN_QUAD, DRAW_2D, DRAW_PROFILE);
+            ENUMS(FULLSCREEN_QUAD, DRAW_2D, DRAW_PROFILE, DRAW_3D);
         }
 
         STRUCT(Blit) {
