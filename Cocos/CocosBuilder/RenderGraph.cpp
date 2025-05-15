@@ -50,6 +50,7 @@ void buildRenderGraph(ModuleBuilder& builder, Features features) {
 #include "cocos/renderer/gfx-base/GFXSwapchain.h"
 #include "cocos/renderer/gfx-base/states/GFXSampler.h"
 #include "cocos/core/assets/Material.h"
+#include "cocos/scene/Model.h"
 )",
         .mTypescriptInclude = R"(
 function resetColor (v: Color): void {
@@ -521,8 +522,10 @@ void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
                 (SceneFlags, mSceneFlags, _)
                 ([[nullable]] const scene::Camera*, mCamera, nullptr)
                 (BlitType, mBlitType, BlitType::FULLSCREEN_QUAD)
+                (ccstd::pmr::vector<IntrusivePtr<scene::Model>>, mModels, _)
             );
             CNTR(mMaterial, mPassID, mSceneFlags, mCamera, mBlitType);
+            CNTR(mCamera, mBlitType, mModels);
         }
 
         STRUCT(RenderData, .mFlags = NO_COPY) {

@@ -254,9 +254,9 @@ virtual void useLightFrustum(IntrusivePtr<scene::Light> light, uint32_t csmLevel
 virtual SceneBuilder *addScene(const scene::Camera* camera, SceneFlags sceneFlags, [[optional]] scene::Light* light = nullptr, [[optional]] scene::RenderScene* scene = nullptr) = 0;
 virtual void addFullscreenQuad(cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
 virtual void addCameraQuad(scene::Camera* camera, cc::Material *material, uint32_t passID, SceneFlags sceneFlags = SceneFlags::NONE) = 0;
-[[beta]] virtual void addDraw3d(const scene::Camera* camera, const std::vector<scene::Model *>& models) = 0;
-[[beta]] virtual void addDraw2d(const scene::Camera* camera) = 0;
-[[beta]] virtual void addDrawProfiler(const scene::Camera* camera) = 0;
+[[beta]] virtual void addDraw3D(const scene::Camera* camera, const std::vector<scene::Model *>& models, SceneFlags sceneFlags = SceneFlags::NON_BUILTIN) = 0;
+[[beta]] virtual void addDraw2D(const scene::Camera* camera) = 0;
+[[beta]] virtual void addProfiler(const scene::Camera* camera) = 0;
 virtual void clearRenderTarget(const ccstd::string &name, const gfx::Color &color = {}) = 0;
 virtual void setViewport(const gfx::Viewport &viewport) = 0;
 [[experimental]] virtual void addCustomCommand(std::string_view customBehavior) = 0;
