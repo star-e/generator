@@ -2386,6 +2386,12 @@ PmrMap<std::pmr::string, ImportedTypes> SyntaxGraph::getImportedTypes(
                     addImported(mg, paramID, g, false, modulePath, false, imported);
                 }
             },
+            [&](const Enum& s) {
+                if (traits.mFlags & DECORATOR) {
+                    const auto decoratorID = locate("/cc/ccenum", g);
+                    addImported(mg, decoratorID, g, true, modulePath, false, imported);
+                }
+            },
             [](const auto&) {});
 
         visit_vertex(

@@ -37,6 +37,7 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
         CLASS(RefCounted, .mFlags = IMPL_DETAIL);
         CLASS(ArrayBuffer);
     }
+
     MODULE(PassUtils,
         .mFolder = "cocos/renderer/core",
         .mFilePrefix = "PassUtils.h",
@@ -99,6 +100,14 @@ void buildCocosCommon(ModuleBuilder& builder, Features features) {
             NAMESPACE(scene) {
                 IMPORT_CLASS(RenderScene);
             }
+        }
+    }
+
+    MODULE(Enum,
+        .mTypescriptFolder = "cocos/core",
+        .mTypescriptFilePrefix = "enum") {
+        NAMESPACE(cc) {
+            IMPORT_CLASS(ccenum);
         }
     }
 
