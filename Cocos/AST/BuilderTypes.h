@@ -447,6 +447,9 @@ struct ModuleBuilder {
     void setMemberTypescriptName(SyntaxGraph::vertex_descriptor vertID,
         std::string_view memberName, std::string_view tsName);
 
+    void setMemberRenamedFrom(SyntaxGraph::vertex_descriptor vertID,
+        std::string_view memberName, std::string_view fromMemberName);
+
     void setTypescriptInitValue(SyntaxGraph::vertex_descriptor vertID,
         std::string_view memberName, std::string_view init);
 

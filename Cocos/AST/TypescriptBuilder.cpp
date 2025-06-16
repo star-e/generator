@@ -178,6 +178,9 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                 }
             }
             OSS << "}\n";
+            if (traits.mFlags & DECORATOR) {
+                OSS << "ccenum(" << name << ");\n";
+            }
         },
         [&](const Graph& s) {
             if (currScope.mCount++)
@@ -263,7 +266,7 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
             }
             OSS << "}\n";
 
-            if (traits.mStructInterface) {
+            if (traits.mStructInterface && !(traits.mFlags & TS_NO_STRUCT_INTERFACE_FUNCTIONS)) {
                 if (sEnableMake) {
                     oss << "\n";
                     OSS << "export function make" << name << funcSpace << "(): " << name << " {\n";
@@ -328,10 +331,20 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
                                 OSS << "value." << memberName << " ??= "
                                     << g.getTypescriptInitialValue(memberID, m) << ";\n";
                             } else {
-                                OSS << "if (value." << memberName << " === undefined) {\n";
-                                OSS << "    value." << memberName << " = "
-                                    << g.getTypescriptInitialValue(memberID, m) << ";\n";
-                                OSS << "}\n";
+                                if (m.mRenamedFromMember.empty()) {
+                                    OSS << "if (value." << memberName << " === undefined) {\n";
+                                    OSS << "    value." << memberName << " = "
+                                        << g.getTypescriptInitialValue(memberID, m) << ";\n";
+                                    OSS << "}\n";
+                                } else {
+                                    const auto& renameFromName = g.getMemberName(m.mRenamedFromMember, true);
+
+                                    OSS << "if (value." << memberName << " === undefined) {\n";
+                                    OSS << "    value." << memberName << " = ";
+                                    oss << "value." << renameFromName << " || ";
+                                    oss << g.getTypescriptInitialValue(memberID, m) << ";\n";
+                                    OSS << "}\n";
+                                }
                             }
                         }
                     }

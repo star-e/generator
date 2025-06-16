@@ -50,6 +50,16 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             );
         }
 
+        STRUCT(ForwardPassConfigs, .mStructInterface = true, .mFlags = TS_NO_STRUCT_INTERFACE_FUNCTIONS) {
+            PUBLIC(
+                (bool, mEnableMainLightShadowMap, false)
+                (bool, mEnableMainLightPlanarShadowMap, false)
+                (bool, mEnablePlanarReflectionProbe, false)
+                (bool, mEnableMSAA, false)
+                (bool, mEnableSingleForwardPass, false)
+            );
+        }
+
         STRUCT(HBAO, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
@@ -79,16 +89,24 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
         //    TS_INIT(mFocusPos, new Vec3(0, 0, 0));
         //}
 
+        ENUM_CLASS(BloomType, .mFlags = TS_ENUM_OBJECT | DECORATOR) {
+            ENUMS(KawaseDualFilter, MipmapFilter);
+        }
+
         STRUCT(Bloom, .mStructInterface = true) {
             PUBLIC(
                 (bool, mEnabled, false)
-                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
+                (BloomType, mType, BloomType::KawaseDualFilter)
+                ([[optional]] [[nullable]] IntrusivePtr<Material>, mMaterial, _)
+                ([[nullable]] IntrusivePtr<Material>, mKawaseFilterMaterial, _)
+                ([[nullable]] IntrusivePtr<Material>, mMipmapFilterMaterial, _)
                 (bool, mEnableAlphaMask, false)
                 //(bool, mUseHdrIlluminance, false)
                 (uint32_t, mIterations, 3)
                 (float, mThreshold, 0.8)
-                (float, mIntensity, 2.3)
+                (float, mIntensity, 1)
             );
+            builder.setMemberRenamedFrom(vertID, "mKawaseFilterMaterial", "mMaterial");
         }
 
         STRUCT(ColorGrading, .mStructInterface = true) {
@@ -121,11 +139,6 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             );
         }
 
-        //STRUCT(ForwardPipeline, .mStructInterface = true) {
-        //    PUBLIC(
-        //        (uint32_t, mMobileMaxSpotLightShadowMaps, 1)
-        //    );
-        //}
 
         STRUCT(PipelineSettings, .mStructInterface = true) {
             PUBLIC(

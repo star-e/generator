@@ -188,7 +188,8 @@ Member::Member(const allocator_type& alloc) noexcept
     , mComments(alloc)
     , mTypescriptType(alloc)
     , mTypescriptDefaultValue(alloc)
-    , mTypescriptMemberName(alloc) {}
+    , mTypescriptMemberName(alloc)
+    , mRenamedFromMember(alloc) {}
 
 Member::Member(Member&& rhs, const allocator_type& alloc)
     : mTypePath(std::move(rhs.mTypePath), alloc)
@@ -205,6 +206,7 @@ Member::Member(Member&& rhs, const allocator_type& alloc)
     , mTypescriptType(std::move(rhs.mTypescriptType), alloc)
     , mTypescriptDefaultValue(std::move(rhs.mTypescriptDefaultValue), alloc)
     , mTypescriptMemberName(std::move(rhs.mTypescriptMemberName), alloc)
+    , mRenamedFromMember(std::move(rhs.mRenamedFromMember), alloc)
     , mTypescriptArray(std::move(rhs.mTypescriptArray))
     , mNullable(std::move(rhs.mNullable)) {}
 
@@ -223,6 +225,7 @@ Member::Member(Member const& rhs, const allocator_type& alloc)
     , mTypescriptType(rhs.mTypescriptType, alloc)
     , mTypescriptDefaultValue(rhs.mTypescriptDefaultValue, alloc)
     , mTypescriptMemberName(rhs.mTypescriptMemberName, alloc)
+    , mRenamedFromMember(rhs.mRenamedFromMember, alloc)
     , mTypescriptArray(rhs.mTypescriptArray)
     , mNullable(rhs.mNullable) {}
 

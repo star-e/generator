@@ -63,6 +63,7 @@ enum GenerationFlags : uint64_t {
     SKIP_RESET = 1 << 26,
     TS_NAME = 1 << 27,
     TS_ENUM_OBJECT = 1 << 28,
+    TS_NO_STRUCT_INTERFACE_FUNCTIONS = 1 << 29,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -338,6 +339,7 @@ struct Member {
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
     std::pmr::string mTypescriptMemberName;
+    std::pmr::string mRenamedFromMember;
     bool mTypescriptArray = false;
     bool mNullable = false;
 };
