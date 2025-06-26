@@ -97,7 +97,7 @@ void buildRenderSettings(ModuleBuilder& builder, Features features) {
             PUBLIC(
                 (bool, mEnabled, false)
                 (BloomType, mType, BloomType::KawaseDualFilter)
-                ([[optional]] [[nullable]] IntrusivePtr<Material>, mMaterial, _)
+                ([[nullable]] IntrusivePtr<Material>, mMaterial, _)
                 ([[nullable]] IntrusivePtr<Material>, mKawaseFilterMaterial, _)
                 ([[nullable]] IntrusivePtr<Material>, mMipmapFilterMaterial, _)
                 (bool, mEnableAlphaMask, false)
