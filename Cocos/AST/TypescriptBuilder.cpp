@@ -377,8 +377,6 @@ void outputTypescript(std::ostream& oss, std::pmr::string& space,
         });
 }
 
-static const uint32_t sPoolBatchSize = 16;
-
 void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     CodegenContext& codegen,
     const ModuleBuilder& builder,
@@ -425,7 +423,7 @@ void outputTypescriptPool(std::ostream& oss, std::pmr::string& space,
     if (sUseCreatePool) {
         oss << "\n";
         OSS << "function createPool<T> (Constructor: new() => T): RecyclePool<T> {\n";
-        OSS << "    return new RecyclePool<T>(() => new Constructor(), 16);\n";
+        OSS << "    return new RecyclePool<T>(() => new Constructor(), " << sPoolBatchSize << ");\n";
         OSS << "}\n";
     }
 

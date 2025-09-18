@@ -6,6 +6,7 @@ static constexpr bool sReduceTypescriptMemberFunction = true;
 static constexpr bool sEnablePoolSettings = false;
 static constexpr bool sUseCreatePool = true;
 static constexpr bool gReduceCode = true;
+static constexpr int sPoolBatchSize = 4;
 
 const auto* const gNameReset = "reset";
 
