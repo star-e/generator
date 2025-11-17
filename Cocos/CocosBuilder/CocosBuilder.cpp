@@ -61,7 +61,7 @@ int main() {
         buildRenderCommon(builder,
             Fwd | Types | Names | Typescripts | Jsb | Serialization | TsPool);
         buildLayoutGraph(builder,
-            Fwd | Types | Names | Graphs | Typescripts | Serialization | TsPool);
+            Fwd | Types | Names | Graphs | Typescripts | Serialization);
         buildRenderGraph(builder,
             Fwd | Types | Graphs | Typescripts | TsPool);
         buildFGDispatcher(builder, Types | Graphs);
