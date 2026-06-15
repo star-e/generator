@@ -88,6 +88,9 @@ std::pmr::string getParameterName(std::string_view member,
 std::pmr::string getParameterPrefix(std::string_view member,
     std::pmr::memory_resource* scratch);
 
+std::pmr::string getMemberName(std::string_view member,
+    std::pmr::memory_resource* scratch);
+
 // Syntax
 bool isInstance(std::string_view name);
 

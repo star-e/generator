@@ -386,14 +386,24 @@ PolymorphicPair::PolymorphicPair(PolymorphicPair&& rhs, const allocator_type& al
     , mValue(std::move(rhs.mValue), alloc)
     , mMemberName(std::move(rhs.mMemberName), alloc)
     , mContainerPath(std::move(rhs.mContainerPath), alloc)
-    , mVector(std::move(rhs.mVector)) {}
+    , mConst(std::move(rhs.mConst))
+    , mPointer(std::move(rhs.mPointer))
+    , mVector(std::move(rhs.mVector))
+    , mOptional(std::move(rhs.mOptional))
+    , mTypescriptSkip(std::move(rhs.mTypescriptSkip))
+    , mTypescriptTypedArray(std::move(rhs.mTypescriptTypedArray)) {}
 
 PolymorphicPair::PolymorphicPair(PolymorphicPair const& rhs, const allocator_type& alloc)
     : mTag(rhs.mTag, alloc)
     , mValue(rhs.mValue, alloc)
     , mMemberName(rhs.mMemberName, alloc)
     , mContainerPath(rhs.mContainerPath, alloc)
-    , mVector(rhs.mVector) {}
+    , mConst(rhs.mConst)
+    , mPointer(rhs.mPointer)
+    , mVector(rhs.mVector)
+    , mOptional(rhs.mOptional)
+    , mTypescriptSkip(rhs.mTypescriptSkip)
+    , mTypescriptTypedArray(rhs.mTypescriptTypedArray) {}
 
 PolymorphicPair::~PolymorphicPair() noexcept = default;
 

@@ -582,12 +582,19 @@ struct PolymorphicPair {
     bool isVector() const noexcept {
         return mVector;
     }
+    std::pmr::string getMaskName() const;
+    std::pmr::string getBitsName() const;
 
     std::pmr::string mTag;
     std::pmr::string mValue;
     std::pmr::string mMemberName;
     std::pmr::string mContainerPath;
+    bool mConst = false;
+    bool mPointer = false;
     bool mVector = true;
+    bool mOptional = false;
+    bool mTypescriptSkip = false;
+    bool mTypescriptTypedArray = false;
 };
 
 struct Polymorphic {
@@ -613,6 +620,7 @@ struct Polymorphic {
         }
         return false;
     }
+    bool tsEmpty() const noexcept;
 
     std::pmr::vector<PolymorphicPair> mConcepts;
 };

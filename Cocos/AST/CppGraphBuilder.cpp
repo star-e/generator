@@ -671,27 +671,6 @@ std::pmr::string CppGraphBuilder::handleType(std::string_view ns) const {
     return oss.str();
 }
 
-std::pmr::string CppGraphBuilder::layerHandleType(const Layer& layer,
-    std::string_view ns, bool bSkipName) const {
-    Expects(false);
-    return "";
-}
-
-std::pmr::string CppGraphBuilder::layerHandleVariantType(std::string_view ns) const {
-    Expects(false);
-    return "";
-}
-
-std::pmr::string CppGraphBuilder::layerTagVariantType(std::string_view ns) const {
-    Expects(false);
-    return "";
-}
-
-std::pmr::string CppGraphBuilder::layerValueVariantType(bool bConst, std::string_view ns) const {
-    Expects(false);
-    return "";
-}
-
 std::pmr::string CppGraphBuilder::vertexPropertyMapName(bool bConst) const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& g = *mStruct.mSyntaxGraph;
@@ -1099,15 +1078,6 @@ std::pmr::string CppGraphBuilder::vertexComponentMapMemberName(
         }
     }
     oss << ">";
-
-    return oss.str();
-}
-
-std::pmr::string CppGraphBuilder::generateVertexType(std::string_view name, bool layer) const {
-    pmr_ostringstream oss(std::ios::out, get_allocator());
-    const auto& g = *mStruct.mSyntaxGraph;
-    const auto& s = *mGraph;
-    auto scratch = get_allocator().resource();
 
     return oss.str();
 }
@@ -1682,11 +1652,6 @@ std::pmr::string CppGraphBuilder::generatePolymorphicGraph_h() const {
 }
 
 std::pmr::string CppGraphBuilder::generateVertexProperties_h() const {
-    Expects(false);
-    return "";
-}
-
-std::pmr::string CppGraphBuilder::generateStackGraph_h() const {
     Expects(false);
     return "";
 }

@@ -640,4 +640,12 @@ void removeCustomAttributes(std::pmr::string& str, std::string_view apiDLL) {
     boost::algorithm::replace_all(str, "[[covariant]] ", "");
 }
 
+std::pmr::string getMemberName(std::string_view member,
+    std::pmr::memory_resource* scratch) {
+    if (member.size() < 2)
+        throw std::runtime_error("member format incorrect");
+
+    return camelToVariable(member.substr(1), scratch);
+}
+
 }

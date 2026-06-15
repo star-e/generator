@@ -1509,26 +1509,6 @@ return isAncestor;
     return oss.str();
 }
 
-std::pmr::string CppGraphBuilder::generateAddLayer(bool piecewise) const {
-    Expects(false);
-    return "";
-}
-
-std::pmr::string CppGraphBuilder::generateLayer(bool bConst) const {
-    Expects(false);
-    return "";
-}
-
-std::pmr::string CppGraphBuilder::generateGetLayer(bool bConst) const {
-    Expects(false);
-    return "";
-}
-
-std::pmr::string CppGraphBuilder::generateGetLayerIf(bool bConst) const {
-    Expects(false);
-    return "";
-}
-
 std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     std::pmr::string space(get_allocator());
