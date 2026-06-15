@@ -43,7 +43,7 @@ CppStructBuilder::CppStructBuilder(const allocator_type& alloc)
 CppStructBuilder::CppStructBuilder(const SyntaxGraph* syntaxGraph, const ModuleGraph* moduleGraph,
     uint32_t currentVertex, uint32_t currentModule,
     std::string_view currentNamespace,
-    std::string_view projectName, 
+    std::string_view projectName,
     const allocator_type& alloc)
     : mSyntaxGraph(syntaxGraph)
     , mModuleGraph(moduleGraph)
@@ -98,7 +98,7 @@ std::pmr::string CppStructBuilder::getDependentName(std::string_view typePath) c
 std::pmr::string CppStructBuilder::getParameterType(const Parameter& param, bool bTypeParam) const {
     auto* scratch = get_allocator().resource();
     pmr_ostringstream oss(std::ios::out, scratch);
-    
+
     if (param.mConst) {
         oss << "const ";
     }
@@ -189,7 +189,7 @@ std::pmr::string CppStructBuilder::generateGetAllocatorBody() const {
 
 namespace {
 
-template<class T>
+template <class T>
 void outputMembers(std::ostream& oss, std::pmr::string& space,
     const SyntaxGraph& g, std::string_view ns,
     SyntaxGraph::vertex_descriptor vertID, const T& s,
@@ -215,7 +215,7 @@ void outputMembers(std::ostream& oss, std::pmr::string& space,
                 }
             }
         }
-            
+
         for (const auto& member : f.mMembers) {
             Expects(f.mTypeLength >= member.mType.size());
             if (!member.mComment.empty()) {
@@ -390,7 +390,7 @@ std::pmr::string CppStructBuilder::generateOperatorSignature(OperatorType type, 
             [&](const Composition_ auto& s) {
                 Expects(false);
                 if (bInline) {
-                    //OSS << name << ""
+                    // OSS << name << ""
                 }
             },
             [&](const auto&) {
@@ -500,7 +500,7 @@ std::pmr::string CppStructBuilder::generateOperatorBody(OperatorType type) const
 
 namespace {
 
-template<Composition_ T>
+template <Composition_ T>
 void generateCntr(std::ostream& oss, std::pmr::string& space,
     const CppStructBuilder& cpp, const SyntaxGraph& g,
     const T& s, const Constructor& cntr,
@@ -925,7 +925,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     }
                 }
             }
-            
+
             if (bPmr) {
                 switch (needMove) {
                 case ImplEnum::Inline:
@@ -1054,10 +1054,12 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                 if (bNoexcept && !bPmr) {
                     OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
                 } else {
-                    //if (bPmr) {
-                    //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
-                    //}
+                    // if (bPmr) {
+                    //     OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
+                    //     OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
+                    // } else {
                     OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
+                    //}
                 }
                 break;
             case ImplEnum::Separated:
@@ -1065,19 +1067,21 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
                     if (bNoexcept && !bPmr) {
                         OSS << api << name << "& operator=(" << name << "&& rhs) noexcept;\n";
                     } else {
-                        //if (bPmr) {
-                        //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
-                        //}
+                        // if (bPmr) {
+                        //     OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
+                        // }
                         OSS << api << name << "& operator=(" << name << "&& rhs) noexcept;\n";
                     }
                 } else {
                     if (bNoexcept && !bPmr) {
                         OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
                     } else {
-                        //if (bPmr) {
-                        //    OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
-                        //}
+                        // if (bPmr) {
+                        //     OSS << "// NOLINTNEXTLINE(performance-noexcept-move-constructor)\n";
+                        //     OSS << name << "& operator=(" << name << "&& rhs) = default;\n";
+                        // } else {
                         OSS << name << "& operator=(" << name << "&& rhs) noexcept = default;\n";
+                        //}
                     }
                 }
                 break;
@@ -1109,7 +1113,7 @@ std::pmr::string CppStructBuilder::generateHeaderConstructors() const {
             default:
                 break;
             }
-            
+
             auto needDtor = g.needDtor(vertID, bDLL);
             switch (needDtor) {
             case ImplEnum::Inline:
@@ -1240,8 +1244,6 @@ std::pmr::string CppStructBuilder::generateCppConstructors() const {
                 needNewLine = true;
             }
 
-            
-
             if (bDLL && needMove == ImplEnum::Separated) {
                 oss << "\n";
                 OSS << structName << "::" << name << "(" << name << "&& rhs)";
@@ -1324,7 +1326,7 @@ std::pmr::string CppStructBuilder::generateConstructorSignature(
     int count = 0;
 
     auto generateCntrParameters = [&count, &oss, &g, &bNoexcept, scratch, this](
-        const Composition_ auto& s, const Constructor& cntr) {
+                                      const Composition_ auto& s, const Constructor& cntr) {
         for (const auto& k : cntr.mIndices) {
             if (count++)
                 oss << ", ";
@@ -1601,7 +1603,7 @@ void CppStructBuilder::generateMethod(
     } else {
         OSS;
     }
-    
+
     oss << getParameterType(m.mReturnType, false);
 
     oss << m.mFunctionName << "(";
