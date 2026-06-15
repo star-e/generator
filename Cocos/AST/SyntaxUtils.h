@@ -121,4 +121,6 @@ inline bool containsLowercase(std::string_view str) noexcept {
     return std::any_of(str.begin(), str.end(), ::islower);
 }
 
+std::string_view removeTail(std::string_view tagName);
+
 }

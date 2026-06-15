@@ -497,27 +497,11 @@ std::pmr::string removeVertex(const ObjectGraphBuilder& builder,
                             }
                         }
                     }
-
-                    if (s.hasStack()) {
-                        int count = 0;
-                        oss << "\n";
-                        OSS << "// GraphStack\n";
-                        for (const auto& layer : s.mStack.mLayers) {
-                            if (count++)
-                                oss << "\n";
-                            OSS << "for (auto& layer : g." << layer.mMemberName << ") {\n";
-                            OSS << "    remove_vertex(u, layer);\n";
-                            OSS << "}\n";
-                        }
-                    }
                 },
                 [&](auto) {
                     OSS << "g.mVertices.erase(vert.mPosition);\n";
                     if (!s.mVertexMaps.empty()) {
                         throw std::runtime_error("only vector vertex list support UuidGraph");
-                    }
-                    if (s.hasStack()) {
-                        throw std::runtime_error("only vector vertex list support GraphStack");
                     }
                 }),
             s.mVertexListType);

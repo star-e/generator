@@ -420,23 +420,37 @@ Polymorphic::~Polymorphic() noexcept = default;
 
 Component::Component(const allocator_type& alloc) noexcept
     : mName(alloc)
+    , mTagPath(alloc)
     , mValuePath(alloc)
     , mMemberName(alloc)
-    , mContainerPath(alloc) {}
+    , mContainerPath(alloc)
+    , mCounterName(alloc) {}
 
 Component::Component(Component&& rhs, const allocator_type& alloc)
     : mName(std::move(rhs.mName), alloc)
+    , mTagPath(std::move(rhs.mTagPath), alloc)
     , mValuePath(std::move(rhs.mValuePath), alloc)
     , mMemberName(std::move(rhs.mMemberName), alloc)
     , mContainerPath(std::move(rhs.mContainerPath), alloc)
-    , mVector(std::move(rhs.mVector)) {}
+    , mCounterName(std::move(rhs.mCounterName), alloc)
+    , mVector(std::move(rhs.mVector))
+    , mReadOnly(std::move(rhs.mReadOnly))
+    , mOptional(std::move(rhs.mOptional))
+    , mTypescriptSkip(std::move(rhs.mTypescriptSkip))
+    , mTypescriptTypedArray(std::move(rhs.mTypescriptTypedArray)) {}
 
 Component::Component(Component const& rhs, const allocator_type& alloc)
     : mName(rhs.mName, alloc)
+    , mTagPath(rhs.mTagPath, alloc)
     , mValuePath(rhs.mValuePath, alloc)
     , mMemberName(rhs.mMemberName, alloc)
     , mContainerPath(rhs.mContainerPath, alloc)
-    , mVector(rhs.mVector) {}
+    , mCounterName(rhs.mCounterName, alloc)
+    , mVector(rhs.mVector)
+    , mReadOnly(rhs.mReadOnly)
+    , mOptional(rhs.mOptional)
+    , mTypescriptSkip(rhs.mTypescriptSkip)
+    , mTypescriptTypedArray(rhs.mTypescriptTypedArray) {}
 
 Component::~Component() noexcept = default;
 
@@ -454,7 +468,9 @@ VertexMap::VertexMap(VertexMap&& rhs, const allocator_type& alloc)
     , mKeyType(std::move(rhs.mKeyType), alloc)
     , mComponentName(std::move(rhs.mComponentName), alloc)
     , mComponentMemberName(std::move(rhs.mComponentMemberName), alloc)
-    , mTypePath(std::move(rhs.mTypePath), alloc) {}
+    , mTypePath(std::move(rhs.mTypePath), alloc)
+    , mOptional(std::move(rhs.mOptional))
+    , mRefCounted(std::move(rhs.mRefCounted)) {}
 
 VertexMap::VertexMap(VertexMap const& rhs, const allocator_type& alloc)
     : mMapType(rhs.mMapType, alloc)
@@ -462,45 +478,11 @@ VertexMap::VertexMap(VertexMap const& rhs, const allocator_type& alloc)
     , mKeyType(rhs.mKeyType, alloc)
     , mComponentName(rhs.mComponentName, alloc)
     , mComponentMemberName(rhs.mComponentMemberName, alloc)
-    , mTypePath(rhs.mTypePath, alloc) {}
+    , mTypePath(rhs.mTypePath, alloc)
+    , mOptional(rhs.mOptional)
+    , mRefCounted(rhs.mRefCounted) {}
 
 VertexMap::~VertexMap() noexcept = default;
-
-Layer::Layer(const allocator_type& alloc) noexcept
-    : mContainer(alloc)
-    , mMemberName(alloc)
-    , mGraphPath(alloc)
-    , mTagPath(alloc) {}
-
-Layer::Layer(Layer&& rhs, const allocator_type& alloc)
-    : mContainer(std::move(rhs.mContainer), alloc)
-    , mMemberName(std::move(rhs.mMemberName), alloc)
-    , mGraphPath(std::move(rhs.mGraphPath), alloc)
-    , mTagPath(std::move(rhs.mTagPath), alloc)
-    , mContainerType(std::move(rhs.mContainerType)) {}
-
-Layer::Layer(Layer const& rhs, const allocator_type& alloc)
-    : mContainer(rhs.mContainer, alloc)
-    , mMemberName(rhs.mMemberName, alloc)
-    , mGraphPath(rhs.mGraphPath, alloc)
-    , mTagPath(rhs.mTagPath, alloc)
-    , mContainerType(rhs.mContainerType) {}
-
-Layer::~Layer() noexcept = default;
-
-Stack::Stack(const allocator_type& alloc) noexcept
-    : mLayers(alloc)
-    , mContainer(alloc) {}
-
-Stack::Stack(Stack&& rhs, const allocator_type& alloc)
-    : mLayers(std::move(rhs.mLayers), alloc)
-    , mContainer(std::move(rhs.mContainer), alloc) {}
-
-Stack::Stack(Stack const& rhs, const allocator_type& alloc)
-    : mLayers(rhs.mLayers, alloc)
-    , mContainer(rhs.mContainer, alloc) {}
-
-Stack::~Stack() noexcept = default;
 
 Named::Named(const allocator_type& alloc) noexcept
     : mComponentName(alloc)
@@ -579,10 +561,10 @@ Graph::Graph(const allocator_type& alloc) noexcept
     , mEdgeProperty(alloc)
     , mComponents(alloc)
     , mPolymorphic(alloc)
+    , mTypescriptMembers(alloc)
     , mVertexMaps(alloc)
     , mNamedConcept(alloc)
     , mAddressableConcept(alloc)
-    , mTypescriptMembers(alloc)
     , mTypescriptFunctions(alloc) {}
 
 Graph::Graph(Graph&& rhs, const allocator_type& alloc)
@@ -602,12 +584,23 @@ Graph::Graph(Graph&& rhs, const allocator_type& alloc)
     , mMutableGraphVertex(std::move(rhs.mMutableGraphVertex))
     , mMutableGraphEdge(std::move(rhs.mMutableGraphEdge))
     , mNamed(std::move(rhs.mNamed))
+    , mUniqueName(std::move(rhs.mUniqueName))
+    , mCaseSensitive(std::move(rhs.mCaseSensitive))
     , mReferenceGraph(std::move(rhs.mReferenceGraph))
+    , mParentGraph(std::move(rhs.mParentGraph))
     , mAliasGraph(std::move(rhs.mAliasGraph))
     , mAddressable(std::move(rhs.mAddressable))
     , mAddressIndex(std::move(rhs.mAddressIndex))
     , mMutableReference(std::move(rhs.mMutableReference))
     , mColorMap(std::move(rhs.mColorMap))
+    , mObject(std::move(rhs.mObject))
+    , mVertexPropertyReadonly(std::move(rhs.mVertexPropertyReadonly))
+    , mInoutList(std::move(rhs.mInoutList))
+    , mRecycle(std::move(rhs.mRecycle))
+    , mVersioning(std::move(rhs.mVersioning))
+    , mGarbageCollection(std::move(rhs.mGarbageCollection))
+    , mClear(std::move(rhs.mClear))
+    , mDirtyMask(std::move(rhs.mDirtyMask))
     , mPolymorphic(std::move(rhs.mPolymorphic), alloc)
     , mVertexListType(std::move(rhs.mVertexListType))
     , mEdgeListType(std::move(rhs.mEdgeListType))
@@ -621,10 +614,10 @@ Graph::Graph(Graph&& rhs, const allocator_type& alloc)
     , mEdgeSizeType(std::move(rhs.mEdgeSizeType))
     , mEdgeDifferenceType(std::move(rhs.mEdgeDifferenceType))
     , mDegreeSizeType(std::move(rhs.mDegreeSizeType))
+    , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
     , mVertexMaps(std::move(rhs.mVertexMaps), alloc)
     , mNamedConcept(std::move(rhs.mNamedConcept), alloc)
     , mAddressableConcept(std::move(rhs.mAddressableConcept), alloc)
-    , mTypescriptMembers(std::move(rhs.mTypescriptMembers), alloc)
     , mTypescriptFunctions(std::move(rhs.mTypescriptFunctions), alloc) {}
 
 Graph::Graph(Graph const& rhs, const allocator_type& alloc)
@@ -644,12 +637,23 @@ Graph::Graph(Graph const& rhs, const allocator_type& alloc)
     , mMutableGraphVertex(rhs.mMutableGraphVertex)
     , mMutableGraphEdge(rhs.mMutableGraphEdge)
     , mNamed(rhs.mNamed)
+    , mUniqueName(rhs.mUniqueName)
+    , mCaseSensitive(rhs.mCaseSensitive)
     , mReferenceGraph(rhs.mReferenceGraph)
+    , mParentGraph(rhs.mParentGraph)
     , mAliasGraph(rhs.mAliasGraph)
     , mAddressable(rhs.mAddressable)
     , mAddressIndex(rhs.mAddressIndex)
     , mMutableReference(rhs.mMutableReference)
     , mColorMap(rhs.mColorMap)
+    , mObject(rhs.mObject)
+    , mVertexPropertyReadonly(rhs.mVertexPropertyReadonly)
+    , mInoutList(rhs.mInoutList)
+    , mRecycle(rhs.mRecycle)
+    , mVersioning(rhs.mVersioning)
+    , mGarbageCollection(rhs.mGarbageCollection)
+    , mClear(rhs.mClear)
+    , mDirtyMask(rhs.mDirtyMask)
     , mPolymorphic(rhs.mPolymorphic, alloc)
     , mVertexListType(rhs.mVertexListType)
     , mEdgeListType(rhs.mEdgeListType)
@@ -663,10 +667,10 @@ Graph::Graph(Graph const& rhs, const allocator_type& alloc)
     , mEdgeSizeType(rhs.mEdgeSizeType)
     , mEdgeDifferenceType(rhs.mEdgeDifferenceType)
     , mDegreeSizeType(rhs.mDegreeSizeType)
+    , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
     , mVertexMaps(rhs.mVertexMaps, alloc)
     , mNamedConcept(rhs.mNamedConcept, alloc)
     , mAddressableConcept(rhs.mAddressableConcept, alloc)
-    , mTypescriptMembers(rhs.mTypescriptMembers, alloc)
     , mTypescriptFunctions(rhs.mTypescriptFunctions, alloc) {}
 
 Graph::~Graph() noexcept = default;

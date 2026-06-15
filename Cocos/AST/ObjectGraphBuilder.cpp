@@ -693,111 +693,6 @@ std::pmr::string ObjectGraphBuilder::handleType(std::string_view ns) const {
     return oss.str();
 }
 
-std::pmr::string ObjectGraphBuilder::layerHandleType(const Layer& layer,
-    std::string_view ns, bool bSkipName) const {
-    prepareNamespace(ns);
-    pmr_ostringstream oss(std::ios::out, get_allocator());
-    const auto& g = *mStruct.mSyntaxGraph;
-    const auto& s = *mGraph;
-    const auto& cpp = mStruct;
-    auto scratch = get_allocator().resource();
-    std::pmr::string space(get_allocator());
-
-    auto graphName = getCppPath(g.getDependentName(ns, cpp.mCurrentVertex), scratch);
-    oss << "Impl::ValueHandle<" << cpp.getDependentName(layer.mTagPath) << ", ";
-    if (layer.isIntrusive()) {
-        oss << graphName;
-    } else {
-        visit(
-            overload(
-                [&](Vector_) {
-                    if (bSkipName || graphName.empty()) {
-                        oss << "layer_descriptor";
-                    } else {
-                        oss << graphName << "::layer_descriptor";
-                    }
-                },
-                [&](List_) {
-                    oss << cpp.getDependentName(layer.mContainer) << "<" << graphName << ">::iterator";
-                }),
-            layer.mContainerType);
-    }
-
-    oss << ">";
-    return oss.str();
-}
-
-std::pmr::string ObjectGraphBuilder::layerHandleVariantType(std::string_view ns) const {
-    prepareNamespace(ns);
-    auto scratch = get_allocator().resource();
-    const auto& g = *mStruct.mSyntaxGraph;
-    const auto& s = *mGraph;
-    const auto& cpp = mStruct;
-    pmr_ostringstream oss(std::ios::out, get_allocator());
-    std::pmr::string space(get_allocator());
-
-    OSS << "std::variant<\n";
-    {
-        INDENT();
-        int count = 0;
-        for (const auto& l : s.mStack.mLayers) {
-            if (count++) {
-                oss << ",\n";
-            }
-            OSS << layerHandleType(l, ns);
-        }
-        oss << "\n";
-    }
-    OSS << ">\n";
-    return oss.str();
-}
-
-std::pmr::string ObjectGraphBuilder::layerTagVariantType(std::string_view ns) const {
-    prepareNamespace(ns);
-    auto scratch = get_allocator().resource();
-    const auto& g = *mStruct.mSyntaxGraph;
-    const auto& s = *mGraph;
-    const auto& cpp = mStruct;
-    pmr_ostringstream oss(std::ios::out, scratch);
-    std::pmr::string space(scratch);
-
-    OSS << "std::variant<";
-    int count = 0;
-    for (const auto& l : s.mStack.mLayers) {
-        if (count++)
-            oss << ", ";
-        oss << cpp.getDependentName(l.mTagPath);
-    }
-    oss << ">";
-
-    return oss.str();
-}
-
-std::pmr::string ObjectGraphBuilder::layerValueVariantType(bool bConst, std::string_view ns) const {
-    prepareNamespace(ns);
-    auto scratch = get_allocator().resource();
-    const auto& g = *mStruct.mSyntaxGraph;
-    const auto& s = *mGraph;
-    const auto& cpp = mStruct;
-    pmr_ostringstream oss(std::ios::out, scratch);
-    std::pmr::string space(scratch);
-
-    OSS << "std::variant<";
-    int count = 0;
-    for (const auto& l : s.mStack.mLayers) {
-        if (count++)
-            oss << ", ";
-
-        if (bConst) {
-            oss << "const ";
-        }
-        oss << cpp.getDependentName(l.mGraphPath);
-        oss << "*";
-    }
-    oss << ">";
-    return oss.str();
-}
-
 std::pmr::string ObjectGraphBuilder::vertexPropertyMapName(bool bConst) const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& g = *mStruct.mSyntaxGraph;
@@ -1217,15 +1112,6 @@ std::pmr::string ObjectGraphBuilder::vertexComponentMapMemberName(
         }
     }
     oss << ">";
-
-    return oss.str();
-}
-
-std::pmr::string ObjectGraphBuilder::generateVertexType(std::string_view name, bool layer) const {
-    pmr_ostringstream oss(std::ios::out, get_allocator());
-    const auto& g = *mStruct.mSyntaxGraph;
-    const auto& s = *mGraph;
-    auto scratch = get_allocator().resource();
 
     return oss.str();
 }

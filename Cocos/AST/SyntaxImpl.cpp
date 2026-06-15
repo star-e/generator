@@ -968,6 +968,18 @@ std::pmr::vector<BaseConstructor> SyntaxGraph::getBaseConstructors(vertex_descri
     return results;
 }
 
+SyntaxGraph::vertex_descriptor SyntaxGraph::getFirstTemplateParameter(vertex_descriptor vertID) const noexcept {
+    auto scratch = mScratch;
+    const auto& g = *this;
+    Expects(g.isInstantiation(vertID));
+    auto typePath = g.getTypePath(vertID);
+    std::pmr::string t(scratch);
+    std::pmr::vector<std::pmr::string> params(scratch);
+    extractTemplate(typePath, t, params);
+    Expects(!params.empty());
+    return locate(params.front(), g);
+}
+
 SyntaxGraph::vertex_descriptor SyntaxGraph::getMemberType(
     vertex_descriptor vertID, std::string_view member) const noexcept {
     const auto& g = *this;

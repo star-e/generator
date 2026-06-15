@@ -555,11 +555,7 @@ std::pmr::string getVariableName(std::string_view typeName,
 }
 
 std::string_view convertTag(std::string_view tagName) {
-    Expects(!tagName.empty() && tagName.back() == '_');
-    if (!tagName.empty() && tagName.back() == '_') {
-        return tagName.substr(0, tagName.size() - 1);
-    }
-    return tagName;
+    return removeTail(tagName);
 }
 
 std::pmr::string getTagType(std::string_view tagName, std::pmr::memory_resource* scratch) {
@@ -646,6 +642,13 @@ std::pmr::string getMemberName(std::string_view member,
         throw std::runtime_error("member format incorrect");
 
     return camelToVariable(member.substr(1), scratch);
+}
+
+std::string_view removeTail(std::string_view tagName) {
+    if (!tagName.empty() && tagName.back() == '_') {
+        return tagName.substr(0, tagName.size() - 1);
+    }
+    return tagName;
 }
 
 }

@@ -650,10 +650,16 @@ struct Component {
     std::pmr::string getTypescriptComponentType(const SyntaxGraph& g) const noexcept;
 
     std::pmr::string mName;
+    std::pmr::string mTagPath;
     std::pmr::string mValuePath;
     std::pmr::string mMemberName;
     std::pmr::string mContainerPath;
+    std::pmr::string mCounterName;
     bool mVector = true;
+    bool mReadOnly = false;
+    bool mOptional = false;
+    bool mTypescriptSkip = false;
+    bool mTypescriptTypedArray = false;
 };
 
 struct VertexMap {
@@ -685,6 +691,8 @@ struct VertexMap {
     std::pmr::string mComponentName;
     std::pmr::string mComponentMemberName;
     std::pmr::string mTypePath;
+    bool mOptional = false;
+    bool mRefCounted = false;
 };
 
 struct Vector_ {};
@@ -748,53 +756,6 @@ inline bool operator==(const PathIndexType& lhs, const PathIndexType& rhs) noexc
 inline bool operator!=(const PathIndexType& lhs, const PathIndexType& rhs) noexcept {
     return !(lhs == rhs);
 }
-
-struct Layer {
-    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
-    allocator_type get_allocator() const noexcept {
-        return allocator_type(mContainer.get_allocator().resource());
-    }
-
-    Layer(const allocator_type& alloc) noexcept;
-    Layer(Layer&& rhs, const allocator_type& alloc);
-    Layer(Layer const& rhs, const allocator_type& alloc);
-
-    Layer(Layer&& rhs) = default;
-    Layer(Layer const& rhs) = delete;
-    Layer& operator=(Layer&& rhs) = default;
-    Layer& operator=(Layer const& rhs) = default;
-    ~Layer() noexcept;
-
-    bool isIntrusive() const noexcept {
-        return mMemberName.empty();
-    }
-
-    std::pmr::string mContainer;
-    std::pmr::string mMemberName;
-    std::pmr::string mGraphPath;
-    std::pmr::string mTagPath;
-    VertexListType mContainerType;
-};
-
-struct Stack {
-    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
-    allocator_type get_allocator() const noexcept {
-        return allocator_type(mLayers.get_allocator().resource());
-    }
-
-    Stack(const allocator_type& alloc) noexcept;
-    Stack(Stack&& rhs, const allocator_type& alloc);
-    Stack(Stack const& rhs, const allocator_type& alloc);
-
-    Stack(Stack&& rhs) = default;
-    Stack(Stack const& rhs) = delete;
-    Stack& operator=(Stack&& rhs) = default;
-    Stack& operator=(Stack const& rhs) = default;
-    ~Stack() noexcept;
-
-    std::pmr::vector<Layer> mLayers;
-    std::pmr::string mContainer = std::pmr::string("/boost/container/pmr/vector", get_allocator());
-};
 
 struct Named {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
@@ -1028,12 +989,23 @@ struct Graph {
     bool mMutableGraphVertex = true;
     bool mMutableGraphEdge = true;
     bool mNamed = false;
+    bool mUniqueName = true;
+    bool mCaseSensitive = true;
     bool mReferenceGraph = false;
+    bool mParentGraph = false;
     bool mAliasGraph = false;
     bool mAddressable = false;
     bool mAddressIndex = true;
     bool mMutableReference = true;
     bool mColorMap = true;
+    bool mObject = false;
+    bool mVertexPropertyReadonly = false;
+    bool mInoutList = false;
+    bool mRecycle = false;
+    bool mVersioning = false;
+    bool mGarbageCollection = false;
+    bool mClear = false;
+    bool mDirtyMask = false;
     Polymorphic mPolymorphic;
     VertexListType mVertexListType;
     EdgeListType mEdgeListType;
@@ -1047,10 +1019,10 @@ struct Graph {
     std::string mEdgeSizeType = "uint32_t";
     std::string mEdgeDifferenceType = "int32_t";
     std::string mDegreeSizeType = "uint32_t";
+    std::pmr::vector<Member> mTypescriptMembers;
     std::pmr::vector<VertexMap> mVertexMaps;
     Named mNamedConcept;
     Addressable mAddressableConcept;
-    std::pmr::vector<Member> mTypescriptMembers;
     std::pmr::vector<std::pmr::string> mTypescriptFunctions;
 };
 
@@ -1297,6 +1269,8 @@ struct SyntaxGraph {
     bool hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept;
     bool hasConsecutiveParameters(vertex_descriptor vertID, const Constructor& cntr) const noexcept;
     std::pmr::vector<BaseConstructor> getBaseConstructors(vertex_descriptor vertID) const;
+
+    vertex_descriptor getFirstTemplateParameter(vertex_descriptor vertID) const noexcept;
 
     vertex_descriptor getMemberType(vertex_descriptor vertID, std::string_view member) const noexcept;
     vertex_descriptor getFirstMemberString(vertex_descriptor vertID) const noexcept;

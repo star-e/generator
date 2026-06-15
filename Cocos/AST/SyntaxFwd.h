@@ -146,8 +146,6 @@ struct Trie_;
 
 using PathIndexType = std::variant<Direct_, Map_>;
 
-struct Layer;
-struct Stack;
 struct Named;
 struct Addressable;
 struct MemberRecord;
