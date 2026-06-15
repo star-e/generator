@@ -86,17 +86,21 @@ std::pmr::string CppGraphBuilder::edgeDescType() const {
     return type;
 }
 
+std::pmr::string CppGraphBuilder::linkDescType() const {
+    Expects(false);
+    return "";
+}
+
 CppGraphBuilder::CppGraphBuilder(const SyntaxGraph* syntaxGraph,
     const ModuleGraph* moduleGraph,
     uint32_t currentVertex, uint32_t currentModule,
     std::string_view currentNamespace,
     bool bDLL, std::string_view projectName, const allocator_type& alloc)
     : mStruct(syntaxGraph, moduleGraph, currentVertex, currentModule,
-        currentNamespace, projectName, alloc)
+          currentNamespace, projectName, alloc)
     , mGraph(&get_by_tag<Graph_>(currentVertex, *syntaxGraph))
     , mDLL(bDLL)
     , mVertexType(alloc) {
-
 }
 
 std::pmr::string CppGraphBuilder::graphType(std::string_view ns) const {
@@ -135,7 +139,8 @@ std::pmr::string CppGraphBuilder::vertexType(std::string_view ns) const {
     const auto& g = *mStruct.mSyntaxGraph;
     auto scratch = get_allocator().resource();
     auto name = getCppPath(g.getDependentName(
-        ns, mStruct.mCurrentVertex), scratch);
+                               ns, mStruct.mCurrentVertex),
+        scratch);
     if (name.empty()) {
         oss << "Vertex";
     } else {
@@ -228,6 +233,16 @@ std::pmr::string CppGraphBuilder::edgeListType(std::string_view ns) const {
     oss << name;
     oss << ">";
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::outEdgeListName() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::outEdgeListMember() const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::componentContainerType() const {
@@ -323,6 +338,16 @@ std::pmr::string CppGraphBuilder::outIterType() const {
     return oss.str();
 }
 
+std::pmr::string CppGraphBuilder::inEdgeListName() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::inEdgeListMember() const {
+    Expects(false);
+    return "";
+}
+
 std::pmr::string CppGraphBuilder::inEdgeListType(std::string_view ns) const {
     prepareNamespace(ns);
     pmr_ostringstream oss(std::ios::out, get_allocator());
@@ -363,6 +388,16 @@ std::pmr::string CppGraphBuilder::edgeIterType() const {
     return oss.str();
 }
 
+std::pmr::string CppGraphBuilder::childListName() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::childListMember() const {
+    Expects(false);
+    return "";
+}
+
 std::pmr::string CppGraphBuilder::childListType(std::string_view ns) const {
     prepareNamespace(ns);
     pmr_ostringstream oss(std::ios::out, get_allocator());
@@ -401,6 +436,16 @@ std::pmr::string CppGraphBuilder::childIterType() const {
     oss << "    vertex_descriptor, ownership_descriptor, " << s.mDifferenceType << ">";
 
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::parentListName() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::parentListMember() const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::parentEdgeType(std::string_view ns) const {
@@ -445,7 +490,7 @@ std::pmr::string CppGraphBuilder::parentIterType() const {
     return oss.str();
 }
 
-std::pmr::string CppGraphBuilder::referenceIterType() const {
+std::pmr::string CppGraphBuilder::linkIterType() const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& s = *mGraph;
 
@@ -478,6 +523,16 @@ std::pmr::string CppGraphBuilder::adjIterType() const {
     std::pmr::string space(get_allocator());
 
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::stringType(std::string_view ns) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::stringViewType() const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::tagType(std::string_view ns) const {
@@ -564,7 +619,7 @@ std::pmr::string CppGraphBuilder::handleElemType(const PolymorphicPair& pair,
 
     auto tagID = locate(pair.mTag, g);
     auto valueID = locate(pair.mValue, g);
-    
+
     auto tagName = cpp.getDependentName(tagID);
     auto valueName = getCppPath(g.getDependentName(ns, valueID), scratch);
 
@@ -614,6 +669,27 @@ std::pmr::string CppGraphBuilder::handleType(std::string_view ns) const {
     }
     oss << ">\n";
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::layerHandleType(const Layer& layer,
+    std::string_view ns, bool bSkipName) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::layerHandleVariantType(std::string_view ns) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::layerTagVariantType(std::string_view ns) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::layerValueVariantType(bool bConst, std::string_view ns) const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::vertexPropertyMapName(bool bConst) const {
@@ -1458,7 +1534,7 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
     OSS << "using parent_iterator  = " << parentIterType() << ";\n";
 
     oss << "\n";
-    OSS << "using ownership_iterator   = " << referenceIterType() << ";\n";
+    OSS << "using ownership_iterator   = " << linkIterType() << ";\n";
     OSS << "using ownerships_size_type = edges_size_type;\n";
 
     oss << "\n";
@@ -1548,6 +1624,21 @@ std::pmr::string CppGraphBuilder::generateReferenceGraph_h() const {
     return oss.str();
 }
 
+std::pmr::string CppGraphBuilder::generatePropertyGraph_h() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateComponentGraph_h() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateNamedGraph_h() const {
+    Expects(false);
+    return "";
+}
+
 std::pmr::string CppGraphBuilder::generateParentGraph_h() const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& s = *mGraph;
@@ -1562,6 +1653,11 @@ std::pmr::string CppGraphBuilder::generateAddressableGraph_h() const {
     std::pmr::string space(get_allocator());
 
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::generateUuidGraph_h() const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::generatePolymorphicGraph_h() const {
@@ -1583,6 +1679,21 @@ std::pmr::string CppGraphBuilder::generatePolymorphicGraph_h() const {
         oss << ";\n";
     }
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::generateVertexProperties_h() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateStackGraph_h() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateVisitors_h() const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::generateMemberFunctions_h() const {
@@ -1659,6 +1770,11 @@ std::pmr::string CppGraphBuilder::generateMembers_h() const {
     std::pmr::string space(get_allocator());
     copyString(oss, space, mStruct.generateMembers());
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::generateGraph_cpp() const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::generateReserve_cpp() const {

@@ -845,6 +845,26 @@ std::pmr::string CppGraphBuilder::generateRemoveEdgeIter(bool bInline) const {
     return oss.str();
 }
 
+std::pmr::string CppGraphBuilder::addVertexTemplate(bool full, bool piecewise) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::addVertexFunction(bool full, bool piecewise, bool hasDefault) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::addVertexVectorImpl(bool full, bool piecewise) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::addVertexObjectImpl(bool full, bool piecewise) const {
+    Expects(false);
+    return "";
+}
+
 std::pmr::string CppGraphBuilder::addVertex(bool propertyParam, bool piecewise, bool cpp14) const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     std::pmr::string space(get_allocator());
@@ -1487,6 +1507,26 @@ return isAncestor;
     OSS << "}\n";
 
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::generateAddLayer(bool piecewise) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateLayer(bool bConst) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateGetLayer(bool bConst) const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateGetLayerIf(bool bConst) const {
+    Expects(false);
+    return "";
 }
 
 std::pmr::string CppGraphBuilder::generateGraphFunctions_h() const {
@@ -4390,6 +4430,16 @@ std::pmr::string CppGraphBuilder::generateGraphSerialization_cpp(bool nvp) const
     OSS << "}\n";
 
     return oss.str();
+}
+
+std::pmr::string CppGraphBuilder::generateGraphPropertyGraph_h() const {
+    Expects(false);
+    return "";
+}
+
+std::pmr::string CppGraphBuilder::generateGraphPropertyGraph_cpp() const {
+    Expects(false);
+    return "";
 }
 
 }

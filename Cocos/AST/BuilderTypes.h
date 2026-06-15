@@ -111,6 +111,7 @@ public:
     virtual std::pmr::string nullVertexValue() const = 0;
     virtual std::pmr::string vertexDescType() const = 0;
     virtual std::pmr::string edgeDescType() const = 0;
+    virtual std::pmr::string linkDescType() const = 0;
 
     virtual std::pmr::string graphType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string vertexDesc(std::string_view ns = ".") const = 0;
@@ -124,22 +125,33 @@ public:
     virtual std::pmr::string vertexListType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string componentContainerType() const = 0;
     virtual std::pmr::string edgeListType(std::string_view ns = ".") const = 0;
+    virtual std::pmr::string outEdgeListName() const = 0;
+    virtual std::pmr::string outEdgeListMember() const = 0;
     virtual std::pmr::string outEdgeListType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string outEdgeType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string outIterType() const = 0;
+    virtual std::pmr::string inEdgeListName() const = 0;
+    virtual std::pmr::string inEdgeListMember() const = 0;
     virtual std::pmr::string inEdgeListType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string inEdgeType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string inIterType() const = 0;
     virtual std::pmr::string edgeIterType() const = 0;
+    virtual std::pmr::string childListName() const = 0;
+    virtual std::pmr::string childListMember() const = 0;
     virtual std::pmr::string childListType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string childEdgeType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string childIterType() const = 0;
+    virtual std::pmr::string parentListName() const = 0;
+    virtual std::pmr::string parentListMember() const = 0;
     virtual std::pmr::string parentListType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string parentEdgeType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string parentIterType() const = 0;
-    virtual std::pmr::string referenceIterType() const = 0;
+    virtual std::pmr::string linkIterType() const = 0;
     virtual std::pmr::string vertexIterType() const = 0;
     virtual std::pmr::string adjIterType() const = 0;
+
+    virtual std::pmr::string stringType(std::string_view ns = "") const = 0;
+    virtual std::pmr::string stringViewType() const = 0;
 
     virtual std::pmr::string tagType(std::string_view ns = ".") const = 0;
     virtual std::pmr::string valueType(std::string_view ns = ".") const = 0;
@@ -147,6 +159,12 @@ public:
     virtual std::pmr::string handleElemType(const PolymorphicPair& pair,
         std::string_view ns = ".", bool bSkipName = false) const = 0;
     virtual std::pmr::string handleType(std::string_view ns = ".") const = 0;
+
+    virtual std::pmr::string layerHandleType(const Layer& layer,
+        std::string_view ns = ".", bool bSkipName = false) const = 0;
+    virtual std::pmr::string layerHandleVariantType(std::string_view ns = ".") const = 0;
+    virtual std::pmr::string layerTagVariantType(std::string_view ns = ".") const = 0;
+    virtual std::pmr::string layerValueVariantType(bool bConst, std::string_view ns = ".") const = 0;
 
     virtual std::pmr::string vertexPropertyMapName(bool bConst) const = 0;
     virtual std::pmr::string vertexPropertyMapMemberName(bool bConst) const = 0;
@@ -168,14 +186,22 @@ public:
     virtual std::pmr::string generateEdgeListGraph_h() const = 0;
     virtual std::pmr::string generateMutableGraph_h() const = 0;
     virtual std::pmr::string generateReferenceGraph_h() const = 0;
+    virtual std::pmr::string generatePropertyGraph_h() const = 0;
+    virtual std::pmr::string generateComponentGraph_h() const = 0;
+    virtual std::pmr::string generateNamedGraph_h() const = 0;
     virtual std::pmr::string generateParentGraph_h() const = 0;
     virtual std::pmr::string generateAddressableGraph_h() const = 0;
+    virtual std::pmr::string generateUuidGraph_h() const = 0;
     virtual std::pmr::string generatePolymorphicGraph_h() const = 0;
+    virtual std::pmr::string generateVertexProperties_h() const = 0;
+    virtual std::pmr::string generateStackGraph_h() const = 0;
+    virtual std::pmr::string generateVisitors_h() const = 0;
     virtual std::pmr::string generateMemberFunctions_h() const = 0;
     virtual std::pmr::string generateReserve_h() const = 0;
     virtual std::pmr::string generateTags_h() const = 0;
     virtual std::pmr::string generateMembers_h() const = 0;
 
+    virtual std::pmr::string generateGraph_cpp() const = 0;
     virtual std::pmr::string generateReserve_cpp() const = 0;
 
     virtual std::pmr::string generateAddEdge(bool property,
@@ -183,14 +209,25 @@ public:
     virtual std::pmr::string generateRemoveEdges(bool bInline = true) const = 0;
     virtual std::pmr::string generateRemoveEdge(bool bInline = true) const = 0;
     virtual std::pmr::string generateRemoveEdgeIter(bool bInline = true) const = 0;
+    virtual std::pmr::string addVertexTemplate(bool full, bool piecewise) const = 0;
+    virtual std::pmr::string addVertexFunction(bool full, bool piecewise, bool hasDefault) const = 0;
+    virtual std::pmr::string addVertexVectorImpl(bool full, bool piecewise) const = 0;
+    virtual std::pmr::string addVertexObjectImpl(bool full, bool piecewise) const = 0;
     virtual std::pmr::string addVertex(bool propertyParam, bool piecewise, bool cpp14 = false) const = 0;
     virtual std::pmr::string generateAddressableGraph(bool bInline = true) const = 0;
+
+    virtual std::pmr::string generateAddLayer(bool piecewise) const = 0;
+    virtual std::pmr::string generateLayer(bool bConst) const = 0;
+    virtual std::pmr::string generateGetLayer(bool bConst) const = 0;
+    virtual std::pmr::string generateGetLayerIf(bool bConst) const = 0;
 
     virtual std::pmr::string generateGraphFunctions_h() const = 0;
     virtual std::pmr::string generateGraphBoostFunctions_h() const = 0;
     virtual std::pmr::string generateGraphPropertyMaps_h() const = 0;
     virtual std::pmr::string generateGraphSerialization_h(bool nvp) const = 0;
     virtual std::pmr::string generateGraphSerialization_cpp(bool nvp) const = 0;
+    virtual std::pmr::string generateGraphPropertyGraph_h() const = 0;
+    virtual std::pmr::string generateGraphPropertyGraph_cpp() const = 0;
 };
 
 class CppGraphBuilder final : public GraphBuilder {
@@ -206,6 +243,7 @@ public:
     std::pmr::string nullVertexValue() const override;
     std::pmr::string vertexDescType() const override;
     std::pmr::string edgeDescType() const override;
+    std::pmr::string linkDescType() const override;
 
     std::pmr::string graphType(std::string_view ns = ".") const override;
     std::pmr::string vertexDesc(std::string_view ns = ".") const override;
@@ -219,22 +257,33 @@ public:
     std::pmr::string vertexListType(std::string_view ns = ".") const override;
     std::pmr::string componentContainerType() const override;
     std::pmr::string edgeListType(std::string_view ns = ".") const override;
+    std::pmr::string outEdgeListName() const override;
+    std::pmr::string outEdgeListMember() const override;
     std::pmr::string outEdgeListType(std::string_view ns = ".") const override;
     std::pmr::string outEdgeType(std::string_view ns = ".") const override;
     std::pmr::string outIterType() const override;
+    std::pmr::string inEdgeListName() const override;
+    std::pmr::string inEdgeListMember() const override;
     std::pmr::string inEdgeListType(std::string_view ns = ".") const override;
     std::pmr::string inEdgeType(std::string_view ns = ".") const override;
     std::pmr::string inIterType() const override;
     std::pmr::string edgeIterType() const override;
+    std::pmr::string childListName() const override;
+    std::pmr::string childListMember() const override;
     std::pmr::string childListType(std::string_view ns = ".") const override;
     std::pmr::string childEdgeType(std::string_view ns = ".") const override;
     std::pmr::string childIterType() const override;
+    std::pmr::string parentListName() const override;
+    std::pmr::string parentListMember() const override;
     std::pmr::string parentListType(std::string_view ns = ".") const override;
     std::pmr::string parentEdgeType(std::string_view ns = ".") const override;
     std::pmr::string parentIterType() const override;
-    std::pmr::string referenceIterType() const override;
+    std::pmr::string linkIterType() const override;
     std::pmr::string vertexIterType() const override;
     std::pmr::string adjIterType() const override;
+
+    std::pmr::string stringType(std::string_view ns = "") const override;
+    std::pmr::string stringViewType() const override;
 
     std::pmr::string tagType(std::string_view ns = ".") const override;
     std::pmr::string valueType(std::string_view ns = ".") const override;
@@ -242,6 +291,12 @@ public:
     std::pmr::string handleElemType(const PolymorphicPair& pair,
         std::string_view ns = ".", bool bSkipName = false) const override;
     std::pmr::string handleType(std::string_view ns = ".") const override;
+
+    std::pmr::string layerHandleType(const Layer& layer,
+        std::string_view ns = ".", bool bSkipName = false) const override;
+    std::pmr::string layerHandleVariantType(std::string_view ns = ".") const override;
+    std::pmr::string layerTagVariantType(std::string_view ns = ".") const override;
+    std::pmr::string layerValueVariantType(bool bConst, std::string_view ns = ".") const override;
 
     std::pmr::string vertexPropertyMapName(bool bConst) const override;
     std::pmr::string vertexPropertyMapMemberName(bool bConst) const override;
@@ -263,14 +318,22 @@ public:
     std::pmr::string generateEdgeListGraph_h() const override;
     std::pmr::string generateMutableGraph_h() const override;
     std::pmr::string generateReferenceGraph_h() const override;
+    std::pmr::string generatePropertyGraph_h() const override;
+    std::pmr::string generateComponentGraph_h() const override;
+    std::pmr::string generateNamedGraph_h() const override;
     std::pmr::string generateParentGraph_h() const override;
     std::pmr::string generateAddressableGraph_h() const override;
+    std::pmr::string generateUuidGraph_h() const override;
     std::pmr::string generatePolymorphicGraph_h() const override;
+    std::pmr::string generateVertexProperties_h() const override;
+    std::pmr::string generateStackGraph_h() const override;
+    std::pmr::string generateVisitors_h() const override;
     std::pmr::string generateMemberFunctions_h() const override;
     std::pmr::string generateReserve_h() const override;
     std::pmr::string generateTags_h() const override;
     std::pmr::string generateMembers_h() const override;
 
+    std::pmr::string generateGraph_cpp() const override;
     std::pmr::string generateReserve_cpp() const override;
 
     std::pmr::string generateAddEdge(bool property,
@@ -278,14 +341,25 @@ public:
     std::pmr::string generateRemoveEdges(bool bInline = true) const override;
     std::pmr::string generateRemoveEdge(bool bInline = true) const override;
     std::pmr::string generateRemoveEdgeIter(bool bInline = true) const override;
+    std::pmr::string addVertexTemplate(bool full, bool piecewise) const override;
+    std::pmr::string addVertexFunction(bool full, bool piecewise, bool hasDefault) const override;
+    std::pmr::string addVertexVectorImpl(bool full, bool piecewise) const override;
+    std::pmr::string addVertexObjectImpl(bool full, bool piecewise) const override;
     std::pmr::string addVertex(bool propertyParam, bool piecewise, bool cpp14 = false) const override;
     std::pmr::string generateAddressableGraph(bool bInline = true) const override;
+
+    std::pmr::string generateAddLayer(bool piecewise) const override;
+    std::pmr::string generateLayer(bool bConst) const override;
+    std::pmr::string generateGetLayer(bool bConst) const override;
+    std::pmr::string generateGetLayerIf(bool bConst) const override;
 
     std::pmr::string generateGraphFunctions_h() const override;
     std::pmr::string generateGraphBoostFunctions_h() const override;
     std::pmr::string generateGraphPropertyMaps_h() const override;
     std::pmr::string generateGraphSerialization_h(bool nvp) const override;
     std::pmr::string generateGraphSerialization_cpp(bool nvp) const override;
+    std::pmr::string generateGraphPropertyGraph_h() const override;
+    std::pmr::string generateGraphPropertyGraph_cpp() const override;
 
     CppGraphBuilder(const SyntaxGraph* syntaxGraph, const ModuleGraph* moduleGraph,
         uint32_t currentVertex, uint32_t currentModule,
