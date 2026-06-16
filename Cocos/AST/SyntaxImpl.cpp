@@ -223,12 +223,12 @@ bool SyntaxGraph::isPmr(vertex_descriptor vertID) const noexcept {
 
             if (templateID == optionalID) {
                 Expects(s.mParameters.size() == 1);
-                auto parameterID = locate(s.mParameters.front(), g);
+                auto parameterID = locate(s.mParameters.front().mTypePath, g);
                 return g.isPmr(parameterID);
             }
 
-            for (const auto& typePath : s.mParameters) {
-                const auto typeInfo = extractType(typePath);
+            for (const auto& param : s.mParameters) {
+                const auto typeInfo = extractType(param.mTypePath);
                 if (typeInfo.mPointer) {
                     return false;
                 }
@@ -275,12 +275,12 @@ bool SyntaxGraph::isNoexcept(vertex_descriptor vertID) const noexcept {
             if (!traits.mNoexcept)
                 bThrow = true;
 
-            for (const auto& typePath : s.mParameters) {
-                auto typeInfo = extractType(typePath);
+            for (const auto& param : s.mParameters) {
+                auto typeInfo = extractType(param.mTypePath);
                 if (typeInfo.mPointer) {
                     continue;
                 }
-                auto paramID = locate(typePath, g);
+                auto paramID = locate(param.mTypePath, g);
                 const auto& traits = get(g.traits, g, paramID);
                 if (!traits.mNoexcept)
                     bThrow = true;
@@ -352,6 +352,19 @@ bool SyntaxGraph::isOptional(vertex_descriptor vertID) const noexcept {
     return false;
 }
 
+bool SyntaxGraph::isMap(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    if (holds_tag<Map_>(vertID, g))
+        return true;
+
+    if (!holds_tag<Instance_>(vertID, g))
+        return false;
+
+    const auto& inst = get<Instance>(vertID, g);
+    const auto templateID = locate(inst.mTemplate, g);
+    return holds_tag<Map_>(templateID, g);
+}
+
 bool SyntaxGraph::isPoolObject(vertex_descriptor vertID) const noexcept {
     const auto& g = *this;
     const auto& traits = get(g.traits, g, vertID);
@@ -408,12 +421,12 @@ bool SyntaxGraph::isPoolObject(vertex_descriptor vertID) const noexcept {
 
             if (templateID == optionalID) {
                 Expects(s.mParameters.size() == 1);
-                auto parameterID = locate(s.mParameters.front(), g);
+                auto parameterID = locate(s.mParameters.front().mTypePath, g);
                 return g.isPoolObject(parameterID);
             }
 
-            for (const auto& typePath : s.mParameters) {
-                auto paramID = locate(typePath, g);
+            for (const auto& param : s.mParameters) {
+                auto paramID = locate(param.mTypePath, g);
                 if (g.isPoolObject(paramID)) {
                     return true;
                 }
@@ -450,6 +463,36 @@ bool SyntaxGraph::isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const n
     return !m.mAPI.empty();
 }
 
+bool SyntaxGraph::isTriviallyCopyable(vertex_descriptor vertID) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+    if (traits.mTrivial) {
+        return true;
+    }
+    if (g.isPmr(vertID)) {
+        return false;
+    }
+    if (holds_tag<Value_>(vertID, g) || holds_tag<Enum_>(vertID, g) || isTag(vertID)) {
+        return true;
+    }
+    const bool result = visit_vertex(
+        vertID, g,
+        [&](const Struct& s) {
+            for (const auto& m : s.mMembers) {
+                const auto memberID = locate(m.mTypePath, g);
+                Expects(memberID != g.null_vertex());
+                if (!g.isTriviallyCopyable(memberID)) {
+                    return false;
+                }
+            }
+            return true;
+        },
+        [&](const auto&) {
+            return false;
+        });
+    return result;
+}
+
 bool SyntaxGraph::isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept {
     const auto& g = *this;
     auto* scratch = g.mScratch;
@@ -472,7 +515,7 @@ bool SyntaxGraph::isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const n
             auto type = g.getTypescriptTypename(templateID);
             if (type == "Map" || type == "Array" || type == "Set" || (traits.mFlags & JSB)) {
                 for (const auto& param : inst.mParameters) {
-                    auto paramID = locate(param, g);
+                    auto paramID = locate(param.mTypePath, g);
                     if (!g.isJsb(paramID, mg)) {
                         return false;
                     }
@@ -721,7 +764,7 @@ bool SyntaxGraph::hasPmrOptional(vertex_descriptor vertID) const noexcept {
                 if (g.isOptional(typeID)) {
                     const auto& inst = get<Instance>(typeID, g);
                     Expects(inst.mParameters.size() == 1);
-                    auto paramID = locate(inst.mParameters.front(), g);
+                    auto paramID = locate(inst.mParameters.front().mTypePath, g);
                     if (g.isPmr(paramID)) {
                         return true;
                     }
@@ -827,6 +870,56 @@ bool SyntaxGraph::hasVirtualInheritance(vertex_descriptor vertID) const noexcept
     return hasVirtual;
 }
 
+bool SyntaxGraph::hasGraphPropertyTag(
+    vertex_descriptor vertID,
+    vertex_descriptor tagID,
+    bool bTypescript) const noexcept {
+    const auto& g = *this;
+    const auto& traits = get(g.traits, g, vertID);
+
+    if (traits.mImport)
+        return false;
+
+    if (traits.mUnknown)
+        return false;
+
+    return visit_vertex(
+        vertID, g,
+        [&](const Composition_ auto& s) {
+            for (const auto& m : s.mMembers) {
+                if (bTypescript && m.mTypescriptSkip) {
+                    continue;
+                }
+                if (!m.mPropertyGraphTag.empty()) {
+                    const auto memberTagID = locate(m.mPropertyGraphTag, g);
+                    if (memberTagID == tagID) {
+                        return true;
+                    }
+                    if (tagID == g.null_vertex()) {
+                        return true;
+                    }
+                }
+                const auto memberID = locate(m.mTypePath, g);
+                if (hasGraphPropertyTag(memberID, tagID, bTypescript)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        [&](const Instance& inst) {
+            for (const auto& param : inst.mParameters) {
+                const auto typeID = locate(param.mTypePath, g);
+                if (g.hasGraphPropertyTag(typeID, tagID, bTypescript)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        [&](const auto&) {
+            return false;
+        });
+}
+
 bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept {
     if (vertID == typeID)
         return true;
@@ -878,7 +971,7 @@ bool SyntaxGraph::hasType(vertex_descriptor vertID, vertex_descriptor typeID) co
             },
             [&](const Instance& s) {
                 for (const auto& paramType : s.mParameters) {
-                    const auto& paramID = locate(paramType, g);
+                    const auto& paramID = locate(paramType.mTypePath, g);
                     if (paramID == g.null_vertex()) {
                         // TODO(hyde): handle paramType has *
                         continue;
@@ -1473,7 +1566,9 @@ void SyntaxGraph::instantiate(std::string_view currentScope, std::string_view de
         auto& instance = get_by_tag<Instance_>(vertID, g);
         instance.mTemplate = name;
         for (const auto& param : parameters) {
-            instance.mParameters.emplace_back(param);
+            TemplateParameter templateParam(instance.get_allocator());
+            templateParam.mTypePath = param;
+            instance.mParameters.emplace_back(std::move(templateParam));
         }
     }
 }
@@ -1551,11 +1646,11 @@ void SyntaxGraph::propagate(vertex_descriptor vertID, GenerationFlags flags) {
         },
         [&](const Instance& s) {
             for (const auto& p : s.mParameters) {
-                auto info = extractType(p);
+                auto info = extractType(p.mTypePath);
                 if (info.mPointer) {
                     continue;
                 }
-                auto typeID = locate(p, g);
+                auto typeID = locate(p.mTypePath, g);
                 propagate(typeID, flags);
             }
         },
@@ -1981,7 +2076,7 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID) co
 
             if (g.isTypescriptArray(vertID)) {
                 Expects(instance.mParameters.size() == 1);
-                const auto& param = instance.mParameters.front();
+                const auto& param = instance.mParameters.front().mTypePath;
                 const auto paramPath = removeCvPointerRef(param);
                 auto paramID = locate(paramPath, g);
                 Expects(paramID != g.null_vertex());
@@ -1992,7 +2087,7 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID) co
             } else if (g.isTypescriptVariant(vertID)) {
                 int count = 0;
                 for (const auto& param : instance.mParameters) {
-                    std::string_view paramPath = param;
+                    std::string_view paramPath = param.mTypePath;
                     if (paramPath.back() == '*') {
                         paramPath = paramPath.substr(0, paramPath.size() - 1);
                     }
@@ -2008,7 +2103,7 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID) co
                 if (templateTS.mName == "_") {
                     // is removed
                     Expects(instance.mParameters.size() == 1);
-                    const auto& param = instance.mParameters.front();
+                    const auto& param = instance.mParameters.front().mTypePath;
                     auto paramID = locate(param, g);
                     auto paramName = g.getTypescriptTypename(paramID);
                     result.append(paramName);
@@ -2022,8 +2117,8 @@ std::pmr::string SyntaxGraph::getTypescriptTypename(vertex_descriptor vertID) co
                     result.append("<");
                     int count = 0;
                     for (const auto& param : instance.mParameters) {
-                        const auto paramTraits = getParameterTraits(param);
-                        const auto paramTypePath = removeCvPointerRef(param);
+                        const auto paramTraits = getParameterTraits(param.mTypePath);
+                        const auto paramTypePath = removeCvPointerRef(param.mTypePath);
                         auto paramID = locate(paramTypePath, g);
                         auto paramName = g.getTypescriptTypename(paramID);
                         if (count++) {
@@ -2349,7 +2444,7 @@ void addImported(
         },
         [&](const Instance& s) {
             for (const auto& p : s.mParameters) {
-                auto typePath = removeCvPointerRef(p);
+                auto typePath = removeCvPointerRef(p.mTypePath);
                 auto paramID = locate(typePath, g);
                 addImported(mg, paramID, g, forceImport, modulePath, false, imported);
             }
@@ -2449,7 +2544,7 @@ std::pmr::string Graph::getTypescriptVertexDescriptorType(std::string_view tsNam
         mVertexListType);
 }
 
-std::string_view Graph::getTypescriptEdgeDescriptorType() const {
+std::pmr::string Graph::getTypescriptEdgeDescriptorType() const {
     if (mEdgeProperty.empty()) {
         if (gImpl) {
             return "impl.ED";
@@ -2465,7 +2560,7 @@ std::string_view Graph::getTypescriptEdgeDescriptorType() const {
     }
 }
 
-std::string_view Graph::getTypescriptReferenceDescriptorType() const {
+std::pmr::string Graph::getTypescriptReferenceDescriptorType() const {
     if (isAliasGraph()) {
         return getTypescriptEdgeDescriptorType();
     } else {

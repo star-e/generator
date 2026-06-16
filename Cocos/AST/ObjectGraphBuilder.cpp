@@ -4117,43 +4117,6 @@ std::pmr::string ObjectGraphBuilder::generateGraphPropertyGraph_cpp() const {
     return oss.str();
 }
 
-std::pmr::string ObjectGraphBuilder::generateStackGraph_h() const {
-    pmr_ostringstream oss(std::ios::out, get_allocator());
-    std::pmr::string space(get_allocator());
-
-    const auto& s = *mGraph;
-    const auto& cpp = mStruct;
-
-    if (!s.hasStack())
-        return oss.str();
-
-    auto name = cpp.getDependentName(cpp.mCurrentPath);
-
-    oss << "\n";
-    OSS << "// GraphStack\n";
-    OSS << "using layer_descriptor = uint16_t;\n";
-    OSS << "using layers_size_type = uint16_t;\n";
-    OSS << "using layer_iterator = boost::integer_range<layer_descriptor>::iterator;\n";
-    OSS << "using layer_tag_type = " << layerTagVariantType() << ";\n";
-    OSS << "using layer_value_type = " << layerValueVariantType(false) << ";\n";
-    OSS << "using layer_const_value_type = " << layerValueVariantType(true) << ";\n";
-    OSS << "using layer_handle_type = ";
-    copyString(oss, space, layerHandleVariantType(), true);
-    oss << ";\n";
-
-    oss << "\n";
-    OSS << "// GraphStack help functions\n";
-    OSS << "static layer_descriptor null_layer() noexcept {\n";
-    OSS << "    return std::numeric_limits<layer_descriptor>::max();\n";
-    OSS << "}\n";
-    oss << "\n";
-    OSS << "inline boost::integer_range<layer_descriptor> layer_set() const noexcept {\n";
-    OSS << "    return boost::integer_range<layer_descriptor>(0, gsl::narrow_cast<layers_size_type>(mLayers.size()));\n";
-    OSS << "}\n";
-
-    return oss.str();
-}
-
 std::pmr::string ObjectGraphBuilder::generateVisitors_h() const {
     pmr_ostringstream oss(std::ios::out, get_allocator());
     const auto& s = *mGraph;
@@ -5258,10 +5221,6 @@ return false;
                 }
             }
 
-            if (s.hasStack()) {
-                Expects(false);
-            }
-
             if (false && s.mReferenceGraph && s.mNamed && s.mUniqueName) {
                 oss << "\n";
                 OSS << "Ensures(uniqueAddress());\n";
@@ -5459,18 +5418,6 @@ return false;
                     OSS << "mVariants.reserve(sz);\n";
                 }
             }
-            if (s.hasStack()) {
-                int count = 0;
-                oss << "\n";
-                OSS << "// GraphStack\n";
-                for (const auto& layer : s.mStack.mLayers) {
-                    if (count++)
-                        oss << "\n";
-                    OSS << "for (auto& layer : " << layer.mMemberName << ") {\n";
-                    OSS << "    layer.reserve(sz);\n";
-                    OSS << "}\n";
-                }
-            }
         }
         OSS << "}\n";
     }
@@ -5493,18 +5440,6 @@ return false;
                 }
                 if (s.isPolymorphic()) {
                     OSS << "mVariants.clear();\n";
-                }
-            }
-            if (s.hasStack()) {
-                int count = 0;
-                oss << "\n";
-                OSS << "// GraphStack\n";
-                for (const auto& layer : s.mStack.mLayers) {
-                    if (count++)
-                        oss << "\n";
-                    OSS << "for (auto& layer : " << layer.mMemberName << ") {\n";
-                    OSS << "    layer.clear();\n";
-                    OSS << "}\n";
                 }
             }
             if (s.needEdgeList()) {

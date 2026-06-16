@@ -52,6 +52,7 @@ template <typename T> concept Instantiation_ = IsInstantiation<T>::value;
 
 struct Container;
 struct Map;
+struct TemplateParameter;
 struct Instance;
 struct Namespace;
 struct Define;
@@ -90,8 +91,9 @@ struct Map_;
 struct Instance_;
 struct PolymorphicPair;
 struct Polymorphic;
-struct Component;
 struct VertexMap;
+struct PropertyGraph;
+struct Component;
 
 template <typename T> struct IsForward { static constexpr bool value = false; };
 template <typename T> concept Forward_ = IsForward<T>::value;

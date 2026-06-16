@@ -558,6 +558,57 @@ std::string_view convertTag(std::string_view tagName) {
     return removeTail(tagName);
 }
 
+std::pmr::string getTagName(std::string_view typeName,
+    std::pmr::memory_resource* mr) {
+    auto name = convertTag(typeName);
+    return getVariableName(name, mr);
+}
+
+bool needView(std::string_view cppName) {
+    if (cppName == "std::string" || cppName == "std::pmr::string" || cppName == "PmrString") {
+        return true;
+    } else if (cppName == "std::u8string" || cppName == "std::pmr::u8string") {
+        return true;
+    }
+    return false;
+}
+
+std::pmr::string getViewOrMove(std::string_view cppName,
+    std::pmr::memory_resource* mr) {
+    if (cppName == "std::string" || cppName == "std::pmr::string" || cppName == "PmrString") {
+        return std::pmr::string("std::string_view", mr);
+    } else if (cppName == "std::u8string" || cppName == "std::pmr::u8string") {
+        return std::pmr::string("std::u8string_view", mr);
+    }
+    pmr_ostringstream oss(std::ios_base::out, mr);
+    oss << cppName << "&&";
+    return oss.str();
+}
+
+std::pmr::string getViewOrRef(std::string_view cppName,
+    std::pmr::memory_resource* mr) {
+    if (cppName == "std::string" || cppName == "std::pmr::string" || cppName == "PmrString") {
+        return std::pmr::string("std::string_view", mr);
+    } else if (cppName == "std::u8string" || cppName == "std::pmr::u8string") {
+        return std::pmr::string("std::u8string_view", mr);
+    }
+    pmr_ostringstream oss(std::ios_base::out, mr);
+    oss << cppName << "&";
+    return oss.str();
+}
+
+std::pmr::string getViewOrConstRef(std::string_view cppName,
+    std::pmr::memory_resource* mr) {
+    if (cppName == "std::string" || cppName == "std::pmr::string" || cppName == "PmrString") {
+        return std::pmr::string("std::string_view", mr);
+    } else if (cppName == "std::u8string" || cppName == "std::pmr::u8string") {
+        return std::pmr::string("std::u8string_view", mr);
+    }
+    pmr_ostringstream oss(std::ios_base::out, mr);
+    oss << "const " << cppName << "&";
+    return oss.str();
+}
+
 std::pmr::string getTagType(std::string_view tagName, std::pmr::memory_resource* scratch) {
     std::pmr::string typeName(convertTag(tagName));
     typeName.append("Tag");

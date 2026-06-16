@@ -33,6 +33,7 @@ namespace Meta {
 
 inline const char* getName(const Container& v) noexcept { return "Container"; }
 inline const char* getName(const Map& v) noexcept { return "Map"; }
+inline const char* getName(const TemplateParameter& v) noexcept { return "TemplateParameter"; }
 inline const char* getName(const Instance& v) noexcept { return "Instance"; }
 inline const char* getName(const Namespace& v) noexcept { return "Namespace"; }
 inline const char* getName(const Define& v) noexcept { return "Define"; }
@@ -68,8 +69,9 @@ inline const char* getName(const Map_& v) noexcept { return "Map"; }
 inline const char* getName(const Instance_& v) noexcept { return "Instance"; }
 inline const char* getName(const PolymorphicPair& v) noexcept { return "PolymorphicPair"; }
 inline const char* getName(const Polymorphic& v) noexcept { return "Polymorphic"; }
-inline const char* getName(const Component& v) noexcept { return "Component"; }
 inline const char* getName(const VertexMap& v) noexcept { return "VertexMap"; }
+inline const char* getName(const PropertyGraph& v) noexcept { return "PropertyGraph"; }
+inline const char* getName(const Component& v) noexcept { return "Component"; }
 inline const char* getName(const Vector_& v) noexcept { return "Vector"; }
 inline const char* getName(const List_& v) noexcept { return "List"; }
 inline const char* getName(const Set_& v) noexcept { return "Set"; }

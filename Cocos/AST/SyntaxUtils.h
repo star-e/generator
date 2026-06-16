@@ -102,6 +102,21 @@ std::pmr::string getVariableName(std::string_view typeName,
     std::pmr::memory_resource* mr);
 
 std::string_view convertTag(std::string_view tagName);
+
+std::pmr::string getTagName(std::string_view typeName,
+    std::pmr::memory_resource* mr);
+
+bool needView(std::string_view cppName);
+
+std::pmr::string getViewOrMove(std::string_view cppName,
+    std::pmr::memory_resource* mr);
+
+std::pmr::string getViewOrRef(std::string_view cppName,
+    std::pmr::memory_resource* mr);
+
+std::pmr::string getViewOrConstRef(std::string_view cppName,
+    std::pmr::memory_resource* mr);
+
 std::pmr::string getTagType(std::string_view tagName,
     std::pmr::memory_resource* scratch = std::pmr::get_default_resource());
 

@@ -647,7 +647,7 @@ void generateMove(std::ostream& oss, std::pmr::string& space,
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
-                auto parameterID = locate(inst.mParameters.front(), g);
+                auto parameterID = locate(inst.mParameters.front().mTypePath, g);
                 bPmr = g.isPmr(parameterID);
 
                 if (bPmr) {
@@ -714,7 +714,7 @@ void generateCopy(std::ostream& oss, std::pmr::string& space,
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
-                auto parameterID = locate(inst.mParameters.front(), g);
+                auto parameterID = locate(inst.mParameters.front().mTypePath, g);
                 bPmr = g.isPmr(parameterID);
                 if (bPmr) {
                     oss << lhs << "(" << rhs << " ? " << cpp.getDependentName(memberID)
@@ -756,7 +756,7 @@ void generateMoveAssign(std::ostream& oss, std::pmr::string& space,
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
-                auto parameterID = locate(inst.mParameters.front(), g);
+                auto parameterID = locate(inst.mParameters.front().mTypePath, g);
                 bPmr = g.isPmr(parameterID);
 
                 if (bPmr) {
@@ -792,7 +792,7 @@ void generateCopyAssign(std::ostream& oss, std::pmr::string& space,
             if (templateID == optionalID) {
                 const auto& inst = get<Instance>(memberID, g);
                 Expects(inst.mParameters.size() == 1);
-                auto parameterID = locate(inst.mParameters.front(), g);
+                auto parameterID = locate(inst.mParameters.front().mTypePath, g);
                 bPmr = g.isPmr(parameterID);
                 if (bPmr) {
                     OSS << lhs << " = " << rhs << " ? " << cpp.getDependentName(memberID)

@@ -182,6 +182,12 @@
     <ClCompile Include="BuilderUtils.cpp">
       <Filter>2.Builder</Filter>
     </ClCompile>
+    <ClCompile Include="ObjectGraphBuilder.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="ObjectGraphFunctions.cpp">
+      <Filter>2.Builder</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="1.Syntax">

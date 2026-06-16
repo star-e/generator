@@ -286,6 +286,8 @@
     <ClCompile Include="CppMethod.cpp" />
     <ClCompile Include="CppSerialization.cpp" />
     <ClCompile Include="JsbBuilder.cpp" />
+    <ClCompile Include="ObjectGraphBuilder.cpp" />
+    <ClCompile Include="ObjectGraphFunctions.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

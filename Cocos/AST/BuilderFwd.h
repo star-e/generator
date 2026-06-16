@@ -37,6 +37,7 @@ enum class OperatorType : uint32_t;
 struct CppStructBuilder;
 class GraphBuilder;
 class CppGraphBuilder;
+class ObjectGraphBuilder;
 struct ModuleBuilder;
 struct TypeHandle;
 struct ModuleHandle;

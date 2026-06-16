@@ -49,7 +49,7 @@ void outputContainer(std::ostream& oss, std::pmr::string& space,
         {
             INDENT();
             const auto& inst = get<Instance>(paramID, g);
-            const auto& paramPath = inst.mParameters.at(1);
+            const auto& paramPath = inst.mParameters.at(1).mTypePath;
             const auto paramID = locate(paramPath, g);
             if (g.isInstantiation(paramID)) {
                 outputContainer(oss, space, paramID, g, level + 1);
@@ -69,7 +69,7 @@ void outputContainer(std::ostream& oss, std::pmr::string& space,
         {
             INDENT();
             const auto& inst = get<Instance>(paramID, g);
-            const auto& paramPath = inst.mParameters.at(0);
+            const auto& paramPath = inst.mParameters.at(0).mTypePath;
             const auto paramID = locate(paramPath, g);
             if (g.isInstantiation(paramID)) {
                 outputContainer(oss, space, paramID, g, level + 1);
@@ -113,7 +113,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
                     OSS << "for (const [_, v] of " << memberName << ") {\n";
                     {
                         INDENT();
-                        const auto& paramPath = inst.mParameters.at(1);
+                        const auto& paramPath = inst.mParameters.at(1).mTypePath;
                         const auto paramID = locate(paramPath, g);
                         if (g.isInstantiation(paramID)) {
                             outputContainer(oss, space, paramID, g, 1);
@@ -127,7 +127,7 @@ void outputDisassembleMembers(std::ostream& oss, std::pmr::string& space,
                     OSS << "for (const v of " << memberName << ") {\n";
                     {
                         INDENT();
-                        const auto& paramPath = inst.mParameters.at(0);
+                        const auto& paramPath = inst.mParameters.at(0).mTypePath;
                         const auto paramID = locate(paramPath, g);
                         if (g.isInstantiation(paramID)) {
                             outputContainer(oss, space, paramID, g, 1);
@@ -755,7 +755,7 @@ void outputSaveCollection(std::ostream& oss, std::pmr::string& space, std::strin
         INDENT();
         const auto& instance = get<Instance>(vertID, g);
         Expects(!instance.mParameters.empty());
-        const auto& paramPath = instance.mParameters.front();
+        const auto& paramPath = instance.mParameters.front().mTypePath;
         const auto paramID = locate(paramPath, g);
         std::pmr::string paramName("v", scratch);
         paramName.append(std::to_string(depth));
@@ -782,8 +782,8 @@ void outputSaveMap(std::ostream& oss, std::pmr::string& space, std::string_view 
         const auto& instance = get<Instance>(vertID, g);
         Expects(!instance.mParameters.empty());
         Expects(instance.mParameters.size() == 2);
-        const auto& keyPath = instance.mParameters.at(0);
-        const auto& valuePath = instance.mParameters.at(1);
+        const auto& keyPath = instance.mParameters.at(0).mTypePath;
+        const auto& valuePath = instance.mParameters.at(1).mTypePath;
         const auto keyID = locate(keyPath, g);
         const auto valueID = locate(valuePath, g);
         std::pmr::string keyName("k", scratch);
@@ -879,7 +879,7 @@ void outputLoadCollection(std::ostream& oss, std::pmr::string& space, std::strin
     // elememt
     const auto& instance = get<Instance>(vertID, g);
     Expects(!instance.mParameters.empty());
-    const auto& paramPath = instance.mParameters.front();
+    const auto& paramPath = instance.mParameters.front().mTypePath;
     const auto paramID = locate(paramPath, g);
     
     std::pmr::string counterName("i", scratch);
@@ -957,8 +957,8 @@ void outputLoadMap(std::ostream& oss, std::pmr::string& space, std::string_view 
     const auto& instance = get<Instance>(vertID, g);
     Expects(!instance.mParameters.empty());
     Expects(instance.mParameters.size() == 2);
-    const auto& keyPath = instance.mParameters.at(0);
-    const auto& valuePath = instance.mParameters.at(1);
+    const auto& keyPath = instance.mParameters.at(0).mTypePath;
+    const auto& valuePath = instance.mParameters.at(1).mTypePath;
     const auto keyID = locate(keyPath, g);
     const auto valueID = locate(valuePath, g);
     std::pmr::string keyName("k", scratch);
@@ -1456,7 +1456,7 @@ getChainedArrayValueID(const SyntaxGraph& g,
             const auto& instance = get<Instance>(vertID, g);
             Expects(!instance.mParameters.empty());
             Expects(instance.mParameters.size() == 1);
-            const auto& valuePath = instance.mParameters.at(0);
+            const auto& valuePath = instance.mParameters.at(0).mTypePath;
             vertID = locate(valuePath, g);
         } else {
             return vertID;
@@ -1544,7 +1544,7 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
                         const auto& instance = get<Instance>(memberID, g);
                         Expects(!instance.mParameters.empty());
                         Expects(instance.mParameters.size() == 1);
-                        const auto& valuePath = instance.mParameters.at(0);
+                        const auto& valuePath = instance.mParameters.at(0).mTypePath;
                         const auto valueID = locate(valuePath, g);
                         if (g.isTypescriptMap(valueID)) {
                             throw std::runtime_error("array of map is not supported");
@@ -1563,8 +1563,8 @@ void outputFunctions(std::ostream& oss, std::pmr::string& space,
                         const auto& instance = get<Instance>(memberID, g);
                         Expects(!instance.mParameters.empty());
                         Expects(instance.mParameters.size() == 2);
-                        const auto& keyPath = instance.mParameters.at(0);
-                        const auto& valuePath = instance.mParameters.at(1);
+                        const auto& keyPath = instance.mParameters.at(0).mTypePath;
+                        const auto& valuePath = instance.mParameters.at(1).mTypePath;
                         const auto keyID = locate(keyPath, g);
                         const auto valueID = locate(valuePath, g);
                         if (g.isTypescriptMap(valueID)) {

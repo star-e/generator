@@ -64,6 +64,7 @@ enum GenerationFlags : uint64_t {
     TS_NAME = 1 << 27,
     TS_ENUM_OBJECT = 1 << 28,
     TS_NO_STRUCT_INTERFACE_FUNCTIONS = 1 << 29,
+    PROPERTY_GRAPH_INDEX = 1 << 30,
 };
 
 constexpr GenerationFlags operator|(const GenerationFlags lhs, const GenerationFlags rhs) noexcept {
@@ -93,6 +94,26 @@ constexpr bool any(GenerationFlags e) noexcept {
 struct Container {};
 struct Map {};
 
+struct TemplateParameter {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mTypePath.get_allocator().resource());
+    }
+
+    TemplateParameter(const allocator_type& alloc) noexcept;
+    TemplateParameter(TemplateParameter&& rhs, const allocator_type& alloc);
+    TemplateParameter(TemplateParameter const& rhs, const allocator_type& alloc);
+
+    TemplateParameter(TemplateParameter&& rhs) = default;
+    TemplateParameter(TemplateParameter const& rhs) = delete;
+    TemplateParameter& operator=(TemplateParameter&& rhs) = default;
+    TemplateParameter& operator=(TemplateParameter const& rhs) = default;
+    ~TemplateParameter() noexcept;
+
+    std::pmr::string mTypePath;
+    bool mConst = false;
+};
+
 struct Instance {
     using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
     allocator_type get_allocator() const noexcept {
@@ -110,7 +131,7 @@ struct Instance {
     ~Instance() noexcept;
 
     std::pmr::string mTemplate;
-    std::pmr::vector<std::pmr::string> mParameters;
+    std::pmr::vector<TemplateParameter> mParameters;
 };
 
 struct Namespace {};
@@ -334,14 +355,24 @@ struct Member {
     bool mPointer = false;
     bool mReference = false;
     bool mPublic = true;
+    bool mDoublePointer = false;
+    bool mConstDoublePointer = false;
     bool mOptional = false;
+    bool mNullable = false;
+    bool mReadonly = false;
+    bool mRange = false;
+    bool mWeakRef = false;
     GenerationFlags mFlags = {};
     std::pmr::string mTypescriptType;
     std::pmr::string mTypescriptDefaultValue;
+    bool mTypescriptArray = false;
+    bool mTypescriptTypedArray = false;
+    bool mTypescriptSkip = false;
+    bool mTypescriptMutable = false;
+    bool mTypescriptNonNull = false;
     std::pmr::string mTypescriptMemberName;
     std::pmr::string mRenamedFromMember;
-    bool mTypescriptArray = false;
-    bool mNullable = false;
+    std::pmr::string mPropertyGraphTag;
 };
 
 struct Parameter {
@@ -623,6 +654,61 @@ struct Polymorphic {
     bool tsEmpty() const noexcept;
 
     std::pmr::vector<PolymorphicPair> mConcepts;
+    bool mSkipReset = false;
+};
+
+struct VertexMap {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mMapType.get_allocator().resource());
+    }
+
+    VertexMap(const allocator_type& alloc) noexcept;
+    VertexMap(VertexMap&& rhs, const allocator_type& alloc);
+    VertexMap(VertexMap const& rhs, const allocator_type& alloc);
+
+    VertexMap(VertexMap&& rhs) = default;
+    VertexMap(VertexMap const& rhs) = delete;
+    VertexMap& operator=(VertexMap&& rhs) = default;
+    VertexMap& operator=(VertexMap const& rhs) = default;
+    ~VertexMap() noexcept;
+
+    bool isBimap() const noexcept {
+        return !mComponentName.empty();
+    }
+    bool isComponentMember() const noexcept {
+        return !mComponentMemberName.empty();
+    }
+
+    std::pmr::string mMapType;
+    std::pmr::string mMemberName;
+    std::pmr::string mKeyType;
+    std::pmr::string mComponentName;
+    std::pmr::string mComponentMemberName;
+    std::pmr::string mTypePath;
+    bool mOptional = false;
+    bool mRefCounted = false;
+};
+
+struct PropertyGraph {
+    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
+    allocator_type get_allocator() const noexcept {
+        return allocator_type(mProperties.get_allocator().resource());
+    }
+
+    PropertyGraph(const allocator_type& alloc);
+    PropertyGraph(PropertyGraph&& rhs, const allocator_type& alloc);
+    PropertyGraph(PropertyGraph const& rhs, const allocator_type& alloc);
+
+    PropertyGraph(PropertyGraph&& rhs) = default;
+    PropertyGraph(PropertyGraph const& rhs) = delete;
+    PropertyGraph& operator=(PropertyGraph&& rhs) = default;
+    PropertyGraph& operator=(PropertyGraph const& rhs) = default;
+    ~PropertyGraph() noexcept;
+
+    std::pmr::vector<Polymorphic> mProperties;
+    std::pmr::vector<VertexMap> mPropertyMaps;
+    PmrMap<std::pmr::string, uint32_t> mPropertyIndex;
 };
 
 struct Component {
@@ -660,39 +746,6 @@ struct Component {
     bool mOptional = false;
     bool mTypescriptSkip = false;
     bool mTypescriptTypedArray = false;
-};
-
-struct VertexMap {
-    using allocator_type = std::pmr::polymorphic_allocator<std::byte>;
-    allocator_type get_allocator() const noexcept {
-        return allocator_type(mMapType.get_allocator().resource());
-    }
-
-    VertexMap(const allocator_type& alloc) noexcept;
-    VertexMap(VertexMap&& rhs, const allocator_type& alloc);
-    VertexMap(VertexMap const& rhs, const allocator_type& alloc);
-
-    VertexMap(VertexMap&& rhs) = default;
-    VertexMap(VertexMap const& rhs) = delete;
-    VertexMap& operator=(VertexMap&& rhs) = default;
-    VertexMap& operator=(VertexMap const& rhs) = default;
-    ~VertexMap() noexcept;
-
-    bool isBimap() const noexcept {
-        return !mComponentName.empty();
-    }
-    bool isComponentMember() const noexcept {
-        return !mComponentMemberName.empty();
-    }
-
-    std::pmr::string mMapType;
-    std::pmr::string mMemberName;
-    std::pmr::string mKeyType;
-    std::pmr::string mComponentName;
-    std::pmr::string mComponentMemberName;
-    std::pmr::string mTypePath;
-    bool mOptional = false;
-    bool mRefCounted = false;
 };
 
 struct Vector_ {};
@@ -853,7 +906,7 @@ struct Graph {
         return allocator_type(mMembers.get_allocator().resource());
     }
 
-    Graph(const allocator_type& alloc) noexcept;
+    Graph(const allocator_type& alloc);
     Graph(Graph&& rhs, const allocator_type& alloc);
     Graph(Graph const& rhs, const allocator_type& alloc);
 
@@ -885,6 +938,18 @@ struct Graph {
 
     bool isBidirectionalOnly() const noexcept {
         return !mUndirected && mBidirectional;
+    }
+
+    bool isUniqueAddressGraph() const noexcept {
+        return mReferenceGraph && mNamed && mUniqueName;
+    }
+
+    bool isUniqueAddressAliasGraph() const noexcept {
+        return isUniqueAddressGraph() && mAliasGraph;
+    }
+
+    bool isAliasDirected() const noexcept {
+        return mReferenceGraph && mAliasGraph && isDirectedOnly();
     }
 
     bool needEdgeList() const noexcept {
@@ -958,6 +1023,10 @@ struct Graph {
         }
         throw std::out_of_range("component not found");
     }
+    bool isPureName(const Component& c) const noexcept {
+        Expects(mNamed);
+        return mNamedConcept.mComponentName == c.mName && mNamedConcept.mComponentMemberName.empty();
+    }
 
     // Typescript
     std::string_view getTypescriptNullVertex() const;
@@ -965,8 +1034,8 @@ struct Graph {
     std::pmr::string getTypescriptVertexPropertyType(const SyntaxGraph& g) const noexcept;
 
     std::pmr::string getTypescriptVertexDescriptorType(std::string_view tsName) const;
-    std::string_view getTypescriptEdgeDescriptorType() const;
-    std::string_view getTypescriptReferenceDescriptorType() const;
+    std::pmr::string getTypescriptEdgeDescriptorType() const;
+    std::pmr::string getTypescriptReferenceDescriptorType() const;
 
     std::pmr::string getTypescriptVertexDereference(std::string_view v) const;
 
@@ -1007,6 +1076,7 @@ struct Graph {
     bool mClear = false;
     bool mDirtyMask = false;
     Polymorphic mPolymorphic;
+    PropertyGraph mPropertyGraph;
     VertexListType mVertexListType;
     EdgeListType mEdgeListType;
     OutEdgeListType mOutEdgeListType;
@@ -1247,9 +1317,11 @@ struct SyntaxGraph {
     bool isUtf8(vertex_descriptor vertID) const noexcept;
     bool isPair(vertex_descriptor vertID) const noexcept;
     bool isOptional(vertex_descriptor vertID) const noexcept;
+    bool isMap(vertex_descriptor vertID) const noexcept;
     bool isPoolObject(vertex_descriptor vertID) const noexcept;
     bool isPoolType(vertex_descriptor vertID, std::string_view modulePath) const noexcept;
     bool isDLL(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
+    bool isTriviallyCopyable(vertex_descriptor vertID) const noexcept;
     bool isJsb(vertex_descriptor vertID, const ModuleGraph& mg) const noexcept;
 
     // struct
@@ -1266,6 +1338,7 @@ struct SyntaxGraph {
     bool hasImpl(vertex_descriptor vertID, bool bDLL) const noexcept;
     bool hasHeader(vertex_descriptor vertID) const noexcept;
     bool hasVirtualInheritance(vertex_descriptor vertID) const noexcept;
+    bool hasGraphPropertyTag(vertex_descriptor vertID, vertex_descriptor tagID, bool bTypescript) const noexcept;
     bool hasType(vertex_descriptor vertID, vertex_descriptor typeID) const noexcept;
     bool hasConsecutiveParameters(vertex_descriptor vertID, const Constructor& cntr) const noexcept;
     std::pmr::vector<BaseConstructor> getBaseConstructors(vertex_descriptor vertID) const;
