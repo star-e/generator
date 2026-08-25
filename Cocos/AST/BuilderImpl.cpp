@@ -1931,6 +1931,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
             std::pmr::string space(scratch);
             outputComment(oss);
             OSS << "// NOLINTBEGIN(misc-include-cleaner)\n";
+            OSS << "// clang-format off\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Serialization.h\"\n";
             OSS << "#include \"" << ccFolder << "/" << m.mFilePrefix << "Types.h\"\n";
 
@@ -1952,6 +1953,7 @@ void ModuleBuilder::outputModule(std::string_view name, std::pmr::set<std::pmr::
                 OSS << "#include \"" << ccFolder << "/details/Range.h\"\n";
             }
             OSS << "#include \"" << ccFolder << "/details/SerializationUtils.h\"\n";
+            OSS << "// clang-format on\n";
 
             copyString(oss, generateSerialization_cpp(mProjectName, mSyntaxGraph, mModuleGraph, modulePath, false, scratch, scratch));
             OSS << "// NOLINTEND(misc-include-cleaner)\n";
