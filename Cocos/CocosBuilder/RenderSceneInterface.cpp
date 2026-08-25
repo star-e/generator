@@ -11,8 +11,8 @@ void buildRenderSceneInterface(ModuleBuilder& builder, Features features) {
         .mFolder = "cocos/renderer/scene",
         .mFilePrefix = "RenderSceneInterface",
         .mToJsFilename = "render-scene.i",
-        .mToJsPrefix = "scene",
-        .mToJsNamespace = "render",
+        .mToJsPrefix = "render_scene",
+        .mToJsNamespace = "render_scene",
         .mToJsCppHeaders = R"(#include "bindings/auto/jsb_render_scene_auto.h"
 )",
         .mToJsUsingNamespace = R"(
