@@ -17,6 +17,9 @@ void buildRenderInterface(ModuleBuilder& builder, Features features);
 void buildPrivateInterface(ModuleBuilder& builder, Features features);
 void buildRenderCompiler(ModuleBuilder& builder, Features features);
 
+// RenderScene
+void buildRenderSceneInterface(ModuleBuilder& builder, Features features);
+
 // Private
 void buildPrivateTypes(ModuleBuilder& builder, Features features);
 

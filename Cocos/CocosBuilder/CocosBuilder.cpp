@@ -75,6 +75,9 @@ int main() {
         buildRenderInterface(builder, Fwd | Types | Typescripts | Interface | ToJs);
         buildPrivateInterface(builder, Fwd | Types | Typescripts | Interface);
 
+        // RenderScene
+        buildRenderSceneInterface(builder, Fwd | Types | Typescripts | Interface | ToJs);
+
         // web
         buildPrivateTypes(builder, Fwd | Types | Typescripts);
 
@@ -157,6 +160,10 @@ int main() {
         builder.outputModule("RenderInterface", files);
         builder.outputModule("PrivateInterface", files);
 
+        // render scene
+        builder.outputModule("RenderSceneInterface", files);
+
+        // render dependency graph
         builder.outputModule("FGDispatcher", files);
 
         // private
