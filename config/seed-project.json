@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "name": "CocosCodegenModel",
+  "inputs": ["../spec/codegen/model-support.spec", "../spec/codegen/typegraph.spec"],
+  "graphSupportModule": "CocosModelSupport",
+  "outputDirectory": ".",
+  "targets": { "cpp": { "kind": "library", "name": "CocosCodegenModel" } },
+  "modules": {
+    "CocosModelSupport": { "cpp": { "header": "\"model/GraphSupport.h\"" } },
+    "CocosTypeGraph": { "cpp": { "outputDirectory": ".", "prefix": "TypeGraph" } }
+  }
+}

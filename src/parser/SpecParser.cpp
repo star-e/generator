@@ -1,4 +1,4 @@
-#include "parser/CocosSpecParser.h"
+#include "parser/SpecParser.h"
 
 #include <cctype>
 #include <set>
@@ -37,6 +37,7 @@ public:
         while (!accept("}")) {
             expect("interface");
             Interface declaration;
+            declaration.location = location;
             declaration.name = uniqueName(names);
             expect("{");
             std::set<std::string> methods;

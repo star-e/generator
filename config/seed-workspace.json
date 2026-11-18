@@ -1,0 +1,4 @@
+{
+  "outputDirectory": "../build/seed",
+  "projects": ["seed-project.json"]
+}

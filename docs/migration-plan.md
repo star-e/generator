@@ -9,8 +9,8 @@
 | 命令行与产物来源 | 可执行文件、帮助文本和清单中的生成器名称统一为 `cocos-codegen`。 |
 | 构建 | CMake 可执行目标为 `CocosCodegen`，输出文件名设为 `cocos-codegen`。项目专用构建选项使用 `COCOS_CODEGEN_` 前缀。 |
 | C++ 接口 | 生成器代码放在 `cc::codegen`，例如 `cc::codegen::TypeGraph`。引擎类型沿用所属命名空间，例如 `cc::render::OutputArchive`。 |
-| 新增 C++ 文件 | 文件名用 `Cocos` 加职责名，省去单字母 `S` 前缀，例如 `CocosTypeGraph.h`、`CocosSpecParser.cpp`、`CocosFileWriter.cpp`。 |
-| 自定义配置与声明 | 使用小写 `cocos-` 前缀，例如 `cocos-workspace.json`、`cocos-archive.spec`。CMake 和包管理器的标准入口使用 `CMakeLists.txt`、`CMakePresets.json`、`vcpkg.json`。 |
+| 新增 C++ 文件 | 文件名按职责使用 PascalCase，例如 `TypeGraph.cpp`、`SpecParser.h`、`Workspace.cpp`。 |
+| 自定义配置与声明 | 文件名使用小写，多个单词用连字符分隔，例如 `workspace.json`、`archive.spec`。CMake 和包管理器的标准入口使用 `CMakeLists.txt`、`CMakePresets.json`、`vcpkg.json`。 |
 
 这些约定用于新工具。引擎的模块文件保留既有命名，例如 C++ 调用方包含 `ArchiveTypes.h`，TS 调用方导入 `./archive`。原生图模块以各自的 `*Types.h` 作为操作入口。
 
@@ -29,16 +29,16 @@
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/host
-build/host/cocos-codegen generate --workspace config/cocos-workspace.json
-build/host/cocos-codegen generate --workspace config/cocos-workspace.json --check --diff
+build/host/cocos-codegen generate --workspace config/workspace.json
+build/host/cocos-codegen generate --workspace config/workspace.json --check --diff
 ctest --test-dir build/host --output-on-failure
 ```
 
 使用 clangd 时，在 `generator` 根目录运行 `cmake --preset clangd`。CMake 会在同一个 `build/host` 目录导出 `compile_commands.json`，供 clangd 读取项目的 C++20 编译选项和头文件路径。
 
-默认暂存目录为 `build/staging/cocos4/`。可用 `--output DIR` 指定另一处专用目录。`--check` 只读，退出码 0 表示与计划相符，1 表示文件缺失、变化或多出，2 表示输入或执行出错。生成器使用固定版本的 JSON 库，CMake 可使用已安装的包或按 SHA-256 下载源码。[工作区](../config/cocos-workspace.json) · [模块声明](../spec/render/cocos-archive.spec) · [TS 投影](../spec/render/cocos-archive.json)
+默认暂存目录为 `build/staging/cocos4/`。可用 `--output DIR` 指定另一处专用目录。`--check` 只读，退出码 0 表示与计划相符，1 表示文件缺失、变化或多出，2 表示输入或执行出错。生成器使用固定版本的 JSON 库，CMake 可使用已安装的包或按 SHA-256 下载源码。[工作区](../config/workspace.json) · [模块声明](../spec/render/archive.spec) · [TS 投影](../spec/render/archive.json)
 
-独立构建运行 `cocos.archive.generate`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线和归档互读测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/CocosLegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/cocos-baseline.json) · [历史重建测试](../tests/CocosLegacyReplay.cmake) · [引擎互读测试](../tests/CocosInterop.cmake)
+独立构建运行 `cocos.typegraph` 和 `cocos.archive.generate`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线和归档互读测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake)
 
 ## 生成流程
 
@@ -49,7 +49,7 @@ ctest --test-dir build/host --output-on-failure
 | 层 | 建议实现 |
 | --- | --- |
 | 声明输入 | 每个输出模块一份 `.spec`。把 `CocosCommon.cpp`、C++ 默认类型和 TS 映射中的引擎类型登记为外部模块，指向真实头文件和 TS 导出。按实际符号补全直接导入，例如 `RenderCommon` 的旧 `mRequires` 只列 `Gfx`，`LightInfo` 还引用了 `scene::Light` 和 `scene::ReflectionProbe`。 |
-| 语义模型 | 解析器保留声明的源位置。从语法树构建模块图和类型图，解析导入、限定名与签名。模块声明写入 `cocos-archive.spec` 这样的文件，语言投影放在同名的 `cocos-archive.json` 中。规则绑定到具体成员和重载，诊断同时指出出错的规则和相关声明。 |
+| 语义模型 | 解析器保留声明的源位置。从语法树构建模块图和类型图，解析导入、限定名与签名。模块声明写入 `archive.spec` 这样的文件，语言投影放在同名的 `archive.json` 中。规则绑定到具体成员和重载，诊断同时指出出错的规则和相关声明。 |
 | Cocos 生成计划 | 模块间的类型依赖来自 `.spec` 的导入。项目配置描述输出种类、相对路径和前缀。准备阶段确定引擎容器、图存储、TS 对象池、序列化字段顺序与绑定规则，列全路径并检查冲突，再将只读模型和计划交给后端。 |
 | 后端 | 引擎的 C++ 输出兼容 C++17，沿用 `ccstd`、Boost PMR 和 `IntrusivePtr`。图类型按声明的能力生成顶点、出边、组件和层级访问接口。TS 保留引擎 `./graph` 的导入路径，生成 Web 所需的类、枚举、短方法名和对象池。C++ 与 TS 序列化共用一份字段计划。Cocos JSB 生成 `se::Value` 转换和 SWIG 输入，由引擎的 `cc_gen_swig_files` 生成 `jsb_render_auto.*`。 |
 | 工作区和写入 | 后端返回相对路径与内容。工作区先核对整批文件与计划一一对应，再执行比较或写入。`--check` 只读并报告缺失、差异和过期路径。写入时保留相同文件的时间戳，按文件暂存和替换，中断后可按同一清单重跑。 |
@@ -76,13 +76,13 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 生成器自举
 
-`spec/codegen/` 描述工具实际使用的语法节点、模块图、类型图和输出计划。现有 Archive 工具使用手写的最小模型。建议在迁移 `RenderSettings` 前先引入较完整的类型图源码种子，让宿主尽早使用最终形态的模型。名字解析、建图、类型复用和依赖遍历由手写 C++ 实现，直接使用生成的图类型和成员函数。
+`CocosCodegenModel` 编译 `src/generated/` 中的类型图种子。解析器保留语法和源位置，建图器先登记作用域与声明，再绑定签名中的类型。Archive 的两个后端消费同一张只读图。作用域边从父指向子，字段和签名通过 `TypeId` 引用其类型，模块按声明顺序保存输出列表。[类型图声明](../spec/codegen/typegraph.spec) · [生成源码](../src/generated/TypeGraphTypes.h) · [建图器](../src/model/TypeGraphBuilder.cpp)
 
-首份种子可以用固定版本的外部工具在临时工作区生成。输入以 Cocos 自己的类型图声明为准，生成时适配文件前缀、命名空间、头文件、运行时符号和构建目标。把适配后的 C++ 源码提交到 `src/generated/` 前，在单独检出的 `generator` 中用 Cocos 自己的图支持代码编译、链接，并验证 Archive 产物。日常构建直接使用仓库中的源码种子。
+首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
 
 当 `cocos-codegen` 能处理普通结构体时，先重新生成诊断使用的源位置类型。能处理自身图声明后，再重新生成整份类型图。接管时允许调整源码布局和成员实现，将每项差异与声明或输出规则一起审查，验证类型查找、复合类型复用和引擎产物后，将候选输出确认为新快照。此后 CI 从 `generator` 的干净检出验证自举。
 
-1. CMake 用手写源码和已提交的种子构建 `cocos-codegen`。运行这个工具，按 `config/cocos-self-host.json` 将全部自身模型生成到空目录。
+1. CMake 用手写源码和已提交的种子构建 `cocos-codegen`。运行这个工具，按 `config/self-host.json` 将全部自身模型生成到空目录。
 2. 在新的构建目录重新编译同一个 `CocosCodegen` 目标。此时所有生成的头文件、源文件均取自上一步的输出，候选工具用它们完成编译和链接。
 3. 用刚构建的候选工具读取相同声明和配置，生成到第二个空目录。两轮输出和仓库中的种子快照须有相同的相对路径集合，每个文件内容逐字节一致。自举源码的生成和 Git 检出统一使用 LF。随后用该候选工具运行当前阶段的引擎生成与消费测试。
 
@@ -105,7 +105,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 | 职责 | 实现与可验证的行为 |
 | --- | --- |
 | 图与视图 | 图拥有顶点、邻接关系和组件。单源遍历只要求枚举顶点的出边、从边取得终点，全图遍历额外要求枚举顶点。引用视图枚举父子边，过滤视图只呈现入选顶点和边，两者都保留原图描述符。C++17 生成图可直接满足这些接口。 |
-| 深度优先遍历 | 在 `CocosGraphDFS.h` 实现显式栈 DFS，调用方提供访问者、颜色表和临时存储。`depthFirstVisit` 从给定顶点出发并沿用颜色，`depthFirstSearch` 初始化颜色，按枚举顺序从剩余未访问顶点继续搜索。按出边顺序访问，遇到灰色终点时报告回边，子顶点完成后再完成对应的树边。 |
+| 深度优先遍历 | 在 `GraphDFS.h` 实现显式栈 DFS，调用方提供访问者、颜色表和临时存储。`depthFirstVisit` 从给定顶点出发并沿用颜色，`depthFirstSearch` 初始化颜色，按枚举顺序从剩余未访问顶点继续搜索。按出边顺序访问，遇到灰色终点时报告回边，子顶点完成后再完成对应的树边。 |
 | 依赖分析 | 模块边从导入方指向依赖方。按 DFS 的顶点完成顺序输出模块，例如 A 导入 B 时先输出 B，菱形依赖中的公共模块只输出一次。遇到回边时用当前访问路径和导入位置报告完整环。类型构建按需遍历继承和按值成员依赖，指针或引用允许指向自身。 |
 
 原生运行时按消费者切换。`NativeExecutor.cpp` 在过滤视图上利用发现和完成事件执行渲染命令，`FrameGraphDispatcher.cpp` 在启用 pass 重排时计算传递闭包。阶段 3 迁移图遍历、引用视图和过滤视图时，同批适配执行器等手写调用方。阶段 4 接管 `FGDispatcher` 时，再用 Cocos 的可达性实现验证重排约束。Web 的 `graph.ts` 也将现有 DFS 标注为源自 Boost.Graph，迁移时独立实现遍历，并用同一组图核对 C++ 和 TS 的访问事件序列。[原生执行器](../../cocos4/native/cocos/renderer/pipeline/custom/NativeExecutor.cpp) · [帧图调度](../../cocos4/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp) · [Web 图接口与遍历](../../cocos4/cocos/rendering/custom/graph.ts)
@@ -116,7 +116,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `cc::codegen::TypeGraph` 是 C++、TS 和 JSB 后端共用的语义类型图。`ModuleGraph` 负责模块导入和依赖顺序，`TypeGraph` 记录作用域、声明归属和解析后的类型关系。类型投影按类型 ID 绑定，方法重命名按具体成员绑定。
 
-首份声明覆盖命名空间、模块归属、内建和外部类型、枚举、结构体、接口与图，也描述指针、引用、限定类型、函数和模板实例。字段、方法参数和返回值引用类型 ID。先让现有 `ArchiveInterface` 走通 `解析 → TypeGraph → 语言投影 → 输出`。例如两个归档接口的 `scratch()` 应复用同一个指向 `memory_resource` 的指针类型节点。第一步用 Archive 的四个文件逐字节一致、未知类型仍定位到原声明、原生与 TS 归档互读通过来验收。[当前类型模型](../src/model/CocosInterface.h) · [归档接口声明](../spec/render/cocos-archive.spec)
+首份声明覆盖命名空间、模块归属、内建和外部类型、枚举、结构体、接口与图，也描述指针、引用、限定类型、函数和模板实例。当前 `.spec` 前端已接入接口、参数、返回值和指针，其他声明随引擎模块接入。`cocos.typegraph` 检查两个归档接口的 `scratch()` 复用同一个指向 `memory_resource` 的指针节点，并保留各自的诊断位置。Archive 的四个产物和 C++/TS 互读继续使用原有回归用例。[语义验证](../tests/TypeGraphTest.cpp) · [归档接口声明](../spec/render/archive.spec)
 
 随后用 `RenderSettings` 验证结构体、枚举和字段引用，让 `PipelineSettings.bloom` 能解析到 `Bloom`，`Bloom.type` 能解析到 `BloomType`。到 `RenderCommon` 再接入跨模块类型解析和 JSB 投影。[设置声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderSettings.cpp)
 
@@ -146,7 +146,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 2. **交付一个能端到端工作的 Archive 模块。** CI 先单独检出 `generator`，用仓库中的 CMake 配置构建 `cocos-codegen`。第一批实现只需支持这两个接口所用的声明、外部类型、语言投影、文件输出和只读检查。生成表中的 4 个路径，与 Windows 基线逐字节对照。把这四个文件放进隔离的引擎副本，分别用真实的 `BinaryArchive.h` 和 `binary-archive.ts` 读写同一组布尔值、数值和 ASCII 字符串，互读对方写出的数据。[原生读写](../../cocos4/native/cocos/renderer/pipeline/custom/BinaryArchive.h) · [Web 读写](../../cocos4/cocos/rendering/custom/binary-archive.ts)
 3. **验证 Cocos 图算法与运行时。** 在生成器阶段用空图、孤立顶点、菱形依赖、有环图和长链验证 DFS 的覆盖范围、依赖顺序、环诊断和显式栈。C++17 消费用例只包含对应的 `*Types.h`，构造顶点、调用成员访问组件并遍历出边，链接该模块的 `*Types.cpp` 后运行。TS 侧验证 `locateChild`、`getParent`。用例覆盖边与父子关系共享和独立存储，以及过滤后访问的顶点和顺序。CI 检查生成器和原生用例的实际头文件依赖，含预编译头。检测到 `boost/graph/` 时检查失败，并报告引入路径。[旧 LayoutGraph 描述](../../cocos-engine-generator/Cocos/CocosBuilder/LayoutGraph.cpp) · [旧 RenderGraph 描述](../../cocos-engine-generator/Cocos/CocosBuilder/RenderGraph.cpp)
 4. **每批都放回引擎验证。** 在隔离的 `cocos4` 副本中按清单放入本批产物。图模块同批更新手写调用方、原生测试以及生成代码的包含和调用，例如重新生成 `LayoutGraphSerialization.cpp`。移除该批退役的图头和对应 CMake 条目，在全新构建目录编译并链接。Web 侧执行引擎的 `tsc --noEmit` 并运行图和对象池用例，编辑器资产由其消费端单独验证。绑定阶段执行引擎的 SWIG 步骤，编译生成的包装，并从 JS 调用一次渲染接口。布局归档用已有数据及跨 C++/TS 的样本验证字段顺序和枚举值。[原生测试调用方](../../cocos4/native/cocos/renderer/pipeline/custom/test/test.h) · [布局序列化](../../cocos4/native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp) · [Web 消费方](../../cocos4/cocos/rendering/custom/web-pipeline.ts) · [原生布局读取](../../cocos4/native/cocos/renderer/pipeline/custom/NativeFactory.cpp) · [引擎构建](../../cocos4/native/CMakeLists.txt)
-5. **按模块切换生成入口。** 新工具默认写入 `generator/build/staging/cocos4/`。建议从 `generator` 运行 `cocos-codegen generate --workspace config/cocos-workspace.json --check --diff` 比较暂存目录。引擎对照任务按批核对目标产物和已退役路径。仅替换生成器内部算法时，继续要求产物字节一致。切换引擎图接口时，逐文件审查成员化与适配代码带来的差异，以消费者编译、遍历事件和调度结果验收，再更新对应基线。每次接管记录模块、输入版本和产物清单。回退时恢复该批产物、旧头、CMake 登记及配套调用方。
+5. **按模块切换生成入口。** 新工具默认写入 `generator/build/staging/cocos4/`。建议从 `generator` 运行 `cocos-codegen generate --workspace config/workspace.json --check --diff` 比较暂存目录。引擎对照任务按批核对目标产物和已退役路径。仅替换生成器内部算法时，继续要求产物字节一致。切换引擎图接口时，逐文件审查成员化与适配代码带来的差异，以消费者编译、遍历事件和调度结果验收，再更新对应基线。每次接管记录模块、输入版本和产物清单。回退时恢复该批产物、旧头、CMake 登记及配套调用方。
 
 引擎文件归属按具体路径登记。同步时只接受本批标为 `generated` 的路径。`NativePipeline.cpp`、手写 Web 实现和编辑器 `.meta` 由引擎维护。`native/CMakeLists.txt` 的受管范围是 renderer 源列表。旧基线登记了 41 个原生生成文件，四个图头按批移出后核对 37 个原生生成文件的登记。
 

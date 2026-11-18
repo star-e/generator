@@ -1,16 +1,21 @@
+add_executable(CocosTypeGraphTest TypeGraphTest.cpp)
+target_link_libraries(CocosTypeGraphTest PRIVATE CocosCodegenModel)
+add_test(NAME cocos.typegraph COMMAND CocosTypeGraphTest
+    "${PROJECT_SOURCE_DIR}/spec/render/archive.spec")
+
 add_test(NAME cocos.archive.generate COMMAND "${CMAKE_COMMAND}"
     "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/CocosArchiveTest.cmake")
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/ArchiveTest.cmake")
 
 set(COCOS_CODEGEN_ENGINE_ROOT "" CACHE PATH "Engine checkout for baseline and archive consumer tests")
 if(COCOS_CODEGEN_ENGINE_ROOT)
     add_test(NAME cocos.baseline COMMAND "${CMAKE_COMMAND}"
         "-DENGINE=${COCOS_CODEGEN_ENGINE_ROOT}" "-DSOURCE=${PROJECT_SOURCE_DIR}"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/CocosBaseline.cmake")
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/Baseline.cmake")
     add_test(NAME cocos.archive.interop COMMAND "${CMAKE_COMMAND}"
         "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
         "-DENGINE=${COCOS_CODEGEN_ENGINE_ROOT}" "-DGENERATOR=${CMAKE_GENERATOR}"
         "-DPLATFORM=${CMAKE_GENERATOR_PLATFORM}" "-DTOOLSET=${CMAKE_GENERATOR_TOOLSET}"
         "-DPREFIX=${CMAKE_PREFIX_PATH}" "-DTOOLCHAIN=${CMAKE_TOOLCHAIN_FILE}"
-        "-DCONFIG=$<CONFIG>" -P "${CMAKE_CURRENT_SOURCE_DIR}/CocosInterop.cmake")
+        "-DCONFIG=$<CONFIG>" -P "${CMAKE_CURRENT_SOURCE_DIR}/Interop.cmake")
 endif()

@@ -1,7 +1,7 @@
 {
-  "void": { "ts": "void" },
-  "bool": { "ts": "boolean" },
-  "double": { "ts": "number" },
+  "void": { "builtin": true, "ts": "void" },
+  "bool": { "builtin": true, "ts": "boolean" },
+  "double": { "builtin": true, "ts": "number" },
   "std::string_view": { "header": "string_view", "ts": "string" },
   "boost::container::pmr::memory_resource": { "header": "boost/container/pmr/memory_resource.hpp" }
 }

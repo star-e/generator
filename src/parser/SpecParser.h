@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model/CocosInterface.h"
+#include "model/Interface.h"
 
 namespace cc::codegen {
 

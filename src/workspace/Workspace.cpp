@@ -1,6 +1,7 @@
-#include "workspace/CocosWorkspace.h"
-#include "codegen/CocosInterfaceEmitter.h"
-#include "parser/CocosSpecParser.h"
+#include "workspace/Workspace.h"
+#include "codegen/InterfaceEmitter.h"
+#include "parser/SpecParser.h"
+#include "model/TypeGraphBuilder.h"
 
 #include <algorithm>
 #include <cctype>
@@ -56,6 +57,7 @@ TypeTable loadTypes(const fs::path& path) {
     const auto json = object(path);
     for (const auto& [name, value] : json.items()) {
         ExternalType type{value.value("header", std::string{})};
+        type.builtin = value.value("builtin", false);
         if (value.contains("ts")) type.typescript = value.at("ts").get<std::string>();
         types.emplace(name, std::move(type));
     }
@@ -101,17 +103,24 @@ Files plan(const Json& settings, const fs::path& base) {
     if (eol != "crlf" && eol != "lf") throw std::runtime_error("lineEnding must be lf or crlf");
     const auto& modules = settings.at("modules");
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
-    std::set<std::string> moduleNames, outputKeys;
-    Files files;
+    std::vector<ModuleInput> inputs;
+    std::vector<OutputLayout> layouts;
     for (const auto& config : modules) {
         const auto spec = base / config.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
-        if (!moduleNames.insert(module.name).second) throw std::runtime_error("duplicate module " + module.name);
         auto projection = loadProjection(base / config.at("projection").get<std::string>(), module);
         OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),
                             config.at("prefix").get<std::string>(), outputPath(config.at("typescript"))};
         if (!identifier(layout.prefix)) throw std::runtime_error("invalid file prefix " + layout.prefix);
-        for (auto& [path, content] : emitInterfaces(module, layout, types, projection, preamble)) {
+        inputs.push_back({std::move(module), std::move(projection)});
+        layouts.push_back(std::move(layout));
+    }
+    const auto graph = buildTypeGraph(inputs, types);
+    std::set<std::string> outputKeys;
+    Files files;
+    for (size_t i = 0; i < layouts.size(); ++i) {
+        const ModuleId owner{static_cast<uint32_t>(i)};
+        for (auto& [path, content] : emitInterfaces(graph, owner, layouts[i], preamble)) {
             auto relative = path.lexically_normal();
             auto key = relative.generic_string();
             std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });

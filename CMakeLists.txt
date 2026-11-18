@@ -11,14 +11,21 @@ if(NOT nlohmann_json_FOUND)
     FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
+add_library(CocosCodegenModel STATIC
+    src/generated/TypeGraphTypes.cpp
+    src/model/TypeGraph.cpp
+    src/model/TypeGraphBuilder.cpp
+    src/parser/SpecParser.cpp)
+target_compile_features(CocosCodegenModel PUBLIC cxx_std_20)
+target_include_directories(CocosCodegenModel PUBLIC src)
+set_target_properties(CocosCodegenModel PROPERTIES CXX_EXTENSIONS OFF)
+
 add_executable(CocosCodegen
-    src/cli/CocosMain.cpp
-    src/parser/CocosSpecParser.cpp
-    src/codegen/CocosInterfaceEmitter.cpp
-    src/workspace/CocosWorkspace.cpp)
+    src/cli/Main.cpp
+    src/codegen/InterfaceEmitter.cpp
+    src/workspace/Workspace.cpp)
 target_compile_features(CocosCodegen PRIVATE cxx_std_20)
-target_include_directories(CocosCodegen PRIVATE src)
-target_link_libraries(CocosCodegen PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(CocosCodegen PRIVATE CocosCodegenModel nlohmann_json::nlohmann_json)
 set_target_properties(CocosCodegen PROPERTIES OUTPUT_NAME cocos-codegen CXX_EXTENSIONS OFF)
 include(CTest)
 if(BUILD_TESTING)

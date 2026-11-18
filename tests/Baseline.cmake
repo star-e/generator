@@ -1,5 +1,5 @@
-include("${CMAKE_CURRENT_LIST_DIR}/CocosTestSupport.cmake")
-file(READ "${SOURCE}/config/cocos-baseline.json" baseline)
+include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
+file(READ "${SOURCE}/config/baseline.json" baseline)
 string(JSON count LENGTH "${baseline}" files)
 if(NOT count EQUAL 52)
     message(FATAL_ERROR "Expected 52 historical paths")

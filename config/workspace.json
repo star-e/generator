@@ -1,12 +1,12 @@
 {
   "outputRoot": "../build/staging/cocos4",
   "lineEnding": "crlf",
-  "preamble": "cocos-preamble.txt",
-  "types": "../spec/extern/cocos-types.json",
+  "preamble": "preamble.txt",
+  "types": "../spec/extern/types.json",
   "modules": [
     {
-      "spec": "../spec/render/cocos-archive.spec",
-      "projection": "../spec/render/cocos-archive.json",
+      "spec": "../spec/render/archive.spec",
+      "projection": "../spec/render/archive.json",
       "nativeRoot": "native",
       "includeDir": "cocos/renderer/pipeline/custom",
       "prefix": "Archive",

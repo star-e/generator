@@ -1,4 +1,4 @@
-#include "workspace/CocosWorkspace.h"
+#include "workspace/Workspace.h"
 
 #include <iostream>
 #include <stdexcept>
