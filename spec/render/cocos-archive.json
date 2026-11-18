@@ -1,0 +1,14 @@
+{
+  "OutputArchive": {
+    "writeBool": "b",
+    "writeNumber": "n",
+    "writeString": "s",
+    "scratch": null
+  },
+  "InputArchive": {
+    "readBool": "b",
+    "readNumber": "n",
+    "readString": "s",
+    "scratch": null
+  }
+}

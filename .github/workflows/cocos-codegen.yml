@@ -1,0 +1,16 @@
+name: Cocos code generator
+on: [push, pull_request]
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build/host -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build/host --config Release --parallel
+      - run: ctest --test-dir build/host -C Release --output-on-failure

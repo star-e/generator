@@ -1,0 +1,14 @@
+{
+  "version": 5,
+  "configurePresets": [
+    {
+      "name": "clangd",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/host",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ]
+}
