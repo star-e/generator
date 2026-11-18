@@ -76,9 +76,11 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 生成器自举
 
-`spec/codegen/` 描述工具实际使用的语法节点、模块图、类型图和输出计划。解析、依赖遍历和代码输出算法由手写 C++ 实现，直接使用生成的模型。首批 `ArchiveInterface` 交付时就把宿主模型和引擎类型的依赖分开。具备结构体生成能力后，先接入编译诊断使用的源位置类型。具备图生成能力后，再接入 `ModuleGraph` 和 `TypeGraph`。
+`spec/codegen/` 描述工具实际使用的语法节点、模块图、类型图和输出计划。现有 Archive 工具使用手写的最小模型。建议在迁移 `RenderSettings` 前先引入较完整的类型图源码种子，让宿主尽早使用最终形态的模型。名字解析、建图、类型复用和依赖遍历由手写 C++ 实现，直接使用生成的图类型和成员函数。
 
-首个工具用手写的最小模型构建。每当它能生成一个自身模型，就将生成的 C++ 源码作为种子提交到 `src/generated/`，让宿主改用这份源码。CI 从 `generator` 的干净检出开始验证。
+首份种子可以用固定版本的外部工具在临时工作区生成。输入以 Cocos 自己的类型图声明为准，生成时适配文件前缀、命名空间、头文件、运行时符号和构建目标。把适配后的 C++ 源码提交到 `src/generated/` 前，在单独检出的 `generator` 中用 Cocos 自己的图支持代码编译、链接，并验证 Archive 产物。日常构建直接使用仓库中的源码种子。
+
+当 `cocos-codegen` 能处理普通结构体时，先重新生成诊断使用的源位置类型。能处理自身图声明后，再重新生成整份类型图。接管时允许调整源码布局和成员实现，将每项差异与声明或输出规则一起审查，验证类型查找、复合类型复用和引擎产物后，将候选输出确认为新快照。此后 CI 从 `generator` 的干净检出验证自举。
 
 1. CMake 用手写源码和已提交的种子构建 `cocos-codegen`。运行这个工具，按 `config/cocos-self-host.json` 将全部自身模型生成到空目录。
 2. 在新的构建目录重新编译同一个 `CocosCodegen` 目标。此时所有生成的头文件、源文件均取自上一步的输出，候选工具用它们完成编译和链接。
@@ -109,6 +111,16 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 原生运行时按消费者切换。`NativeExecutor.cpp` 在过滤视图上利用发现和完成事件执行渲染命令，`FrameGraphDispatcher.cpp` 在启用 pass 重排时计算传递闭包。阶段 3 迁移图遍历、引用视图和过滤视图时，同批适配执行器等手写调用方。阶段 4 接管 `FGDispatcher` 时，再用 Cocos 的可达性实现验证重排约束。Web 的 `graph.ts` 也将现有 DFS 标注为源自 Boost.Graph，迁移时独立实现遍历，并用同一组图核对 C++ 和 TS 的访问事件序列。[原生执行器](../../cocos4/native/cocos/renderer/pipeline/custom/NativeExecutor.cpp) · [帧图调度](../../cocos4/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp) · [Web 图接口与遍历](../../cocos4/cocos/rendering/custom/graph.ts)
 
 ## 模块迁移顺序
+
+### 在 RenderSettings 之前接入 TypeGraph
+
+`cc::codegen::TypeGraph` 是 C++、TS 和 JSB 后端共用的语义类型图。`ModuleGraph` 负责模块导入和依赖顺序，`TypeGraph` 记录作用域、声明归属和解析后的类型关系。类型投影按类型 ID 绑定，方法重命名按具体成员绑定。
+
+首份声明覆盖命名空间、模块归属、内建和外部类型、枚举、结构体、接口与图，也描述指针、引用、限定类型、函数和模板实例。字段、方法参数和返回值引用类型 ID。先让现有 `ArchiveInterface` 走通 `解析 → TypeGraph → 语言投影 → 输出`。例如两个归档接口的 `scratch()` 应复用同一个指向 `memory_resource` 的指针类型节点。第一步用 Archive 的四个文件逐字节一致、未知类型仍定位到原声明、原生与 TS 归档互读通过来验收。[当前类型模型](../src/model/CocosInterface.h) · [归档接口声明](../spec/render/cocos-archive.spec)
+
+随后用 `RenderSettings` 验证结构体、枚举和字段引用，让 `PipelineSettings.bloom` 能解析到 `Bloom`，`Bloom.type` 能解析到 `BloomType`。到 `RenderCommon` 再接入跨模块类型解析和 JSB 投影。[设置声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderSettings.cpp)
+
+### 引擎模块和产物
 
 旧版 52 个文件作为历史基线。按这 11 个模块的新版计划，退役四个图头后生成 **48 个文件**，其中原生 C++ 文件为 37 个。C++ 默认目录是 `native/cocos/renderer/pipeline/custom/`，引擎 TS 默认目录是 `cocos/rendering/custom/`。模块名与文件前缀分别配置，尤其注意 `PrivateInterface → Private` 和 `PrivateTypes → Native`。
 
