@@ -8,23 +8,7 @@ foreach(path IN ITEMS native/cocos/renderer/pipeline/custom/BinaryArchive.h
 endforeach()
 
 set(build "${work}/build")
-set(args -G "${GENERATOR}")
-if(PLATFORM)
-    list(APPEND args -A "${PLATFORM}")
-endif()
-if(TOOLSET)
-    list(APPEND args -T "${TOOLSET}")
-endif()
-if(TOOLCHAIN)
-    list(APPEND args "-DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN}")
-endif()
-if(CONFIG)
-    set(configArg --config "${CONFIG}")
-endif()
-execute_process(COMMAND "${CMAKE_COMMAND}" -S "${SOURCE}/tests/consumer" -B "${build}"
-    ${args} "-DSTAGING=${stage}" "-DCMAKE_PREFIX_PATH=${PREFIX}" "-DCMAKE_BUILD_TYPE=${CONFIG}"
-    COMMAND_ERROR_IS_FATAL ANY)
-run("${CMAKE_COMMAND}" --build "${build}" ${configArg})
+build_consumer("${SOURCE}/tests/consumer" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)
 
 find_program(node node REQUIRED)

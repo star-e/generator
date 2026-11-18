@@ -1,5 +1,6 @@
 #include "workspace/Workspace.h"
 #include "codegen/InterfaceEmitter.h"
+#include "codegen/RecordEmitter.h"
 #include "codegen/SettingsEmitter.h"
 #include "parser/SpecParser.h"
 #include "model/TypeGraphBuilder.h"
@@ -53,13 +54,14 @@ fs::path outputPath(const Json& value) {
     return path.lexically_normal();
 }
 
-TypeTable loadTypes(const fs::path& path) {
+TypeTable loadTypes(const Json& json) {
     TypeTable types;
-    const auto json = object(path);
+    if (!json.is_object()) throw std::runtime_error("expected external type mappings");
     for (const auto& [name, value] : json.items()) {
         ExternalType type{value.value("header", std::string{})};
         type.builtin = value.value("builtin", false);
         if (value.contains("ts")) type.typescript = value.at("ts").get<std::string>();
+        if (value.contains("tsModule")) type.typescriptModule = outputPath(value.at("tsModule")).generic_string();
         types.emplace(name, std::move(type));
     }
     return types;
@@ -116,21 +118,21 @@ std::string normalizeLines(const std::string& input, bool crlf) {
 }
 
 Files plan(const Json& settings, const fs::path& base) {
-    auto types = loadTypes(base / settings.at("types").get<std::string>());
+    auto types = loadTypes(object(base / settings.at("types").get<std::string>()));
     auto preamble = normalizeLines(read(base / settings.at("preamble").get<std::string>()), false);
     const auto eol = settings.at("lineEnding").get<std::string>();
     if (eol != "crlf" && eol != "lf") throw std::runtime_error("lineEnding must be lf or crlf");
     const auto& modules = settings.at("modules");
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
     std::vector<ModuleInput> inputs;
-    std::vector<std::variant<std::monostate, OutputLayout, SettingsOutput>> layouts;
+    std::vector<std::variant<std::monostate, OutputLayout, SettingsOutput, RecordOutput>> layouts;
     for (const auto& config : modules) {
         const auto spec = base / config.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
         const auto backend = config.value("backend", std::string{"interfaces"});
         if (backend == "model") {
             layouts.emplace_back(std::monostate{});
-            inputs.push_back({std::move(module), {}});
+            inputs.push_back({std::move(module), {}, loadTypes(config.value("types", Json::object()))});
             continue;
         }
         const auto projection = base / config.at("projection").get<std::string>();
@@ -138,6 +140,22 @@ Files plan(const Json& settings, const fs::path& base) {
         if (ts.extension() != ".ts") throw std::runtime_error("expected .ts output");
         if (backend == "settings") {
             layouts.emplace_back(SettingsOutput{ts, loadSettingsProjection(projection)});
+            inputs.push_back({std::move(module), {}});
+        } else if (backend == "records") {
+            const auto rules = object(projection);
+            RecordOutput output{.header = outputPath(config.at("header")), .typescript = ts};
+            if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
+            if (rules.contains("pools")) {
+                rules.at("pools").get_to(output.pools);
+                output.poolModule = outputPath(rules.at("poolModule"));
+                std::set<std::string> members;
+                for (const auto& [name, member] : output.pools) {
+                    if (!identifier(member) || !members.insert(member).second) {
+                        throw std::runtime_error(projection.string() + ": invalid pool member " + member);
+                    }
+                }
+            }
+            layouts.emplace_back(std::move(output));
             inputs.push_back({std::move(module), {}});
         } else if (backend == "interfaces") {
             OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),
@@ -159,6 +177,8 @@ Files plan(const Json& settings, const fs::path& base) {
         Files emitted;
         if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {
             emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->projection, preamble));
+        } else if (const auto* records = std::get_if<RecordOutput>(&layouts[i])) {
+            emitted = emitRecords(graph, owner, *records, preamble);
         } else {
             emitted = emitInterfaces(graph, owner, std::get<OutputLayout>(layouts[i]), preamble);
         }

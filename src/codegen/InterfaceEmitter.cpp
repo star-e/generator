@@ -1,4 +1,5 @@
 #include "codegen/InterfaceEmitter.h"
+#include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
 
 #include <set>
@@ -80,7 +81,12 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
                      const std::string& preamble) {
     const auto& module = graph.modules.at(owner.value);
     std::set<std::string> headers;
-    auto collectHeader = [&](const TypeUse& type) {
+    TypeImports typeImports;
+    auto collectDependencies = [&](const TypeUse& type, bool visible) {
+        const auto& node = graph.node(type.type);
+        if (visible && node.typescriptName && !node.typescriptModule.empty()) {
+            typeImports[node.typescriptModule].insert(*node.typescriptName);
+        }
         const auto& base = baseType(graph, type.type);
         if (base.qualifiedName.empty()) throw std::runtime_error(type.location.describe() + ": unsupported C++ interface type");
         const auto& header = base.cppHeader;
@@ -94,8 +100,9 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
         const auto* interfaceType = std::get_if<InterfaceType>(&decl.data);
         if (!interfaceType) throw std::runtime_error("expected an interface declaration for " + decl.qualifiedName);
         for (const auto& method : interfaceType->methods) {
-            collectHeader(method.result);
-            for (const auto& param : method.parameters) collectHeader(param.type);
+            const bool visible = method.typescriptName.has_value();
+            collectDependencies(method.result, visible);
+            for (const auto& param : method.parameters) collectDependencies(param.type, visible);
         }
     }
 
@@ -108,6 +115,8 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
     header << "#include \"" << (layout.includeDir / fwdName).generic_string() << "\"\n";
     impl << preamble << "// clang-format off\n" << lintBegin << "#include \"" << typeName << "\"\n";
     ts << preamble << "/* eslint-disable max-len */\n";
+    writeTypeImports(ts, typeImports, layout.typescript);
+    if (!typeImports.empty()) ts << '\n';
     for (auto* out : {&fwd, &header, &impl}) {
         for (const auto& name : module.namespaces) *out << "\nnamespace " << name << " {\n";
         *out << '\n';

@@ -86,6 +86,7 @@ constexpr bool validateFixedLayout_CocosTypeGraph() {
         static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::ExternalTypeNode");
         static_assert(sizeof(CheckedType) == 1ULL, "fixed layout size: ::cc::codegen::ExternalTypeNode");
         static_assert(alignof(CheckedType) == 1ULL, "fixed layout alignment: ::cc::codegen::ExternalTypeNode");
+        static_assert(offsetof(CheckedType, isStruct) == 0ULL, "fixed layout offset isStruct: ::cc::codegen::ExternalTypeNode");
     }
     {
         using CheckedType = ::cc::codegen::AliasType;

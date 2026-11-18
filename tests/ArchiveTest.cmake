@@ -11,21 +11,25 @@ endif()
 run(${generate})
 file(READ "${SOURCE}/config/baseline.json" baseline)
 file(GLOB_RECURSE files RELATIVE "${output}" "${output}/*")
-set(expectedFiles
+set(baselineFiles
     cocos/rendering/custom/archive.ts
     editor/assets/default_renderpipeline/builtin-pipeline-types.ts
     native/cocos/renderer/pipeline/custom/ArchiveFwd.h
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
     native/cocos/renderer/pipeline/custom/ArchiveTypes.h)
+set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts native/cocos/renderer/pipeline/custom/RenderCommonTypes.h)
+list(SORT expectedFiles)
 if(NOT files STREQUAL expectedFiles)
     message(FATAL_ERROR "Unexpected generated paths: ${files}")
 endif()
-foreach(path IN LISTS files)
+foreach(path IN LISTS baselineFiles)
     string(JSON expected GET "${baseline}" files "${path}")
     file(SHA256 "${output}/${path}" actual)
     if(NOT actual STREQUAL expected)
         message(FATAL_ERROR "Baseline mismatch: ${path} (${actual})")
     endif()
+endforeach()
+foreach(path IN LISTS files)
     file(TIMESTAMP "${output}/${path}" stamp "%s.%f" UTC)
     list(APPEND before "${stamp}")
 endforeach()

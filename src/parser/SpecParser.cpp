@@ -41,9 +41,10 @@ public:
         std::set<std::string> names;
         while (!accept("}")) {
             if (external) {
-                if (!accept("class")) expect("struct");
+                const bool isStruct = accept("struct");
+                if (!isStruct) expect("class");
                 const auto start = location;
-                module.declarations.push_back({uniqueName(names), start, ExternalDeclaration{}});
+                module.declarations.push_back({uniqueName(names), start, ExternalDeclaration{isStruct}});
                 expect(";");
             } else {
                 module.declarations.push_back(declaration(names));
@@ -149,10 +150,28 @@ private:
         }
         result.location = location;
         result.name = uniqueName(names);
+        if (auto* enumeration = std::get_if<Enum>(&result.data); enumeration && accept(":")) {
+            enumeration->underlying = type();
+        }
         expect("{");
         std::set<std::string> members;
         if (auto* record = std::get_if<Record>(&result.data)) {
-            while (!accept("}")) record->fields.push_back(field(members));
+            while (!accept("}")) {
+                const auto start = location;
+                if (token == "constructor" && followedBy("(")) {
+                    advance();
+                    Constructor ctor{start};
+                    expect("(");
+                    if (!accept(")")) {
+                        do { ctor.fields.push_back(identifier()); } while (accept(","));
+                        expect(")");
+                    }
+                    expect(";");
+                    record->constructors.push_back(std::move(ctor));
+                } else {
+                    record->fields.push_back(field(members));
+                }
+            }
         } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {
             while (!accept("}")) {
                 enumeration->values.push_back(uniqueName(members));
@@ -166,6 +185,12 @@ private:
             while (!accept("}")) methods.push_back(method(members));
         }
         return result;
+    }
+
+    bool followedBy(std::string_view expected) const {
+        auto next = *this;
+        next.advance();
+        return next.token == expected;
     }
 
     Field field(std::set<std::string>& names) {

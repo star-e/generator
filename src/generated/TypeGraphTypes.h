@@ -60,7 +60,10 @@ struct Enumerator {
 struct NamespaceType {};
 struct TagType {};
 struct BuiltinType {};
-struct ExternalTypeNode {};
+
+struct ExternalTypeNode {
+    bool isStruct = false;
+};
 
 struct EnumType {
     TypeId underlying;
@@ -68,6 +71,7 @@ struct EnumType {
 };
 
 struct RecordType {
+    std::vector<std::vector<uint32_t>> constructors;
     std::vector<TypeId> bases;
     std::vector<FieldInfo> fields;
     std::vector<MethodInfo> methods;
@@ -163,6 +167,7 @@ struct TypeNode {
     TypeData data;
     std::string cppHeader;
     std::optional<std::string> typescriptName;
+    std::string typescriptModule;
     std::vector<TypeId> templateParameters;
 };
 

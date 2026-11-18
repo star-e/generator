@@ -5,7 +5,7 @@ set(workspace "${work}/config/workspace.json")
 set(generate "${TOOL}" generate --workspace "${workspace}" --output "${work}/stage")
 run(${generate})
 
-# Consumer-first and provider-first workspaces must plan the same five files.
+# Consumer-first and provider-first workspaces must plan the same files.
 file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)
 math(EXPR last "${count} - 1")
@@ -27,16 +27,16 @@ function(change_imports before after)
 endfunction()
 
 change_imports("import ReflectionProbe;" "")
-expect_failure(2 "render-common.spec:8:25: cc::scene::ReflectionProbe requires import ReflectionProbe in module RenderCommon" ${generate})
+expect_failure(2 "render-common.spec:14:25: cc::scene::ReflectionProbe requires import ReflectionProbe in module RenderCommon" ${generate})
 change_imports("import Light;" "")
-expect_failure(2 "render-common.spec:7:38: cc::scene::Light requires import Light in module RenderCommon" ${generate})
+expect_failure(2 "render-common.spec:13:38: cc::scene::Light requires import Light in module RenderCommon" ${generate})
 
 # A provider's own imports do not make a third module's names visible to its consumer.
 set(probe "${work}/spec/extern/reflection-probe.spec")
 file(READ "${probe}" provider)
 string(REPLACE "namespace" "import Light;\nnamespace" indirect "${provider}")
 file(WRITE "${probe}" "${indirect}")
-expect_failure(2 "render-common.spec:7:38: cc::scene::Light requires import Light" ${generate})
+expect_failure(2 "render-common.spec:13:38: cc::scene::Light requires import Light" ${generate})
 
 change_imports("import Light;" "import Missing;")
 expect_failure(2 "render-common.spec:2:8: unknown imported module Missing" ${generate})

@@ -20,15 +20,24 @@
     },
     {
       "spec": "../spec/render/render-common.spec",
-      "backend": "model"
+      "backend": "records",
+      "projection": "../spec/render/render-common.json",
+      "header": "native/cocos/renderer/pipeline/custom/RenderCommonTypes.h",
+      "typescript": "cocos/rendering/custom/types.ts"
     },
     {
       "spec": "../spec/extern/light.spec",
-      "backend": "model"
+      "backend": "model",
+      "types": {
+        "Light": { "header": "cocos/scene/Light.h", "ts": "Light", "tsModule": "cocos/render-scene/scene" }
+      }
     },
     {
       "spec": "../spec/extern/reflection-probe.spec",
-      "backend": "model"
+      "backend": "model",
+      "types": {
+        "ReflectionProbe": { "header": "cocos/scene/ReflectionProbe.h", "ts": "ReflectionProbe", "tsModule": "cocos/render-scene/scene/reflection-probe" }
+      }
     }
   ]
 }

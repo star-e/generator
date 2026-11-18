@@ -97,7 +97,7 @@ void checkImports(const std::filesystem::path& specs) {
         import RenderCommon;
         namespace cc::render { struct PassInfo { light: LightInfo; } }
     )"), {}});
-    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"bool", {}}};
+    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
         const auto& info = graph.node(infoId);
@@ -114,7 +114,12 @@ void checkImports(const std::filesystem::path& specs) {
                 std::holds_alternative<ExternalTypeNode>(probeNode.data), "lost external declarations");
         require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module}, "wrong direct imports");
 
-        const auto& fields = std::get<RecordType>(info.data).fields;
+        const auto& enumeration = std::get<EnumType>(graph.node(graph.findType("cc::render::AccessType")).data);
+        require(enumeration.underlying == graph.findType("uint8_t"), "lost enum underlying type");
+        const auto& record = std::get<RecordType>(info.data);
+        require(record.constructors == std::vector<std::vector<uint32_t>>{{0, 2, 3, 1}, {0, 2}},
+                "lost native constructor overloads or argument order");
+        const auto& fields = record.fields;
         require(fields.size() == 4 && fields[0].name == "light" && fields[0].isNullable &&
                 fields[1].name == "probe" && fields[1].isNullable, "wrong LightInfo resources");
         const auto& ptr = std::get<TemplateInstanceType>(graph.node(fields[0].type.type).data);

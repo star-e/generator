@@ -23,6 +23,7 @@ set_target_properties(CocosCodegenModel PROPERTIES CXX_EXTENSIONS OFF)
 add_executable(CocosCodegen
     src/cli/Main.cpp
     src/codegen/InterfaceEmitter.cpp
+    src/codegen/RecordEmitter.cpp
     src/codegen/SettingsEmitter.cpp
     src/workspace/Workspace.cpp)
 target_compile_features(CocosCodegen PRIVATE cxx_std_20)

@@ -33,7 +33,8 @@ void registerExternalTypes(TypeGraph& graph, const TypeTable& types) {
         const auto name = pos == std::string::npos ? qualified : qualified.substr(pos + 2);
         graph.appendNode(TypeNode{.name = name, .qualifiedName = qualified,
                                   .data = type.builtin ? TypeData{BuiltinType{}} : TypeData{ExternalTypeNode{}},
-                                  .cppHeader = type.header, .typescriptName = type.typescript}, parent);
+                                  .cppHeader = type.header, .typescriptName = type.typescript,
+                                  .typescriptModule = type.typescriptModule}, parent);
     }
 }
 
@@ -88,6 +89,24 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         }
         result.fields.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable});
     }
+    std::set<std::vector<uint32_t>> signatures;
+    for (const auto& ctor : syntax.constructors) {
+        std::vector<uint32_t> members, signature;
+        for (const auto& name : ctor.fields) {
+            const auto field = std::ranges::find(result.fields, name, &FieldInfo::name);
+            if (field == result.fields.end()) throw std::runtime_error(ctor.location.describe() + ": unknown constructor field " + name);
+            const auto index = static_cast<uint32_t>(field - result.fields.begin());
+            if (std::ranges::find(members, index) != members.end()) {
+                throw std::runtime_error(ctor.location.describe() + ": repeated constructor field " + name);
+            }
+            members.push_back(index);
+            signature.push_back(field->type.type.value);
+        }
+        if (!signatures.insert(std::move(signature)).second) {
+            throw std::runtime_error(ctor.location.describe() + ": duplicate constructor signature");
+        }
+        result.constructors.push_back(std::move(members));
+    }
     return result;
 }
 
@@ -98,7 +117,7 @@ TypeData declare(const Declaration& decl) {
         return enumeration;
     }
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};
-    if (std::holds_alternative<ExternalDeclaration>(decl.data)) return ExternalTypeNode{};
+    if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) return ExternalTypeNode{external->isStruct};
     return InterfaceType{};
 }
 
@@ -236,10 +255,24 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 throw std::runtime_error(decl.location.describe() + ": duplicate type " + qualified);
             }
             const bool external = std::holds_alternative<ExternalDeclaration>(decl.data);
-            auto id = graph.appendNode(TypeNode{.name = decl.name, .qualifiedName = std::move(qualified),
-                                                .module = owner, .data = declare(decl),
-                                                .typescriptName = external ? std::nullopt : std::optional{decl.name}}, parent);
+            TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl)};
+            if (external) {
+                if (const auto it = input.externalTypes.find(decl.name); it != input.externalTypes.end()) {
+                    node.cppHeader = it->second.header;
+                    node.typescriptName = it->second.typescript;
+                    node.typescriptModule = it->second.typescriptModule;
+                }
+            } else {
+                node.typescriptName = decl.name;
+            }
+            auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
+        }
+        for (const auto& [name, mapping] : input.externalTypes) {
+            const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
+            if (it == module.declarations.end() || !std::holds_alternative<ExternalDeclaration>(it->data)) {
+                throw std::runtime_error(module.name + ": mapping for unknown external type " + name);
+            }
         }
         scopes.push_back(std::move(scope));
     }
@@ -253,6 +286,15 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             if (const auto* record = std::get_if<Record>(&decl.data)) {
                 auto payload = resolveRecord(graph, *record, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);
+            } else if (const auto* enumeration = std::get_if<Enum>(&decl.data); enumeration && enumeration->underlying) {
+                const auto underlying = resolve(graph, *enumeration->underlying, scopes[i], owner);
+                const auto& base = graph.node(underlying.type);
+                static const std::set<std::string> integral{"int", "unsigned", "short", "long", "char", "bool",
+                    "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t"};
+                if (!integral.contains(base.qualifiedName)) {
+                    throw std::runtime_error(underlying.location.describe() + ": expected integral enum base");
+                }
+                std::get<EnumType>(graph.getNode(id.value).data).underlying = underlying.type;
             } else if (std::holds_alternative<Interface>(decl.data)) {
                 auto payload = resolveInterface(graph, decl, input.projection, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);

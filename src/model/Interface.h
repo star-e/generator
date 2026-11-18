@@ -41,15 +41,22 @@ struct Field {
     bool isNullable{};
 };
 
+struct Constructor {
+    SourceLocation location;
+    std::vector<std::string> fields;
+};
+
 struct Record {
     std::vector<Field> fields;
+    std::vector<Constructor> constructors;
 };
 
 struct Enum {
     std::vector<std::string> values;
+    std::optional<TypeRef> underlying;
 };
 
-struct ExternalDeclaration {};
+struct ExternalDeclaration { bool isStruct{}; };
 
 struct Declaration {
     std::string name;
@@ -73,6 +80,7 @@ struct ExternalType {
     std::string header;
     std::optional<std::string> typescript;
     bool builtin{};
+    std::string typescriptModule;
 };
 using TypeTable = std::map<std::string, ExternalType>;
 using Projection = std::map<std::string, std::map<std::string, std::optional<std::string>>>;

@@ -37,9 +37,10 @@ namespace codegen {
     struct NamespaceType {}
     struct TagType {}
     struct BuiltinType {}
-    struct ExternalTypeNode {}
+    struct ExternalTypeNode { isStruct: bool = false; }
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; }
     struct RecordType {
+        constructors: std::vector<std::vector<uint32_t>>;
         bases: std::vector<TypeId>;
         fields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;
@@ -77,6 +78,7 @@ namespace codegen {
         data: TypeData;
         cppHeader: std::string;
         typescriptName: std::optional<std::string>;
+        typescriptModule: std::string;
         templateParameters: std::vector<TypeId>;
     }
     struct TypeModule {

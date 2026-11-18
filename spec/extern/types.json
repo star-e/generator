@@ -3,11 +3,12 @@
   "bool": { "builtin": true, "ts": "boolean" },
   "double": { "builtin": true, "ts": "number" },
   "float": { "builtin": true, "ts": "number" },
+  "uint8_t": { "header": "cstdint", "ts": "number" },
   "uint32_t": { "header": "cstdint", "ts": "number" },
   "cc::gfx::SampleCount": { "ts": "gfx.SampleCount" },
   "cc::Material": { "ts": "Material" },
   "cc::Texture2D": { "ts": "Texture2D" },
-  "cc::IntrusivePtr": {},
+  "cc::IntrusivePtr": { "header": "cocos/base/Ptr.h" },
   "std::string_view": { "header": "string_view", "ts": "string" },
   "boost::container::pmr::memory_resource": { "header": "boost/container/pmr/memory_resource.hpp" }
 }
