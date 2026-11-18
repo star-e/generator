@@ -454,7 +454,11 @@ std::string tsParams(const std::vector<Member>& members, const Order& order, boo
 }
 
 Order poolResetOrder(const std::string& name, const std::vector<Member>& members, const Order& order,
-                     const PoolProjection& pool) {
+                     const PoolProjection& pool, bool resetToDefaults) {
+    if (resetToDefaults) {
+        if (!pool.keepOnReset.empty()) throw std::runtime_error(name + ": resetToDefaults conflicts with keepOnReset");
+        return {};
+    }
     Order reset;
     auto retained = pool.keepOnReset;
     for (auto index : order) {
@@ -494,7 +498,7 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>&
               const Order* poolReset, bool resetToDefaults) {
     const bool initializeFields = resetToDefaults && std::get<RecordType>(node.data).constructors.empty();
     ts << "export class " << node.name << " {\n";
-    if (!initializeFields) tsConstructorAndPoolReset(ts, members, order, poolReset);
+    if (!initializeFields) tsConstructorAndPoolReset(ts, members, order, resetToDefaults ? nullptr : poolReset);
     if (resetToDefaults) {
         ts << "    reset (): void {\n";
         for (const auto& m : members) {
@@ -626,9 +630,9 @@ struct Pool {
 
     void add(const std::string& name, const std::string& pool, const std::vector<Member>& members, const Order& order) {
         resets << "        this." << pool << ".reset(); // " << name << "\n";
-        factories << "    create" << name << " (\n";
-        if (!order.empty()) factories << "        " << tsParams(members, order, true, ",\n        ") << ",\n";
-        factories << "    ): " << name << " {\n        const v = this." << pool << ".add(); // " << name << "\n        v.reset(";
+        factories << "    create" << name << " (";
+        if (!order.empty()) factories << "\n        " << tsParams(members, order, true, ",\n        ") << ",\n    ";
+        factories << "): " << name << " {\n        const v = this." << pool << ".add(); // " << name << "\n        v.reset(";
         for (size_t i = 0; i < order.size(); ++i) {
             if (i) factories << ", ";
             factories << members.at(order[i]).name;
@@ -718,9 +722,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const bool resetToDefaults = pendingReset.erase(node.name) != 0;
         std::optional<Order> reset;
         if (entry != output.pools.end()) {
-            if (resetToDefaults) throw std::runtime_error(node.name + ": resetToDefaults conflicts with pool reset");
             ++poolCount;
-            reset = poolResetOrder(node.name, members, order, entry->second);
+            reset = poolResetOrder(node.name, members, order, entry->second, resetToDefaults);
             pool.add(node.name, entry->second.member, members, *reset);
         }
         tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults);

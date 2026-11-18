@@ -71,25 +71,35 @@ compareDeclaration(cpp, 'struct LightInfo {', '};');
 compareDeclaration(cpp, 'struct RasterPassTag {};', 'struct RaytraceTag {};');
 compareDeclaration(cpp, 'struct BufferTag {};', 'struct TextureTag {};');
 compareDeclaration(ts, 'export class LightInfo {', '}');
-compareDeclaration(ts, '    createLightInfo (', '    }');
+compareDeclaration(ts, 'export class RenderCommonObjectPool {', '}');
 compareDeclaration(cpp, 'struct PipelineStatistics {', '};');
 compareDeclaration(ts, 'export class PipelineStatistics {', '}');
-function checkStatistics(Statistics, renderPasses) {
-    const stats = new Statistics();
+function checkStatistics({ PipelineStatistics, RenderCommonObjectPool }, renderPasses) {
+    const stats = new PipelineStatistics();
+    const pool = new RenderCommonObjectPool();
+    const pooled = pool.createPipelineStatistics();
+    assert.ok(pooled instanceof PipelineStatistics);
+    assert.notEqual(pool.createPipelineStatistics(), pooled);
+    assert.deepEqual(pooled, stats);
     const counters = Object.keys(stats);
     assert.equal(counters.length, 11);
     assert.ok(counters.includes('numRenderPasses'));
     for (const [index, name] of counters.entries()) {
         assert.equal(stats[name], name === 'numRenderPasses' ? renderPasses : 0, name);
         stats[name] = 100 + index;
+        pooled[name] = 200 + index;
     }
     stats.reset();
+    pool.reset();
+    const reused = pool.createPipelineStatistics();
+    assert.equal(reused, pooled);
     for (const name of counters) {
         assert.equal(stats[name], name === 'numRenderPasses' ? renderPasses : 0, name);
+        assert.equal(reused[name], stats[name], name);
     }
 }
-checkStatistics(types.PipelineStatistics, 0);
-checkStatistics(require(path.join(jsDir, 'types-variant.js')).PipelineStatistics, 7);
+checkStatistics(types, 0);
+checkStatistics(require(path.join(jsDir, 'types-variant.js')), 7);
 for (const op of ['==', '!=']) {
     compareDeclaration(cpp, `inline bool operator${op}(const ResolvePair& lhs, const ResolvePair& rhs) noexcept {`, '}');
 }
@@ -102,7 +112,6 @@ function constructors(root, name) {
 for (const name of ['ResolvePair', 'CopyPair', 'UploadPair', 'MovePair']) {
     compareDeclaration(cpp, `struct ${name} {`, '};');
     compareDeclaration(ts, `export class ${name} {`, '}');
-    compareDeclaration(ts, `    create${name} (`, '    }');
     const definitions = constructors(stage, name);
     assert.equal(definitions.length, name === 'UploadPair' ? 3 : 4, name);
     assert.deepEqual(definitions, constructors(engine, name), name);

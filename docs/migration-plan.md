@@ -138,7 +138,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 
-`PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。TS 投影通过 `resetToDefaults` 生成无参 `reset()`，字段初始化和重置使用相同的声明值。消费测试逐字段检查，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建对象和重置后的值。[声明](../spec/render/render-common.spec) · [TS 投影](../spec/render/render-common.json)
+`PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。TS 投影通过 `resetToDefaults` 生成无参 `reset()`。配合 `pools` 后，`RenderCommonObjectPool.createPipelineStatistics()` 每次从池中取出对象时都调用该方法。消费测试用引擎的 `RecyclePool` 核对对象复用和全部计数器，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建和复用的对象都采用声明值。[声明](../spec/render/render-common.spec) · [TS 投影](../spec/render/render-common.json)
 
 ### 引擎模块和产物
 

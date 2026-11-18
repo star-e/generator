@@ -10,6 +10,7 @@
     "ResolvePair": "rp",
     "CopyPair": "cp",
     "UploadPair": { "member": "up", "keepOnReset": ["source"] },
-    "MovePair": "mp"
+    "MovePair": "mp",
+    "PipelineStatistics": "ps"
   }
 }
