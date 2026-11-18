@@ -160,8 +160,8 @@ int main() {
         builder.outputModule("RenderInterface", files);
         builder.outputModule("PrivateInterface", files);
 
-        // render scene
-        builder.outputModule("RenderSceneInterface", files);
+        //// render scene
+        //builder.outputModule("RenderSceneInterface", files);
 
         // render dependency graph
         builder.outputModule("FGDispatcher", files);

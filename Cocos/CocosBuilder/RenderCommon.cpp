@@ -83,7 +83,7 @@ import { saveUniformBlock, loadUniformBlock } from './serialization';
 
         ENUM_CLASS(ResourceResidency, .mFlags = TS_ENUM_OBJECT) {
             UNDERLYING_TYPE(uint8_t);
-            ENUMS(MANAGED, MEMORYLESS, PERSISTENT, EXTERNAL, BACKBUFFER);
+            ENUMS(MANAGED, MEMORYLESS, PERSISTENT, EXTERNAL, BACKBUFFER, CUSTOM);
         }
 
         ENUM_CLASS(QueueHint, .mFlags = TS_ENUM_OBJECT) {

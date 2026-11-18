@@ -63,6 +63,7 @@ virtual void destroy() noexcept = 0;
                 (const RenderGraph*, mRenderGraph, nullptr)
                 (const ResourceGraph*, mResourceGraph, nullptr)
                 (gfx::CommandBuffer*, mPrimaryCommandBuffer, nullptr)
+                (gfx::RenderPass*, mCurrentRenderPass, nullptr)
             );
         }
 
