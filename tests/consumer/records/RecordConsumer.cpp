@@ -16,6 +16,7 @@ using cc::render::LightInfo;
 using cc::render::LightingMode;
 using cc::render::MovePair;
 using cc::render::ParameterType;
+using cc::render::PipelineStatistics;
 using cc::render::QueueHint;
 using cc::render::ResolveFlags;
 using cc::render::ResolvePair;
@@ -26,6 +27,13 @@ using cc::render::SceneFlags;
 using cc::render::TaskType;
 using cc::render::UpdateFrequency;
 using cc::render::UploadPair;
+
+static_assert(std::is_aggregate_v<PipelineStatistics>);
+constexpr PipelineStatistics stats{};
+static_assert(stats.numRenderPasses == 0 && stats.numManagedTextures == 0 && stats.totalManagedTextures == 0 &&
+              stats.numUploadBuffers == 0 && stats.numUploadBufferViews == 0 && stats.numFreeUploadBuffers == 0 &&
+              stats.numFreeUploadBufferViews == 0 && stats.numDescriptorSets == 0 && stats.numFreeDescriptorSets == 0 &&
+              stats.numInstancingBuffers == 0 && stats.numInstancingUniformBlocks == 0);
 
 template<class Enum>
 constexpr bool hasSequentialValues(std::initializer_list<Enum> members) {

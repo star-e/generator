@@ -51,7 +51,16 @@ set(names "cocos/rendering/custom/types-names.ts")
 run("${CMAKE_COMMAND}" -E compare_files "${stage}/${names}" "${ENGINE}/${names}")
 set(enumConsumer "${stage}/cocos/rendering/custom/enum-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsumer}" COPYONLY)
+
+# Compile both versions against the same engine imports to exercise the projected defaults at runtime.
+set(commonSpec "${work}/spec/render/render-common.spec")
+file(READ "${commonSpec}" common)
+string(REPLACE "numRenderPasses: uint32_t = 0" "numRenderPasses: uint32_t = 7" common "${common}")
+file(WRITE "${commonSpec}" "${common}")
+run("${TOOL}" generate --workspace "${workspace}" --output "${work}/variant")
+set(variant "${stage}/cocos/rendering/custom/types-variant.ts")
+configure_file("${work}/variant/cocos/rendering/custom/types.ts" "${variant}" COPYONLY)
 run("${node}" "${ENGINE}/node_modules/typescript/bin/tsc" --strict --skipLibCheck --target es6 --module commonjs
-    --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${enumConsumer}")
+    --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${enumConsumer}" "${variant}")
 run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}")
 finish_workspace("${work}")

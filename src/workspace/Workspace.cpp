@@ -121,6 +121,10 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
     const auto projection = base / config.at("projection").get<std::string>();
     const auto rules = object(projection);
     if (rules.contains("comparable")) rules.at("comparable").get_to(output.comparable);
+    if (rules.contains("resetToDefaults")) {
+        if (!output.typescript) throw std::runtime_error(projection.string() + ": resetToDefaults requires TypeScript output");
+        rules.at("resetToDefaults").get_to(output.resetToDefaults);
+    }
     if (rules.contains("namedEnums")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": namedEnums require TypeScript output");
         rules.at("namedEnums").get_to(output.namedEnums);

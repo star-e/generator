@@ -17,6 +17,7 @@ struct RecordOutput {
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
     std::set<std::string> comparable;
+    std::set<std::string> resetToDefaults;
     std::filesystem::path poolModule;
     std::map<std::string, PoolProjection> pools;
 };

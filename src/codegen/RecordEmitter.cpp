@@ -357,13 +357,17 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     out << "};\n";
 }
 
+bool inferTsType(const Member& m) {
+    return m.ts == "number" || m.ts == "boolean" || m.ts == "string";
+}
+
 std::string tsParams(const std::vector<Member>& members, const Order& order, bool defaults, const std::string& sep) {
     std::string params;
     for (const auto index : order) {
         const auto& m = members.at(index);
         if (!params.empty()) params += sep;
         params += m.name;
-        if (!defaults || (m.ts != "number" && m.ts != "boolean" && m.ts != "string")) params += ": " + m.ts;
+        if (!defaults || !inferTsType(m)) params += ": " + m.ts;
         if (defaults) params += " = " + m.tsDefault;
     }
     return params;
@@ -383,15 +387,14 @@ Order poolResetOrder(const std::string& name, const std::vector<Member>& members
     return reset;
 }
 
-void tsRecord(std::ostream& ts, const std::string& name, const std::vector<Member>& members, const Order& order,
-              const Order* reset) {
+void tsConstructorAndPoolReset(std::ostream& ts, const std::vector<Member>& members, const Order& order, const Order* poolReset) {
     const auto params = tsParams(members, order, true, ", ");
     const bool multiline = params.size() + std::string_view("    constructor () {").size() > 120;
     auto signature = [&](const Order& fields, bool defaults) {
         if (multiline && !fields.empty()) return "\n        " + tsParams(members, fields, defaults, ",\n        ") + ",\n    ";
         return defaults ? params : tsParams(members, fields, false, ", ");
     };
-    ts << "export class " << name << " {\n" << "    constructor (" << signature(order, true) << ") {\n";
+    ts << "    constructor (" << signature(order, true) << ") {\n";
     auto assignments = [&](const Order& fields) {
         for (uint32_t i = 0; i < members.size(); ++i) {
             const auto& m = members[i];
@@ -401,12 +404,34 @@ void tsRecord(std::ostream& ts, const std::string& name, const std::vector<Membe
         ts << "    }\n";
     };
     assignments(order);
-    if (reset) {
-        ts << "    reset (" << signature(*reset, false) << "): void {\n";
-        assignments(*reset);
+    if (poolReset) {
+        ts << "    reset (" << signature(*poolReset, false) << "): void {\n";
+        assignments(*poolReset);
+    }
+}
+
+void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>& members, const Order& order,
+              const Order* poolReset, bool resetToDefaults) {
+    const bool initializeFields = resetToDefaults && std::get<RecordType>(node.data).constructors.empty();
+    ts << "export class " << node.name << " {\n";
+    if (!initializeFields) tsConstructorAndPoolReset(ts, members, order, poolReset);
+    if (resetToDefaults) {
+        ts << "    reset (): void {\n";
+        for (const auto& m : members) {
+            if (m.readonly) throw std::runtime_error(node.name + "." + m.name + ": reset requires a writable field");
+            if (m.name == "reset") throw std::runtime_error(node.name + ".reset: field conflicts with reset method");
+            ts << "        this." << m.name << " = " << m.tsDefault << ";\n";
+        }
+        ts << "    }\n";
     }
     for (const auto& m : members) {
-        ts << "    declare " << (m.readonly ? "readonly " : "") << m.comment << m.name << ": " << m.ts << ";\n";
+        if (initializeFields) {
+            ts << "    " << m.comment << m.name;
+            if (!inferTsType(m)) ts << ": " << m.ts;
+            ts << " = " << m.tsDefault << ";\n";
+        } else {
+            ts << "    declare " << (m.readonly ? "readonly " : "") << m.comment << m.name << ": " << m.ts << ";\n";
+        }
     }
     ts << "}\n";
 }
@@ -438,6 +463,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
     auto pendingComparable = output.comparable;
+    auto pendingReset = output.resetToDefaults;
     std::string enumImports;
     size_t poolCount{};
     for (auto id : module.declarations) {
@@ -488,15 +514,18 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             order = *ctor;
         }
         const auto entry = output.pools.find(node.name);
+        const bool resetToDefaults = pendingReset.erase(node.name) != 0;
         std::optional<Order> reset;
         if (entry != output.pools.end()) {
+            if (resetToDefaults) throw std::runtime_error(node.name + ": resetToDefaults conflicts with pool reset");
             ++poolCount;
             reset = poolResetOrder(node.name, members, order, entry->second);
             pool.add(node.name, entry->second.member, members, *reset);
         }
-        tsRecord(ts, node.name, members, order, reset ? &*reset : nullptr);
+        tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults);
     }
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
+    if (!pendingReset.empty()) throw std::runtime_error("unknown resetToDefaults record " + *pendingReset.begin() + " in " + module.name);
     if (!pendingComparable.empty()) throw std::runtime_error("unknown comparable record " + *pendingComparable.begin() + " in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
     if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);

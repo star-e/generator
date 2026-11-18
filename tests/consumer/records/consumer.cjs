@@ -70,6 +70,24 @@ assert.equal(types.ResourceFlags[0x200], 'TRANSFER_DST');
 compareDeclaration(cpp, 'struct LightInfo {', '};');
 compareDeclaration(ts, 'export class LightInfo {', '}');
 compareDeclaration(ts, '    createLightInfo (', '    }');
+compareDeclaration(cpp, 'struct PipelineStatistics {', '};');
+compareDeclaration(ts, 'export class PipelineStatistics {', '}');
+function checkStatistics(Statistics, renderPasses) {
+    const stats = new Statistics();
+    const counters = Object.keys(stats);
+    assert.equal(counters.length, 11);
+    assert.ok(counters.includes('numRenderPasses'));
+    for (const [index, name] of counters.entries()) {
+        assert.equal(stats[name], name === 'numRenderPasses' ? renderPasses : 0, name);
+        stats[name] = 100 + index;
+    }
+    stats.reset();
+    for (const name of counters) {
+        assert.equal(stats[name], name === 'numRenderPasses' ? renderPasses : 0, name);
+    }
+}
+checkStatistics(types.PipelineStatistics, 0);
+checkStatistics(require(path.join(jsDir, 'types-variant.js')).PipelineStatistics, 7);
 for (const op of ['==', '!=']) {
     compareDeclaration(cpp, `inline bool operator${op}(const ResolvePair& lhs, const ResolvePair& rhs) noexcept {`, '}');
 }

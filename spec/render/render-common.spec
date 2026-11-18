@@ -189,4 +189,18 @@ namespace cc::render {
         constructor(source, target, mipLevels, numSlices,
                     targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
     }
+
+    struct PipelineStatistics {
+        numRenderPasses: uint32_t = 0;
+        numManagedTextures: uint32_t = 0;
+        totalManagedTextures: uint32_t = 0;
+        numUploadBuffers: uint32_t = 0;
+        numUploadBufferViews: uint32_t = 0;
+        numFreeUploadBuffers: uint32_t = 0;
+        numFreeUploadBufferViews: uint32_t = 0;
+        numDescriptorSets: uint32_t = 0;
+        numFreeDescriptorSets: uint32_t = 0;
+        numInstancingBuffers: uint32_t = 0;
+        numInstancingUniformBlocks: uint32_t = 0;
+    }
 }
