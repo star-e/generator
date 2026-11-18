@@ -96,7 +96,9 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 图接口与算法
 
-**C++ 图操作生成在图类型上，取消每个模块的 `*Graphs.h`。** 图标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。自举模型的 `TypeGraph::getNode(v)` 是组件成员接口的现有实例。引擎图迁移时，顶点遍历、出边遍历和顶点、边的增删也通过图对象调用。[自举模型声明](../spec/codegen/typegraph.spec) · [现有引擎图操作](../../cocos4/native/cocos/renderer/pipeline/custom/RenderGraphGraphs.h)
+**C++ 图操作生成在图类型上，取消每个模块的 `*Graphs.h`。** 图按声明的能力提供成员函数。遍历和计数使用 `g.vertices()`、`g.out_edges(v)`、`g.num_vertices()`，增删使用 `g.add_vertex(…)`、`g.remove_vertex(v)`、`g.add_edge(u, v)`、`g.remove_edge(e)`，层级查询使用 `g.get_parent(v)`、`g.num_children(v)`。
+
+组件标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。组件访问提供两种成员调用，例如自举模型中的 `g.get(Node_{}, v)` 和 `g.getNode(v)`。具名访问器采用 `get` 加组件名的形式。[自举模型声明](../spec/codegen/typegraph.spec) · [生成的成员接口](../src/generated/TypeGraphTypes.h)
 
 成员声明、模板定义和短小的内联实现放在 `*Types.h`，较大的非模板实现放在配套的 `*Types.cpp`。通用遍历仍是手写算法，例如 `depthFirstSearch(g, …)` 调用图的成员接口。旧工具为 `LayoutGraph`、`RenderGraph`、`FGDispatcher` 和 `NativePipeline` 各生成一个 `*Graphs.h`，其中 `NativePipelineGraphs.h` 只有包含指令和头文件保护。这四个旧路径按模块退役。[旧文件规划](../../cocos-engine-generator/Cocos/AST/BuilderImpl.cpp) · [旧 NativePipeline 图头](../../cocos4/native/cocos/renderer/pipeline/custom/NativePipelineGraphs.h)
 
