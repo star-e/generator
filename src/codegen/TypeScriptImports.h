@@ -15,9 +15,9 @@ inline std::string modulePath(const std::filesystem::path& target, const std::fi
     return path.starts_with("../") ? path : "./" + path;
 }
 
-inline void writeTypeImports(std::ostream& out, const TypeImports& imports, const std::filesystem::path& from) {
+inline void writeImports(std::ostream& out, const TypeImports& imports, const std::filesystem::path& from, bool typeOnly) {
     for (const auto& [path, names] : imports) {
-        out << "import type { ";
+        out << (typeOnly ? "import type { " : "import { ");
         for (auto it = names.begin(); it != names.end(); ++it) {
             if (it != names.begin()) out << ", ";
             out << *it;

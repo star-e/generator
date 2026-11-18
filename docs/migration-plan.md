@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区生成四个归档文件、一个编辑器设置文件，以及 `RenderCommon` 的 C++ 类型头、TS 类型文件和 TS 枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区生成四个归档文件、一个编辑器设置文件，以及 `RenderCommon` 的 C++ 类型头、C++ 构造函数实现、TS 类型文件和 TS 枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -127,6 +127,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 `ResolveFlags` 的三个低位在 C++ 和 TS 中均保留 `1 << n`。例如 `DEPTH | STENCIL` 等于 `6`。对于 `uint32_t` 的 `1 << 31`，两端输出求值后的整数 `2147483648`，避免 TS 按有符号 32 位整数移位得到负数。TS 输出仍检查安全整数范围。
 
 `LightInfo` 的模型记录字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区为其配置原生头文件和 TS 导入路径。
+
+`ResolvePair` 的两个 PMR 字符串在构造、带分配器的复制和移动时都使用目标内存资源。后端将这些构造函数写入暂存目录的 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp`，并按 `comparable` 投影生成五个字段的相等比较。TS 从引擎的 gfx 模块导入 `ResolveMode` 作为运行时值，供构造函数和 `createResolvePair()` 的默认参数使用。消费测试逐段对照引擎实现，验证两个 C++ 内存资源之间的复制与移动，以及 TS 对象池复用后五个字段的默认值。[Gfx 声明](../spec/extern/gfx.spec) · [消费测试](../tests/RecordInterop.cmake)
 
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 

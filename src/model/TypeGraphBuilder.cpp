@@ -375,13 +375,11 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             }
             const bool external = std::holds_alternative<ExternalDeclaration>(decl.data);
             TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl)};
-            if (external) {
-                if (const auto it = input.externalTypes.find(decl.name); it != input.externalTypes.end()) {
-                    node.cppHeader = it->second.header;
-                    node.typescriptName = it->second.typescript;
-                    node.typescriptModule = it->second.typescriptModule;
-                }
-            } else {
+            if (const auto it = input.externalTypes.find(decl.name); it != input.externalTypes.end()) {
+                node.cppHeader = it->second.header;
+                node.typescriptName = it->second.typescript;
+                node.typescriptModule = it->second.typescriptModule;
+            } else if (!external) {
                 node.typescriptName = decl.name;
             }
             auto id = graph.appendNode(std::move(node), parent);
@@ -389,7 +387,8 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         }
         for (const auto& [name, mapping] : input.externalTypes) {
             const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
-            if (it == module.declarations.end() || !std::holds_alternative<ExternalDeclaration>(it->data)) {
+            if (it == module.declarations.end() || (!std::holds_alternative<ExternalDeclaration>(it->data) &&
+                                                    !std::holds_alternative<Enum>(it->data))) {
                 throw std::runtime_error(module.name + ": mapping for unknown external type " + name);
             }
         }

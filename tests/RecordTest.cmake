@@ -9,6 +9,8 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 string(REPLACE "uint8_t {" "uint32_t {" changed "${original}")
 string(REPLACE "READ_WRITE," [=[@deprecated("Use \"READ\" for */.") MODIFY = 0x10, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE,]=] changed "${changed}")
 string(REPLACE "level: uint32_t = 0" "level: uint32_t = 11" changed "${changed}")
+string(REPLACE "gfx::ResolveMode::SAMPLE_ZERO" "gfx::ResolveMode::AVERAGE" changed "${changed}")
+string(REPLACE "constructor(source, target," "constructor(target, source," changed "${changed}")
 string(REPLACE "constructor(light, level);" "constructor(level, light);" changed "${changed}")
 string(REPLACE "constructor(light, level, culledByLight, probe);" "constructor(light, probe, level, culledByLight);" changed "${changed}")
 file(WRITE "${spec}" "${changed}")
@@ -31,6 +33,7 @@ foreach(output IN ITEMS cpp ts)
     endif()
 endforeach()
 foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
+                          "gfx::ResolveMode mode{gfx::ResolveMode::AVERAGE};" "ResolvePair(ccstd::pmr::string targetIn, ccstd::pmr::string sourceIn,"
                           "LightInfo(uint32_t levelIn, IntrusivePtr<scene::Light> lightIn)")
     string(FIND "${cpp}" "${fragment}" at)
     if(at EQUAL -1)
@@ -38,6 +41,7 @@ foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "L
     endif()
 endforeach()
 foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "level = 11"
+                          "mode: ResolveMode = ResolveMode.AVERAGE" "v.reset(target, source, resolveFlags, mode, mode1);"
                           "constructor (light: Light | null = null, probe: ReflectionProbe | null = null, level = 11, culledByLight = false)")
     string(FIND "${ts}" "${fragment}" at)
     if(at EQUAL -1)
@@ -63,6 +67,9 @@ string(JSON broken SET "${rules}" constEnums "[\"LightInfo\"]")
 file(WRITE "${projection}" "${broken}")
 expect_failure(2 "unknown const enum LightInfo in RenderCommon" ${generate})
 file(WRITE "${projection}" "${rules}")
+string(REPLACE "gfx::ResolveMode::SAMPLE_ZERO" "gfx::ResolveMode::MISSING" broken "${original}")
+file(WRITE "${spec}" "${broken}")
+expect_failure(2 "invalid enum default gfx::ResolveMode::MISSING" ${generate})
 
 string(REPLACE [=["Please use OPAQUE."]=] [=["Please use OPAQUE.]=] broken "${original}")
 file(WRITE "${spec}" "${broken}")

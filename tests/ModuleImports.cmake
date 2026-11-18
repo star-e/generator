@@ -31,6 +31,8 @@ function(change_imports before after)
     file(WRITE "${common}" "${changed}")
 endfunction()
 
+change_imports("import Gfx;" "")
+expect_failure(2 "render-common.spec:[0-9]+:[0-9]+: cc::gfx::ResolveMode requires import Gfx in module RenderCommon" ${generate})
 change_imports("import ReflectionProbe;" "")
 expect_failure(2 "render-common.spec:${probeLine}:25: cc::scene::ReflectionProbe requires import ReflectionProbe in module RenderCommon" ${generate})
 change_imports("import Light;" "")

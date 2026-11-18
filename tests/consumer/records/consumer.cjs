@@ -70,6 +70,21 @@ assert.equal(types.ResourceFlags[0x200], 'TRANSFER_DST');
 compareDeclaration(cpp, 'struct LightInfo {', '};');
 compareDeclaration(ts, 'export class LightInfo {', '}');
 compareDeclaration(ts, '    createLightInfo (', '    }');
+compareDeclaration(cpp, 'struct ResolvePair {', '};');
+for (const op of ['==', '!=']) {
+    compareDeclaration(cpp, `inline bool operator${op}(const ResolvePair& lhs, const ResolvePair& rhs) noexcept {`, '}');
+}
+const sourceFile = cpp.replace(/\.h$/, '.cpp');
+for (const [first, last] of [
+    ['const allocator_type& alloc) noexcept', '  target(alloc) {}'],
+    ['ccstd::pmr::string sourceIn, ccstd::pmr::string targetIn, ResolveFlags resolveFlagsIn, gfx::ResolveMode modeIn, gfx::ResolveMode mode1In, const allocator_type& alloc) // NOLINT', '  mode1(mode1In) {}'],
+    ['ResolvePair&& rhs, const allocator_type& alloc)', '  mode1(rhs.mode1) {}'],
+    ['ResolvePair const& rhs, const allocator_type& alloc)', '  mode1(rhs.mode1) {}'],
+]) {
+    compareDeclaration(sourceFile, 'ResolvePair::ResolvePair(' + first, last);
+}
+compareDeclaration(ts, 'export class ResolvePair {', '}');
+compareDeclaration(ts, '    createResolvePair (', '    }');
 
 for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS', 'COUNT'].entries()) {
     assert.equal(UpdateFrequency[name], value);
@@ -108,3 +123,15 @@ assert.equal(pool.createLightInfo(), a);
 assert.deepEqual(fields(a), [null, 0, false, null]);
 assert.equal(pool.createLightInfo(light, 9, false, probe), b);
 assert.deepEqual(fields(b), [light, 9, false, probe]);
+
+const { ResolveMode } = require(path.join(jsDir, '../../gfx'));
+const pairFields = (p) => [p.source, p.target, p.resolveFlags, p.mode, p.mode1];
+const defaults = ['', '', 0, ResolveMode.SAMPLE_ZERO, ResolveMode.SAMPLE_ZERO];
+const explicit = ['color-msaa', 'color', depthStencil, ResolveMode.MIN, ResolveMode.MAX];
+assert.deepEqual(pairFields(new types.ResolvePair()), defaults);
+assert.deepEqual(pairFields(new types.ResolvePair(...explicit)), explicit);
+const pair = pool.createResolvePair(...explicit);
+assert.deepEqual(pairFields(pair), explicit);
+pool.reset();
+assert.equal(pool.createResolvePair(), pair);
+assert.deepEqual(pairFields(pair), defaults);

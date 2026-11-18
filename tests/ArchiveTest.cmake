@@ -18,7 +18,8 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/ArchiveFwd.h
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
     native/cocos/renderer/pipeline/custom/ArchiveTypes.h)
-set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts native/cocos/renderer/pipeline/custom/RenderCommonTypes.h)
+set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts
+    native/cocos/renderer/pipeline/custom/RenderCommonTypes.h native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp)
 list(SORT expectedFiles)
 if(NOT files STREQUAL expectedFiles)
     message(FATAL_ERROR "Unexpected generated paths: ${files}")

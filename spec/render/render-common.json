@@ -2,5 +2,6 @@
   "namedEnums": ["UpdateFrequency"],
   "constEnums": ["ParameterType", "TaskType", "LightingMode", "AttachmentType", "ClearValueType", "ResolveFlags"],
   "poolModule": "cocos/core/memop",
-  "pools": { "LightInfo": "li" }
+  "comparable": ["ResolvePair"],
+  "pools": { "LightInfo": "li", "ResolvePair": "rp" }
 }

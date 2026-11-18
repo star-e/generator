@@ -103,13 +103,14 @@ void checkImports(const std::filesystem::path& specs) {
     const auto commonSpec = specs / "render/render-common.spec";
     std::vector<ModuleInput> inputs{{readModule(commonSpec), {}},
                                     {readModule(specs / "extern/light.spec"), {}},
-                                    {readModule(specs / "extern/reflection-probe.spec"), {}}};
+                                    {readModule(specs / "extern/reflection-probe.spec"), {}},
+                                    {readModule(specs / "extern/gfx.spec"), {}}};
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
         import RenderCommon;
         namespace cc::render { struct PassInfo { light: LightInfo; } }
     )"), {}});
-    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}}};
+    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}}, {"ccstd::pmr::string", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
         const auto& info = graph.node(infoId);
@@ -124,7 +125,11 @@ void checkImports(const std::filesystem::path& specs) {
                 graph.modules.at(probeNode.module.value).name == "ReflectionProbe", "wrong module ownership");
         require(std::holds_alternative<ExternalTypeNode>(lightNode.data) &&
                 std::holds_alternative<ExternalTypeNode>(probeNode.data), "lost external declarations");
-        require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module}, "wrong direct imports");
+        const auto mode = graph.findType("cc::gfx::ResolveMode");
+        require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module, graph.node(mode).module},
+                "wrong direct imports");
+        const auto& pair = std::get<RecordType>(graph.node(graph.findType("cc::render::ResolvePair")).data);
+        require(pair.fields.at(3).type.type == mode && pair.fields.at(4).type.type == mode, "wrong resolve mode type");
 
         const auto& enumeration = std::get<EnumType>(graph.node(graph.findType("cc::render::AccessType")).data);
         require(enumeration.underlying == graph.findType("uint8_t"), "lost enum underlying type");

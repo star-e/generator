@@ -1,5 +1,6 @@
 #include "cocos/renderer/pipeline/custom/RenderCommonTypes.h"
 #include "ShiftProbe.h"
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <cstddef>
 #include <initializer_list>
@@ -13,6 +14,7 @@ using cc::render::LightingMode;
 using cc::render::ParameterType;
 using cc::render::QueueHint;
 using cc::render::ResolveFlags;
+using cc::render::ResolvePair;
 using cc::render::ResourceDimension;
 using cc::render::ResourceFlags;
 using cc::render::ResourceResidency;
@@ -72,8 +74,39 @@ static_assert(static_cast<uint32_t>(depthStencil) == 6 && !any(depthStencil & Re
 static_assert(static_cast<uint32_t>(cc::ShiftProbe::HIGH) == 0x80000000U);
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
+static_assert(std::is_nothrow_move_constructible_v<ResolvePair> && !std::is_copy_constructible_v<ResolvePair>);
+static_assert(std::is_nothrow_move_assignable_v<ResolvePair> && std::is_copy_assignable_v<ResolvePair>);
+
+bool checkResolvePair() {
+    using cc::gfx::ResolveMode;
+    namespace pmr = boost::container::pmr;
+    pmr::monotonic_buffer_resource first, second;
+    auto uses = [](const ResolvePair& pair, pmr::memory_resource* resource) {
+        return pair.get_allocator().resource() == resource && pair.source.get_allocator().resource() == resource &&
+               pair.target.get_allocator().resource() == resource;
+    };
+    ResolvePair defaults;
+    ResolvePair empty(&first);
+    if (!uses(defaults, pmr::get_default_resource()) || !uses(empty, &first) || defaults != empty ||
+        !empty.source.empty() || !empty.target.empty() || empty.resolveFlags != ResolveFlags::NONE ||
+        empty.mode != ResolveMode::SAMPLE_ZERO || empty.mode1 != ResolveMode::SAMPLE_ZERO) return false;
+
+    ccstd::pmr::string source(96, 's', &first), target(80, 't', &first);
+    ResolvePair original(source, target, depthStencil, ResolveMode::MIN, ResolveMode::MAX, &second);
+    if (!uses(original, &second) || original.source != source || original.target != target ||
+        original.resolveFlags != depthStencil || original.mode != ResolveMode::MIN || original.mode1 != ResolveMode::MAX) return false;
+    ResolvePair copied(original, &first);
+    if (!uses(copied, &first) || copied != original) return false;
+    ResolvePair moved(std::move(copied), &second);
+    if (!uses(moved, &second) || moved != original) return false;
+    empty = moved;
+    if (!uses(empty, &first) || empty != original) return false;
+    empty.mode1 = ResolveMode::SAMPLE_ZERO;
+    return empty != original;
+}
 
 int main() {
+    if (!checkResolvePair()) return 3;
     LightInfo empty;
     if (empty.light.get() || empty.probe || empty.level != 0 || empty.culledByLight) return 1;
 

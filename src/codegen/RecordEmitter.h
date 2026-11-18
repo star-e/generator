@@ -11,6 +11,7 @@ struct RecordOutput {
     std::optional<std::filesystem::path> typescript;
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
+    std::set<std::string> comparable;
     std::filesystem::path poolModule;
     std::map<std::string, std::string> pools;
 };

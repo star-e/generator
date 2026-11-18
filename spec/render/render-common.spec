@@ -1,6 +1,7 @@
 module RenderCommon;
 import Light;
 import ReflectionProbe;
+import Gfx;
 
 namespace cc::render {
     enum class UpdateFrequency : uint8_t {
@@ -133,5 +134,15 @@ namespace cc::render {
         COLOR = 1 << 0,
         DEPTH = 1 << 1,
         STENCIL = 1 << 2,
+    }
+
+    struct ResolvePair {
+        source: ccstd::pmr::string;
+        target: ccstd::pmr::string;
+        resolveFlags: ResolveFlags = ResolveFlags::NONE;
+        mode: gfx::ResolveMode = gfx::ResolveMode::SAMPLE_ZERO;
+        mode1: gfx::ResolveMode = gfx::ResolveMode::SAMPLE_ZERO;
+
+        constructor(source, target, resolveFlags, mode, mode1);
     }
 }

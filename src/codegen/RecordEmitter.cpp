@@ -10,6 +10,7 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 
 namespace cc::codegen {
 namespace {
@@ -18,6 +19,7 @@ struct Dependencies {
     std::set<std::string> headers;
     std::set<std::string> forwardDeclarations;
     TypeImports typeImports;
+    TypeImports valueImports;
 };
 
 struct Member {
@@ -29,6 +31,7 @@ struct Member {
     std::string comment;
     bool move{};
     bool readonly{};
+    bool usesAllocator{};
 };
 
 std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
@@ -92,10 +95,24 @@ std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId 
     return cppName(graph, node, module);
 }
 
-Member projectMember(const TypeGraph& graph, const TypeModule& module, const FieldInfo& field, Dependencies& deps,
+Member projectMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field, Dependencies& deps,
                      bool emitTs) {
+    const auto& module = graph.modules.at(owner.value);
     const auto& node = graph.node(field.type.type);
     Member m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly};
+    if (node.qualifiedName == "ccstd::pmr::string") {
+        if (field.isNullable || !field.initializer.empty()) invalid(field, "expected a default-constructed PMR string");
+        if (node.cppHeader.empty()) invalid(field, "missing native header for " + node.qualifiedName);
+        m.cpp = nativeType(graph, module, field.type.type, deps);
+        if (emitTs) {
+            if (node.typescriptName != "string") invalid(field, "expected a TypeScript string mapping for " + node.qualifiedName);
+            m.ts = *node.typescriptName;
+            m.tsDefault = "''";
+        }
+        m.move = true;
+        m.usesAllocator = true;
+        return m;
+    }
     if (!emitTs && !field.isNullable) {
         m.cpp = nativeType(graph, module, field.type.type, deps);
         return m;
@@ -151,6 +168,18 @@ Member projectMember(const TypeGraph& graph, const TypeModule& module, const Fie
     m.cpp = cppName(graph, node, module);
     m.ts = *node.typescriptName;
     m.tsDefault = field.initializer;
+    if (std::holds_alternative<EnumType>(node.data)) {
+        const auto pos = field.initializer.rfind("::");
+        if (pos == std::string::npos) invalid(field, "expected a named enum default");
+        const auto member = field.initializer.substr(pos + 2);
+        m.cppDefault = m.cpp + "::" + member;
+        m.tsDefault = m.ts + "." + member;
+        if (node.module != owner) {
+            if (node.cppHeader.empty() || node.typescriptModule.empty()) invalid(field, "missing external enum mapping");
+            deps.valueImports[node.typescriptModule].insert(m.ts);
+        }
+        return m;
+    }
     if (m.ts == "boolean" && (m.tsDefault == "false" || m.tsDefault == "true")) return m;
     if (m.ts == "number" && numericDefault(node.qualifiedName, m.tsDefault)) return m;
     invalid(field, "unsupported scalar default " + field.initializer);
@@ -187,14 +216,12 @@ void tsEnumNames(std::ostream& out, const std::string& name, const EnumType& enu
     out << "    default:\n        return '';\n    }\n}\n";
 }
 
-void cppRecord(std::ostream& out, const TypeGraph& graph, const TypeModule& module, const TypeNode& node,
-               const std::vector<Member>& members, Dependencies& deps) {
-    const auto& record = std::get<RecordType>(node.data);
-    out << "struct " << node.name << " {\n";
-    if (!record.constructors.empty()) out << "    " << node.name << "() = default;\n";
+void inlineConstructors(std::ostream& out, const std::string& name, const RecordType& record,
+                        const std::vector<Member>& members) {
+    if (!record.constructors.empty()) out << "    " << name << "() = default;\n";
     for (const auto& ctor : record.constructors) {
         if (ctor.empty()) continue;
-        out << "    " << node.name << "(";
+        out << "    " << name << "(";
         for (size_t i = 0; i < ctor.size(); ++i) {
             const auto& m = members.at(ctor[i]);
             if (i) out << ", ";
@@ -213,6 +240,94 @@ void cppRecord(std::ostream& out, const TypeGraph& graph, const TypeModule& modu
         out << " {}\n";
     }
     if (!record.constructors.empty()) out << '\n';
+}
+
+enum class CtorArgs { defaults, fields, move, copy };
+
+void pmrInitializers(std::ostream& source, const std::vector<Member>& members, CtorArgs args, const Order& fields = {}) {
+    bool first = true;
+    for (uint32_t i = 0; i < members.size(); ++i) {
+        const auto& m = members[i];
+        const bool hasArg = args == CtorArgs::move || args == CtorArgs::copy ||
+                            (args == CtorArgs::fields && std::ranges::find(fields, i) != fields.end());
+        if (!m.usesAllocator && !hasArg) continue;
+        source << (first ? "\n: " : ",\n  ") << m.name << "(";
+        if (hasArg) {
+            const bool move = m.move && args != CtorArgs::copy;
+            if (move) source << "std::move(";
+            source << (args == CtorArgs::fields ? m.name + "In" : "rhs." + m.name);
+            if (move) source << ")";
+            if (m.usesAllocator) source << ", ";
+        }
+        if (m.usesAllocator) source << "alloc";
+        source << ")";
+        first = false;
+    }
+    source << " {}\n";
+}
+
+void pmrConstructors(std::ostream& header, std::ostream& source, const std::string& name,
+                     const RecordType& record, const std::vector<Member>& members, const Member& allocatorMember) {
+    const std::string alloc = "const allocator_type& alloc";
+    const auto defaultAlloc = alloc + " = boost::container::pmr::get_default_resource()";
+    const auto constructor = "\n" + name + "::" + name + "(";
+    header << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
+           << "    allocator_type get_allocator() const noexcept { // NOLINT\n"
+           << "        return {" << allocatorMember.name << ".get_allocator().resource()};\n    }\n\n"
+           << "    " << name << "(" << defaultAlloc << ") noexcept; // NOLINT\n";
+    source << constructor << alloc << ") noexcept";
+    pmrInitializers(source, members, CtorArgs::defaults);
+    for (const auto& order : record.constructors) {
+        if (order.empty()) continue;
+        std::string params;
+        for (auto index : order) {
+            const auto& m = members.at(index);
+            params += m.cpp + " " + m.name + "In, ";
+        }
+        header << "    " << name << "(" << params << defaultAlloc << ");\n";
+        source << constructor << params << alloc << ") // NOLINT";
+        pmrInitializers(source, members, CtorArgs::fields, order);
+    }
+    for (auto args : {CtorArgs::move, CtorArgs::copy}) {
+        const auto rhs = name + (args == CtorArgs::move ? "&& rhs" : " const& rhs");
+        header << "    " << name << "(" << rhs << ", " << alloc << ");\n";
+        source << constructor << rhs << ", " << alloc << ")";
+        pmrInitializers(source, members, args);
+    }
+    header << "\n    " << name << "(" << name << "&& rhs) noexcept = default;\n"
+           << "    " << name << "(" << name << " const& rhs) = delete;\n"
+           << "    " << name << "& operator=(" << name << "&& rhs) noexcept = default;\n"
+           << "    " << name << "& operator=(" << name << " const& rhs) = default;\n\n";
+}
+
+void cppEquality(std::ostream& out, const std::string& name, const std::vector<Member>& members) {
+    const auto params = "(const " + name + "& lhs, const " + name + "& rhs) noexcept {\n";
+    out << "\ninline bool operator==" << params;
+    auto writeTuple = [&](std::string_view object) {
+        out << "std::forward_as_tuple(";
+        for (size_t i = 0; i < members.size(); ++i) {
+            if (i) out << ", ";
+            out << object << "." << members[i].name;
+        }
+        out << ")";
+    };
+    out << "    return ";
+    writeTuple("lhs");
+    out << " ==\n           ";
+    writeTuple("rhs");
+    out << ";\n}\n\ninline bool operator!=" << params << "    return !(lhs == rhs);\n}\n";
+}
+
+void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, const TypeModule& module,
+               const TypeNode& node, const std::vector<Member>& members, Dependencies& deps) {
+    const auto& record = std::get<RecordType>(node.data);
+    out << "struct " << node.name << " {\n";
+    const auto allocator = std::ranges::find(members, true, &Member::usesAllocator);
+    if (allocator == members.end()) {
+        inlineConstructors(out, node.name, record, members);
+    } else {
+        pmrConstructors(out, source, node.name, record, members, *allocator);
+    }
     for (const auto& m : members) {
         out << "    " << m.cpp << " " << m.name;
         if (!m.cppDefault.empty()) out << "{" << m.cppDefault << "}";
@@ -239,22 +354,27 @@ std::string tsParams(const std::vector<Member>& members, const Order& order, boo
         const auto& m = members.at(index);
         if (!params.empty()) params += sep;
         params += m.name;
-        if (!defaults || (m.ts != "number" && m.ts != "boolean")) params += ": " + m.ts;
+        if (!defaults || (m.ts != "number" && m.ts != "boolean" && m.ts != "string")) params += ": " + m.ts;
         if (defaults) params += " = " + m.tsDefault;
     }
     return params;
 }
 
 void tsRecord(std::ostream& ts, const std::string& name, const std::vector<Member>& members, const Order& order, bool pooled) {
-    ts << "export class " << name << " {\n"
-       << "    constructor (" << tsParams(members, order, true, ", ") << ") {\n";
+    const auto params = tsParams(members, order, true, ", ");
+    const bool multiline = params.size() + std::string_view("    constructor () {").size() > 120;
+    auto signature = [&](bool defaults) {
+        if (multiline) return "\n        " + tsParams(members, order, defaults, ",\n        ") + ",\n    ";
+        return defaults ? params : tsParams(members, order, false, ", ");
+    };
+    ts << "export class " << name << " {\n" << "    constructor (" << signature(true) << ") {\n";
     auto assignments = [&] {
         for (const auto& m : members) ts << "        this." << m.name << " = " << m.name << ";\n";
         ts << "    }\n";
     };
     assignments();
     if (pooled) {
-        ts << "    reset (" << tsParams(members, order, false, ", ") << "): void {\n";
+        ts << "    reset (" << signature(false) << "): void {\n";
         assignments();
     }
     for (const auto& m : members) {
@@ -287,9 +407,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     const auto& module = graph.modules.at(owner.value);
     Dependencies deps;
     Pool pool;
-    std::ostringstream cpp, ts, nameFunctions;
+    std::ostringstream cpp, definitions, ts, nameFunctions;
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
+    auto pendingComparable = output.comparable;
     std::string enumImports;
     size_t poolCount{};
     for (auto id : module.declarations) {
@@ -325,8 +446,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto* record = std::get_if<RecordType>(&node.data);
         if (!record) throw std::runtime_error("expected record or enum: " + node.qualifiedName);
         std::vector<Member> members;
-        for (const auto& field : record->fields) members.push_back(projectMember(graph, module, field, deps, output.typescript.has_value()));
-        cppRecord(cpp, graph, module, node, members, deps);
+        for (const auto& field : record->fields) members.push_back(projectMember(graph, owner, field, deps, output.typescript.has_value()));
+        cppRecord(cpp, definitions, graph, module, node, members, deps);
+        if (pendingComparable.erase(node.name)) {
+            deps.headers.insert("tuple");
+            cppEquality(cpp, node.name, members);
+        }
         if (!output.typescript) continue;
         Order order(members.size());
         std::iota(order.begin(), order.end(), 0U);
@@ -343,6 +468,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
     }
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
+    if (!pendingComparable.empty()) throw std::runtime_error("unknown comparable record " + *pendingComparable.begin() + " in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
     if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
 
@@ -353,14 +479,26 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         else header << "#include \"" << include << "\"\n";
     }
     for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
-    for (const auto& ns : module.namespaces) header << "\nnamespace " << ns << " {\n";
-    header << cpp.str();
-    for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) header << "\n} // namespace " << *it << "\n";
+    auto writeNamespace = [&](std::ostream& out, const std::ostringstream& body) {
+        for (const auto& ns : module.namespaces) out << "\nnamespace " << ns << " {\n";
+        out << body.str();
+        for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) out << "\n} // namespace " << *it << "\n";
+    };
+    writeNamespace(header, cpp);
 
     Files files{{output.header, header.str()}};
+    if (!definitions.view().empty()) {
+        auto path = output.header;
+        path.replace_extension(".cpp");
+        std::ostringstream source;
+        source << preamble << "#include \"" << output.header.filename().generic_string() << "\"\n#include <utility>\n";
+        writeNamespace(source, definitions);
+        files.emplace(path, source.str());
+    }
     if (!output.typescript) return files;
     script << preamble << "/* eslint-disable max-len */\n";
-    writeTypeImports(script, deps.typeImports, *output.typescript);
+    writeImports(script, deps.valueImports, *output.typescript, false);
+    writeImports(script, deps.typeImports, *output.typescript, true);
     if (poolCount) {
         script << "import { RecyclePool } from '" << modulePath(output.poolModule, *output.typescript) << "';\n";
         ts << "\nfunction createPool<T> (Constructor: new() => T): RecyclePool<T> {\n"

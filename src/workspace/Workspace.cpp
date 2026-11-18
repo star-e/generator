@@ -120,6 +120,7 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
     if (!config.contains("projection")) return output;
     const auto projection = base / config.at("projection").get<std::string>();
     const auto rules = object(projection);
+    if (rules.contains("comparable")) rules.at("comparable").get_to(output.comparable);
     if (rules.contains("namedEnums")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": namedEnums require TypeScript output");
         rules.at("namedEnums").get_to(output.namedEnums);

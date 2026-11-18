@@ -115,7 +115,7 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
     header << "#include \"" << (layout.includeDir / fwdName).generic_string() << "\"\n";
     impl << preamble << "// clang-format off\n" << lintBegin << "#include \"" << typeName << "\"\n";
     ts << preamble << "/* eslint-disable max-len */\n";
-    writeTypeImports(ts, typeImports, layout.typescript);
+    writeImports(ts, typeImports, layout.typescript, true);
     if (!typeImports.empty()) ts << '\n';
     for (auto* out : {&fwd, &header, &impl}) {
         for (const auto& name : module.namespaces) *out << "\nnamespace " << name << " {\n";

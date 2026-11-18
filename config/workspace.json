@@ -26,6 +26,13 @@
       "typescript": "cocos/rendering/custom/types.ts"
     },
     {
+      "spec": "../spec/extern/gfx.spec",
+      "backend": "model",
+      "types": {
+        "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ResolveMode", "tsModule": "cocos/gfx" }
+      }
+    },
+    {
       "spec": "../spec/extern/light.spec",
       "backend": "model",
       "types": {
