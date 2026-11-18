@@ -1,0 +1,13 @@
+{
+  "outputRoot": "../build/self-host",
+  "lineEnding": "lf",
+  "preamble": "preamble.txt",
+  "types": "../spec/codegen/host-types.json",
+  "modules": [
+    {
+      "backend": "records",
+      "spec": "../spec/codegen/source-location.spec",
+      "header": "generated/SourceLocation.h"
+    }
+  ]
+}

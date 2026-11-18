@@ -72,6 +72,15 @@ TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, 
     return {use.pointer ? graph.makePointer(id) : id, use.location};
 }
 
+MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
+    MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
+                      .isConst = method.isConst, .isNoexcept = method.isNoexcept};
+    for (const auto& parameter : method.parameters) {
+        member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name});
+    }
+    return member;
+}
+
 RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
     RecordType result;
     for (const auto& field : syntax.fields) {
@@ -107,6 +116,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         }
         result.constructors.push_back(std::move(members));
     }
+    for (const auto& method : syntax.methods) result.methods.push_back(resolveMethod(graph, method, scope, owner));
     return result;
 }
 
@@ -133,15 +143,11 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
     InterfaceType result;
     std::set<std::string> visibleNames;
     for (const auto& method : std::get<Interface>(decl.data).methods) {
-        MethodInfo member{.result = resolve(graph, method.result, scope, module), .name = method.name,
-                          .isConst = method.isConst, .isNoexcept = method.isNoexcept,
-                          .typescriptName = projectMethod(projection, decl.name, method.name)};
+        auto member = resolveMethod(graph, method, scope, module);
+        member.typescriptName = projectMethod(projection, decl.name, method.name);
         if (member.typescriptName && !visibleNames.insert(*member.typescriptName).second) {
             throw std::runtime_error(method.result.location.describe() + ": duplicate TS method " +
                                      decl.name + "." + *member.typescriptName);
-        }
-        for (const auto& parameter : method.parameters) {
-            member.parameters.push_back({resolve(graph, parameter.type, scope, module), parameter.name});
         }
         result.methods.push_back(std::move(member));
     }

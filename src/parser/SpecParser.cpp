@@ -168,6 +168,9 @@ private:
                     }
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
+                } else if (token == "fn" && !followedBy(":")) {
+                    advance();
+                    record->methods.push_back(recordMethod(members));
                 } else {
                     record->fields.push_back(field(members));
                 }
@@ -226,6 +229,28 @@ private:
             expect(">");
         }
         result.pointer = accept("*");
+        return result;
+    }
+
+    Method recordMethod(std::set<std::string>& names) {
+        Method result;
+        result.name = uniqueName(names);
+        expect("(");
+        std::set<std::string> parameters;
+        if (!accept(")")) {
+            do {
+                auto name = uniqueName(parameters);
+                expect(":");
+                result.parameters.push_back({type(), std::move(name)});
+            } while (accept(","));
+            expect(")");
+        }
+        result.isConst = accept("const");
+        result.isNoexcept = accept("noexcept");
+        expect("-");
+        expect(">");
+        result.result = type();
+        expect(";");
         return result;
     }
 

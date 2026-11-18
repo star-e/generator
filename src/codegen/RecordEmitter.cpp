@@ -74,9 +74,31 @@ bool numericDefault(const std::string& type, const std::string& literal) {
     return (in >> value) && in.eof();
 }
 
-Member projectMember(const TypeGraph& graph, const TypeModule& module, const FieldInfo& field, Dependencies& deps) {
+std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
+    const auto& node = graph.node(id);
+    if (const auto* ptr = std::get_if<PointerType>(&node.data)) return nativeType(graph, module, ptr->pointee, deps) + "*";
+    if (const auto* instance = std::get_if<TemplateInstanceType>(&node.data)) {
+        std::string name = nativeType(graph, module, instance->declaration, deps) + "<";
+        for (size_t i = 0; i < instance->arguments.size(); ++i) {
+            if (i) name += ", ";
+            const auto& arg = instance->arguments[i];
+            if (const auto* type = std::get_if<TypeId>(&arg)) name += nativeType(graph, module, *type, deps);
+            else name += std::get<std::string>(arg);
+        }
+        return name + ">";
+    }
+    if (!node.cppHeader.empty()) deps.headers.insert(node.cppHeader);
+    return cppName(graph, node, module);
+}
+
+Member projectMember(const TypeGraph& graph, const TypeModule& module, const FieldInfo& field, Dependencies& deps,
+                     bool emitTs) {
     const auto& node = graph.node(field.type.type);
     Member m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly};
+    if (!emitTs && !field.isNullable) {
+        m.cpp = nativeType(graph, module, field.type.type, deps);
+        return m;
+    }
     const auto* ptr = std::get_if<PointerType>(&node.data);
     const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
     if (ptr || instance) {
@@ -97,10 +119,13 @@ Member projectMember(const TypeGraph& graph, const TypeModule& module, const Fie
         }
         const auto& resource = graph.node(target);
         const auto* external = std::get_if<ExternalTypeNode>(&resource.data);
-        if (!external || !resource.typescriptName || resource.typescriptModule.empty()) invalid(field, "missing external resource mapping");
-        deps.typeImports[resource.typescriptModule].insert(*resource.typescriptName);
-        m.ts = *resource.typescriptName + " | null";
-        m.tsDefault = "null";
+        if (!external) invalid(field, "expected an external resource");
+        if (emitTs) {
+            if (!resource.typescriptName || resource.typescriptModule.empty()) invalid(field, "missing external resource mapping");
+            deps.typeImports[resource.typescriptModule].insert(*resource.typescriptName);
+            m.ts = *resource.typescriptName + " | null";
+            m.tsDefault = "null";
+        }
         const auto name = cppName(graph, resource, module);
         if (ptr) {
             const auto ns = resource.qualifiedName.rfind("::");
@@ -132,9 +157,12 @@ Member projectMember(const TypeGraph& graph, const TypeModule& module, const Fie
 
 using Order = std::vector<uint32_t>;
 
-void cppRecord(std::ostream& out, const TypeNode& node, const std::vector<Member>& members) {
-    out << "struct " << node.name << " {\n    " << node.name << "() = default;\n";
-    for (const auto& ctor : std::get<RecordType>(node.data).constructors) {
+void cppRecord(std::ostream& out, const TypeGraph& graph, const TypeModule& module, const TypeNode& node,
+               const std::vector<Member>& members, Dependencies& deps) {
+    const auto& record = std::get<RecordType>(node.data);
+    out << "struct " << node.name << " {\n";
+    if (!record.constructors.empty()) out << "    " << node.name << "() = default;\n";
+    for (const auto& ctor : record.constructors) {
         if (ctor.empty()) continue;
         out << "    " << node.name << "(";
         for (size_t i = 0; i < ctor.size(); ++i) {
@@ -154,10 +182,22 @@ void cppRecord(std::ostream& out, const TypeNode& node, const std::vector<Member
         }
         out << " {}\n";
     }
-    out << '\n';
+    if (!record.constructors.empty()) out << '\n';
     for (const auto& m : members) {
         out << "    " << m.cpp << " " << m.name;
         if (!m.cppDefault.empty()) out << "{" << m.cppDefault << "}";
+        out << ";\n";
+    }
+    for (const auto& method : record.methods) {
+        out << "    " << nativeType(graph, module, method.result.type, deps) << " " << method.name << "(";
+        for (size_t i = 0; i < method.parameters.size(); ++i) {
+            if (i) out << ", ";
+            const auto& p = method.parameters[i];
+            out << nativeType(graph, module, p.type.type, deps) << " " << p.name;
+        }
+        out << ")";
+        if (method.isConst) out << " const";
+        if (method.isNoexcept) out << " noexcept";
         out << ";\n";
     }
     out << "};\n";
@@ -242,8 +282,9 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto* record = std::get_if<RecordType>(&node.data);
         if (!record) throw std::runtime_error("expected record or enum: " + node.qualifiedName);
         std::vector<Member> members;
-        for (const auto& field : record->fields) members.push_back(projectMember(graph, module, field, deps));
-        cppRecord(cpp, node, members);
+        for (const auto& field : record->fields) members.push_back(projectMember(graph, module, field, deps, output.typescript.has_value()));
+        cppRecord(cpp, graph, module, node, members, deps);
+        if (!output.typescript) continue;
         Order order(members.size());
         std::iota(order.begin(), order.end(), 0U);
         if (!record->constructors.empty()) {
@@ -271,17 +312,20 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     header << cpp.str();
     for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) header << "\n} // namespace " << *it << "\n";
 
+    Files files{{output.header, header.str()}};
+    if (!output.typescript) return files;
     script << preamble << "/* eslint-disable max-len */\n";
-    writeTypeImports(script, deps.typeImports, output.typescript);
+    writeTypeImports(script, deps.typeImports, *output.typescript);
     if (poolCount) {
-        script << "import { RecyclePool } from '" << modulePath(output.poolModule, output.typescript) << "';\n";
+        script << "import { RecyclePool } from '" << modulePath(output.poolModule, *output.typescript) << "';\n";
         ts << "\nfunction createPool<T> (Constructor: new() => T): RecyclePool<T> {\n"
            << "    return new RecyclePool<T>(() => new Constructor(), 16);\n}\n"
            << "\nexport class " << module.name << "ObjectPool {\n    constructor () {\n    }\n    reset (): void {\n"
            << pool.resets.str() << "    }\n" << pool.factories.str() << pool.fields.str() << "}\n";
     }
     script << ts.str();
-    return {{output.header, header.str()}, {output.typescript, script.str()}};
+    files.emplace(*output.typescript, script.str());
+    return files;
 }
 
 } // namespace cc::codegen

@@ -38,7 +38,7 @@ ctest --test-dir build/host --output-on-failure
 
 默认暂存目录为 `build/staging/cocos4/`。可用 `--output DIR` 指定另一处专用目录。`--check` 只读，退出码 0 表示与计划相符，1 表示文件缺失、变化或多出，2 表示输入或执行出错。生成器使用固定版本的 JSON 库，CMake 可使用已安装的包或按 SHA-256 下载源码。[工作区](../config/workspace.json) · [模块声明](../spec/render/archive.spec) · [TS 投影](../spec/render/archive.json)
 
-独立构建运行 `cocos.typegraph`、`cocos.modules.imports`、`cocos.archive.generate`、`cocos.settings.generate` 和 `cocos.records.generate`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线、归档互读、编辑器设置和 RenderCommon 消费测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake) · [编辑器消费测试](../tests/SettingsInterop.cmake)
+独立构建运行 `cocos.typegraph`、`cocos.modules.imports`、`cocos.archive.generate`、`cocos.settings.generate`、`cocos.records.generate` 和 `cocos.selfhost`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线、归档互读、编辑器设置和 RenderCommon 消费测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake) · [编辑器消费测试](../tests/SettingsInterop.cmake)
 
 ## 生成流程
 
@@ -80,11 +80,11 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
 
-当 `cocos-codegen` 能处理普通结构体时，先重新生成诊断使用的源位置类型。能处理自身图声明后，再重新生成整份类型图。接管时允许调整源码布局和成员实现，将每项差异与声明或输出规则一起审查，验证类型查找、复合类型复用和引擎产物后，将候选输出确认为新快照。此后 CI 从 `generator` 的干净检出验证自举。
+首个自举类型是 `SourceLocation`。`config/self-host.json` 选择 C++ 头文件输出，三个字段和 `describe() const` 的声明来自 `.spec`，诊断文本的实现仍在 `SpecParser.cpp`。日常构建使用 `src/generated/SourceLocation.h` 快照。运行 `build/host/cocos-codegen generate --workspace config/self-host.json` 会将头文件写入 `build/self-host/generated/`。[模型声明](../spec/codegen/source-location.spec) · [自举配置](../config/self-host.json) · [生成快照](../src/generated/SourceLocation.h)
 
-1. CMake 用手写源码和已提交的种子构建 `cocos-codegen`。运行这个工具，按 `config/self-host.json` 将全部自身模型生成到空目录。
-2. 在新的构建目录重新编译同一个 `CocosCodegen` 目标。此时所有生成的头文件、源文件均取自上一步的输出，候选工具用它们完成编译和链接。
-3. 用刚构建的候选工具读取相同声明和配置，生成到第二个空目录。两轮输出和仓库中的种子快照须有相同的相对路径集合，每个文件内容逐字节一致。自举源码的生成和 Git 检出统一使用 LF。随后用该候选工具运行当前阶段的引擎生成与消费测试。
+1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在独立的空目录生成第一轮，检查产物清单、LF 换行和快照字节。
+2. 测试在新的构建目录编译同一个 `CocosCodegen` 目标，并将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮的输出根目录。解析器和 TypeGraph 通过原有的 `model/SourceLocation.h` 入口包含这份生成声明。
+3. 候选工具在第二个空目录生成同一份声明。测试逐文件比较两轮结果，再用候选构建运行当前配置的所有非自举回归，包含源位置的聚合初始化、缺失导入的文件名和行列，以及已启用的引擎消费者。完整 TypeGraph 的接管仍按相同流程扩展。[自举测试](../tests/SelfHost.cmake)
 
 自身声明或生成规则变更时，重新生成受影响的快照，将输入改动和源码差异一并审查。如果新声明依赖新增语法，先让可构建的工具支持该语法，再用它刷新种子。
 

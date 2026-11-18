@@ -11,13 +11,17 @@ if(NOT nlohmann_json_FOUND)
     FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
+set(COCOS_CODEGEN_SELF_HOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/src" CACHE PATH
+    "Include root containing the generated self-hosted model headers")
+
 add_library(CocosCodegenModel STATIC
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.h"
     src/generated/TypeGraphTypes.cpp
     src/model/TypeGraph.cpp
     src/model/TypeGraphBuilder.cpp
     src/parser/SpecParser.cpp)
 target_compile_features(CocosCodegenModel PUBLIC cxx_std_20)
-target_include_directories(CocosCodegenModel PUBLIC src)
+target_include_directories(CocosCodegenModel PUBLIC "${COCOS_CODEGEN_SELF_HOST_ROOT}" src)
 set_target_properties(CocosCodegenModel PROPERTIES CXX_EXTENSIONS OFF)
 
 add_executable(CocosCodegen

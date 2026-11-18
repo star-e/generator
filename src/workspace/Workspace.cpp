@@ -107,6 +107,33 @@ SettingsProjection loadSettingsProjection(const fs::path& path) {
     return projection;
 }
 
+fs::path typescriptOutput(const Json& config) {
+    auto ts = outputPath(config.at("typescript"));
+    if (ts.extension() != ".ts") throw std::runtime_error("expected .ts output");
+    return ts;
+}
+
+RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
+    RecordOutput output{.header = outputPath(config.at("header"))};
+    if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
+    if (config.contains("typescript")) output.typescript = typescriptOutput(config);
+    if (!config.contains("projection")) return output;
+    const auto projection = base / config.at("projection").get<std::string>();
+    const auto rules = object(projection);
+    if (rules.contains("pools")) {
+        if (!output.typescript) throw std::runtime_error(projection.string() + ": pools require TypeScript output");
+        rules.at("pools").get_to(output.pools);
+        output.poolModule = outputPath(rules.at("poolModule"));
+        std::set<std::string> members;
+        for (const auto& [name, member] : output.pools) {
+            if (!identifier(member) || !members.insert(member).second) {
+                throw std::runtime_error(projection.string() + ": invalid pool member " + member);
+            }
+        }
+    }
+    return output;
+}
+
 std::string normalizeLines(const std::string& input, bool crlf) {
     std::string result;
     for (size_t i = 0; i < input.size(); ++i) {
@@ -135,27 +162,15 @@ Files plan(const Json& settings, const fs::path& base) {
             inputs.push_back({std::move(module), {}, loadTypes(config.value("types", Json::object()))});
             continue;
         }
+        if (backend == "records") {
+            layouts.emplace_back(loadRecordOutput(config, base));
+            inputs.push_back({std::move(module), {}});
+            continue;
+        }
         const auto projection = base / config.at("projection").get<std::string>();
-        const auto ts = outputPath(config.at("typescript"));
-        if (ts.extension() != ".ts") throw std::runtime_error("expected .ts output");
+        const auto ts = typescriptOutput(config);
         if (backend == "settings") {
             layouts.emplace_back(SettingsOutput{ts, loadSettingsProjection(projection)});
-            inputs.push_back({std::move(module), {}});
-        } else if (backend == "records") {
-            const auto rules = object(projection);
-            RecordOutput output{.header = outputPath(config.at("header")), .typescript = ts};
-            if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
-            if (rules.contains("pools")) {
-                rules.at("pools").get_to(output.pools);
-                output.poolModule = outputPath(rules.at("poolModule"));
-                std::set<std::string> members;
-                for (const auto& [name, member] : output.pools) {
-                    if (!identifier(member) || !members.insert(member).second) {
-                        throw std::runtime_error(projection.string() + ": invalid pool member " + member);
-                    }
-                }
-            }
-            layouts.emplace_back(std::move(output));
             inputs.push_back({std::move(module), {}});
         } else if (backend == "interfaces") {
             OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),

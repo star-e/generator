@@ -49,6 +49,7 @@ struct Constructor {
 struct Record {
     std::vector<Field> fields;
     std::vector<Constructor> constructors;
+    std::vector<Method> methods;
 };
 
 struct Enum {

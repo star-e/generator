@@ -6,12 +6,24 @@
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
+#include <type_traits>
 
 namespace {
 using namespace cc::codegen;
 
 void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
+}
+
+void checkSourceLocation() {
+    static_assert(std::is_aggregate_v<SourceLocation>);
+    static_assert(std::is_same_v<decltype(SourceLocation::file), std::filesystem::path>);
+    static_assert(std::is_same_v<decltype(SourceLocation::line), std::size_t>);
+    static_assert(std::is_same_v<decltype(SourceLocation::column), std::size_t>);
+    const SourceLocation empty;
+    require(empty.file.empty() && empty.line == 0 && empty.column == 0, "source location defaults changed");
+    const SourceLocation loc{"input.spec", 12, 7};
+    require(loc.describe() == "input.spec:12:7", "source location format changed");
 }
 
 const MethodInfo& scratch(const TypeGraph& graph, TypeId owner) {
@@ -171,6 +183,7 @@ int main(int argc, char** argv) {
     try {
         if (argc != 2) throw std::runtime_error("expected spec directory");
         const std::filesystem::path specs = argv[1];
+        checkSourceLocation();
         checkArchive(specs / "render/archive.spec");
         checkSettings(specs / "render/render-settings.spec");
         checkImports(specs);

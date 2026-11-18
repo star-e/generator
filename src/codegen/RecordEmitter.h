@@ -1,12 +1,13 @@
 #pragma once
 
 #include "codegen/InterfaceEmitter.h"
+#include <optional>
 
 namespace cc::codegen {
 
 struct RecordOutput {
     std::filesystem::path header;
-    std::filesystem::path typescript;
+    std::optional<std::filesystem::path> typescript;
     std::filesystem::path poolModule;
     std::map<std::string, std::string> pools;
 };
