@@ -1,8 +1,9 @@
 const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
-const [js, stage, engine] = process.argv.slice(2);
-const { AccessType, LightInfo, RenderCommonObjectPool } = require(js);
+const [jsDir, stage, engine] = process.argv.slice(2);
+const { UpdateFrequency, AccessType, LightInfo, RenderCommonObjectPool } = require(path.join(jsDir, 'types.js'));
+const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
 
 function compareDeclaration(file, firstLine, lastLine) {
     function read(root) {
@@ -22,12 +23,19 @@ const engineTypes = fs.readFileSync(path.join(engine, ts), 'utf8').split(/\r?\n/
 for (const line of fs.readFileSync(path.join(stage, ts), 'utf8').split(/\r?\n/)) {
     if (line.startsWith('import ')) assert.ok(engineTypes.includes(line), line);
 }
+compareDeclaration(cpp, 'enum class UpdateFrequency : uint8_t {', '};');
 compareDeclaration(cpp, 'enum class AccessType : uint8_t {', '};');
 compareDeclaration(cpp, 'struct LightInfo {', '};');
+compareDeclaration(ts, 'export enum UpdateFrequency {', '}');
 compareDeclaration(ts, 'export enum AccessType {', '}');
 compareDeclaration(ts, 'export class LightInfo {', '}');
 compareDeclaration(ts, '    createLightInfo (', '    }');
 
+for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS', 'COUNT'].entries()) {
+    assert.equal(UpdateFrequency[name], value);
+    assert.equal(getUpdateFrequencyName(value), name);
+}
+assert.equal(getUpdateFrequencyName(99), '');
 assert.deepEqual([AccessType.READ, AccessType.READ_WRITE, AccessType.WRITE], [0, 1, 2]);
 const fields = (v) => [v.light, v.level, v.culledByLight, v.probe];
 assert.deepEqual(fields(new LightInfo()), [null, 0, false, null]);

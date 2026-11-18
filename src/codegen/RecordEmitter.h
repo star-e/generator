@@ -2,12 +2,14 @@
 
 #include "codegen/InterfaceEmitter.h"
 #include <optional>
+#include <set>
 
 namespace cc::codegen {
 
 struct RecordOutput {
     std::filesystem::path header;
     std::optional<std::filesystem::path> typescript;
+    std::set<std::string> namedEnums;
     std::filesystem::path poolModule;
     std::map<std::string, std::string> pools;
 };

@@ -157,6 +157,16 @@ Member projectMember(const TypeGraph& graph, const TypeModule& module, const Fie
 
 using Order = std::vector<uint32_t>;
 
+void tsEnumNames(std::ostream& out, const std::string& name, const EnumType& enumeration) {
+    out << "\nexport function get" << name << "Name (e: " << name << "): string {\n"
+        << "    switch (e) {\n";
+    for (const auto& value : enumeration.values) {
+        out << "    case " << name << "." << value.name << ":\n"
+            << "        return '" << value.name << "';\n";
+    }
+    out << "    default:\n        return '';\n    }\n}\n";
+}
+
 void cppRecord(std::ostream& out, const TypeGraph& graph, const TypeModule& module, const TypeNode& node,
                const std::vector<Member>& members, Dependencies& deps) {
     const auto& record = std::get<RecordType>(node.data);
@@ -257,7 +267,9 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     const auto& module = graph.modules.at(owner.value);
     Dependencies deps;
     Pool pool;
-    std::ostringstream cpp, ts;
+    std::ostringstream cpp, ts, nameFunctions;
+    auto pendingEnums = output.namedEnums;
+    std::string enumImports;
     size_t poolCount{};
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
@@ -277,6 +289,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             cpp << "};\n";
             ts << "}\n";
+            if (pendingEnums.erase(node.name)) {
+                if (!enumImports.empty()) enumImports += ", ";
+                enumImports += node.name;
+                tsEnumNames(nameFunctions, node.name, *enumeration);
+            }
             continue;
         }
         const auto* record = std::get_if<RecordType>(&node.data);
@@ -300,6 +317,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
     }
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
+    if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
 
     std::ostringstream header, script;
     header << preamble << "#pragma once\n";
@@ -325,6 +343,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
     script << ts.str();
     files.emplace(*output.typescript, script.str());
+    if (!enumImports.empty()) {
+        const auto stem = output.typescript->stem().generic_string();
+        const auto namesPath = output.typescript->parent_path() / (stem + "-names.ts");
+        files.emplace(namesPath, preamble + "import { " + enumImports + " } from './" + stem + "';\n" + nameFunctions.str());
+    }
     return files;
 }
 

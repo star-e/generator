@@ -1,4 +1,5 @@
 {
+  "namedEnums": ["UpdateFrequency"],
   "poolModule": "cocos/core/memop",
   "pools": { "LightInfo": "li" }
 }

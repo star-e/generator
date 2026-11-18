@@ -5,7 +5,14 @@
 
 using cc::render::AccessType;
 using cc::render::LightInfo;
+using cc::render::UpdateFrequency;
 
+static_assert(std::is_same_v<std::underlying_type_t<UpdateFrequency>, uint8_t>);
+static_assert(static_cast<int>(UpdateFrequency::PER_INSTANCE) == 0);
+static_assert(static_cast<int>(UpdateFrequency::PER_BATCH) == 1);
+static_assert(static_cast<int>(UpdateFrequency::PER_PHASE) == 2);
+static_assert(static_cast<int>(UpdateFrequency::PER_PASS) == 3);
+static_assert(static_cast<int>(UpdateFrequency::COUNT) == 4);
 static_assert(std::is_same_v<std::underlying_type_t<AccessType>, uint8_t>);
 static_assert(static_cast<int>(AccessType::READ) == 0 && static_cast<int>(AccessType::READ_WRITE) == 1 &&
               static_cast<int>(AccessType::WRITE) == 2);

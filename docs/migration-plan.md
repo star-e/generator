@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区生成四个归档文件、一个编辑器设置文件，以及 `RenderCommon` 的首批 C++ 和 TS 类型。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区生成四个归档文件、一个编辑器设置文件，以及 `RenderCommon` 的 C++ 类型头、TS 类型文件和 TS 枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -120,7 +120,9 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `RenderSettings` 的 `PipelineSettings.bloom` 和 `Bloom.type` 分别引用 `Bloom` 和 `BloomType`。设置后端按字段生成 TS 接口、默认值工厂和递归补全函数。旧版材质迁移规则在投影中声明。`cocos.settings.editor` 编译引擎的 `BuiltinPipelineSettings` 并在隔离环境调用 `onEnable()`，检查新字段缺失、已有材质和显式 `null` 三种情况。[设置声明](../spec/render/render-settings.spec) · [设置投影](../spec/render/render-settings.json)
 
-`RenderCommon` 的 `AccessType` 和 `LightInfo` 现已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。模型声明记录枚举底层类型、字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区为其配置原生头文件和 TS 导入路径。`cocos.records.interop` 编译运行 C++17 消费者，并用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。当前对照范围是这两个类型的声明和对象池的 `createLightInfo()` 方法，其他枚举、结构体、序列化及 JSB 将在后续批次接入。[模块声明](../spec/render/render-common.spec) · [对象池投影](../spec/render/render-common.json) · [消费测试](../tests/RecordInterop.cmake)
+`RenderCommon` 的 `UpdateFrequency`、`AccessType` 和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。模型声明记录枚举底层类型、字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区为其配置原生头文件和 TS 导入路径。模块投影的 `namedEnums` 选中 `UpdateFrequency`，生成器据其枚举项输出同目录的 `types-names.ts`。[模块声明](../spec/render/render-common.spec) · [模块投影](../spec/render/render-common.json)
+
+`cocos.records.interop` 逐字节对照引擎的 `types-names.ts`，编译运行 C++17 消费者，并在 TS 编译后验证五个更新频率的名称和越界返回值。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 
 ### 引擎模块和产物
 

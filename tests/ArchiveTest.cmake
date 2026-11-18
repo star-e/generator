@@ -13,6 +13,7 @@ file(READ "${SOURCE}/config/baseline.json" baseline)
 file(GLOB_RECURSE files RELATIVE "${output}" "${output}/*")
 set(baselineFiles
     cocos/rendering/custom/archive.ts
+    cocos/rendering/custom/types-names.ts
     editor/assets/default_renderpipeline/builtin-pipeline-types.ts
     native/cocos/renderer/pipeline/custom/ArchiveFwd.h
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp

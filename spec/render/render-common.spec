@@ -3,6 +3,14 @@ import Light;
 import ReflectionProbe;
 
 namespace cc::render {
+    enum class UpdateFrequency : uint8_t {
+        PER_INSTANCE,
+        PER_BATCH,
+        PER_PHASE,
+        PER_PASS,
+        COUNT,
+    }
+
     enum class AccessType : uint8_t {
         READ,
         READ_WRITE,
