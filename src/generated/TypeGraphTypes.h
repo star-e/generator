@@ -50,6 +50,7 @@ struct FieldInfo {
     std::string initializer;
     bool isReadonly = false;
     bool isNullable = false;
+    bool transient = false;
 };
 
 struct Enumerator {
@@ -75,6 +76,7 @@ struct EnumType {
 
 struct RecordType {
     bool moveOnly = false;
+    bool serializable = false;
     std::vector<std::vector<uint32_t>> constructors;
     std::vector<TypeId> bases;
     std::vector<FieldInfo> fields;

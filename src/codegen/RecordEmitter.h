@@ -16,6 +16,7 @@ struct RecordOutput {
     std::filesystem::path header;
     std::optional<std::filesystem::path> forwardHeader;
     std::optional<std::filesystem::path> namesHeader;
+    std::optional<std::filesystem::path> serializationHeader;
     std::optional<std::filesystem::path> typescript;
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
@@ -26,6 +27,12 @@ struct RecordOutput {
     std::map<std::string, PoolProjection> pools;
 };
 
-Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, const std::string& preamble);
+struct ArchiveOutput {
+    const OutputLayout& layout;
+    const TypeModule& module;
+};
+
+Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, std::optional<ArchiveOutput> archive,
+                  const std::string& preamble);
 
 } // namespace cc::codegen

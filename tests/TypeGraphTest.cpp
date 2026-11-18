@@ -104,7 +104,8 @@ void checkImports(const std::filesystem::path& specs) {
     std::vector<ModuleInput> inputs{{readModule(commonSpec), {}},
                                     {readModule(specs / "extern/light.spec"), {}},
                                     {readModule(specs / "extern/reflection-probe.spec"), {}},
-                                    {readModule(specs / "extern/gfx.spec"), {}}};
+                                    {readModule(specs / "extern/gfx.spec"), {}},
+                                    {readModule(specs / "render/archive.spec"), {}}};
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
         import RenderCommon;
@@ -125,7 +126,8 @@ void checkImports(const std::filesystem::path& specs) {
         }
     )"), {}});
     const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
-                          {"ccstd::pmr::string", {}}, {"ccstd::vector", {}}};
+                          {"ccstd::pmr::string", {}}, {"ccstd::vector", {}}, {"void", {}}, {"double", {}},
+                          {"std::string_view", {}}, {"boost::container::pmr::memory_resource", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
         const auto& info = graph.node(infoId);
@@ -153,7 +155,8 @@ void checkImports(const std::filesystem::path& specs) {
         require(std::holds_alternative<ExternalTypeNode>(lightNode.data) &&
                 std::holds_alternative<ExternalTypeNode>(probeNode.data), "lost external declarations");
         const auto mode = graph.findType("cc::gfx::ResolveMode");
-        require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module, graph.node(mode).module},
+        const auto archive = graph.findType("cc::render::InputArchive");
+        require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module, graph.node(mode).module, graph.node(archive).module},
                 "wrong direct imports");
         const auto& pair = std::get<RecordType>(graph.node(graph.findType("cc::render::ResolvePair")).data);
         require(pair.fields.at(3).type.type == mode && pair.fields.at(4).type.type == mode, "wrong resolve mode type");
@@ -166,6 +169,8 @@ void checkImports(const std::filesystem::path& specs) {
         require(record.constructors == std::vector<std::vector<uint32_t>>{{0, 2, 3, 1}, {0, 2}},
                 "lost native constructor overloads or argument order");
         const auto& fields = record.fields;
+        require(record.serializable && pair.serializable && !upload.serializable &&
+                fields.at(0).transient && fields.at(1).transient && !fields.at(2).transient, "wrong archive selection");
         require(fields.size() == 4 && fields[0].name == "light" && fields[0].isNullable &&
                 fields[1].name == "probe" && fields[1].isNullable, "wrong LightInfo resources");
         const auto& ptr = std::get<TemplateInstanceType>(graph.node(fields[0].type.type).data);

@@ -33,6 +33,8 @@ endfunction()
 
 change_imports("import Gfx;" "")
 expect_failure(2 "render-common.spec:[0-9]+:[0-9]+: cc::gfx::ResolveMode requires import Gfx in module RenderCommon" ${generate})
+change_imports("import ArchiveInterface;" "")
+expect_failure(2 "serialization requires import ArchiveInterface" ${generate})
 change_imports("import ReflectionProbe;" "")
 expect_failure(2 "render-common.spec:${probeLine}:25: cc::scene::ReflectionProbe requires import ReflectionProbe in module RenderCommon" ${generate})
 change_imports("import Light;" "")

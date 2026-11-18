@@ -39,6 +39,7 @@ struct Field {
     std::string initializer;
     bool isReadonly{};
     bool isNullable{};
+    bool transient{};
 };
 
 struct Constructor {
@@ -48,6 +49,7 @@ struct Constructor {
 
 struct Record {
     bool moveOnly{};
+    bool serializable{};
     std::vector<Field> fields;
     std::vector<Constructor> constructors;
     std::vector<Method> methods;

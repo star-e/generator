@@ -28,6 +28,7 @@ namespace codegen {
         initializer: std::string;
         isReadonly: bool = false;
         isNullable: bool = false;
+        transient: bool = false;
     }
     struct Enumerator {
         name: std::string;
@@ -43,6 +44,7 @@ namespace codegen {
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
     struct RecordType {
         moveOnly: bool = false;
+        serializable: bool = false;
         constructors: std::vector<std::vector<uint32_t>>;
         bases: std::vector<TypeId>;
         fields: std::vector<FieldInfo>;

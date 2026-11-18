@@ -87,7 +87,7 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
 }
 
 RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
-    RecordType result{.moveOnly = syntax.moveOnly};
+    RecordType result{.moveOnly = syntax.moveOnly, .serializable = syntax.serializable};
     for (const auto& field : syntax.fields) {
         auto use = resolve(graph, field.type, scope, owner);
         std::string_view magnitude = field.initializer;
@@ -110,7 +110,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
                 throw std::runtime_error(use.location.describe() + ": invalid enum default " + field.initializer);
             }
         }
-        result.fields.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable});
+        result.fields.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient});
     }
     std::set<std::vector<uint32_t>> signatures;
     for (const auto& ctor : syntax.constructors) {

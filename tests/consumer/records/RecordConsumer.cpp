@@ -1,9 +1,12 @@
 #include "cocos/renderer/pipeline/custom/RenderCommonNames.h"
+#include "cocos/renderer/pipeline/custom/RenderCommonSerialization.h"
+#include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "ShiftProbe.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <array>
 #include <cstddef>
+#include <fstream>
 #include <initializer_list>
 #include <string_view>
 #include <type_traits>
@@ -184,7 +187,55 @@ bool checkUploadPair() {
     return matches(moved, &second);
 }
 
-int main() {
+int exchangeRecords(std::string_view command, const char* path) {
+    using cc::gfx::ResolveMode;
+    pmr::monotonic_buffer_resource memory;
+    if (command == "write") {
+        std::ofstream file(path, std::ios::binary);
+        cc::render::BinaryOutputArchive archive(file, &memory);
+        save(archive, LightInfo{nullptr, 77, true, nullptr});
+        save(archive, ResolvePair{"color-msaa", "color", depthStencil, ResolveMode::MIN, ResolveMode::MAX, &memory});
+        save(archive, CopyPair{"copy-src", "copy-dst", 1, 2, 3, 4, 5, 6, 7, 8, &memory});
+        save(archive, MovePair{"move-src", "move-dst", 11, 12, 13, 14, 15, &memory});
+        save(archive, PipelineStatistics{21, 22, 23, 24, 25, 26, 27, 28, 29, 30, UINT32_MAX});
+        file.close();
+        return file.good() ? 0 : 1;
+    }
+    if (command != "read") return 2;
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return 1;
+    cc::render::BinaryInputArchive archive(file, &memory);
+    LightInfo light;
+    alignas(std::max_align_t) std::byte token{};
+    auto* probe = reinterpret_cast<cc::scene::ReflectionProbe*>(&token);
+    light.probe = probe;
+    ResolvePair resolve(&memory);
+    CopyPair copy(&memory);
+    MovePair move(&memory);
+    PipelineStatistics statistics{};
+    load(archive, light);
+    load(archive, resolve);
+    load(archive, copy);
+    load(archive, move);
+    load(archive, statistics);
+    if (light.level != 77 || !light.culledByLight || light.probe != probe) return 3;
+    if (resolve.source != "color-msaa" || resolve.target != "color" || resolve.resolveFlags != depthStencil ||
+        resolve.mode != ResolveMode::MIN || resolve.mode1 != ResolveMode::MAX) return 4;
+    if (copy.source != "copy-src" || copy.target != "copy-dst" ||
+        subresources(copy) != std::array<uint32_t, 8>{1, 2, 3, 4, 5, 6, 7, 8}) return 5;
+    if (move.source != "move-src" || move.target != "move-dst" ||
+        subresources(move) != std::array<uint32_t, 5>{11, 12, 13, 14, 15}) return 6;
+    const std::array counts{statistics.numRenderPasses, statistics.numManagedTextures, statistics.totalManagedTextures,
+        statistics.numUploadBuffers, statistics.numUploadBufferViews, statistics.numFreeUploadBuffers,
+        statistics.numFreeUploadBufferViews, statistics.numDescriptorSets, statistics.numFreeDescriptorSets,
+        statistics.numInstancingBuffers, statistics.numInstancingUniformBlocks};
+    if (counts != std::array<uint32_t, 11>{21, 22, 23, 24, 25, 26, 27, 28, 29, 30, UINT32_MAX}) return 7;
+    return file.good() && file.peek() == std::char_traits<char>::eof() ? 0 : 1;
+}
+
+int main(int argc, char** argv) {
+    if (argc == 3) return exchangeRecords(argv[1], argv[2]);
+    if (argc != 1) return 2;
     using cc::render::getName;
     using namespace std::string_view_literals;
     if (getName(QueueHint::RENDER_OPAQUE) != "OPAQUE"sv || getName(static_cast<QueueHint>(255)) != ""sv ||

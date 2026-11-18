@@ -5,6 +5,7 @@
 #include "model/IntegerLiteral.h"
 
 #include <algorithm>
+#include <iterator>
 #include <locale>
 #include <numeric>
 #include <set>
@@ -515,6 +516,111 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>&
     ts << "}\n";
 }
 
+// Both writers consume this sequence in declaration order, independently of constructor and pool order.
+struct ArchiveField {
+    std::string name;
+    std::string primitive;
+    std::string cppDescription;
+    std::string tsDescription;
+};
+
+std::vector<ArchiveField> archiveFields(const TypeGraph& graph, const RecordType& record, const std::vector<Member>& members) {
+    std::vector<ArchiveField> fields;
+    for (size_t i = 0; i < record.fields.size(); ++i) {
+        const auto& field = record.fields[i];
+        const auto& node = graph.node(field.type.type);
+        ArchiveField entry{.name = field.name};
+        if (field.transient) {
+            std::string_view cpp = members[i].cpp, ts = members[i].ts;
+            if (cpp.ends_with('*')) cpp.remove_suffix(1);
+            if (ts.ends_with(" | null")) ts.remove_suffix(7);
+            entry.cppDescription = cpp;
+            entry.tsDescription = ts;
+        } else {
+            if (field.isReadonly) invalid(field, "archive load requires a writable field");
+            std::string_view type = node.qualifiedName;
+            if (const auto* enumeration = std::get_if<EnumType>(&node.data))
+                type = enumeration->underlying == TypeId{} ? std::string_view{"int"} : graph.node(enumeration->underlying).qualifiedName;
+            static constexpr std::string_view numbers[]{"int", "unsigned", "short", "char", "bool", "int8_t", "uint8_t",
+                "int16_t", "uint16_t", "int32_t", "uint32_t", "float", "double"};
+            if (node.qualifiedName == "bool") entry.primitive = "Bool";
+            else if (node.qualifiedName == "ccstd::pmr::string") entry.primitive = "String";
+            else if (std::ranges::find(numbers, type) != std::end(numbers)) entry.primitive = "Number";
+            else invalid(field, "unsupported archive field type " + node.qualifiedName);
+        }
+        fields.push_back(std::move(entry));
+    }
+    return fields;
+}
+
+const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& module, std::string_view name) {
+    for (auto id : module.declarations) {
+        const auto& type = graph.node(id);
+        if (type.name == name && std::holds_alternative<InterfaceType>(type.data)) return type;
+    }
+    throw std::runtime_error(module.name + ": missing archive interface " + std::string(name));
+}
+
+const std::string& archiveMethod(const TypeNode& interfaceType, const std::string& method) {
+    const auto& methods = std::get<InterfaceType>(interfaceType.data).methods;
+    const auto found = std::ranges::find(methods, method, &MethodInfo::name);
+    if (found != methods.end() && found->typescriptName) return *found->typescriptName;
+    throw std::runtime_error("missing TypeScript projection for " + interfaceType.qualifiedName + "." + method);
+}
+
+struct RecordArchives {
+    std::ostringstream declarations, definitions, script;
+
+    void add(const TypeGraph& graph, const TypeModule& archive, const TypeNode& record, const std::vector<ArchiveField>& fields, bool emitTs) {
+        const auto& name = record.name;
+        declarations << '\n';
+        for (bool save : {true, false}) {
+            const std::string op = save ? "save" : "load";
+            const auto& api = archiveInterface(graph, archive, save ? "OutputArchive" : "InputArchive");
+            const auto archiveName = cppName(graph, api, graph.modules.at(record.module.value));
+            const auto signature = "void " + op + "(" + archiveName + "& ar, " + (save ? "const " : "") + name + "& v)";
+            declarations << signature << ";\n";
+            definitions << '\n' << signature << " {\n";
+            if (emitTs) script << "\nexport function " << op << name << " (a: " << api.name << ", v: " << name << "): void {\n";
+            for (const auto& field : fields) {
+                const auto member = "v." + field.name;
+                if (field.primitive.empty()) {
+                    definitions << "    // skip, " << field.name << ": " << field.cppDescription << '\n';
+                    if (emitTs) script << "    // skip, " << member << ": " << field.tsDescription << '\n';
+                    continue;
+                }
+                definitions << "    " << op << "(ar, " << member << ");\n";
+                if (emitTs) {
+                    const auto& method = archiveMethod(api, (save ? "write" : "read") + field.primitive);
+                    if (save) script << "    a." << method << "(" << member << ");\n";
+                    else script << "    " << member << " = a." << method << "();\n";
+                }
+            }
+            definitions << "}\n";
+            if (emitTs) script << "}\n";
+        }
+    }
+
+    void emitNative(Files& files, const TypeModule& module, const RecordOutput& output,
+                    const OutputLayout& archive, const std::string& preamble) const {
+        const auto& path = *output.serializationHeader;
+        const auto archiveHeader = (archive.includeDir / (archive.prefix + "Types.h")).generic_string();
+        std::ostringstream header, source;
+        header << preamble << "#pragma once\n#include \"" << archiveHeader << "\"\n#include \""
+               << output.forwardHeader.value_or(output.header).generic_string() << "\"\n";
+        writeNamespace(header, module, declarations);
+        source << preamble << "// NOLINTBEGIN(misc-include-cleaner)\n// clang-format off\n";
+        cppIncludes(source, {archiveHeader, path.generic_string(), output.header.generic_string(),
+                             (archive.includeDir / "details/SerializationUtils.h").generic_string()});
+        source << "// clang-format on\n";
+        writeNamespace(source, module, definitions);
+        source << "// NOLINTEND(misc-include-cleaner)\n";
+        files.emplace(output.nativeRoot / path, header.str());
+        auto cpp = output.nativeRoot / path;
+        files.emplace(cpp.replace_extension(".cpp"), source.str());
+    }
+};
+
 struct Pool {
     std::ostringstream resets, factories, fields;
 
@@ -534,10 +640,12 @@ struct Pool {
 
 } // namespace
 
-Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, const std::string& preamble) {
+Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, std::optional<ArchiveOutput> archive,
+                  const std::string& preamble) {
     const auto& module = graph.modules.at(owner.value);
     Dependencies deps;
     Pool pool;
+    RecordArchives archives;
     std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, nameFunctions;
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
@@ -589,6 +697,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         std::vector<Member> members;
         for (const auto& field : record->fields) members.push_back(projectMember(graph, owner, field, deps, output.typescript.has_value()));
         cppRecord(cpp, definitions, graph, module, node, members, deps);
+        if (record->serializable) {
+            if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
+            archives.add(graph, archive->module, node, archiveFields(graph, *record, members), output.typescript.has_value());
+        }
         if (pendingHashes.erase(node.name)) cppHash(hashDeclarations, hashDefinitions, node, members);
         if (pendingComparable.erase(node.name)) {
             deps.headers.insert("tuple");
@@ -637,6 +749,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
 
     Files files{{output.nativeRoot / output.header, header.str()}};
+    if (archive) archives.emitNative(files, module, output, archive->layout, preamble);
     if (output.forwardHeader) files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble));
     if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output.header, preamble));
     if (!definitions.view().empty()) {
@@ -658,7 +771,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
            << "\nexport class " << module.name << "ObjectPool {\n    constructor () {\n    }\n    reset (): void {\n"
            << pool.resets.str() << "    }\n" << pool.factories.str() << pool.fields.str() << "}\n";
     }
-    script << ts.str();
+    if (!archives.script.view().empty()) {
+        auto path = archive->layout.typescript;
+        script << "import type { OutputArchive, InputArchive } from '" << modulePath(path.replace_extension(), *output.typescript) << "';\n";
+    }
+    script << ts.str() << archives.script.str();
     files.emplace(*output.typescript, script.str());
     if (!enumImports.empty()) {
         const auto stem = output.typescript->stem().generic_string();

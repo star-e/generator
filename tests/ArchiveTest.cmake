@@ -19,7 +19,9 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
     native/cocos/renderer/pipeline/custom/ArchiveTypes.h
     native/cocos/renderer/pipeline/custom/RenderCommonFwd.h
-    native/cocos/renderer/pipeline/custom/RenderCommonNames.h)
+    native/cocos/renderer/pipeline/custom/RenderCommonNames.h
+    native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp
+    native/cocos/renderer/pipeline/custom/RenderCommonSerialization.h)
 set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts
     native/cocos/renderer/pipeline/custom/RenderCommonTypes.h native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp)
 list(SORT expectedFiles)

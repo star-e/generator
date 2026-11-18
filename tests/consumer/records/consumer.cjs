@@ -1,7 +1,7 @@
 const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
-const [jsDir, stage, engine] = process.argv.slice(2);
+const [jsDir, stage, engine, nativeFile, webFile] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
@@ -194,3 +194,37 @@ pool.reset();
 assert.equal(pool.createUploadPair(), pooledUpload);
 assert.equal(pooledUpload.source, pooledBytes);
 assert.deepEqual(uploadFields(pooledUpload), uploadDefaults);
+
+const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
+const statistics = Object.assign(new types.PipelineStatistics(), {
+    numRenderPasses: 21, numManagedTextures: 22, totalManagedTextures: 23, numUploadBuffers: 24,
+    numUploadBufferViews: 25, numFreeUploadBuffers: 26, numFreeUploadBufferViews: 27, numDescriptorSets: 28,
+    numFreeDescriptorSets: 29, numInstancingBuffers: 30, numInstancingUniformBlocks: 0xFFFFFFFF,
+});
+const fixtures = [
+    ['LightInfo', new LightInfo(light, 77, true, probe)],
+    ['ResolvePair', new types.ResolvePair('color-msaa', 'color', depthStencil, ResolveMode.MIN, ResolveMode.MAX)],
+    ['CopyPair', new types.CopyPair('copy-src', 'copy-dst', 1, 2, 3, 4, 5, 6, 7, 8)],
+    ['MovePair', new types.MovePair('move-src', 'move-dst', 11, 12, 13, 14, 15)],
+    ['PipelineStatistics', statistics],
+];
+const bytesFromCpp = fs.readFileSync(nativeFile);
+const input = new BinaryInputArchive(bytesFromCpp.buffer.slice(bytesFromCpp.byteOffset, bytesFromCpp.byteOffset + bytesFromCpp.byteLength));
+const output = new BinaryOutputArchive();
+for (const [name, expected] of fixtures) {
+    compareDeclaration(ts, 'export function save' + name + ' (a: OutputArchive, v: ' + name + '): void {', '}');
+    compareDeclaration(ts, 'export function load' + name + ' (a: InputArchive, v: ' + name + '): void {', '}');
+    const actual = new types[name]();
+    if (name === 'LightInfo') Object.assign(actual, { light, probe });
+    types['load' + name](input, actual);
+    assert.deepEqual(actual, expected, name);
+    if (name === 'LightInfo') {
+        assert.equal(actual.light, light);
+        assert.equal(actual.probe, probe);
+    }
+    types['save' + name](output, expected);
+}
+assert.equal(input.offset, bytesFromCpp.byteLength);
+assert.equal(types.saveUploadPair, undefined);
+assert.equal(types.loadUploadPair, undefined);
+fs.writeFileSync(webFile, new Uint8Array(output.data));

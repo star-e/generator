@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区生成四个归档文件、一个编辑器设置文件，以及 `RenderCommon` 的 C++ 前置声明头、类型头、构造函数实现、TS 类型文件和 TS 枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区生成 13 个文件。归档接口占四个文件，编辑器设置占一个文件。`RenderCommon` 生成 C++ 前置声明头、名称查询头、类型头及实现、序列化头及实现，以及 TS 类型和枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -145,6 +145,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按 `hashable` 投影生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec) · [投影](../spec/render/render-common.json)
 
 记录模块可以用 `namesHeader` 指定 C++ 名称查询头，原生头文件路径相对于 `nativeRoot`。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)
+
+记录用 `@serialize` 参与归档，用 `@transient` 标记加载时应保留原值的字段。记录模块直接导入 `ArchiveInterface`，用 `serializationHeader` 指定 C++ 头路径。C++ 的 `save/load` 和 TS 的 `save类型名/load类型名` 共用 TypeGraph 中的字段顺序。`RenderCommon` 包含五组归档函数，其中 `LightInfo` 只读写 `level` 和 `culledByLight`。消费测试用引擎的 `BinaryArchive` 在两种语言间双向读写五种记录并逐字节比较。[声明](../spec/render/render-common.spec) · [互读测试](../tests/RecordInterop.cmake)
 
 旧版 52 个文件作为历史基线。按这 11 个模块的新版计划，退役四个图头后生成 **48 个文件**，其中原生 C++ 文件为 37 个。C++ 默认目录是 `native/cocos/renderer/pipeline/custom/`，引擎 TS 默认目录是 `cocos/rendering/custom/`。模块名与文件前缀分别配置，尤其注意 `PrivateInterface → Private` 和 `PrivateTypes → Native`。
 

@@ -2,6 +2,7 @@ module RenderCommon;
 import Light;
 import ReflectionProbe;
 import Gfx;
+import ArchiveInterface;
 
 namespace cc::render {
     enum class UpdateFrequency : uint8_t {
@@ -131,8 +132,10 @@ namespace cc::render {
         INT_TYPE,
     }
 
-    struct LightInfo {
+    @serialize struct LightInfo {
+        @transient
         nullable light: IntrusivePtr<scene::Light>;
+        @transient
         nullable probe: scene::ReflectionProbe* = nullptr;
         level: uint32_t = 0;
         culledByLight: bool = false;
@@ -148,7 +151,7 @@ namespace cc::render {
         STENCIL = 1 << 2,
     }
 
-    struct ResolvePair {
+    @serialize struct ResolvePair {
         source: ccstd::pmr::string;
         target: ccstd::pmr::string;
         resolveFlags: ResolveFlags = ResolveFlags::NONE;
@@ -158,7 +161,7 @@ namespace cc::render {
         constructor(source, target, resolveFlags, mode, mode1);
     }
 
-    struct CopyPair {
+    @serialize struct CopyPair {
         source: ccstd::pmr::string;
         target: ccstd::pmr::string;
         mipLevels: uint32_t = 0xFFFFFFFF;
@@ -189,7 +192,7 @@ namespace cc::render {
                     targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
     }
 
-    struct MovePair {
+    @serialize struct MovePair {
         source: ccstd::pmr::string;
         target: ccstd::pmr::string;
         mipLevels: uint32_t = 0xFFFFFFFF;
@@ -202,7 +205,7 @@ namespace cc::render {
                     targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
     }
 
-    struct PipelineStatistics {
+    @serialize struct PipelineStatistics {
         numRenderPasses: uint32_t = 0;
         numManagedTextures: uint32_t = 0;
         totalManagedTextures: uint32_t = 0;

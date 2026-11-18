@@ -149,9 +149,16 @@ private:
                 expect("struct");
                 result.data = TagDeclaration{};
             } else {
-                expect("moveOnly");
-                if (!accept("struct")) fail("@moveOnly requires a struct");
-                result.data = Record{.moveOnly = true};
+                Record record;
+                do {
+                    const auto annotation = identifier();
+                    if (annotation == "moveOnly" && !record.moveOnly) record.moveOnly = true;
+                    else if (annotation == "serialize" && !record.serializable) record.serializable = true;
+                    else fail("unknown or duplicate record annotation @" + annotation);
+                    if (token != "@" && token != "struct") fail("@" + annotation + " requires a struct");
+                } while (accept("@"));
+                expect("struct");
+                result.data = std::move(record);
             }
         } else if (accept("struct")) result.data = Record{};
         else if (accept("graph")) result.data = GraphDeclaration{};
@@ -303,6 +310,10 @@ private:
 
     Field field(std::set<std::string>& names) {
         Field result;
+        if (accept("@")) {
+            expect("transient");
+            result.transient = true;
+        }
         result.isReadonly = accept("readonly");
         result.isNullable = accept("nullable");
         result.name = uniqueName(names);

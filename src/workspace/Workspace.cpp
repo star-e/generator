@@ -127,6 +127,12 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
         if (output.namesHeader->extension() != ".h" || *output.namesHeader == output.header || output.namesHeader == output.forwardHeader)
             throw std::runtime_error("expected a distinct .h namesHeader");
     }
+    if (config.contains("serializationHeader")) {
+        const auto path = outputPath(config.at("serializationHeader"));
+        if (path.extension() != ".h" || path == output.header || path == output.namesHeader || path == output.forwardHeader)
+            throw std::runtime_error("expected a distinct .h serializationHeader");
+        output.serializationHeader = path;
+    }
     if (config.contains("typescript")) output.typescript = typescriptOutput(config);
     if (!config.contains("projection")) return output;
     const auto projection = base / config.at("projection").get<std::string>();
@@ -225,7 +231,19 @@ Files plan(const Json& settings, const fs::path& base) {
         if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {
             emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->projection, preamble));
         } else if (const auto* records = std::get_if<RecordOutput>(&layouts[i])) {
-            emitted = emitRecords(graph, owner, *records, preamble);
+            std::optional<ArchiveOutput> archive;
+            if (records->serializationHeader) {
+                const auto& module = graph.modules.at(i);
+                for (auto imported : module.imports) {
+                    const auto& dependency = graph.modules.at(imported.value);
+                    if (dependency.name == "ArchiveInterface") {
+                        if (const auto* layout = std::get_if<OutputLayout>(&layouts.at(imported.value)))
+                            archive.emplace(*layout, dependency);
+                    }
+                }
+                if (!archive) throw std::runtime_error(module.name + ": serialization requires import ArchiveInterface with interface output");
+            }
+            emitted = emitRecords(graph, owner, *records, archive, preamble);
         } else {
             emitted = emitInterfaces(graph, owner, std::get<OutputLayout>(layouts[i]), preamble);
         }

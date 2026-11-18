@@ -3,6 +3,8 @@ project(RenderCommonConsumer LANGUAGES CXX)
 find_package(boost_container CONFIG REQUIRED)
 set(native "${ENGINE}/native")
 add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp "${native}/cocos/base/RefCounted.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp")
 target_link_libraries(RecordConsumer PRIVATE Boost::container)
 get_target_property(containerType Boost::container TYPE)
