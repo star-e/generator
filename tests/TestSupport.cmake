@@ -4,6 +4,13 @@ function(run)
     execute_process(COMMAND ${ARGV} COMMAND_ERROR_IS_FATAL ANY)
 endfunction()
 
+function(expect_failure code pattern)
+    execute_process(COMMAND ${ARGN} RESULT_VARIABLE rc ERROR_VARIABLE error)
+    if(NOT rc STREQUAL "${code}" OR NOT error MATCHES "${pattern}")
+        message(FATAL_ERROR "Expected ${code} and ${pattern}, got ${rc}: ${error}")
+    endif()
+endfunction()
+
 function(test_workspace result)
     string(RANDOM LENGTH 16 ALPHABET 0123456789abcdef suffix)
     set(dir "${CMAKE_CURRENT_BINARY_DIR}/cocos-test-${suffix}")

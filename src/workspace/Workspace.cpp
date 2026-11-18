@@ -1,5 +1,6 @@
 #include "workspace/Workspace.h"
 #include "codegen/InterfaceEmitter.h"
+#include "codegen/SettingsEmitter.h"
 #include "parser/SpecParser.h"
 #include "model/TypeGraphBuilder.h"
 
@@ -68,12 +69,13 @@ Projection loadProjection(const fs::path& path, const Module& module) {
     Projection projection;
     const auto json = object(path);
     for (const auto& [name, rules] : json.items()) {
-        auto decl = std::ranges::find(module.interfaces, name, &Interface::name);
-        if (decl == module.interfaces.end() || !rules.is_object()) {
+        const auto decl = std::ranges::find(module.declarations, name, &Declaration::name);
+        if (decl == module.declarations.end() || !std::holds_alternative<Interface>(decl->data) || !rules.is_object()) {
             throw std::runtime_error(path.string() + ": invalid interface rule " + name);
         }
+        const auto& methods = std::get<Interface>(decl->data).methods;
         for (const auto& [method, value] : rules.items()) {
-            if (std::ranges::find(decl->methods, method, &Method::name) == decl->methods.end()) {
+            if (std::ranges::find(methods, method, &Method::name) == methods.end()) {
                 throw std::runtime_error(path.string() + ": unknown method " + name + "." + method);
             }
             auto& target = projection[name][method];
@@ -82,6 +84,23 @@ Projection loadProjection(const fs::path& path, const Module& module) {
                 if (!identifier(*target)) throw std::runtime_error(path.string() + ": invalid TS name " + *target);
             }
         }
+    }
+    return projection;
+}
+
+struct SettingsOutput {
+    fs::path typescript;
+    SettingsProjection projection;
+};
+
+SettingsProjection loadSettingsProjection(const fs::path& path) {
+    const auto json = object(path);
+    SettingsProjection projection;
+    for (const auto& [key, value] : json.items()) {
+        if (key == "interfaceOnly") value.get_to(projection.interfaceOnly);
+        else if (key == "registerEnums") value.get_to(projection.registerEnums);
+        else if (key == "renamedFrom") value.get_to(projection.renamedFrom);
+        else throw std::runtime_error(path.string() + ": unknown settings projection " + key);
     }
     return projection;
 }
@@ -104,23 +123,40 @@ Files plan(const Json& settings, const fs::path& base) {
     const auto& modules = settings.at("modules");
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
     std::vector<ModuleInput> inputs;
-    std::vector<OutputLayout> layouts;
+    std::vector<std::variant<OutputLayout, SettingsOutput>> layouts;
     for (const auto& config : modules) {
         const auto spec = base / config.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
-        auto projection = loadProjection(base / config.at("projection").get<std::string>(), module);
-        OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),
-                            config.at("prefix").get<std::string>(), outputPath(config.at("typescript"))};
-        if (!identifier(layout.prefix)) throw std::runtime_error("invalid file prefix " + layout.prefix);
-        inputs.push_back({std::move(module), std::move(projection)});
-        layouts.push_back(std::move(layout));
+        const auto projection = base / config.at("projection").get<std::string>();
+        const auto ts = outputPath(config.at("typescript"));
+        if (ts.extension() != ".ts") throw std::runtime_error("expected .ts output");
+        const auto backend = config.value("backend", std::string{"interfaces"});
+        if (backend == "settings") {
+            layouts.emplace_back(SettingsOutput{ts, loadSettingsProjection(projection)});
+            inputs.push_back({std::move(module), {}});
+        } else if (backend == "interfaces") {
+            OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),
+                                config.at("prefix").get<std::string>(), ts};
+            if (!identifier(layout.prefix)) throw std::runtime_error("invalid file prefix " + layout.prefix);
+            auto methods = loadProjection(projection, module);
+            layouts.emplace_back(std::move(layout));
+            inputs.push_back({std::move(module), std::move(methods)});
+        } else {
+            throw std::runtime_error("unknown backend " + backend);
+        }
     }
     const auto graph = buildTypeGraph(inputs, types);
     std::set<std::string> outputKeys;
     Files files;
     for (size_t i = 0; i < layouts.size(); ++i) {
         const ModuleId owner{static_cast<uint32_t>(i)};
-        for (auto& [path, content] : emitInterfaces(graph, owner, layouts[i], preamble)) {
+        Files emitted;
+        if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {
+            emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->projection, preamble));
+        } else {
+            emitted = emitInterfaces(graph, owner, std::get<OutputLayout>(layouts[i]), preamble);
+        }
+        for (auto& [path, content] : emitted) {
             auto relative = path.lexically_normal();
             auto key = relative.generic_string();
             std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });

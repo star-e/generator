@@ -1,6 +1,7 @@
 #include "model/TypeGraphBuilder.h"
 #include "parser/SpecParser.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -20,16 +21,19 @@ const MethodInfo& scratch(const TypeGraph& graph, TypeId owner) {
     throw std::runtime_error("scratch method missing");
 }
 
-void checkArchive(const std::filesystem::path& spec) {
+Module readModule(const std::filesystem::path& spec) {
     std::ifstream stream(spec, std::ios::binary);
     if (!stream) throw std::runtime_error("cannot open " + spec.string());
-    const std::string source{std::istreambuf_iterator<char>(stream), {}};
+    return parseModule(spec, {std::istreambuf_iterator<char>(stream), {}});
+}
+
+void checkArchive(const std::filesystem::path& spec) {
     const Projection projection{{"InputArchive", {{"scratch", std::nullopt}}},
                                 {"OutputArchive", {{"scratch", std::nullopt}, {"writeBool", "b"}}}};
     const TypeTable types{{"void", {"", "void", true}}, {"bool", {"", "boolean", true}},
                           {"double", {"", "number", true}}, {"std::string_view", {"string_view", "string"}},
                           {"boost::container::pmr::memory_resource", {"boost/container/pmr/memory_resource.hpp", {}}}};
-    const auto graph = buildTypeGraph({{parseModule(spec, source), projection}}, types);
+    const auto graph = buildTypeGraph({{readModule(spec), projection}}, types);
     const auto input = graph.findType("cc::render::InputArchive");
     const auto output = graph.findType("cc::render::OutputArchive");
     const auto& first = scratch(graph, input);
@@ -52,6 +56,35 @@ void checkArchive(const std::filesystem::path& spec) {
     require(children == graph.modules.front().declarations, "scope children changed");
     for (auto edge : graph.in_edges(input.value)) require(graph.source(edge) == scope, "wrong parent");
     require(graph.in_degree(input.value) == 1, "missing parent");
+}
+
+void checkSettings(const std::filesystem::path& spec) {
+    TypeTable externals;
+    for (const auto* name : {"bool", "uint32_t", "float", "cc::gfx::SampleCount", "cc::Material",
+                             "cc::Texture2D", "cc::IntrusivePtr"}) externals.emplace(name, ExternalType{});
+    const auto graph = buildTypeGraph({{readModule(spec), {}}}, externals);
+    const auto bloom = graph.findType("cc::render::Bloom");
+    const auto bloomType = graph.findType("cc::render::BloomType");
+    auto field = [&](TypeId record, const std::string& name) -> const FieldInfo& {
+        const auto& fields = std::get<RecordType>(graph.node(record).data).fields;
+        const auto it = std::ranges::find(fields, name, &FieldInfo::name);
+        if (it == fields.end()) throw std::runtime_error("missing settings field " + name);
+        return *it;
+    };
+    const auto& nested = field(graph.findType("cc::render::PipelineSettings"), "bloom");
+    require(nested.isReadonly && nested.type.type == bloom, "PipelineSettings.bloom did not bind to Bloom");
+    const auto& mode = field(bloom, "type");
+    require(mode.type.type == bloomType && mode.initializer == "BloomType::KawaseDualFilter", "lost enum default");
+    const auto& values = std::get<EnumType>(graph.node(bloomType).data).values;
+    require(values.size() == 2 && values[0].name == "KawaseDualFilter" && values[1].name == "MipmapFilter",
+            "enum values changed order");
+    const auto& legacy = field(bloom, "material");
+    const auto& kawase = field(bloom, "kawaseFilterMaterial");
+    require(legacy.type.type == kawase.type.type && kawase.isNullable && kawase.type.location.file == spec,
+            "lost shared resource type or field metadata");
+    const auto& ptr = std::get<TemplateInstanceType>(graph.node(kawase.type.type).data);
+    require(ptr.declaration == graph.findType("cc::IntrusivePtr") &&
+            std::get<TypeId>(ptr.arguments.at(0)) == graph.findType("cc::Material"), "wrong resource type");
 }
 
 void checkTypes() {
@@ -89,8 +122,9 @@ void checkTypes() {
 
 int main(int argc, char** argv) {
     try {
-        if (argc != 2) throw std::runtime_error("expected archive declaration path");
+        if (argc != 3) throw std::runtime_error("expected archive and settings declaration paths");
         checkArchive(argv[1]);
+        checkSettings(argv[2]);
         checkTypes();
         return 0;
     } catch (const std::exception& error) {

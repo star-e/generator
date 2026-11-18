@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-已接入 `ArchiveInterface`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+已接入 `ArchiveInterface` 和 `RenderSettings`，默认生成四个归档文件和一个编辑器设置文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -38,7 +38,7 @@ ctest --test-dir build/host --output-on-failure
 
 默认暂存目录为 `build/staging/cocos4/`。可用 `--output DIR` 指定另一处专用目录。`--check` 只读，退出码 0 表示与计划相符，1 表示文件缺失、变化或多出，2 表示输入或执行出错。生成器使用固定版本的 JSON 库，CMake 可使用已安装的包或按 SHA-256 下载源码。[工作区](../config/workspace.json) · [模块声明](../spec/render/archive.spec) · [TS 投影](../spec/render/archive.json)
 
-独立构建运行 `cocos.typegraph` 和 `cocos.archive.generate`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线和归档互读测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake)
+独立构建运行 `cocos.typegraph`、`cocos.archive.generate` 和 `cocos.settings.generate`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线、归档互读和编辑器设置测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake) · [编辑器消费测试](../tests/SettingsInterop.cmake)
 
 ## 生成流程
 
@@ -76,7 +76,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 生成器自举
 
-`CocosCodegenModel` 编译 `src/generated/` 中的类型图种子。解析器保留语法和源位置，建图器先登记作用域与声明，再绑定签名中的类型。Archive 的两个后端消费同一张只读图。作用域边从父指向子，字段和签名通过 `TypeId` 引用其类型，模块按声明顺序保存输出列表。[类型图声明](../spec/codegen/typegraph.spec) · [生成源码](../src/generated/TypeGraphTypes.h) · [建图器](../src/model/TypeGraphBuilder.cpp)
+`CocosCodegenModel` 编译 `src/generated/` 中的类型图种子。解析器保留语法和源位置，建图器先登记作用域与声明，再绑定字段和方法签名中的类型。Archive 的 C++、TS 后端和 RenderSettings 的 TS 后端消费同一张只读图。作用域边从父指向子，字段和签名通过 `TypeId` 引用其类型，模块按声明顺序保存输出列表。[类型图声明](../spec/codegen/typegraph.spec) · [生成源码](../src/generated/TypeGraphTypes.h) · [建图器](../src/model/TypeGraphBuilder.cpp)
 
 首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
 
@@ -116,9 +116,9 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `cc::codegen::TypeGraph` 是 C++、TS 和 JSB 后端共用的语义类型图。`ModuleGraph` 负责模块导入和依赖顺序，`TypeGraph` 记录作用域、声明归属和解析后的类型关系。类型投影按类型 ID 绑定，方法重命名按具体成员绑定。
 
-首份声明覆盖命名空间、模块归属、内建和外部类型、枚举、结构体、接口与图，也描述指针、引用、限定类型、函数和模板实例。当前 `.spec` 前端已接入接口、参数、返回值和指针，其他声明随引擎模块接入。`cocos.typegraph` 检查两个归档接口的 `scratch()` 复用同一个指向 `memory_resource` 的指针节点，并保留各自的诊断位置。Archive 的四个产物和 C++/TS 互读继续使用原有回归用例。[语义验证](../tests/TypeGraphTest.cpp) · [归档接口声明](../spec/render/archive.spec)
+首份声明覆盖命名空间、模块归属、内建和外部类型、枚举、结构体、接口与图，也描述指针、引用、限定类型、函数和模板实例。当前 `.spec` 前端已接入接口方法、结构体字段、枚举、指针和类型模板实参，其他声明随引擎模块接入。`cocos.typegraph` 检查两个归档接口的 `scratch()` 复用同一个指向 `memory_resource` 的指针节点，并保留各自的诊断位置。Archive 的四个产物和 C++/TS 互读继续使用原有回归用例。[语义验证](../tests/TypeGraphTest.cpp) · [归档接口声明](../spec/render/archive.spec)
 
-随后用 `RenderSettings` 验证结构体、枚举和字段引用，让 `PipelineSettings.bloom` 能解析到 `Bloom`，`Bloom.type` 能解析到 `BloomType`。到 `RenderCommon` 再接入跨模块类型解析和 JSB 投影。[设置声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderSettings.cpp)
+`RenderSettings` 的 `PipelineSettings.bloom` 和 `Bloom.type` 分别引用 `Bloom` 和 `BloomType`。设置后端按字段生成 TS 接口、默认值工厂和递归补全函数。旧版材质迁移规则在投影中声明。`cocos.settings.editor` 编译引擎的 `BuiltinPipelineSettings` 并在隔离环境调用 `onEnable()`，检查新字段缺失、已有材质和显式 `null` 三种情况。下一批 `RenderCommon` 接入跨模块类型解析和 JSB 投影。[设置声明](../spec/render/render-settings.spec) · [设置投影](../spec/render/render-settings.json)
 
 ### 引擎模块和产物
 

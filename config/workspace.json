@@ -11,6 +11,12 @@
       "includeDir": "cocos/renderer/pipeline/custom",
       "prefix": "Archive",
       "typescript": "cocos/rendering/custom/archive.ts"
+    },
+    {
+      "backend": "settings",
+      "spec": "../spec/render/render-settings.spec",
+      "projection": "../spec/render/render-settings.json",
+      "typescript": "editor/assets/default_renderpipeline/builtin-pipeline-types.ts"
     }
   ]
 }

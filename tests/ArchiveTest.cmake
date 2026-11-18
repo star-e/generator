@@ -4,13 +4,6 @@ file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
 set(output "${work}/staging")
 set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --output "${output}")
 
-function(expect_failure code pattern)
-    execute_process(COMMAND ${ARGN} RESULT_VARIABLE rc ERROR_VARIABLE error)
-    if(NOT rc STREQUAL "${code}" OR NOT error MATCHES "${pattern}")
-        message(FATAL_ERROR "Expected ${code} and ${pattern}, got ${rc}: ${error}")
-    endif()
-endfunction()
-
 expect_failure(1 "missing:" ${generate} --check)
 if(EXISTS "${output}")
     message(FATAL_ERROR "--check created the output directory")
@@ -18,9 +11,14 @@ endif()
 run(${generate})
 file(READ "${SOURCE}/config/baseline.json" baseline)
 file(GLOB_RECURSE files RELATIVE "${output}" "${output}/*")
-list(LENGTH files count)
-if(NOT count EQUAL 4)
-    message(FATAL_ERROR "Expected four files, found ${files}")
+set(expectedFiles
+    cocos/rendering/custom/archive.ts
+    editor/assets/default_renderpipeline/builtin-pipeline-types.ts
+    native/cocos/renderer/pipeline/custom/ArchiveFwd.h
+    native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
+    native/cocos/renderer/pipeline/custom/ArchiveTypes.h)
+if(NOT files STREQUAL expectedFiles)
+    message(FATAL_ERROR "Unexpected generated paths: ${files}")
 endif()
 foreach(path IN LISTS files)
     string(JSON expected GET "${baseline}" files "${path}")

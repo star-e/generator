@@ -1,0 +1,7 @@
+{
+  "interfaceOnly": ["ForwardPassConfigs"],
+  "registerEnums": ["BloomType"],
+  "renamedFrom": {
+    "Bloom": { "kawaseFilterMaterial": "material" }
+  }
+}

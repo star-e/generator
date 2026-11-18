@@ -35,16 +35,7 @@ public:
         expect("{");
         std::set<std::string> names;
         while (!accept("}")) {
-            expect("interface");
-            Interface declaration;
-            declaration.location = location;
-            declaration.name = uniqueName(names);
-            expect("{");
-            std::set<std::string> methods;
-            while (!accept("}")) {
-                declaration.methods.push_back(method(methods));
-            }
-            module.interfaces.push_back(std::move(declaration));
+            module.declarations.push_back(declaration(names));
         }
         if (!token.empty()) {
             fail("unexpected token after namespace");
@@ -84,7 +75,14 @@ private:
         size_t length = 0;
         if (!remaining.empty()) {
             length = remaining.starts_with("::") ? 2 : 1;
-            if (identifierStart(remaining.front())) {
+            if (std::isdigit(static_cast<unsigned char>(remaining.front()))) {
+                while (length < remaining.size() && std::isdigit(static_cast<unsigned char>(remaining[length]))) ++length;
+                if (length + 1 < remaining.size() && remaining[length] == '.' &&
+                    std::isdigit(static_cast<unsigned char>(remaining[length + 1]))) {
+                    ++length;
+                    while (length < remaining.size() && std::isdigit(static_cast<unsigned char>(remaining[length]))) ++length;
+                }
+            } else if (identifierStart(remaining.front())) {
                 while (length < remaining.size() &&
                        (identifierStart(remaining[length]) ||
                         std::isdigit(static_cast<unsigned char>(remaining[length])))) {
@@ -128,9 +126,68 @@ private:
         return parts;
     }
 
+    Declaration declaration(std::set<std::string>& names) {
+        Declaration result;
+        if (accept("struct")) result.data = Record{};
+        else if (accept("enum")) {
+            expect("class");
+            result.data = Enum{};
+        } else {
+            expect("interface");
+        }
+        result.location = location;
+        result.name = uniqueName(names);
+        expect("{");
+        std::set<std::string> members;
+        if (auto* record = std::get_if<Record>(&result.data)) {
+            while (!accept("}")) record->fields.push_back(field(members));
+        } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {
+            while (!accept("}")) {
+                enumeration->values.push_back(uniqueName(members));
+                if (!accept(",")) {
+                    expect("}");
+                    break;
+                }
+            }
+        } else {
+            auto& methods = std::get<Interface>(result.data).methods;
+            while (!accept("}")) methods.push_back(method(members));
+        }
+        return result;
+    }
+
+    Field field(std::set<std::string>& names) {
+        Field result;
+        result.isReadonly = accept("readonly");
+        result.isNullable = accept("nullable");
+        result.name = uniqueName(names);
+        expect(":");
+        result.type = type();
+        if (accept("=")) {
+            const bool negative = accept("-");
+            if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
+                if (negative) result.initializer = "-";
+                result.initializer += token;
+                advance();
+            } else {
+                if (negative) fail("expected numeric default");
+                result.initializer = identifier();
+                while (accept("::")) result.initializer += "::" + identifier();
+            }
+        }
+        expect(";");
+        return result;
+    }
+
     TypeRef type() {
         TypeRef result{location, identifier()};
         while (accept("::")) result.name += "::" + identifier();
+        if (accept("<")) {
+            do {
+                result.arguments.push_back(type());
+            } while (accept(","));
+            expect(">");
+        }
         result.pointer = accept("*");
         return result;
     }

@@ -4,6 +4,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace cc::codegen {
@@ -12,6 +13,7 @@ struct TypeRef {
     SourceLocation location;
     std::string name;
     bool pointer{};
+    std::vector<TypeRef> arguments;
 };
 
 struct Parameter {
@@ -28,15 +30,35 @@ struct Method {
 };
 
 struct Interface {
-    std::string name;
     std::vector<Method> methods;
+};
+
+struct Field {
+    TypeRef type;
+    std::string name;
+    std::string initializer;
+    bool isReadonly{};
+    bool isNullable{};
+};
+
+struct Record {
+    std::vector<Field> fields;
+};
+
+struct Enum {
+    std::vector<std::string> values;
+};
+
+struct Declaration {
+    std::string name;
     SourceLocation location;
+    std::variant<Interface, Record, Enum> data;
 };
 
 struct Module {
     std::string name;
     std::vector<std::string> namespaces;
-    std::vector<Interface> interfaces;
+    std::vector<Declaration> declarations;
 };
 
 struct ExternalType {

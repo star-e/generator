@@ -1,0 +1,25 @@
+include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
+test_workspace(work)
+set(stage "${work}/engine")
+set(asset editor/assets/default_renderpipeline)
+run("${TOOL}" generate --workspace "${SOURCE}/config/workspace.json" --output "${stage}")
+configure_file("${ENGINE}/${asset}/builtin-pipeline-settings.ts" "${stage}/${asset}/builtin-pipeline-settings.ts" COPYONLY)
+find_program(node node REQUIRED)
+set(tsc "${node}" "${ENGINE}/node_modules/typescript/bin/tsc")
+set(options --target es6 --module commonjs --strict --experimentalDecorators)
+set(sources "${stage}/${asset}/builtin-pipeline-settings.ts" "${stage}/${asset}/builtin-pipeline-types.ts")
+
+# Type-check the real editor component against the engine API when its declarations are built.
+set(engineAPI "${ENGINE}/bin/.declarations/cc.d.ts")
+if(EXISTS "${engineAPI}")
+    file(WRITE "${work}/env.d.ts" "declare module 'cc/env' { export const EDITOR: boolean; }\n")
+    run(${tsc} ${options} --noEmit --skipLibCheck "${engineAPI}" "${work}/env.d.ts" ${sources})
+endif()
+
+# Supply the editor services used by this component in the isolated runtime.
+set(cc "${stage}/node_modules/cc")
+configure_file("${SOURCE}/tests/consumer/editor-host.ts" "${cc}/index.ts" COPYONLY)
+file(WRITE "${cc}/env.ts" "export const EDITOR = true;\n")
+run(${tsc} ${options} --rootDir "${stage}" --outDir "${work}/js" ${sources} "${cc}/index.ts" "${cc}/env.ts")
+run("${node}" "${SOURCE}/tests/consumer/settings-consumer.cjs" "${work}/js" "${asset}")
+finish_workspace("${work}")

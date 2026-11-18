@@ -81,11 +81,16 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
     const auto& module = graph.modules.at(owner.value);
     std::set<std::string> headers;
     auto collectHeader = [&](const TypeUse& type) {
-        const auto& header = baseType(graph, type.type).cppHeader;
+        const auto& base = baseType(graph, type.type);
+        if (base.qualifiedName.empty()) throw std::runtime_error(type.location.describe() + ": unsupported C++ interface type");
+        const auto& header = base.cppHeader;
         if (!header.empty()) headers.insert(header);
     };
     for (auto id : module.declarations) {
-        for (const auto& method : std::get<InterfaceType>(graph.node(id).data).methods) {
+        const auto& decl = graph.node(id);
+        const auto* interfaceType = std::get_if<InterfaceType>(&decl.data);
+        if (!interfaceType) throw std::runtime_error("expected an interface declaration for " + decl.qualifiedName);
+        for (const auto& method : interfaceType->methods) {
             collectHeader(method.result);
             for (const auto& param : method.parameters) collectHeader(param.type);
         }
@@ -120,7 +125,6 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
         *out << "// clang-format on\n";
     }
     const auto dir = layout.nativeRoot / layout.includeDir;
-    if (layout.typescript.extension() != ".ts") throw std::runtime_error("expected .ts output");
     return {{dir / fwdName, fwd.str()}, {dir / typeName, header.str()},
             {dir / (layout.prefix + "Types.cpp"), impl.str()}, {layout.typescript, ts.str()}};
 }
