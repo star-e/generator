@@ -1,6 +1,6 @@
 # Cocos 渲染管线生成器迁移方案
 
-在 `generator` 仓库实现独立的 C++20 命令行工具 `cocos-codegen`。仓库包含声明解析器、模块图、类型图、输出规划和各语言后端，单独检出即可用 CMake 和声明的第三方依赖构建。第一版以当前 `cocos4` 的行为为兼容目标，输出 C++17、可执行 TypeScript、现有归档格式和原生 JS 绑定。原生图操作迁入图类型的成员函数，相应调用方随模块切换。第一个交付选 `ArchiveInterface`，最后接管 `NativePipeline`。
+在 `generator` 仓库实现独立的 C++20 命令行工具 `cocos-codegen`。仓库包含声明解析器、模块图、类型图、输出规划和各语言后端，单独检出即可用 CMake 和声明的第三方依赖构建。第一版以当前 `cocos4` 的行为为兼容目标，输出 C++17、可执行 TypeScript、现有归档格式和原生 JS 绑定。原生图操作迁入图类型的成员函数，相应调用方随模块切换。引擎模块从 `ArchiveInterface` 开始，最后接管 `NativePipeline`。迁移完成还要求 `cocos-codegen` 能生成自身使用的模型源码，并用这些源码重新构建出能复现同一结果的工具。
 
 ## 命名约定
 
@@ -24,7 +24,7 @@
 
 ## 生成流程
 
-`cocos-codegen` 的构建、代码生成和 `--check` 均独立于 V8、Node.js 和 .NET。生成目标限定为引擎 C++17、Web 和编辑器所用的 TypeScript，以及 Cocos JSB 所需的 `se::Value` 转换和 `render.i`。引擎的 SWIG 步骤处理 `render.i`。Node.js/npm 用于 `cocos4` 侧的 Web 打包、TypeScript 检查和测试。[引擎绑定入口](../../cocos4/native/tools/swig-config/render.i) · [引擎构建与测试脚本](../../cocos4/package.json)
+`cocos-codegen` 的构建、自举、代码生成和 `--check` 均独立于 V8、Node.js 和 .NET。引擎工作区生成 C++17、Web 和编辑器所用的 TypeScript，以及 Cocos JSB 所需的 `se::Value` 转换和 `render.i`。引擎的 SWIG 步骤处理 `render.i`。Node.js/npm 用于 `cocos4` 侧的 Web 打包、TypeScript 检查和测试。生成器自身的工作区复用同一套 `.spec` 语法、解析器和 C++ 后端，产物编入 C++20 宿主工具，只使用 `generator` 声明的依赖。[引擎绑定入口](../../cocos4/native/tools/swig-config/render.i) · [引擎构建与测试脚本](../../cocos4/package.json)
 
 以 `ArchiveInterface` 为例，一份声明描述 `OutputArchive` 和 `InputArchive` 的八个 C++ 方法。类型图记录签名，语言投影把布尔值、数值、字符串的读写方法分别映射成 TS 接口上的 `b`、`n`、`s`，两个 `scratch()` 仅对原生代码可见。文件计划为这个模块列出三个原生文件和一个 TS 文件。后端分别按引擎的 C++17 和 `target: es6` 配置生成。[旧模块声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [原生接口](../../cocos4/native/cocos/renderer/pipeline/custom/ArchiveTypes.h) · [TS 接口](../../cocos4/cocos/rendering/custom/archive.ts) · [引擎 C++ 配置](../../cocos4/native/cmake/predefine.cmake) · [引擎 TS 配置](../../cocos4/tsconfig.json)
 
@@ -33,7 +33,7 @@
 | 声明输入 | 每个输出模块一份 `.spec`。把 `CocosCommon.cpp`、C++ 默认类型和 TS 映射中的引擎类型登记为外部模块，指向真实头文件和 TS 导出。按实际符号补全直接导入，例如 `RenderCommon` 的旧 `mRequires` 只列 `Gfx`，`LightInfo` 还引用了 `scene::Light` 和 `scene::ReflectionProbe`。 |
 | 语义模型 | 解析器保留声明的源位置。从语法树构建模块图和类型图，解析导入、限定名与签名。模块声明写入 `cocos-archive.spec` 这样的文件，语言投影放在同名的 `cocos-archive.json` 中。规则绑定到具体成员和重载，诊断同时指出出错的规则和相关声明。 |
 | Cocos 生成计划 | 模块间的类型依赖来自 `.spec` 的导入。项目配置描述输出种类、相对路径和前缀。准备阶段确定引擎容器、图存储、TS 对象池、序列化字段顺序与绑定规则，列全路径并检查冲突，再将只读模型和计划交给后端。 |
-| 后端 | C++ 输出兼容 C++17，沿用 `ccstd`、Boost PMR 和 `IntrusivePtr`。图类型按声明的能力生成顶点、出边、组件和层级访问接口。TS 保留引擎 `./graph` 的导入路径，生成 Web 所需的类、枚举、短方法名和对象池。C++ 与 TS 序列化共用一份字段计划。Cocos JSB 生成 `se::Value` 转换和 SWIG 输入，由引擎的 `cc_gen_swig_files` 生成 `jsb_render_auto.*`。 |
+| 后端 | 引擎的 C++ 输出兼容 C++17，沿用 `ccstd`、Boost PMR 和 `IntrusivePtr`。图类型按声明的能力生成顶点、出边、组件和层级访问接口。TS 保留引擎 `./graph` 的导入路径，生成 Web 所需的类、枚举、短方法名和对象池。C++ 与 TS 序列化共用一份字段计划。Cocos JSB 生成 `se::Value` 转换和 SWIG 输入，由引擎的 `cc_gen_swig_files` 生成 `jsb_render_auto.*`。 |
 | 工作区和写入 | 后端返回相对路径与内容。工作区先核对整批文件与计划一一对应，再执行比较或写入。`--check` 只读并报告缺失、差异和过期路径。写入时保留相同文件的时间戳，按文件暂存和替换，中断后可按同一清单重跑。 |
 
 旧宏中存在方法正文、引擎专用 include、SWIG 所有权规则和中英文接口注释。能表达为类型、签名、投影或字段策略的内容迁入声明模型。确需逐字保留的 C++/TS 片段和 SWIG 指令按模块存放，以类型或方法关联，并通过对应消费者编译或绑定测试。[旧接口及 SWIG 规则](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [接口文档来源](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterfaceDocument.cpp)
@@ -44,15 +44,29 @@
 CMakeLists.txt / CMakePresets.json / vcpkg.json
 spec/extern/             引擎、标准库和 Boost 外部类型
 spec/render/             管线模块声明与语言投影
+spec/codegen/            生成器自身的模型声明
 config/                  workspace、模块输出配置、文件归属和版本基线
 src/cli/                 命令入口
 src/parser/              声明解析与源位置诊断
-src/model/               模块图、类型图和名字解析
+src/model/               建图、名字解析和语义检查
+src/generated/           从自身声明生成并纳入版本控制的 C++ 模型源码
 src/codegen/             Cocos 语义准备、输出规划及各后端
 src/workspace/           加载配置、比较和写入
 tests/                   小型契约测试、跨语言用例、引擎对照驱动
 build/staging/cocos4/    临时产物，镜像引擎相对路径
 ```
+
+## 生成器自举
+
+`spec/codegen/` 描述工具实际使用的语法节点、模块图、类型图和输出计划。解析、依赖遍历和代码输出算法由手写 C++ 实现，直接使用生成的模型。首批 `ArchiveInterface` 交付时就把宿主模型和引擎类型的依赖分开。具备结构体生成能力后，先接入编译诊断使用的源位置类型。具备图生成能力后，再接入 `ModuleGraph` 和 `TypeGraph`。
+
+首个工具用手写的最小模型构建。每当它能生成一个自身模型，就将生成的 C++ 源码作为种子提交到 `src/generated/`，让宿主改用这份源码。CI 从 `generator` 的干净检出开始验证。
+
+1. CMake 用手写源码和已提交的种子构建 `cocos-codegen`。运行这个工具，按 `config/cocos-self-host.json` 将全部自身模型生成到空目录。
+2. 在新的构建目录重新编译同一个 `CocosCodegen` 目标。此时所有生成的头文件、源文件均取自上一步的输出，候选工具用它们完成编译和链接。
+3. 用刚构建的候选工具读取相同声明和配置，生成到第二个空目录。两轮输出和仓库中的种子快照须有相同的相对路径集合，每个文件内容逐字节一致。自举源码的生成和 Git 检出统一使用 LF。随后用该候选工具运行当前阶段的引擎生成与消费测试。
+
+自身声明或生成规则变更时，重新生成受影响的快照，将输入改动和源码差异一并审查。如果新声明依赖新增语法，先让可构建的工具支持该语法，再用它刷新种子。
 
 ## JS 与 C++ 的共享缓冲区
 
@@ -106,4 +120,4 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 引擎文件归属按具体路径登记。同步时只接受本批标为 `generated` 的路径。`NativePipeline.cpp`、手写 Web 实现和编辑器 `.meta` 由引擎维护。`native/CMakeLists.txt` 的受管范围是 renderer 源列表。旧基线登记了 41 个原生生成文件，四个图头按批移出后核对 37 个原生生成文件的登记。
 
-全量切换以 **48 个目标文件对照通过、4 个旧图头退役、重复生成零改写、Web 与原生消费测试通过** 为准。Windows 负责历史基线与新版目标清单的对照，Linux 和 macOS 可使用同一份声明验证新工具的构建与生成。若后续引入自举，可用已发布的 `cocos-codegen` 生成自身的数据模型，以该模型编译候选版本，再用候选版本重新生成并比较两次结果。
+迁移完成须同时通过生成器自举和引擎验收。从干净检出构建的候选工具须能复现全部自身模型，并通过 **48 个引擎目标文件对照、4 个旧图头退役、重复生成零改写、Web 与原生消费测试**。Windows 负责历史基线与新版目标清单的对照，Linux 和 macOS 可使用同一份声明验证新工具的构建与生成。
