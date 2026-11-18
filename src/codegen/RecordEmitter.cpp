@@ -2,9 +2,9 @@
 #include "codegen/EnumEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
+#include "model/IntegerLiteral.h"
 
 #include <algorithm>
-#include <charconv>
 #include <locale>
 #include <numeric>
 #include <set>
@@ -56,18 +56,11 @@ std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModu
 }
 
 bool numericDefault(const std::string& type, const std::string& literal) {
-    // Signed decimal syntax is checked by the parser. Both targets reject legacy octal literals.
+    if (type != "float" && type != "double") return validUnsignedFieldDefault(type, literal);
     if (literal.empty()) return false;
     const auto first = literal.front() == '-' ? 1U : 0U;
     if (first == literal.size() || literal[first] < '0' || literal[first] > '9') return false;
     if (literal[first] == '0' && first + 1 < literal.size() && literal[first + 1] != '.') return false;
-    if (type == "uint8_t" || type == "uint32_t") {
-        uint32_t value{};
-        const auto end = literal.data() + literal.size();
-        const auto parsed = std::from_chars(literal.data(), end, value);
-        return parsed.ec == std::errc{} && parsed.ptr == end && (type != "uint8_t" || value <= UINT8_MAX);
-    }
-    if (type != "float" && type != "double") return false;
     std::istringstream in(literal);
     in.imbue(std::locale::classic());
     if (type == "float") {

@@ -2,15 +2,19 @@
 #include "ShiftProbe.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
+#include <array>
 #include <cstddef>
 #include <initializer_list>
 #include <type_traits>
+#include <utility>
 
 using cc::render::AccessType;
 using cc::render::AttachmentType;
 using cc::render::ClearValueType;
+using cc::render::CopyPair;
 using cc::render::LightInfo;
 using cc::render::LightingMode;
+using cc::render::MovePair;
 using cc::render::ParameterType;
 using cc::render::QueueHint;
 using cc::render::ResolveFlags;
@@ -77,14 +81,17 @@ static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionPr
 static_assert(std::is_nothrow_move_constructible_v<ResolvePair> && !std::is_copy_constructible_v<ResolvePair>);
 static_assert(std::is_nothrow_move_assignable_v<ResolvePair> && std::is_copy_assignable_v<ResolvePair>);
 
+namespace pmr = boost::container::pmr;
+
+template<class Pair>
+bool uses(const Pair& pair, pmr::memory_resource* resource) {
+    return pair.get_allocator().resource() == resource && pair.source.get_allocator().resource() == resource &&
+           pair.target.get_allocator().resource() == resource;
+}
+
 bool checkResolvePair() {
     using cc::gfx::ResolveMode;
-    namespace pmr = boost::container::pmr;
     pmr::monotonic_buffer_resource first, second;
-    auto uses = [](const ResolvePair& pair, pmr::memory_resource* resource) {
-        return pair.get_allocator().resource() == resource && pair.source.get_allocator().resource() == resource &&
-               pair.target.get_allocator().resource() == resource;
-    };
     ResolvePair defaults;
     ResolvePair empty(&first);
     if (!uses(defaults, pmr::get_default_resource()) || !uses(empty, &first) || defaults != empty ||
@@ -105,8 +112,39 @@ bool checkResolvePair() {
     return empty != original;
 }
 
+auto subresources(const CopyPair& p) {
+    return std::array{p.mipLevels, p.numSlices, p.sourceMostDetailedMip, p.sourceFirstSlice,
+                      p.sourcePlaneSlice, p.targetMostDetailedMip, p.targetFirstSlice, p.targetPlaneSlice};
+}
+
+auto subresources(const MovePair& p) {
+    return std::array{p.mipLevels, p.numSlices, p.targetMostDetailedMip, p.targetFirstSlice, p.targetPlaneSlice};
+}
+
+template<class Pair, class... Indices>
+bool checkSubresources(Indices... indices) {
+    pmr::monotonic_buffer_resource first, second;
+    Pair empty(&first);
+    const std::array<uint32_t, sizeof...(indices)> defaults{UINT32_MAX, UINT32_MAX};
+    if (!uses(empty, &first) || !empty.source.empty() || !empty.target.empty() || subresources(empty) != defaults) return false;
+
+    const ccstd::pmr::string source(96, 's', &first), target(80, 't', &first);
+    const std::array<uint32_t, sizeof...(indices)> expected{indices...};
+    auto matches = [&](const Pair& p, pmr::memory_resource* resource) {
+        return uses(p, resource) && p.source == source && p.target == target && subresources(p) == expected;
+    };
+    Pair original(source, target, indices..., &second);
+    if (!matches(original, &second)) return false;
+    Pair copied(original, &first);
+    if (!matches(copied, &first)) return false;
+    Pair moved(std::move(copied), &second);
+    return matches(moved, &second);
+}
+
 int main() {
     if (!checkResolvePair()) return 3;
+    if (!checkSubresources<CopyPair>(1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U)) return 4;
+    if (!checkSubresources<MovePair>(1U, 2U, 3U, 4U, 5U)) return 5;
     LightInfo empty;
     if (empty.light.get() || empty.probe || empty.level != 0 || empty.culledByLight) return 1;
 

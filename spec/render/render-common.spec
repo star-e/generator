@@ -145,4 +145,34 @@ namespace cc::render {
 
         constructor(source, target, resolveFlags, mode, mode1);
     }
+
+    struct CopyPair {
+        source: ccstd::pmr::string;
+        target: ccstd::pmr::string;
+        mipLevels: uint32_t = 0xFFFFFFFF;
+        numSlices: uint32_t = 0xFFFFFFFF;
+        sourceMostDetailedMip: uint32_t = 0;
+        sourceFirstSlice: uint32_t = 0;
+        sourcePlaneSlice: uint32_t = 0;
+        targetMostDetailedMip: uint32_t = 0;
+        targetFirstSlice: uint32_t = 0;
+        targetPlaneSlice: uint32_t = 0;
+
+        constructor(source, target, mipLevels, numSlices,
+                    sourceMostDetailedMip, sourceFirstSlice, sourcePlaneSlice,
+                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
+    }
+
+    struct MovePair {
+        source: ccstd::pmr::string;
+        target: ccstd::pmr::string;
+        mipLevels: uint32_t = 0xFFFFFFFF;
+        numSlices: uint32_t = 0xFFFFFFFF;
+        targetMostDetailedMip: uint32_t = 0;
+        targetFirstSlice: uint32_t = 0;
+        targetPlaneSlice: uint32_t = 0;
+
+        constructor(source, target, mipLevels, numSlices,
+                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
+    }
 }

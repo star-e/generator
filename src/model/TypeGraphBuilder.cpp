@@ -1,8 +1,8 @@
 #include "model/TypeGraphBuilder.h"
+#include "model/IntegerLiteral.h"
 
 #include <algorithm>
 #include <bit>
-#include <charconv>
 #include <limits>
 #include <set>
 #include <stdexcept>
@@ -90,6 +90,15 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
     RecordType result;
     for (const auto& field : syntax.fields) {
         auto use = resolve(graph, field.type, scope, owner);
+        std::string_view magnitude = field.initializer;
+        if (magnitude.starts_with('-')) magnitude.remove_prefix(1);
+        if (hasHexPrefix(magnitude)) {
+            const auto& type = graph.node(use.type).qualifiedName;
+            if (!validUnsignedFieldDefault(type, field.initializer)) {
+                throw std::runtime_error(use.location.describe() + ": " + field.name + ": invalid " + type +
+                                         " default " + field.initializer);
+            }
+        }
         const auto pos = field.initializer.rfind("::");
         if (pos != std::string::npos) {
             const auto type = resolveName(graph, field.initializer.substr(0, pos), use.location, scope, owner);
@@ -155,15 +164,6 @@ constexpr IntegerRange integerRange() {
 }
 
 using EnumValue = decltype(Enumerator::value);
-
-std::errc parseMagnitude(std::string_view digits, uint64_t& magnitude) {
-    const bool hex = digits.starts_with("0x") || digits.starts_with("0X");
-    if (hex) digits.remove_prefix(2);
-    const auto end = digits.data() + digits.size();
-    const auto parsed = std::from_chars(digits.data(), end, magnitude, hex ? 16 : 10);
-    if (parsed.ptr != end || (!hex && digits.size() > 1 && digits.front() == '0')) return std::errc::invalid_argument;
-    return parsed.ec;
-}
 
 EnumValue integerLiteral(const EnumMember& member, IntegerRange range, const std::string& base) {
     std::string_view digits = member.initializer;

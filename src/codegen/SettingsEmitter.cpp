@@ -1,6 +1,7 @@
 #include "codegen/SettingsEmitter.h"
 #include "codegen/EnumEmitter.h"
 #include "generated/TypeGraphTypes.h"
+#include "model/IntegerLiteral.h"
 
 #include <algorithm>
 #include <cctype>
@@ -70,8 +71,8 @@ ProjectedField project(const TypeGraph& graph, const FieldInfo& field, Imports& 
         return {FieldKind::scalar, name, alias + "." + initial.substr(pos + 2)};
     }
     if (name == "boolean" && (initial == "true" || initial == "false")) return {FieldKind::scalar, name, initial};
-    // The parser admits a signed decimal literal or a qualified identifier here.
     if (name == "number" && !initial.empty()) {
+        if (hasHexPrefix(initial)) return {FieldKind::scalar, name, initial};
         const auto start = initial.front() == '-' ? 1U : 0U;
         if (start < initial.size() && std::isdigit(static_cast<unsigned char>(initial[start])) &&
             !(initial[start] == '0' && initial.size() > start + 1 && initial[start + 1] != '.')) {

@@ -70,21 +70,22 @@ assert.equal(types.ResourceFlags[0x200], 'TRANSFER_DST');
 compareDeclaration(cpp, 'struct LightInfo {', '};');
 compareDeclaration(ts, 'export class LightInfo {', '}');
 compareDeclaration(ts, '    createLightInfo (', '    }');
-compareDeclaration(cpp, 'struct ResolvePair {', '};');
 for (const op of ['==', '!=']) {
     compareDeclaration(cpp, `inline bool operator${op}(const ResolvePair& lhs, const ResolvePair& rhs) noexcept {`, '}');
 }
 const sourceFile = cpp.replace(/\.h$/, '.cpp');
-for (const [first, last] of [
-    ['const allocator_type& alloc) noexcept', '  target(alloc) {}'],
-    ['ccstd::pmr::string sourceIn, ccstd::pmr::string targetIn, ResolveFlags resolveFlagsIn, gfx::ResolveMode modeIn, gfx::ResolveMode mode1In, const allocator_type& alloc) // NOLINT', '  mode1(mode1In) {}'],
-    ['ResolvePair&& rhs, const allocator_type& alloc)', '  mode1(rhs.mode1) {}'],
-    ['ResolvePair const& rhs, const allocator_type& alloc)', '  mode1(rhs.mode1) {}'],
-]) {
-    compareDeclaration(sourceFile, 'ResolvePair::ResolvePair(' + first, last);
+function constructors(root, name) {
+    return fs.readFileSync(path.join(root, sourceFile), 'utf8').replace(/\r\n/g, '\n').split('\n\n')
+        .filter((block) => block.startsWith(`${name}::${name}(`));
 }
-compareDeclaration(ts, 'export class ResolvePair {', '}');
-compareDeclaration(ts, '    createResolvePair (', '    }');
+for (const name of ['ResolvePair', 'CopyPair', 'MovePair']) {
+    compareDeclaration(cpp, `struct ${name} {`, '};');
+    compareDeclaration(ts, `export class ${name} {`, '}');
+    compareDeclaration(ts, `    create${name} (`, '    }');
+    const definitions = constructors(stage, name);
+    assert.equal(definitions.length, 4, name);
+    assert.deepEqual(definitions, constructors(engine, name), name);
+}
 
 for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS', 'COUNT'].entries()) {
     assert.equal(UpdateFrequency[name], value);
@@ -135,3 +136,20 @@ assert.deepEqual(pairFields(pair), explicit);
 pool.reset();
 assert.equal(pool.createResolvePair(), pair);
 assert.deepEqual(pairFields(pair), defaults);
+
+function checkSubresources(name, offsets) {
+    const names = ['source', 'target', 'mipLevels', 'numSlices', ...offsets];
+    const values = (p) => names.map((field) => p[field]);
+    const initial = ['', '', 4294967295, 4294967295, ...offsets.map(() => 0)];
+    const explicit = ['source', 'target', 1, 2, ...offsets.map((_, i) => i + 3)];
+    assert.deepEqual(values(new types[name]()), initial, name);
+    assert.deepEqual(values(new types[name](...explicit)), explicit, name);
+    const pair = pool[`create${name}`](...explicit);
+    assert.deepEqual(values(pair), explicit, name);
+    pool.reset();
+    assert.equal(pool[`create${name}`](), pair, name);
+    assert.deepEqual(values(pair), initial, name);
+}
+const targetOffsets = ['targetMostDetailedMip', 'targetFirstSlice', 'targetPlaneSlice'];
+checkSubresources('CopyPair', ['sourceMostDetailedMip', 'sourceFirstSlice', 'sourcePlaneSlice', ...targetOffsets]);
+checkSubresources('MovePair', targetOffsets);

@@ -9,6 +9,7 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 string(REPLACE "uint8_t {" "uint32_t {" changed "${original}")
 string(REPLACE "READ_WRITE," [=[@deprecated("Use \"READ\" for */.") MODIFY = 0x10, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE,]=] changed "${changed}")
 string(REPLACE "level: uint32_t = 0" "level: uint32_t = 11" changed "${changed}")
+string(REPLACE "sourceFirstSlice: uint32_t = 0" "sourceFirstSlice: uint8_t = 0XfF" changed "${changed}")
 string(REPLACE "gfx::ResolveMode::SAMPLE_ZERO" "gfx::ResolveMode::AVERAGE" changed "${changed}")
 string(REPLACE "constructor(source, target," "constructor(target, source," changed "${changed}")
 string(REPLACE "constructor(light, level);" "constructor(level, light);" changed "${changed}")
@@ -33,6 +34,7 @@ foreach(output IN ITEMS cpp ts)
     endif()
 endforeach()
 foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
+                          "uint8_t sourceFirstSlice{0XfF};" "uint32_t mipLevels{0xFFFFFFFF};"
                           "gfx::ResolveMode mode{gfx::ResolveMode::AVERAGE};" "ResolvePair(ccstd::pmr::string targetIn, ccstd::pmr::string sourceIn,"
                           "LightInfo(uint32_t levelIn, IntrusivePtr<scene::Light> lightIn)")
     string(FIND "${cpp}" "${fragment}" at)
@@ -41,6 +43,7 @@ foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "L
     endif()
 endforeach()
 foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "level = 11"
+                          "sourceFirstSlice = 0XfF" "mipLevels = 0xFFFFFFFF"
                           "mode: ResolveMode = ResolveMode.AVERAGE" "v.reset(target, source, resolveFlags, mode, mode1);"
                           "constructor (light: Light | null = null, probe: ReflectionProbe | null = null, level = 11, culledByLight = false)")
     string(FIND "${ts}" "${fragment}" at)
@@ -124,6 +127,14 @@ expect_failure(2 "expected integral enum base" ${generate})
 string(REPLACE "level: uint32_t = 0" "level: uint32_t = -1" broken "${original}")
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "level: unsupported scalar default -1" ${generate})
+foreach(literal IN ITEMS 0x100000000 0x 0X12G -0x1)
+    string(REPLACE "mipLevels: uint32_t = 0xFFFFFFFF" "mipLevels: uint32_t = ${literal}" broken "${original}")
+    file(WRITE "${spec}" "${broken}")
+    expect_failure(2 "render-common.spec:[0-9]+:[0-9]+: mipLevels: invalid uint32_t default ${literal}" ${generate})
+endforeach()
+string(REPLACE "sourceFirstSlice: uint32_t = 0" "sourceFirstSlice: uint8_t = 0x100" broken "${original}")
+file(WRITE "${spec}" "${broken}")
+expect_failure(2 "sourceFirstSlice: invalid uint8_t default 0x100" ${generate})
 # The C++-only backend must bind native method types from the spec without TS mappings.
 set(spec "${work}/spec/codegen/source-location.spec")
 file(READ "${spec}" original)

@@ -264,7 +264,6 @@ private:
         if (accept("=")) {
             const bool negative = accept("-");
             if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
-                if (token.starts_with("0x") || token.starts_with("0X")) fail("expected decimal field default");
                 if (negative) result.initializer = "-";
                 result.initializer += token;
                 advance();

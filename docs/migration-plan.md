@@ -130,6 +130,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `ResolvePair` 的两个 PMR 字符串在构造、带分配器的复制和移动时都使用目标内存资源。后端将这些构造函数写入暂存目录的 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp`，并按 `comparable` 投影生成五个字段的相等比较。TS 从引擎的 gfx 模块导入 `ResolveMode` 作为运行时值，供构造函数和 `createResolvePair()` 的默认参数使用。消费测试逐段对照引擎实现，验证两个 C++ 内存资源之间的复制与移动，以及 TS 对象池复用后五个字段的默认值。[Gfx 声明](../spec/extern/gfx.spec) · [消费测试](../tests/RecordInterop.cmake)
 
+`CopyPair` 和 `MovePair` 共用上述 PMR 构造和 TS 对象池生成逻辑。两者的 `mipLevels` 和 `numSlices` 默认值均为 `0xFFFFFFFF`。TypeGraph 按 `uint8_t` 或 `uint32_t` 的范围校验十六进制字段初值，C++ 和 TS 保留声明中的写法。消费测试为各个 mip 和 slice 参数传入不同的值，并检查跨内存资源复制、移动以及对象池重置后的所有字段。[模块声明](../spec/render/render-common.spec) · [消费测试](../tests/RecordInterop.cmake)
+
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 
 ### 引擎模块和产物
