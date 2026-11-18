@@ -170,6 +170,7 @@ struct TypeModule {
     std::string name;
     std::vector<std::string> namespaces;
     std::vector<TypeId> declarations;
+    std::vector<ModuleId> imports;
 };
 
 struct Node_ {};

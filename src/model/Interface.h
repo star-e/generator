@@ -49,16 +49,24 @@ struct Enum {
     std::vector<std::string> values;
 };
 
+struct ExternalDeclaration {};
+
 struct Declaration {
     std::string name;
     SourceLocation location;
-    std::variant<Interface, Record, Enum> data;
+    std::variant<Interface, Record, Enum, ExternalDeclaration> data;
+};
+
+struct ModuleImport {
+    SourceLocation location;
+    std::string name;
 };
 
 struct Module {
     std::string name;
     std::vector<std::string> namespaces;
     std::vector<Declaration> declarations;
+    std::vector<ModuleImport> imports;
 };
 
 struct ExternalType {

@@ -17,6 +17,18 @@
       "spec": "../spec/render/render-settings.spec",
       "projection": "../spec/render/render-settings.json",
       "typescript": "editor/assets/default_renderpipeline/builtin-pipeline-types.ts"
+    },
+    {
+      "spec": "../spec/render/render-common.spec",
+      "backend": "model"
+    },
+    {
+      "spec": "../spec/extern/light.spec",
+      "backend": "model"
+    },
+    {
+      "spec": "../spec/extern/reflection-probe.spec",
+      "backend": "model"
     }
   ]
 }

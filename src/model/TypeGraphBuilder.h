@@ -10,7 +10,7 @@ struct ModuleInput {
     Projection projection;
 };
 
-// Register all declarations first, then resolve signatures against their lexical scopes.
+// Register declarations before binding direct imports and resolving type uses in dependency order.
 TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes);
 
 } // namespace cc::codegen

@@ -123,14 +123,19 @@ Files plan(const Json& settings, const fs::path& base) {
     const auto& modules = settings.at("modules");
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
     std::vector<ModuleInput> inputs;
-    std::vector<std::variant<OutputLayout, SettingsOutput>> layouts;
+    std::vector<std::variant<std::monostate, OutputLayout, SettingsOutput>> layouts;
     for (const auto& config : modules) {
         const auto spec = base / config.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
+        const auto backend = config.value("backend", std::string{"interfaces"});
+        if (backend == "model") {
+            layouts.emplace_back(std::monostate{});
+            inputs.push_back({std::move(module), {}});
+            continue;
+        }
         const auto projection = base / config.at("projection").get<std::string>();
         const auto ts = outputPath(config.at("typescript"));
         if (ts.extension() != ".ts") throw std::runtime_error("expected .ts output");
-        const auto backend = config.value("backend", std::string{"interfaces"});
         if (backend == "settings") {
             layouts.emplace_back(SettingsOutput{ts, loadSettingsProjection(projection)});
             inputs.push_back({std::move(module), {}});
@@ -149,6 +154,7 @@ Files plan(const Json& settings, const fs::path& base) {
     std::set<std::string> outputKeys;
     Files files;
     for (size_t i = 0; i < layouts.size(); ++i) {
+        if (std::holds_alternative<std::monostate>(layouts[i])) continue;
         const ModuleId owner{static_cast<uint32_t>(i)};
         Files emitted;
         if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {

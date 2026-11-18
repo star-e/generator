@@ -46,8 +46,12 @@ TypeId resolveName(const TypeGraph& graph, const std::string& name, const Source
             if (std::holds_alternative<NamespaceType>(declaration.data)) {
                 throw std::runtime_error(location.describe() + ": namespace used as type " + name);
             }
-            if (declaration.module != ModuleId{} && declaration.module != owner) {
-                throw std::runtime_error(location.describe() + ": type requires a module import: " + name);
+            const auto& imports = graph.modules.at(owner.value).imports;
+            if (declaration.module != ModuleId{} && declaration.module != owner &&
+                std::ranges::find(imports, declaration.module) == imports.end()) {
+                throw std::runtime_error(location.describe() + ": " + declaration.qualifiedName + " requires import " +
+                                         graph.modules.at(declaration.module.value).name + " in module " +
+                                         graph.modules.at(owner.value).name);
             }
             return id;
         }
@@ -94,6 +98,7 @@ TypeData declare(const Declaration& decl) {
         return enumeration;
     }
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};
+    if (std::holds_alternative<ExternalDeclaration>(decl.data)) return ExternalTypeNode{};
     return InterfaceType{};
 }
 
@@ -122,6 +127,59 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
         result.methods.push_back(std::move(member));
     }
     return result;
+}
+
+std::vector<ModuleId> bindImports(std::vector<TypeModule>& modules, const std::vector<ModuleInput>& inputs,
+                                  const std::map<std::string, ModuleId>& moduleNames) {
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        auto& module = modules[i];
+        for (const auto& import : inputs[i].syntax.imports) {
+            const auto it = moduleNames.find(import.name);
+            if (it == moduleNames.end()) {
+                throw std::runtime_error(import.location.describe() + ": unknown imported module " + import.name);
+            }
+            if (std::ranges::find(module.imports, it->second) != module.imports.end()) {
+                throw std::runtime_error(import.location.describe() + ": duplicate import " + import.name);
+            }
+            module.imports.push_back(it->second);
+        }
+    }
+
+    // Postorder puts dependencies before consumers while keeping the workspace's module IDs.
+    enum class State { unseen, visiting, done };
+    struct Frame { ModuleId id; size_t nextImport{}; };
+    std::vector<State> states(modules.size(), State::unseen);
+    std::vector<Frame> stack;
+    std::vector<ModuleId> order;
+    for (const auto& [name, root] : moduleNames) {
+        if (states[root.value] != State::unseen) continue;
+        states[root.value] = State::visiting;
+        stack.push_back({root});
+        while (!stack.empty()) {
+            auto& frame = stack.back();
+            const auto& imports = modules[frame.id.value].imports;
+            if (frame.nextImport == imports.size()) {
+                states[frame.id.value] = State::done;
+                order.push_back(frame.id);
+                stack.pop_back();
+                continue;
+            }
+            const auto index = frame.nextImport++;
+            const auto next = imports[index];
+            if (states[next.value] == State::visiting) {
+                const auto first = std::ranges::find(stack, next, &Frame::id);
+                std::string cycle;
+                for (auto it = first; it != stack.end(); ++it) cycle += modules[it->id.value].name + " -> ";
+                const auto& import = inputs[frame.id.value].syntax.imports[index];
+                throw std::runtime_error(import.location.describe() + ": module import cycle: " + cycle + import.name);
+            }
+            if (states[next.value] == State::unseen) {
+                states[next.value] = State::visiting;
+                stack.push_back({next});
+            }
+        }
+    }
+    return order;
 }
 
 // Follow only by-value record fields. Indirection does not require constructing the pointee.
@@ -162,13 +220,13 @@ void checkRecordCycles(const TypeGraph& graph) {
 TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes) {
     TypeGraph graph;
     registerExternalTypes(graph, externalTypes);
-    std::set<std::string> moduleNames;
+    std::map<std::string, ModuleId> moduleNames;
     std::vector<std::string> scopes;
     for (const auto& input : inputs) {
         const auto& module = input.syntax;
-        if (!moduleNames.insert(module.name).second) throw std::runtime_error("duplicate module " + module.name);
         const ModuleId owner{static_cast<uint32_t>(graph.modules.size())};
-        auto& entry = graph.modules.emplace_back(TypeModule{module.name, module.namespaces, {}});
+        if (!moduleNames.emplace(module.name, owner).second) throw std::runtime_error("duplicate module " + module.name);
+        auto& entry = graph.modules.emplace_back(TypeModule{.name = module.name, .namespaces = module.namespaces});
         std::string scope;
         for (const auto& part : module.namespaces) scope = qualify(scope, part);
         const auto parent = ensureNamespace(graph, scope);
@@ -177,16 +235,17 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             if (graph.findType(qualified) != TypeId{}) {
                 throw std::runtime_error(decl.location.describe() + ": duplicate type " + qualified);
             }
+            const bool external = std::holds_alternative<ExternalDeclaration>(decl.data);
             auto id = graph.appendNode(TypeNode{.name = decl.name, .qualifiedName = std::move(qualified),
                                                 .module = owner, .data = declare(decl),
-                                                .typescriptName = decl.name}, parent);
+                                                .typescriptName = external ? std::nullopt : std::optional{decl.name}}, parent);
             entry.declarations.push_back(id);
         }
         scopes.push_back(std::move(scope));
     }
-    for (size_t i = 0; i < inputs.size(); ++i) {
+    for (ModuleId owner : bindImports(graph.modules, inputs, moduleNames)) {
+        const auto i = owner.value;
         const auto& input = inputs[i];
-        const ModuleId owner{static_cast<uint32_t>(i)};
         for (size_t j = 0; j < input.syntax.declarations.size(); ++j) {
             const auto& decl = input.syntax.declarations[j];
             const auto id = graph.modules[i].declarations[j];

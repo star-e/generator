@@ -10,6 +10,7 @@ namespace cc::codegen {
 namespace {
 
 struct Imports {
+    ModuleId owner;
     std::set<std::string> names;
     std::map<std::string, std::string> aliases;
 };
@@ -28,6 +29,9 @@ struct ProjectedField {
 
 std::string typeName(const TypeNode& type, const FieldInfo& field, Imports& imports) {
     if (!type.typescriptName) invalid(field, "missing TypeScript mapping for " + type.qualifiedName);
+    if (type.module != ModuleId{} && type.module != imports.owner) {
+        invalid(field, "missing TypeScript import mapping for " + type.qualifiedName);
+    }
     const auto& name = *type.typescriptName;
     if (type.module == ModuleId{} && name != "boolean" && name != "number" && name != "string") {
         imports.names.insert(name.substr(0, name.find('.')));
@@ -152,7 +156,7 @@ std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsP
         if (!hasDeclaration(name, false)) throw std::runtime_error("unknown migration record " + name);
     }
 
-    Imports imports;
+    Imports imports{.owner = owner};
     std::ostringstream body;
     for (const auto id : module.declarations) {
         const auto& node = graph.node(id);

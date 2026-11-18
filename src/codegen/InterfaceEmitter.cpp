@@ -84,6 +84,9 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
         const auto& base = baseType(graph, type.type);
         if (base.qualifiedName.empty()) throw std::runtime_error(type.location.describe() + ": unsupported C++ interface type");
         const auto& header = base.cppHeader;
+        if (base.module != ModuleId{} && base.module != owner && header.empty()) {
+            throw std::runtime_error(type.location.describe() + ": missing C++ header for imported type " + base.qualifiedName);
+        }
         if (!header.empty()) headers.insert(header);
     };
     for (auto id : module.declarations) {

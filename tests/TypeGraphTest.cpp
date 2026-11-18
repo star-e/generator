@@ -87,6 +87,48 @@ void checkSettings(const std::filesystem::path& spec) {
             std::get<TypeId>(ptr.arguments.at(0)) == graph.findType("cc::Material"), "wrong resource type");
 }
 
+void checkImports(const std::filesystem::path& specs) {
+    const auto commonSpec = specs / "render/render-common.spec";
+    std::vector<ModuleInput> inputs{{readModule(commonSpec), {}},
+                                    {readModule(specs / "extern/light.spec"), {}},
+                                    {readModule(specs / "extern/reflection-probe.spec"), {}}};
+    inputs.push_back({parseModule("consumer.spec", R"(
+        module Consumer;
+        import RenderCommon;
+        namespace cc::render { struct PassInfo { light: LightInfo; } }
+    )"), {}});
+    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"bool", {}}};
+    auto check = [&](const TypeGraph& graph) {
+        const auto infoId = graph.findType("cc::render::LightInfo");
+        const auto& info = graph.node(infoId);
+        const auto& pass = graph.node(graph.findType("cc::render::PassInfo"));
+        require(std::get<RecordType>(pass.data).fields.at(0).type.type == infoId, "wrong imported record");
+        const auto light = graph.findType("cc::scene::Light");
+        const auto probe = graph.findType("cc::scene::ReflectionProbe");
+        const auto& lightNode = graph.node(light);
+        const auto& probeNode = graph.node(probe);
+        const auto& consumer = graph.modules.at(info.module.value);
+        require(consumer.name == "RenderCommon" && graph.modules.at(lightNode.module.value).name == "Light" &&
+                graph.modules.at(probeNode.module.value).name == "ReflectionProbe", "wrong module ownership");
+        require(std::holds_alternative<ExternalTypeNode>(lightNode.data) &&
+                std::holds_alternative<ExternalTypeNode>(probeNode.data), "lost external declarations");
+        require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module}, "wrong direct imports");
+
+        const auto& fields = std::get<RecordType>(info.data).fields;
+        require(fields.size() == 4 && fields[0].name == "light" && fields[0].isNullable &&
+                fields[1].name == "probe" && fields[1].isNullable, "wrong LightInfo resources");
+        const auto& ptr = std::get<TemplateInstanceType>(graph.node(fields[0].type.type).data);
+        require(ptr.declaration == graph.findType("cc::IntrusivePtr") &&
+                ptr.arguments == std::vector<TemplateArgument>{light}, "wrong IntrusivePtr argument");
+        require(std::get<PointerType>(graph.node(fields[1].type.type).data).pointee == probe, "wrong probe pointee");
+        require(fields[1].initializer == "nullptr" && fields[2].name == "level" && fields[2].initializer == "0" &&
+                fields[3].name == "culledByLight" && fields[3].initializer == "false", "wrong LightInfo defaults");
+    };
+    check(buildTypeGraph(inputs, types));
+    std::ranges::reverse(inputs);
+    check(buildTypeGraph(inputs, types));
+}
+
 void checkTypes() {
     auto module = parseModule("forward.spec", R"(
         module Test;
@@ -122,9 +164,11 @@ void checkTypes() {
 
 int main(int argc, char** argv) {
     try {
-        if (argc != 3) throw std::runtime_error("expected archive and settings declaration paths");
-        checkArchive(argv[1]);
-        checkSettings(argv[2]);
+        if (argc != 2) throw std::runtime_error("expected spec directory");
+        const std::filesystem::path specs = argv[1];
+        checkArchive(specs / "render/archive.spec");
+        checkSettings(specs / "render/render-settings.spec");
+        checkImports(specs);
         checkTypes();
         return 0;
     } catch (const std::exception& error) {

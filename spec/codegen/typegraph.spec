@@ -83,6 +83,7 @@ namespace codegen {
         name: std::string;
         namespaces: std::vector<std::string>;
         declarations: std::vector<TypeId>;
+        imports: std::vector<ModuleId>;
     }
 
     @tag struct Node_ {}

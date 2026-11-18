@@ -27,15 +27,27 @@ public:
 
     Module parse() {
         Module module;
+        const bool external = accept("extern");
         expect("module");
         module.name = identifier();
         expect(";");
+        while (accept("import")) {
+            module.imports.push_back({location, identifier()});
+            expect(";");
+        }
         expect("namespace");
         module.namespaces = qualifiedName();
         expect("{");
         std::set<std::string> names;
         while (!accept("}")) {
-            module.declarations.push_back(declaration(names));
+            if (external) {
+                if (!accept("class")) expect("struct");
+                const auto start = location;
+                module.declarations.push_back({uniqueName(names), start, ExternalDeclaration{}});
+                expect(";");
+            } else {
+                module.declarations.push_back(declaration(names));
+            }
         }
         if (!token.empty()) {
             fail("unexpected token after namespace");
