@@ -54,6 +54,12 @@ tests/                   小型契约测试、跨语言用例、引擎对照驱�
 build/staging/cocos4/    临时产物，镜像引擎相对路径
 ```
 
+## JS 与 C++ 的共享缓冲区
+
+对于同一脚本线程上的同步交换，建议沿用引擎 `Pass` 的做法。C++ 按字节数创建 `cc::ArrayBuffer`，按偏移访问其中的数据。JSB 在同一个 `ArrayBuffer` 上创建 `Float32Array` 等视图，JS 和 C++ 就能读写同一块内存。缓冲区由引擎创建和持有，生成器只需为有固定布局的类型从一份字段声明算出两端共用的字节偏移、对齐和记录长度。[缓冲区实现](../../cocos4/native/cocos/core/ArrayBuffer.cpp) · [Pass 的原生数据块](../../cocos4/native/cocos/scene/Pass.cpp) · [JSB 视图](../../cocos4/native/cocos/bindings/manual/jsb_scene_manual.cpp)
+
+具体字段、容量以及是否跨调用复用视图，留到首个使用模块接入时确定。如果 C++ 需要跨调用访问，它用 `cc::ArrayBuffer::Ptr` 持有缓冲区，双方在使用期间保持缓冲区定长且不转移。验收时由 JS 写入一个字段，C++ 读出并改写，再由 JS 从原视图读回新值。
+
 ## 图接口与算法
 
 **C++ 图操作生成在图类型上，取消每个模块的 `*Graphs.h`。** 当前引擎的 `RenderGraphTypes.h` 已有 `reserve` 等成员，`vertices(g)`、`out_edges(v, g)` 和按 tag 访问组件等操作仍在 `RenderGraphGraphs.h` 中以自由函数提供。迁移后分别写成 `g.vertices()`、`g.out_edges(v)` 和 `resg.get(ResourceGraph::DescTag{}, v)`。顶点与边的增删同样通过图对象调用。[现有图类型](../../cocos4/native/cocos/renderer/pipeline/custom/RenderGraphTypes.h) · [现有图操作](../../cocos4/native/cocos/renderer/pipeline/custom/RenderGraphGraphs.h)
