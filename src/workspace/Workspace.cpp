@@ -133,10 +133,30 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
             throw std::runtime_error("expected a distinct .h serializationHeader");
         output.serializationHeader = path;
     }
+    if (config.contains("jsbHeader")) {
+        const auto path = outputPath(config.at("jsbHeader"));
+        if (path.extension() != ".h" || path == output.header || path == output.namesHeader ||
+            path == output.forwardHeader || path == output.serializationHeader)
+            throw std::runtime_error("expected a distinct .h jsbHeader");
+        output.jsbHeader = path;
+    }
     if (config.contains("typescript")) output.typescript = typescriptOutput(config);
-    if (!config.contains("projection")) return output;
+    if (!config.contains("projection")) {
+        if (output.jsbHeader) throw std::runtime_error("jsbHeader requires a record projection");
+        return output;
+    }
     const auto projection = base / config.at("projection").get<std::string>();
     const auto rules = object(projection);
+    if (output.jsbHeader.has_value() != rules.contains("jsb"))
+        throw std::runtime_error(projection.string() + ": configure jsbHeader and jsb projection together");
+    if (output.jsbHeader) {
+        const auto& jsb = rules.at("jsb");
+        jsb.at("records").get_to(output.jsbRecords);
+        if (jsb.contains("includes")) {
+            for (const auto& include : jsb.at("includes").get<std::vector<std::string>>())
+                output.jsbIncludes.insert(outputPath(include));
+        }
+    }
     if (rules.contains("comparable")) rules.at("comparable").get_to(output.comparable);
     if (rules.contains("hashable")) rules.at("hashable").get_to(output.hashable);
     if (rules.contains("resetToDefaults")) {

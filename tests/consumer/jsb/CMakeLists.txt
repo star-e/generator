@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.24)
+project(RenderCommonJsbConsumer LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Use the engine's SWIG headers, binding runtime and platform SDK with their normal build flags.
+include("${ENGINE}/native/CMakeLists.txt")
+set(stagedNative "${STAGING}/native")
+set(records "${stagedNative}/cocos/renderer/pipeline/custom")
+add_executable(JsbConsumer JsbConsumer.cpp "${records}/RenderCommonJsb.cpp" "${records}/RenderCommonTypes.cpp")
+target_include_directories(JsbConsumer BEFORE PRIVATE "${stagedNative}")
+target_link_libraries(JsbConsumer PRIVATE cocos_engine)
+add_dependencies(JsbConsumer genbindings)
+
+if(WIN32)
+    set(dlls ${WINDOWS_DLLS})
+    foreach(dll IN LISTS V8_DLLS)
+        get_filename_component(name "${dll}" NAME)
+        list(APPEND dlls "${V8_DIR}/$<IF:$<CONFIG:Debug>,Debug,Release>/${name}")
+    endforeach()
+    add_custom_command(TARGET JsbConsumer POST_BUILD COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        ${dlls} "$<TARGET_FILE_DIR:JsbConsumer>" VERBATIM)
+endif()
+enable_testing()
+add_test(NAME cocos.jsb.interop COMMAND JsbConsumer)

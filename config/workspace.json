@@ -27,6 +27,7 @@
       "forwardHeader": "cocos/renderer/pipeline/custom/RenderCommonFwd.h",
       "namesHeader": "cocos/renderer/pipeline/custom/RenderCommonNames.h",
       "serializationHeader": "cocos/renderer/pipeline/custom/RenderCommonSerialization.h",
+      "jsbHeader": "cocos/renderer/pipeline/custom/RenderCommonJsb.h",
       "typescript": "cocos/rendering/custom/types.ts"
     },
     {

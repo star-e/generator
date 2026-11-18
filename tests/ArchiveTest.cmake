@@ -19,6 +19,8 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
     native/cocos/renderer/pipeline/custom/ArchiveTypes.h
     native/cocos/renderer/pipeline/custom/RenderCommonFwd.h
+    native/cocos/renderer/pipeline/custom/RenderCommonJsb.cpp
+    native/cocos/renderer/pipeline/custom/RenderCommonJsb.h
     native/cocos/renderer/pipeline/custom/RenderCommonNames.h
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.h)

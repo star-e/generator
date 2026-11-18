@@ -5,6 +5,14 @@
   "comparable": ["ResolvePair"],
   "hashable": ["ResolvePair"],
   "resetToDefaults": ["PipelineStatistics"],
+  "jsb": {
+    "records": ["LightInfo", "ResolvePair", "CopyPair", "UploadPair", "MovePair"],
+    "includes": [
+      "cocos/bindings/auto/jsb_gfx_auto.h",
+      "cocos/bindings/auto/jsb_scene_auto.h",
+      "cocos/renderer/pipeline/custom/details/JsbConversion.h"
+    ]
+  },
   "pools": {
     "LightInfo": "li",
     "ResolvePair": "rp",

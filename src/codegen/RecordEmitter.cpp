@@ -752,6 +752,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
 
     Files files{{output.nativeRoot / output.header, header.str()}};
+    if (output.jsbHeader) emitRecordJsb(files, graph, module, output, preamble);
     if (archive) archives.emitNative(files, module, output, archive->layout, preamble);
     if (output.forwardHeader) files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble));
     if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output.header, preamble));
