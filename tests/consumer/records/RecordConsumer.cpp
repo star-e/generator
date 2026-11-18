@@ -1,10 +1,11 @@
-#include "cocos/renderer/pipeline/custom/RenderCommonTypes.h"
+#include "cocos/renderer/pipeline/custom/RenderCommonNames.h"
 #include "ShiftProbe.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <array>
 #include <cstddef>
 #include <initializer_list>
+#include <string_view>
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
@@ -184,6 +185,10 @@ bool checkUploadPair() {
 }
 
 int main() {
+    using cc::render::getName;
+    using namespace std::string_view_literals;
+    if (getName(QueueHint::RENDER_OPAQUE) != "OPAQUE"sv || getName(static_cast<QueueHint>(255)) != ""sv ||
+        getName(cc::render::RasterPassTag{}) != "RasterPass"sv || getName(stats) != "PipelineStatistics"sv) return 7;
     if (!checkUploadPair()) return 6;
     if (!checkResolvePair()) return 3;
     if (!checkSubresources<CopyPair>(1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U)) return 4;

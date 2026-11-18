@@ -115,11 +115,17 @@ fs::path typescriptOutput(const Json& config) {
 
 RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
     RecordOutput output{.header = outputPath(config.at("header"))};
+    if (config.contains("nativeRoot")) output.nativeRoot = outputPath(config.at("nativeRoot"));
     if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
     if (config.contains("forwardHeader")) {
         output.forwardHeader = outputPath(config.at("forwardHeader"));
         if (output.forwardHeader->extension() != ".h" || *output.forwardHeader == output.header)
             throw std::runtime_error("expected a distinct .h forwardHeader");
+    }
+    if (config.contains("namesHeader")) {
+        output.namesHeader = outputPath(config.at("namesHeader"));
+        if (output.namesHeader->extension() != ".h" || *output.namesHeader == output.header || output.namesHeader == output.forwardHeader)
+            throw std::runtime_error("expected a distinct .h namesHeader");
     }
     if (config.contains("typescript")) output.typescript = typescriptOutput(config);
     if (!config.contains("projection")) return output;

@@ -207,16 +207,19 @@ void cppFlagOperators(std::ostream& out, const std::string& name, const std::str
         << "\nconstexpr bool any(" << name << " e) noexcept {\n    return !!e;\n}\n";
 }
 
-void tsEnumNames(std::ostream& out, const std::string& name, const EnumType& enumeration) {
-    out << "\nexport function get" << name << "Name (e: " << name << "): string {\n"
-        << "    switch (e) {\n";
+void writeEnumNames(std::ostream& out, const std::string& name, const EnumType& enumeration, EnumTarget target) {
+    const bool cpp = target == EnumTarget::cpp;
+    if (cpp) out << "inline const char* getName(" << name << " e) noexcept {\n";
+    else out << "\nexport function get" << name << "Name (e: " << name << "): string {\n";
+    out << "    switch (e) {\n";
     std::set<decltype(Enumerator::value)> seen;
     for (const auto& value : enumeration.values) {
         if (!seen.insert(value.value).second) continue;
-        out << "    case " << name << "." << value.name << ":\n"
-            << "        return '" << value.name << "';\n";
+        if (cpp) out << "        case " << name << "::" << value.name << ": return \"" << value.name << "\";\n";
+        else out << "    case " << name << "." << value.name << ":\n        return '" << value.name << "';\n";
     }
-    out << "    default:\n        return '';\n    }\n}\n";
+    if (cpp) out << "    }\n    return \"\";\n}\n";
+    else out << "    default:\n        return '';\n    }\n}\n";
 }
 
 void inlineConstructors(std::ostream& out, const std::string& name, const RecordType& record,
@@ -368,6 +371,29 @@ std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, cons
     cppIncludes(header, includes);
     writeNamespace(header, module, body);
     if (!hashes.view().empty()) header << "\nnamespace ccstd {\n" << hashes.str() << "\n} // namespace ccstd\n";
+    header << "\n// clang-format on\n";
+    return header.str();
+}
+
+std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const std::filesystem::path& typesHeader,
+                        const std::string& preamble) {
+    std::ostringstream header, body;
+    header << preamble << "// clang-format off\n#pragma once\n#include \"" << typesHeader.generic_string() << "\"\n";
+    body << '\n';
+    for (auto id : module.declarations) {
+        const auto& node = graph.node(id);
+        if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
+            if (!enumeration->isFlags) writeEnumNames(body, node.name, *enumeration, EnumTarget::cpp);
+            continue;
+        }
+        std::string_view name = node.name;
+        if (std::holds_alternative<TagType>(node.data)) {
+            if (name.size() > 3 && name.ends_with("Tag")) name.remove_suffix(3);
+            else if (name.size() > 1 && name.ends_with('_')) name.remove_suffix(1);
+        }
+        body << "inline const char* getName(const " << node.name << "& /*v*/) noexcept { return \"" << name << "\"; }\n";
+    }
+    writeNamespace(header, module, body);
     header << "\n// clang-format on\n";
     return header.str();
 }
@@ -554,7 +580,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (pendingEnums.erase(node.name)) {
                 if (!enumImports.empty()) enumImports += ", ";
                 enumImports += node.name;
-                tsEnumNames(nameFunctions, node.name, *enumeration);
+                writeEnumNames(nameFunctions, node.name, *enumeration, EnumTarget::typescript);
             }
             continue;
         }
@@ -610,15 +636,16 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         header << hashDefinitions.str() << "\n} // namespace ccstd\n";
     }
 
-    Files files{{output.header, header.str()}};
-    if (output.forwardHeader) files.emplace(*output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble));
+    Files files{{output.nativeRoot / output.header, header.str()}};
+    if (output.forwardHeader) files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble));
+    if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output.header, preamble));
     if (!definitions.view().empty()) {
         auto path = output.header;
         path.replace_extension(".cpp");
         std::ostringstream source;
         source << preamble << "#include \"" << output.header.filename().generic_string() << "\"\n#include <utility>\n";
         writeNamespace(source, module, definitions);
-        files.emplace(path, source.str());
+        files.emplace(output.nativeRoot / path, source.str());
     }
     if (!output.typescript) return files;
     script << preamble << "/* eslint-disable max-len */\n";
