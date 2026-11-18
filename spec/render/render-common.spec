@@ -29,6 +29,16 @@ namespace cc::render {
         CUSTOM,
     }
 
+    enum class QueueHint : uint8_t {
+        NONE,
+        OPAQUE,
+        MASK,
+        BLEND,
+        RENDER_OPAQUE = OPAQUE,
+        RENDER_CUTOUT = MASK,
+        RENDER_TRANSPARENT = BLEND,
+    }
+
     enum class ResourceDimension : uint8_t {
         BUFFER,
         TEXTURE1D,

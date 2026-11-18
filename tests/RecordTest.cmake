@@ -7,7 +7,7 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 
 # Change the schema to distinguish generated values, overloads and enum members from a template snapshot.
 string(REPLACE "uint8_t {" "uint32_t {" changed "${original}")
-string(REPLACE "READ_WRITE," "MODIFY," changed "${changed}")
+string(REPLACE "READ_WRITE," "MODIFY, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE," changed "${changed}")
 string(REPLACE "level: uint32_t = 0" "level: uint32_t = 11" changed "${changed}")
 string(REPLACE "constructor(light, level);" "constructor(level, light);" changed "${changed}")
 string(REPLACE "constructor(light, level, culledByLight, probe);" "constructor(light, probe, level, culledByLight);" changed "${changed}")
@@ -20,14 +20,14 @@ file(WRITE "${projection}" "${both}")
 run(${generate})
 file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderCommonTypes.h" cpp)
 file(READ "${work}/stage/cocos/rendering/custom/types.ts" ts)
-foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY," "uint32_t level{11};"
+foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
                           "LightInfo(uint32_t levelIn, IntrusivePtr<scene::Light> lightIn)")
     string(FIND "${cpp}" "${fragment}" at)
     if(at EQUAL -1)
         message(FATAL_ERROR "Missing C++ fragment: ${fragment}")
     endif()
 endforeach()
-foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "MODIFY," "level = 11"
+foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "MODIFY," "LEGACY_CHANGE = CHANGE," "level = 11"
                           "constructor (light: Light | null = null, probe: ReflectionProbe | null = null, level = 11, culledByLight = false)")
     string(FIND "${ts}" "${fragment}" at)
     if(at EQUAL -1)
@@ -43,6 +43,9 @@ foreach(fragment IN ITEMS "import { UpdateFrequency, AccessType } from './types'
         message(FATAL_ERROR "Missing TS name lookup fragment: ${fragment}")
     endif()
 endforeach()
+if(names MATCHES "case AccessType[.](CHANGE|LEGACY_CHANGE):")
+    message(FATAL_ERROR "Alias duplicated the original member's name lookup case")
+endif()
 string(JSON broken SET "${rules}" namedEnums 0 "\"LightInfo\"")
 file(WRITE "${projection}" "${broken}")
 expect_failure(2 "unknown enum LightInfo in RenderCommon" ${generate})
@@ -50,6 +53,20 @@ string(JSON broken SET "${rules}" constEnums "[\"LightInfo\"]")
 file(WRITE "${projection}" "${broken}")
 expect_failure(2 "unknown const enum LightInfo in RenderCommon" ${generate})
 file(WRITE "${projection}" "${rules}")
+
+foreach(target IN ITEMS MISSING ALIAS LATER FOREIGN)
+    file(WRITE "${spec}" "module RenderCommon;
+namespace cc::render {
+    enum class Other { FOREIGN }
+    enum class QueueHint {
+        BASE,
+        ALIAS = ${target},
+        LATER,
+    }
+}
+")
+    expect_failure(2 "render-common[.]spec:6:17: QueueHint[.]ALIAS must refer to an earlier member of the same enum: ${target}" ${generate})
+endforeach()
 
 string(REPLACE "constructor(light, level);" "constructor(light, missing);" broken "${original}")
 file(WRITE "${spec}" "${broken}")

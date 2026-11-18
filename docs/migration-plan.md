@@ -120,7 +120,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `RenderSettings` 的 `PipelineSettings.bloom` 和 `Bloom.type` 分别引用 `Bloom` 和 `BloomType`。设置后端按字段生成 TS 接口、默认值工厂和递归补全函数。旧版材质迁移规则在投影中声明。`cocos.settings.editor` 编译引擎的 `BuiltinPipelineSettings` 并在隔离环境调用 `onEnable()`，检查新字段缺失、已有材质和显式 `null` 三种情况。[设置声明](../spec/render/render-settings.spec) · [设置投影](../spec/render/render-settings.json)
 
-`RenderCommon` 的九个连续取值枚举和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。模型声明记录枚举底层类型、字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区为其配置原生头文件和 TS 导入路径。模块投影用 `constEnums` 选择 TS 常量枚举，用 `namedEnums` 选择需要在同目录的 `types-names.ts` 中生成名称查询的枚举。[模块声明](../spec/render/render-common.spec) · [模块投影](../spec/render/render-common.json)
+`RenderCommon` 的十个枚举和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。`.spec` 中的枚举别名可以引用同一枚举中先声明的成员，如 `QueueHint` 的 `RENDER_CUTOUT = MASK`。TypeGraph 保留引用名称和声明顺序。模型还记录枚举底层类型、字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区为其配置原生头文件和 TS 导入路径。模块投影用 `constEnums` 选择 TS 常量枚举，用 `namedEnums` 选择需要在同目录的 `types-names.ts` 中生成名称查询的枚举。[模块声明](../spec/render/render-common.spec) · [模块投影](../spec/render/render-common.json)
 
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 

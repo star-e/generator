@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const [jsDir, stage, engine] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
-const { UpdateFrequency, AccessType, LightInfo, RenderCommonObjectPool } = types;
+const { UpdateFrequency, QueueHint, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
 const { constEnumValues } = require(path.join(jsDir, 'enum-consumer.js'));
 
@@ -34,7 +34,7 @@ for (const [name, values] of Object.entries(constEnumValues)) {
     assert.deepEqual(values, values.map((_, index) => index), name);
     assert.equal(types[name], undefined, name);
 }
-for (const name of ['UpdateFrequency', 'ResourceResidency', 'ResourceDimension', 'AccessType']) {
+for (const name of ['UpdateFrequency', 'ResourceResidency', 'QueueHint', 'ResourceDimension', 'AccessType']) {
     compareEnum(name, 'enum');
 }
 compareDeclaration(cpp, 'struct LightInfo {', '};');
@@ -48,6 +48,7 @@ for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS
 assert.equal(getUpdateFrequencyName(99), '');
 const runtimeMembers = {
     ResourceResidency: ['MANAGED', 'MEMORYLESS', 'PERSISTENT', 'EXTERNAL', 'BACKBUFFER', 'CUSTOM'],
+    QueueHint: ['NONE', 'RENDER_OPAQUE', 'RENDER_CUTOUT', 'RENDER_TRANSPARENT'],
     ResourceDimension: ['BUFFER', 'TEXTURE1D', 'TEXTURE2D', 'TEXTURE3D'],
 };
 for (const [name, members] of Object.entries(runtimeMembers)) {
@@ -56,6 +57,9 @@ for (const [name, members] of Object.entries(runtimeMembers)) {
         assert.equal(types[name][value], member);
     }
 }
+assert.equal(QueueHint.RENDER_OPAQUE, QueueHint.OPAQUE);
+assert.equal(QueueHint.RENDER_CUTOUT, QueueHint.MASK);
+assert.equal(QueueHint.RENDER_TRANSPARENT, QueueHint.BLEND);
 assert.deepEqual([AccessType.READ, AccessType.READ_WRITE, AccessType.WRITE], [0, 1, 2]);
 const fields = (v) => [v.light, v.level, v.culledByLight, v.probe];
 assert.deepEqual(fields(new LightInfo()), [null, 0, false, null]);

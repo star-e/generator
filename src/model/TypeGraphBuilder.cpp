@@ -123,7 +123,14 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
 TypeData declare(const Declaration& decl) {
     if (const auto* syntax = std::get_if<Enum>(&decl.data)) {
         EnumType enumeration;
-        for (const auto& value : syntax->values) enumeration.values.push_back({value, {}});
+        for (const auto& value : syntax->values) {
+            if (!value.initializer.empty() &&
+                std::ranges::find(enumeration.values, value.initializer, &Enumerator::name) == enumeration.values.end()) {
+                throw std::runtime_error(value.initializerLocation.describe() + ": " + decl.name + "." + value.name +
+                                         " must refer to an earlier member of the same enum: " + value.initializer);
+            }
+            enumeration.values.push_back({value.name, value.initializer});
+        }
         return enumeration;
     }
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};

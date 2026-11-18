@@ -52,8 +52,14 @@ struct Record {
     std::vector<Method> methods;
 };
 
+struct EnumMember {
+    std::string name;
+    std::string initializer;
+    SourceLocation initializerLocation;
+};
+
 struct Enum {
-    std::vector<std::string> values;
+    std::vector<EnumMember> values;
     std::optional<TypeRef> underlying;
 };
 

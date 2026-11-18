@@ -177,7 +177,12 @@ private:
             }
         } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {
             while (!accept("}")) {
-                enumeration->values.push_back(uniqueName(members));
+                EnumMember value{.name = uniqueName(members)};
+                if (accept("=")) {
+                    value.initializerLocation = location;
+                    value.initializer = identifier();
+                }
+                enumeration->values.push_back(std::move(value));
                 if (!accept(",")) {
                     expect("}");
                     break;

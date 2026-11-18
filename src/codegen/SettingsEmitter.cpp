@@ -1,4 +1,5 @@
 #include "codegen/SettingsEmitter.h"
+#include "codegen/EnumEmitter.h"
 #include "generated/TypeGraphTypes.h"
 
 #include <algorithm>
@@ -163,7 +164,7 @@ std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsP
         body << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             body << "export enum " << node.name << " {\n";
-            for (const auto& value : enumeration->values) body << "    " << value.name << ",\n";
+            writeEnumMembers(body, *enumeration);
             body << "}\n";
             if (rules.registerEnums.contains(node.name)) {
                 imports.names.insert("ccenum");

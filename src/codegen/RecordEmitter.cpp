@@ -1,4 +1,5 @@
 #include "codegen/RecordEmitter.h"
+#include "codegen/EnumEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
 
@@ -161,6 +162,8 @@ void tsEnumNames(std::ostream& out, const std::string& name, const EnumType& enu
     out << "\nexport function get" << name << "Name (e: " << name << "): string {\n"
         << "    switch (e) {\n";
     for (const auto& value : enumeration.values) {
+        // An alias shares the earlier member's case.
+        if (!value.initializer.empty()) continue;
         out << "    case " << name << "." << value.name << ":\n"
             << "        return '" << value.name << "';\n";
     }
@@ -285,9 +288,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             cpp << " {\n";
             ts << (pendingConstEnums.erase(node.name) ? "export const enum " : "export enum ") << node.name << " {\n";
-            for (const auto& value : enumeration->values) {
-                for (auto* out : {&cpp, &ts}) *out << "    " << value.name << ",\n";
-            }
+            writeEnumMembers(cpp, *enumeration);
+            writeEnumMembers(ts, *enumeration);
             cpp << "};\n";
             ts << "}\n";
             if (pendingEnums.erase(node.name)) {

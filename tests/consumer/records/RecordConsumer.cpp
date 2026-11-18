@@ -10,6 +10,7 @@ using cc::render::ClearValueType;
 using cc::render::LightInfo;
 using cc::render::LightingMode;
 using cc::render::ParameterType;
+using cc::render::QueueHint;
 using cc::render::ResourceDimension;
 using cc::render::ResourceResidency;
 using cc::render::TaskType;
@@ -31,6 +32,10 @@ static_assert(hasSequentialValues({ParameterType::CONSTANTS, ParameterType::CBV,
                                    ParameterType::SRV, ParameterType::TABLE, ParameterType::SSV}));
 static_assert(hasSequentialValues({ResourceResidency::MANAGED, ResourceResidency::MEMORYLESS, ResourceResidency::PERSISTENT,
                                    ResourceResidency::EXTERNAL, ResourceResidency::BACKBUFFER, ResourceResidency::CUSTOM}));
+static_assert(hasSequentialValues({QueueHint::NONE, QueueHint::OPAQUE, QueueHint::MASK, QueueHint::BLEND}));
+static_assert(QueueHint::RENDER_OPAQUE == QueueHint::OPAQUE);
+static_assert(QueueHint::RENDER_CUTOUT == QueueHint::MASK);
+static_assert(QueueHint::RENDER_TRANSPARENT == QueueHint::BLEND);
 static_assert(hasSequentialValues({ResourceDimension::BUFFER, ResourceDimension::TEXTURE1D,
                                    ResourceDimension::TEXTURE2D, ResourceDimension::TEXTURE3D}));
 static_assert(hasSequentialValues({TaskType::SYNC, TaskType::ASYNC}));
