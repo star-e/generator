@@ -1,6 +1,7 @@
 #include "model/TypeGraphBuilder.h"
 
 #include <algorithm>
+#include <bit>
 #include <charconv>
 #include <limits>
 #include <set>
@@ -128,7 +129,8 @@ TypeData declare(const Declaration& decl) {
     if (const auto* syntax = std::get_if<Enum>(&decl.data)) {
         EnumType enumeration{.isFlags = syntax->isFlags};
         for (const auto& value : syntax->values) {
-            enumeration.values.push_back({value.name, value.initializer});
+            auto& member = enumeration.values.emplace_back(Enumerator{value.name, value.initializer});
+            if (value.leftShift) member.initializer += " << " + value.leftShift->count;
         }
         return enumeration;
     }
@@ -153,20 +155,42 @@ constexpr IntegerRange integerRange() {
 
 using EnumValue = decltype(Enumerator::value);
 
+std::errc parseMagnitude(std::string_view digits, uint64_t& magnitude) {
+    const bool hex = digits.starts_with("0x") || digits.starts_with("0X");
+    if (hex) digits.remove_prefix(2);
+    const auto end = digits.data() + digits.size();
+    const auto parsed = std::from_chars(digits.data(), end, magnitude, hex ? 16 : 10);
+    if (parsed.ptr != end || (!hex && digits.size() > 1 && digits.front() == '0')) return std::errc::invalid_argument;
+    return parsed.ec;
+}
+
 EnumValue integerLiteral(const EnumMember& member, IntegerRange range, const std::string& base) {
     std::string_view digits = member.initializer;
     const bool negative = digits.starts_with('-');
+    if (negative && member.leftShift) {
+        throw std::runtime_error(member.initializerLocation.describe() + ": expected nonnegative left shift operand");
+    }
     if (negative) digits.remove_prefix(1);
-    const bool hex = digits.starts_with("0x") || digits.starts_with("0X");
-    if (hex) digits.remove_prefix(2);
     uint64_t magnitude{};
-    const auto end = digits.data() + digits.size();
-    const auto parsed = std::from_chars(digits.data(), end, magnitude, hex ? 16 : 10);
-    if (parsed.ptr != end || parsed.ec == std::errc::invalid_argument || (!hex && digits.size() > 1 && digits.front() == '0')) {
+    const auto error = parseMagnitude(digits, magnitude);
+    if (error == std::errc::invalid_argument) {
         throw std::runtime_error(member.initializerLocation.describe() + ": invalid integer literal " + member.initializer);
     }
     const uint64_t limit = negative ? uint64_t{0} - static_cast<uint64_t>(range.min) : range.max;
-    if (parsed.ec == std::errc::result_out_of_range || magnitude > limit) enumOverflow(member, base);
+    if (error == std::errc::result_out_of_range || magnitude > limit) enumOverflow(member, base);
+    if (const auto& shift = member.leftShift) {
+        uint64_t count{};
+        const auto countError = parseMagnitude(shift->count, count);
+        if (countError == std::errc::invalid_argument) {
+            throw std::runtime_error(shift->location.describe() + ": invalid integer shift count " + shift->count);
+        }
+        const auto width = static_cast<uint64_t>(std::bit_width(range.max)) + (range.min < 0);
+        if (countError == std::errc::result_out_of_range || count >= width) {
+            throw std::runtime_error(shift->location.describe() + ": shift count out of range for " + base + ": " + shift->count);
+        }
+        if (magnitude > (range.max >> count)) enumOverflow(member, base);
+        magnitude <<= count;
+    }
     if (range.min == 0) return magnitude;
     // Subtract from zero in the unsigned domain so INT64_MIN is representable.
     return static_cast<int64_t>(negative ? uint64_t{0} - magnitude : magnitude);

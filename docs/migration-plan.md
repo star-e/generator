@@ -120,7 +120,9 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `RenderSettings` 的 `PipelineSettings.bloom` 和 `Bloom.type` 分别引用 `Bloom` 和 `BloomType`。设置后端按字段生成 TS 接口、默认值工厂和递归补全函数。旧版材质迁移规则在投影中声明。`cocos.settings.editor` 编译引擎的 `BuiltinPipelineSettings` 并在隔离环境调用 `onEnable()`，检查新字段缺失、已有材质和显式 `null` 三种情况。[设置声明](../spec/render/render-settings.spec) · [设置投影](../spec/render/render-settings.json)
 
-`RenderCommon` 的十一个枚举和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。`.spec` 支持十进制、十六进制整数初值和对同一枚举中先前成员的引用。TypeGraph 保留初值写法、解析后的整数值和声明顺序，并检查底层类型的取值范围。`flags ResourceFlags : uint32_t` 声明位标志，C++ 后端据此生成位运算符和 `any()`。TS 后端生成数值枚举并检查安全整数范围。模块投影用 `constEnums` 选择 TS 常量枚举，用 `namedEnums` 选择需要生成名称查询的枚举。[模块声明](../spec/render/render-common.spec) · [模块投影](../spec/render/render-common.json)
+`RenderCommon` 的十二个枚举和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。`.spec` 支持十进制、十六进制整数初值、两个非负整数字面量的左移，以及对同一枚举中先前成员的引用。TypeGraph 保存初值表达式和求值结果，检查移位量与底层类型的取值范围。`ResourceFlags` 和 `ResolveFlags` 共用 C++ 位运算符和 `any()` 的生成逻辑。模块投影用 `constEnums` 将 `ResolveFlags` 生成为 TS 常量枚举，用 `namedEnums` 选择需要生成名称查询的枚举。[模块声明](../spec/render/render-common.spec) · [模块投影](../spec/render/render-common.json)
+
+`ResolveFlags` 的三个低位在 C++ 和 TS 中均保留 `1 << n`。例如 `DEPTH | STENCIL` 等于 `6`。对于 `uint32_t` 的 `1 << 31`，两端输出求值后的整数 `2147483648`，避免 TS 按有符号 32 位整数移位得到负数。TS 输出仍检查安全整数范围。
 
 `LightInfo` 的模型记录字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区为其配置原生头文件和 TS 导入路径。
 

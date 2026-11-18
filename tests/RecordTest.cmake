@@ -82,6 +82,18 @@ string(REPLACE "TRANSFER_DST = 0x200," "TOP = 0xFFFFFFFF, NEXT," broken "${origi
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "enum value out of range for uint32_t: NEXT" ${generate})
 
+function(expect_bad_shift expression column message)
+    string(REPLACE "DEPTH = 1 << 1," "DEPTH = ${expression}," broken "${original}")
+    file(WRITE "${spec}" "${broken}")
+    expect_failure(2 "render-common[.]spec:[0-9]+:${column}: ${message}" ${generate})
+endfunction()
+expect_bad_shift("1 << -1" 22 "expected nonnegative integer shift count")
+expect_bad_shift("1 << 32" 22 "shift count out of range for uint32_t")
+expect_bad_shift("1 << 1.5" 22 "invalid integer shift count")
+expect_bad_shift("1 << " 22 "expected nonnegative integer shift count")
+expect_bad_shift("2 << 31" 17 "enum value out of range for uint32_t")
+expect_bad_shift("-1 << 0" 17 "expected nonnegative left shift operand")
+
 string(REPLACE "constructor(light, level);" "constructor(light, missing);" broken "${original}")
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "render-common.spec:[0-9]+:[0-9]+: unknown constructor field missing" ${generate})

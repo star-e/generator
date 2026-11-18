@@ -10,8 +10,16 @@ namespace cc::codegen {
 
 enum class EnumTarget { cpp, typescript };
 
-inline std::string cppEnumInitializer(const Enumerator& member) {
-    const auto& init = member.initializer;
+inline std::string enumInitializer(const Enumerator& member, EnumTarget target) {
+    auto init = member.initializer;
+    if (init.find(" << ") != std::string::npos) {
+        const auto value = std::visit([](auto n) { return static_cast<uint64_t>(n); }, member.value);
+        // A positive result fitting int32_t also guarantees a shift count below 31.
+        // Otherwise use the checked value to avoid JS shift wrapping and C++ int promotion.
+        if (value > 0 && value <= INT32_MAX) return init;
+        init = std::to_string(value);
+    }
+    if (target == EnumTarget::typescript) return init;
     const auto* signedValue = std::get_if<int64_t>(&member.value);
     const auto* unsignedValue = std::get_if<uint64_t>(&member.value);
     // The magnitude of INT64_MIN has no signed C++ literal; wide decimal and negative hex need explicit types.
@@ -32,7 +40,7 @@ inline void writeEnumMembers(std::ostream& out, const EnumType& enumeration, Enu
         }
         out << "    " << member.name;
         if (!member.initializer.empty()) {
-            out << " = " << (target == EnumTarget::cpp ? cppEnumInitializer(member) : member.initializer);
+            out << " = " << enumInitializer(member, target);
         }
         out << ",\n";
     }

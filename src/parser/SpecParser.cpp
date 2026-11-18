@@ -87,7 +87,7 @@ private:
         location = position;
         size_t length = 0;
         if (!remaining.empty()) {
-            length = remaining.starts_with("::") ? 2 : 1;
+            length = remaining.starts_with("::") || remaining.starts_with("<<") ? 2 : 1;
             if (remaining.starts_with("0x") || remaining.starts_with("0X")) {
                 length = 2;
                 while (length < remaining.size() && std::isalnum(static_cast<unsigned char>(remaining[length]))) ++length;
@@ -181,21 +181,7 @@ private:
             }
         } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {
             while (!accept("}")) {
-                const auto memberLocation = location;
-                EnumMember value{.name = uniqueName(members), .initializerLocation = memberLocation};
-                if (accept("=")) {
-                    value.initializerLocation = location;
-                    const bool negative = accept("-");
-                    if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
-                        if (negative) value.initializer = "-";
-                        value.initializer += token;
-                        advance();
-                    } else {
-                        if (negative) fail("expected integer literal");
-                        value.initializer = identifier();
-                    }
-                }
-                enumeration->values.push_back(std::move(value));
+                enumeration->values.push_back(enumMember(members));
                 if (!accept(",")) {
                     expect("}");
                     break;
@@ -206,6 +192,31 @@ private:
             while (!accept("}")) methods.push_back(method(members));
         }
         return result;
+    }
+
+    EnumMember enumMember(std::set<std::string>& members) {
+        const auto start = location;
+        EnumMember member{.name = uniqueName(members), .initializerLocation = start};
+        if (!accept("=")) return member;
+        member.initializerLocation = location;
+        const bool negative = accept("-");
+        if (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))) {
+            if (negative) fail("expected integer literal");
+            member.initializer = identifier();
+            if (token == "<<") fail("expected an integer literal as the left shift operand");
+            return member;
+        }
+        if (negative) member.initializer = "-";
+        member.initializer += token;
+        advance();
+        if (accept("<<")) {
+            if (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))) {
+                fail("expected nonnegative integer shift count");
+            }
+            member.leftShift = LeftShift{std::string(token), location};
+            advance();
+        }
+        return member;
     }
 
     bool followedBy(std::string_view expected) const {

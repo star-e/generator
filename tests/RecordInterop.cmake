@@ -1,7 +1,18 @@
 include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
 test_workspace(work)
 set(stage "${work}/engine")
-run("${TOOL}" generate --workspace "${SOURCE}/config/workspace.json" --output "${stage}")
+# Compile a uint32_t high bit alongside the production enums in both consumer languages.
+file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; namespace cc { flags ShiftProbe : uint32_t { HIGH = 1 << 31 } }")
+set(workspace "${work}/config/workspace.json")
+file(READ "${workspace}" config)
+string(JSON count LENGTH "${config}" modules)
+string(JSON config SET "${config}" modules ${count} [[{
+    "backend": "records", "spec": "../spec/shift.spec",
+    "header": "native/ShiftProbe.h", "typescript": "cocos/rendering/custom/shift-probe.ts"
+}]])
+file(WRITE "${workspace}" "${config}")
+run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
 set(build "${work}/build")
 build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)

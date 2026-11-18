@@ -1,4 +1,10 @@
-import { AttachmentType, ClearValueType, LightingMode, ParameterType, ResourceFlags, TaskType } from './types';
+import { AttachmentType, ClearValueType, LightingMode, ParameterType, ResolveFlags, ResourceFlags, TaskType } from './types';
+import { ShiftProbe } from './shift-probe';
+
+export const resolveFlags = [ResolveFlags.NONE, ResolveFlags.COLOR, ResolveFlags.DEPTH, ResolveFlags.STENCIL];
+export const depthStencil = ResolveFlags.DEPTH | ResolveFlags.STENCIL;
+export const resolvesColor = (depthStencil & ResolveFlags.COLOR) !== 0;
+export const highBit = ShiftProbe.HIGH;
 
 export const attachmentUsage = ResourceFlags.COLOR_ATTACHMENT | ResourceFlags.SAMPLED;
 export function usesStorage(flags: ResourceFlags): boolean {

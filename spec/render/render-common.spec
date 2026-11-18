@@ -98,4 +98,11 @@ namespace cc::render {
         constructor(light, level, culledByLight, probe);
         constructor(light, level);
     }
+
+    flags ResolveFlags : uint32_t {
+        NONE = 0,
+        COLOR = 1 << 0,
+        DEPTH = 1 << 1,
+        STENCIL = 1 << 2,
+    }
 }

@@ -5,7 +5,8 @@ const [jsDir, stage, engine] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
-const { constEnumValues, attachmentUsage, usesStorage } = require(path.join(jsDir, 'enum-consumer.js'));
+const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit }
+    = require(path.join(jsDir, 'enum-consumer.js'));
 
 function compareDeclaration(file, firstLine, lastLine) {
     function read(root) {
@@ -37,10 +38,18 @@ for (const [name, values] of Object.entries(constEnumValues)) {
 for (const name of ['UpdateFrequency', 'ResourceResidency', 'QueueHint', 'ResourceDimension', 'AccessType']) {
     compareEnum(name, 'enum');
 }
-const anyFlags = 'constexpr bool any(ResourceFlags e) noexcept {';
-compareDeclaration(cpp, 'enum class ResourceFlags : uint32_t { // NOLINT(performance-enum-size)', anyFlags);
-compareDeclaration(cpp, anyFlags, '}');
+for (const name of ['ResourceFlags', 'ResolveFlags']) {
+    const anyFlags = `constexpr bool any(${name} e) noexcept {`;
+    compareDeclaration(cpp, `enum class ${name} : uint32_t { // NOLINT(performance-enum-size)`, anyFlags);
+    compareDeclaration(cpp, anyFlags, '}');
+}
 compareDeclaration(ts, 'export enum ResourceFlags {', '}');
+compareDeclaration(ts, 'export const enum ResolveFlags {', '}');
+assert.equal(types.ResolveFlags, undefined);
+assert.deepEqual(resolveFlags, [0, 1, 2, 4]);
+assert.equal(depthStencil, 6);
+assert.equal(resolvesColor, false);
+assert.equal(highBit, 0x80000000);
 assert.equal(attachmentUsage, 0x18);
 assert.equal(usesStorage(attachmentUsage), false);
 assert.equal(usesStorage(attachmentUsage | types.ResourceFlags.STORAGE), true);

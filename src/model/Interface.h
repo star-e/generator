@@ -52,10 +52,16 @@ struct Record {
     std::vector<Method> methods;
 };
 
+struct LeftShift {
+    std::string count;
+    SourceLocation location;
+};
+
 struct EnumMember {
     std::string name;
     std::string initializer;
     SourceLocation initializerLocation;
+    std::optional<LeftShift> leftShift;
 };
 
 struct Enum {

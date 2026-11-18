@@ -1,4 +1,5 @@
 #include "cocos/renderer/pipeline/custom/RenderCommonTypes.h"
+#include "ShiftProbe.h"
 
 #include <cstddef>
 #include <initializer_list>
@@ -11,6 +12,7 @@ using cc::render::LightInfo;
 using cc::render::LightingMode;
 using cc::render::ParameterType;
 using cc::render::QueueHint;
+using cc::render::ResolveFlags;
 using cc::render::ResourceDimension;
 using cc::render::ResourceFlags;
 using cc::render::ResourceResidency;
@@ -55,6 +57,12 @@ constexpr bool checkResourceFlags() {
     return static_cast<uint32_t>(~ResourceFlags::NONE) == UINT32_MAX;
 }
 static_assert(checkResourceFlags());
+static_assert(std::is_same_v<std::underlying_type_t<ResolveFlags>, uint32_t>);
+static_assert(!ResolveFlags::NONE && static_cast<uint32_t>(ResolveFlags::COLOR) == 1);
+static_assert(static_cast<uint32_t>(ResolveFlags::DEPTH) == 2 && static_cast<uint32_t>(ResolveFlags::STENCIL) == 4);
+constexpr auto depthStencil = ResolveFlags::DEPTH | ResolveFlags::STENCIL;
+static_assert(static_cast<uint32_t>(depthStencil) == 6 && !any(depthStencil & ResolveFlags::COLOR));
+static_assert(static_cast<uint32_t>(cc::ShiftProbe::HIGH) == 0x80000000U);
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
 

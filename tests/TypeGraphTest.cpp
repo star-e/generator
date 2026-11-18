@@ -183,7 +183,7 @@ void checkEnumIntegers() {
         namespace cc {
             flags Bits : uint32_t { NONE = 0, HIGH = 0X80000000, ALL = 0xffffffff, COPY = ALL }
             enum class Signed : int64_t { MIN = -9223372036854775808, NEXT, RESTART = MIN, AFTER }
-            enum class Unsigned : uint64_t { MAX = 18446744073709551615 }
+            enum class Unsigned : uint64_t { MAX = 18446744073709551615, TOP = 1<<0x3f, COPY = TOP, NEXT }
         })");
     const auto graph = buildTypeGraph({{module, {}}}, {{"uint32_t", {}}, {"int64_t", {}}, {"uint64_t", {}}});
     const auto& bits = std::get<EnumType>(graph.node(graph.findType("cc::Bits")).data);
@@ -194,6 +194,10 @@ void checkEnumIntegers() {
             std::get<int64_t>(signedEnum.values.at(3).value) == INT64_MIN + 1, "incorrect signed enum value");
     const auto& unsignedEnum = std::get<EnumType>(graph.node(graph.findType("cc::Unsigned")).data);
     require(std::get<uint64_t>(unsignedEnum.values.at(0).value) == UINT64_MAX, "incorrect unsigned enum value");
+    require(unsignedEnum.values.at(1).initializer == "1 << 0x3f" &&
+            std::get<uint64_t>(unsignedEnum.values.at(1).value) == (uint64_t{1} << 63) &&
+            std::get<uint64_t>(unsignedEnum.values.at(3).value) == (uint64_t{1} << 63) + 1,
+            "lost shift expression, value or implicit successor");
 }
 
 } // namespace
