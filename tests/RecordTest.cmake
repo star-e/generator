@@ -7,7 +7,7 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 
 # Change the schema to distinguish generated values, overloads and enum members from a template snapshot.
 string(REPLACE "uint8_t {" "uint32_t {" changed "${original}")
-string(REPLACE "READ_WRITE," "MODIFY = 0x10, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE," changed "${changed}")
+string(REPLACE "READ_WRITE," [=[@deprecated("Use \"READ\" for */.") MODIFY = 0x10, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE,]=] changed "${changed}")
 string(REPLACE "level: uint32_t = 0" "level: uint32_t = 11" changed "${changed}")
 string(REPLACE "constructor(light, level);" "constructor(level, light);" changed "${changed}")
 string(REPLACE "constructor(light, level, culledByLight, probe);" "constructor(light, probe, level, culledByLight);" changed "${changed}")
@@ -20,6 +20,16 @@ file(WRITE "${projection}" "${both}")
 run(${generate})
 file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderCommonTypes.h" cpp)
 file(READ "${work}/stage/cocos/rendering/custom/types.ts" ts)
+set(memberDoc [=[    /**
+     * @deprecated Use "READ" for *&#47;.
+     */
+    MODIFY = 0x10,]=])
+foreach(output IN ITEMS cpp ts)
+    string(FIND "${${output}}" "${memberDoc}" at)
+    if(at EQUAL -1)
+        message(FATAL_ERROR "Missing deprecation comment on MODIFY in ${output}")
+    endif()
+endforeach()
 foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
                           "LightInfo(uint32_t levelIn, IntrusivePtr<scene::Light> lightIn)")
     string(FIND "${cpp}" "${fragment}" at)
@@ -53,6 +63,10 @@ string(JSON broken SET "${rules}" constEnums "[\"LightInfo\"]")
 file(WRITE "${projection}" "${broken}")
 expect_failure(2 "unknown const enum LightInfo in RenderCommon" ${generate})
 file(WRITE "${projection}" "${rules}")
+
+string(REPLACE [=["Please use OPAQUE."]=] [=["Please use OPAQUE.]=] broken "${original}")
+file(WRITE "${spec}" "${broken}")
+expect_failure(2 "render-common[.]spec:[0-9]+:[0-9]+: unterminated deprecation message" ${generate})
 
 foreach(target IN ITEMS MISSING ALIAS LATER FOREIGN)
     file(WRITE "${spec}" "module RenderCommon;

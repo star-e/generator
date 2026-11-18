@@ -33,6 +33,7 @@ namespace codegen {
         name: std::string;
         initializer: std::string;
         value: std::variant<int64_t, uint64_t>;
+        deprecationMessage: std::optional<std::string>;
     }
 
     struct NamespaceType {}

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const [jsDir, stage, engine] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
-const { UpdateFrequency, QueueHint, AccessType, LightInfo, RenderCommonObjectPool } = types;
+const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
 const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit }
     = require(path.join(jsDir, 'enum-consumer.js'));
@@ -38,12 +38,25 @@ for (const [name, values] of Object.entries(constEnumValues)) {
 for (const name of ['UpdateFrequency', 'ResourceResidency', 'QueueHint', 'ResourceDimension', 'AccessType']) {
     compareEnum(name, 'enum');
 }
-for (const name of ['ResourceFlags', 'ResolveFlags']) {
+for (const name of ['ResourceFlags', 'SceneFlags', 'ResolveFlags']) {
     const anyFlags = `constexpr bool any(${name} e) noexcept {`;
     compareDeclaration(cpp, `enum class ${name} : uint32_t { // NOLINT(performance-enum-size)`, anyFlags);
     compareDeclaration(cpp, anyFlags, '}');
 }
 compareDeclaration(ts, 'export enum ResourceFlags {', '}');
+compareDeclaration(ts, 'export enum SceneFlags {', '}');
+for (const [value, member, alias] of [
+    [1, 'OPAQUE', 'OPAQUE_OBJECT'],
+    [2, 'MASK', 'CUTOUT_OBJECT'],
+    [4, 'BLEND', 'TRANSPARENT_OBJECT'],
+]) {
+    assert.equal(SceneFlags[member], value);
+    assert.equal(SceneFlags[alias], value);
+    assert.equal(SceneFlags[value], alias);
+}
+assert.equal(SceneFlags.ALL, 4294967295);
+assert.equal(SceneFlags.ALL & SceneFlags.UI, 0x10);
+assert.equal(SceneFlags.ALL & SceneFlags.PROFILER, 0x400);
 compareDeclaration(ts, 'export const enum ResolveFlags {', '}');
 assert.equal(types.ResolveFlags, undefined);
 assert.deepEqual(resolveFlags, [0, 1, 2, 4]);

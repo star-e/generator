@@ -38,6 +38,16 @@ inline void writeEnumMembers(std::ostream& out, const EnumType& enumeration, Enu
             }, member.value);
             if (!safe) throw std::runtime_error(member.name + ": enum value exceeds the TypeScript safe integer range");
         }
+        if (member.deprecationMessage) {
+            auto message = *member.deprecationMessage;
+            // Keep a literal block-comment terminator inside the documentation.
+            for (auto pos = message.find("*/"); pos != std::string::npos; pos = message.find("*/", pos + 1)) {
+                message.replace(pos, 2, "*&#47;");
+            }
+            out << "    /**\n     * @deprecated";
+            if (!message.empty()) out << ' ' << message;
+            out << "\n     */\n";
+        }
         out << "    " << member.name;
         if (!member.initializer.empty()) {
             out << " = " << enumInitializer(member, target);

@@ -56,6 +56,7 @@ struct Enumerator {
     std::string name;
     std::string initializer;
     std::variant<int64_t, uint64_t> value;
+    std::optional<std::string> deprecationMessage;
 };
 
 struct NamespaceType {};

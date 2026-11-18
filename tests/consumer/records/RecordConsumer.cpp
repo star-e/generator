@@ -16,6 +16,7 @@ using cc::render::ResolveFlags;
 using cc::render::ResourceDimension;
 using cc::render::ResourceFlags;
 using cc::render::ResourceResidency;
+using cc::render::SceneFlags;
 using cc::render::TaskType;
 using cc::render::UpdateFrequency;
 
@@ -57,6 +58,12 @@ constexpr bool checkResourceFlags() {
     return static_cast<uint32_t>(~ResourceFlags::NONE) == UINT32_MAX;
 }
 static_assert(checkResourceFlags());
+static_assert(std::is_same_v<std::underlying_type_t<SceneFlags>, uint32_t>);
+static_assert(SceneFlags::OPAQUE_OBJECT == SceneFlags::OPAQUE);
+static_assert(SceneFlags::CUTOUT_OBJECT == SceneFlags::MASK);
+static_assert(SceneFlags::TRANSPARENT_OBJECT == SceneFlags::BLEND);
+static_assert(static_cast<uint32_t>(SceneFlags::ALL) == UINT32_MAX);
+static_assert(static_cast<uint32_t>(SceneFlags::REFLECTION_PROBE | SceneFlags::OPAQUE_OBJECT) == 0x2001);
 static_assert(std::is_same_v<std::underlying_type_t<ResolveFlags>, uint32_t>);
 static_assert(!ResolveFlags::NONE && static_cast<uint32_t>(ResolveFlags::COLOR) == 1);
 static_assert(static_cast<uint32_t>(ResolveFlags::DEPTH) == 2 && static_cast<uint32_t>(ResolveFlags::STENCIL) == 4);

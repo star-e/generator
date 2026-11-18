@@ -129,7 +129,8 @@ TypeData declare(const Declaration& decl) {
     if (const auto* syntax = std::get_if<Enum>(&decl.data)) {
         EnumType enumeration{.isFlags = syntax->isFlags};
         for (const auto& value : syntax->values) {
-            auto& member = enumeration.values.emplace_back(Enumerator{value.name, value.initializer});
+            auto& member = enumeration.values.emplace_back(Enumerator{.name = value.name, .initializer = value.initializer,
+                                                                      .deprecationMessage = value.deprecationMessage});
             if (value.leftShift) member.initializer += " << " + value.leftShift->count;
         }
         return enumeration;

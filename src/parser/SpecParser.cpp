@@ -194,9 +194,38 @@ private:
         return result;
     }
 
+    std::optional<std::string> deprecationMessage() {
+        if (!accept("@")) return std::nullopt;
+        expect("deprecated");
+        expect("(");
+        if (token != "\"") fail("expected quoted deprecation message");
+        // The opening quote is the current token. Read its contents before skipping whitespace or comments.
+        std::string message;
+        while (!remaining.empty()) {
+            char ch = remaining.front();
+            if (ch == '\r' || ch == '\n') break;
+            consume(1);
+            if (ch == '"') {
+                advance();
+                expect(")");
+                return message;
+            }
+            if (ch == '\\') {
+                if (remaining.empty() || (remaining.front() != '"' && remaining.front() != '\\')) {
+                    fail("invalid escape in deprecation message");
+                }
+                ch = remaining.front();
+                consume(1);
+            }
+            message.push_back(ch);
+        }
+        fail("unterminated deprecation message");
+    }
+
     EnumMember enumMember(std::set<std::string>& members) {
+        auto message = deprecationMessage();
         const auto start = location;
-        EnumMember member{.name = uniqueName(members), .initializerLocation = start};
+        EnumMember member{.name = uniqueName(members), .initializerLocation = start, .deprecationMessage = std::move(message)};
         if (!accept("=")) return member;
         member.initializerLocation = location;
         const bool negative = accept("-");
