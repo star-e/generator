@@ -124,6 +124,10 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": namedEnums require TypeScript output");
         rules.at("namedEnums").get_to(output.namedEnums);
     }
+    if (rules.contains("constEnums")) {
+        if (!output.typescript) throw std::runtime_error(projection.string() + ": constEnums require TypeScript output");
+        rules.at("constEnums").get_to(output.constEnums);
+    }
     if (rules.contains("pools")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": pools require TypeScript output");
         rules.at("pools").get_to(output.pools);

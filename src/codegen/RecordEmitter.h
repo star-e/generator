@@ -10,6 +10,7 @@ struct RecordOutput {
     std::filesystem::path header;
     std::optional<std::filesystem::path> typescript;
     std::set<std::string> namedEnums;
+    std::set<std::string> constEnums;
     std::filesystem::path poolModule;
     std::map<std::string, std::string> pools;
 };

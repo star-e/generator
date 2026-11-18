@@ -2,8 +2,10 @@ const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
 const [jsDir, stage, engine] = process.argv.slice(2);
-const { UpdateFrequency, AccessType, LightInfo, RenderCommonObjectPool } = require(path.join(jsDir, 'types.js'));
+const types = require(path.join(jsDir, 'types.js'));
+const { UpdateFrequency, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
+const { constEnumValues } = require(path.join(jsDir, 'enum-consumer.js'));
 
 function compareDeclaration(file, firstLine, lastLine) {
     function read(root) {
@@ -23,11 +25,19 @@ const engineTypes = fs.readFileSync(path.join(engine, ts), 'utf8').split(/\r?\n/
 for (const line of fs.readFileSync(path.join(stage, ts), 'utf8').split(/\r?\n/)) {
     if (line.startsWith('import ')) assert.ok(engineTypes.includes(line), line);
 }
-compareDeclaration(cpp, 'enum class UpdateFrequency : uint8_t {', '};');
-compareDeclaration(cpp, 'enum class AccessType : uint8_t {', '};');
+function compareEnum(name, tsKind) {
+    compareDeclaration(cpp, `enum class ${name} : uint8_t {`, '};');
+    compareDeclaration(ts, `export ${tsKind} ${name} {`, '}');
+}
+for (const [name, values] of Object.entries(constEnumValues)) {
+    compareEnum(name, 'const enum');
+    assert.deepEqual(values, values.map((_, index) => index), name);
+    assert.equal(types[name], undefined, name);
+}
+for (const name of ['UpdateFrequency', 'ResourceResidency', 'ResourceDimension', 'AccessType']) {
+    compareEnum(name, 'enum');
+}
 compareDeclaration(cpp, 'struct LightInfo {', '};');
-compareDeclaration(ts, 'export enum UpdateFrequency {', '}');
-compareDeclaration(ts, 'export enum AccessType {', '}');
 compareDeclaration(ts, 'export class LightInfo {', '}');
 compareDeclaration(ts, '    createLightInfo (', '    }');
 
@@ -36,6 +46,16 @@ for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS
     assert.equal(getUpdateFrequencyName(value), name);
 }
 assert.equal(getUpdateFrequencyName(99), '');
+const runtimeMembers = {
+    ResourceResidency: ['MANAGED', 'MEMORYLESS', 'PERSISTENT', 'EXTERNAL', 'BACKBUFFER', 'CUSTOM'],
+    ResourceDimension: ['BUFFER', 'TEXTURE1D', 'TEXTURE2D', 'TEXTURE3D'],
+};
+for (const [name, members] of Object.entries(runtimeMembers)) {
+    for (const [value, member] of members.entries()) {
+        assert.equal(types[name][member], value);
+        assert.equal(types[name][value], member);
+    }
+}
 assert.deepEqual([AccessType.READ, AccessType.READ_WRITE, AccessType.WRITE], [0, 1, 2]);
 const fields = (v) => [v.light, v.level, v.culledByLight, v.probe];
 assert.deepEqual(fields(new LightInfo()), [null, 0, false, null]);

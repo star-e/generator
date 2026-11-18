@@ -1,5 +1,6 @@
 {
   "namedEnums": ["UpdateFrequency"],
+  "constEnums": ["ParameterType", "TaskType", "LightingMode", "AttachmentType", "ClearValueType"],
   "poolModule": "cocos/core/memop",
   "pools": { "LightInfo": "li" }
 }

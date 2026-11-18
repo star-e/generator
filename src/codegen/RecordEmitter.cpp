@@ -269,6 +269,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     Pool pool;
     std::ostringstream cpp, ts, nameFunctions;
     auto pendingEnums = output.namedEnums;
+    auto pendingConstEnums = output.constEnums;
     std::string enumImports;
     size_t poolCount{};
     for (auto id : module.declarations) {
@@ -283,7 +284,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 cpp << " : " << cppName(graph, base, module);
             }
             cpp << " {\n";
-            ts << "export enum " << node.name << " {\n";
+            ts << (pendingConstEnums.erase(node.name) ? "export const enum " : "export enum ") << node.name << " {\n";
             for (const auto& value : enumeration->values) {
                 for (auto* out : {&cpp, &ts}) *out << "    " << value.name << ",\n";
             }
@@ -318,6 +319,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
+    if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
 
     std::ostringstream header, script;
     header << preamble << "#pragma once\n";

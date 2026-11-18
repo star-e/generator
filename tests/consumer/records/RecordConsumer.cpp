@@ -1,21 +1,43 @@
 #include "cocos/renderer/pipeline/custom/RenderCommonTypes.h"
 
 #include <cstddef>
+#include <initializer_list>
 #include <type_traits>
 
 using cc::render::AccessType;
+using cc::render::AttachmentType;
+using cc::render::ClearValueType;
 using cc::render::LightInfo;
+using cc::render::LightingMode;
+using cc::render::ParameterType;
+using cc::render::ResourceDimension;
+using cc::render::ResourceResidency;
+using cc::render::TaskType;
 using cc::render::UpdateFrequency;
 
-static_assert(std::is_same_v<std::underlying_type_t<UpdateFrequency>, uint8_t>);
-static_assert(static_cast<int>(UpdateFrequency::PER_INSTANCE) == 0);
-static_assert(static_cast<int>(UpdateFrequency::PER_BATCH) == 1);
-static_assert(static_cast<int>(UpdateFrequency::PER_PHASE) == 2);
-static_assert(static_cast<int>(UpdateFrequency::PER_PASS) == 3);
-static_assert(static_cast<int>(UpdateFrequency::COUNT) == 4);
-static_assert(std::is_same_v<std::underlying_type_t<AccessType>, uint8_t>);
-static_assert(static_cast<int>(AccessType::READ) == 0 && static_cast<int>(AccessType::READ_WRITE) == 1 &&
-              static_cast<int>(AccessType::WRITE) == 2);
+template<class Enum>
+constexpr bool hasSequentialValues(std::initializer_list<Enum> members) {
+    static_assert(std::is_same_v<std::underlying_type_t<Enum>, uint8_t>);
+    unsigned expected = 0;
+    for (auto member : members) {
+        if (static_cast<unsigned>(member) != expected++) return false;
+    }
+    return true;
+}
+
+static_assert(hasSequentialValues({UpdateFrequency::PER_INSTANCE, UpdateFrequency::PER_BATCH, UpdateFrequency::PER_PHASE,
+                                   UpdateFrequency::PER_PASS, UpdateFrequency::COUNT}));
+static_assert(hasSequentialValues({ParameterType::CONSTANTS, ParameterType::CBV, ParameterType::UAV,
+                                   ParameterType::SRV, ParameterType::TABLE, ParameterType::SSV}));
+static_assert(hasSequentialValues({ResourceResidency::MANAGED, ResourceResidency::MEMORYLESS, ResourceResidency::PERSISTENT,
+                                   ResourceResidency::EXTERNAL, ResourceResidency::BACKBUFFER, ResourceResidency::CUSTOM}));
+static_assert(hasSequentialValues({ResourceDimension::BUFFER, ResourceDimension::TEXTURE1D,
+                                   ResourceDimension::TEXTURE2D, ResourceDimension::TEXTURE3D}));
+static_assert(hasSequentialValues({TaskType::SYNC, TaskType::ASYNC}));
+static_assert(hasSequentialValues({LightingMode::NONE, LightingMode::DEFAULT, LightingMode::CLUSTERED}));
+static_assert(hasSequentialValues({AttachmentType::RENDER_TARGET, AttachmentType::DEPTH_STENCIL, AttachmentType::SHADING_RATE}));
+static_assert(hasSequentialValues({AccessType::READ, AccessType::READ_WRITE, AccessType::WRITE}));
+static_assert(hasSequentialValues({ClearValueType::NONE, ClearValueType::FLOAT_TYPE, ClearValueType::INT_TYPE}));
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
 
