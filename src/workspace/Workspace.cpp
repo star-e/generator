@@ -163,6 +163,10 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": resetToDefaults requires TypeScript output");
         rules.at("resetToDefaults").get_to(output.resetToDefaults);
     }
+    if (rules.contains("resetFromConstructor")) {
+        if (!output.typescript) throw std::runtime_error(projection.string() + ": resetFromConstructor requires TypeScript output");
+        rules.at("resetFromConstructor").get_to(output.resetFromConstructor);
+    }
     if (rules.contains("namedEnums")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": namedEnums require TypeScript output");
         rules.at("namedEnums").get_to(output.namedEnums);

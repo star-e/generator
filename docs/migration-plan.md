@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区生成 15 个文件。归档接口占四个文件，编辑器设置占一个文件。`RenderCommon` 生成 C++ 前置声明头、名称查询头、类型、序列化和 JSB 转换的头文件与实现，以及 TS 类型和枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区生成 18 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 第一批生成 `LayoutGraphTypes.h`、`layout-graph.ts` 和 `layout-graph-names.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -141,6 +141,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 `PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。TS 投影通过 `resetToDefaults` 生成无参 `reset()`。配合 `pools` 后，`RenderCommonObjectPool.createPipelineStatistics()` 每次从池中取出对象时都调用该方法。消费测试用引擎的 `RecyclePool` 核对对象复用和全部计数器，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建和复用的对象都采用声明值。[声明](../spec/render/render-common.spec) · [TS 投影](../spec/render/render-common.json)
 
 ### 引擎模块和产物
+
+`LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`resetFromConstructor` 使 TS 的 `reset(type)` 更新类型，并把 `count` 恢复为声明值。类型头和 TS 类型文件目前仅覆盖这四个声明，名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec) · [TS 投影](../spec/render/layout-graph.json)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按 `hashable` 投影生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec) · [投影](../spec/render/render-common.json)
 

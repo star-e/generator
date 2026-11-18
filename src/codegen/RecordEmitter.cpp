@@ -234,7 +234,7 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
             if (i) out << ", ";
             out << m.cpp << " " << m.name << "In";
         }
-        out << ") noexcept\n";
+        out << (ctor.size() == 1 ? ") noexcept // NOLINT\n" : ") noexcept\n");
         bool first = true;
         for (uint32_t i = 0; i < members.size(); ++i) {
             if (std::ranges::find(ctor, i) == ctor.end()) continue;
@@ -453,25 +453,26 @@ std::string tsParams(const std::vector<Member>& members, const Order& order, boo
     return params;
 }
 
-Order poolResetOrder(const std::string& name, const std::vector<Member>& members, const Order& order,
-                     const PoolProjection& pool, bool resetToDefaults) {
+Order resetParameters(const std::string& name, const std::vector<Member>& members, const Order& order,
+                      const std::set<std::string>& keepOnReset, bool resetToDefaults) {
     if (resetToDefaults) {
-        if (!pool.keepOnReset.empty()) throw std::runtime_error(name + ": resetToDefaults conflicts with keepOnReset");
+        if (!keepOnReset.empty()) throw std::runtime_error(name + ": resetToDefaults conflicts with keepOnReset");
         return {};
     }
-    Order reset;
-    auto retained = pool.keepOnReset;
-    for (auto index : order) {
-        const auto& m = members.at(index);
+    auto retained = keepOnReset;
+    for (const auto& m : members) {
+        if (m.name == "reset") throw std::runtime_error(name + ".reset: field conflicts with reset method");
         if (retained.erase(m.name)) continue;
         if (m.readonly) throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
-        reset.push_back(index);
     }
     if (!retained.empty()) throw std::runtime_error(name + ": unknown keepOnReset field " + *retained.begin());
+    auto reset = order;
+    std::erase_if(reset, [&](auto index) { return keepOnReset.contains(members[index].name); });
     return reset;
 }
 
-void tsConstructorAndPoolReset(std::ostream& ts, const std::vector<Member>& members, const Order& order, const Order* poolReset) {
+void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members, const Order& order,
+                           const Order* reset, const std::set<std::string>& keepOnReset) {
     const auto params = tsParams(members, order, true, ", ");
     const bool multiline = params.size() + std::string_view("    constructor () {").size() > 120;
     auto signature = [&](const Order& fields, bool defaults) {
@@ -479,26 +480,30 @@ void tsConstructorAndPoolReset(std::ostream& ts, const std::vector<Member>& memb
         return defaults ? params : tsParams(members, fields, false, ", ");
     };
     ts << "    constructor (" << signature(order, true) << ") {\n";
-    auto assignments = [&](const Order& fields) {
+    for (uint32_t i = 0; i < members.size(); ++i) {
+        if (std::ranges::find(order, i) != order.end()) ts << "        this." << members[i].name << " = " << members[i].name << ";\n";
+    }
+    ts << "    }\n";
+    if (reset) {
+        ts << "    reset (" << signature(*reset, false) << "): void {\n";
         for (uint32_t i = 0; i < members.size(); ++i) {
             const auto& m = members[i];
-            if (std::ranges::find(fields, i) != fields.end()) ts << "        this." << m.name << " = " << m.name << ";\n";
-            else if (m.ts == "Uint8Array") ts << "        // " << m.name << ": Uint8Array size unchanged\n";
+            if (keepOnReset.contains(m.name)) {
+                if (m.ts == "Uint8Array") ts << "        // " << m.name << ": Uint8Array size unchanged\n";
+                continue;
+            }
+            const auto& value = std::ranges::find(order, i) != order.end() ? m.name : m.tsDefault;
+            ts << "        this." << m.name << " = " << value << ";\n";
         }
         ts << "    }\n";
-    };
-    assignments(order);
-    if (poolReset) {
-        ts << "    reset (" << signature(*poolReset, false) << "): void {\n";
-        assignments(*poolReset);
     }
 }
 
 void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>& members, const Order& order,
-              const Order* poolReset, bool resetToDefaults) {
+              const Order* reset, bool resetToDefaults, const std::set<std::string>& keepOnReset) {
     const bool initializeFields = resetToDefaults && std::get<RecordType>(node.data).constructors.empty();
     ts << "export class " << node.name << " {\n";
-    if (!initializeFields) tsConstructorAndPoolReset(ts, members, order, resetToDefaults ? nullptr : poolReset);
+    if (!initializeFields) tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset);
     if (resetToDefaults) {
         ts << "    reset (): void {\n";
         for (const auto& m : members) {
@@ -508,9 +513,10 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>&
         }
         ts << "    }\n";
     }
-    for (const auto& m : members) {
-        if (initializeFields) {
-            ts << "    " << m.comment << m.name;
+    for (uint32_t i = 0; i < members.size(); ++i) {
+        const auto& m = members[i];
+        if (initializeFields || std::ranges::find(order, i) == order.end()) {
+            ts << "    " << (m.readonly ? "readonly " : "") << m.comment << m.name;
             if (!inferTsType(m)) ts << ": " << m.ts;
             ts << " = " << m.tsDefault << ";\n";
         } else {
@@ -656,9 +662,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     auto pendingComparable = output.comparable;
     auto pendingHashes = output.hashable;
     auto pendingReset = output.resetToDefaults;
+    auto pendingCtorReset = output.resetFromConstructor;
     std::string enumImports;
     size_t poolCount{};
     bool previousTag = false;
+    const std::set<std::string> keepNone;
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
         if (std::holds_alternative<TagType>(node.data)) {
@@ -714,22 +722,28 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         Order order(members.size());
         std::iota(order.begin(), order.end(), 0U);
         if (!record->constructors.empty()) {
-            const auto ctor = std::ranges::find(record->constructors, members.size(), &Order::size);
-            if (ctor == record->constructors.end()) throw std::runtime_error(node.qualifiedName + ": TS constructor requires all fields");
+            const auto ctor = std::ranges::max_element(record->constructors, {}, &Order::size);
+            if (ctor->size() < members.size() && std::ranges::count(record->constructors, ctor->size(), &Order::size) > 1)
+                throw std::runtime_error(node.qualifiedName + ": ambiguous partial TypeScript constructor");
             order = *ctor;
         }
         const auto entry = output.pools.find(node.name);
         const bool resetToDefaults = pendingReset.erase(node.name) != 0;
+        const bool resetFromConstructor = pendingCtorReset.erase(node.name) != 0;
+        if (resetToDefaults && resetFromConstructor) throw std::runtime_error(node.qualifiedName + ": conflicting reset projections");
+        const auto& retained = entry == output.pools.end() ? keepNone : entry->second.keepOnReset;
         std::optional<Order> reset;
+        if (entry != output.pools.end() || resetFromConstructor)
+            reset = resetParameters(node.name, members, order, retained, resetToDefaults);
         if (entry != output.pools.end()) {
             ++poolCount;
-            reset = poolResetOrder(node.name, members, order, entry->second, resetToDefaults);
             pool.add(node.name, entry->second.member, members, *reset);
         }
-        tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults);
+        tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained);
     }
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
     if (!pendingReset.empty()) throw std::runtime_error("unknown resetToDefaults record " + *pendingReset.begin() + " in " + module.name);
+    if (!pendingCtorReset.empty()) throw std::runtime_error("unknown resetFromConstructor record " + *pendingCtorReset.begin() + " in " + module.name);
     if (!pendingComparable.empty()) throw std::runtime_error("unknown comparable record " + *pendingComparable.begin() + " in " + module.name);
     if (!pendingHashes.empty()) throw std::runtime_error("unknown hashable record " + *pendingHashes.begin() + " in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);

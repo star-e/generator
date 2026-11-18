@@ -26,6 +26,7 @@ struct RecordOutput {
     std::set<std::string> comparable;
     std::set<std::string> hashable;
     std::set<std::string> resetToDefaults;
+    std::set<std::string> resetFromConstructor;
     std::filesystem::path poolModule;
     std::map<std::string, PoolProjection> pools;
 };

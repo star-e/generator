@@ -1,5 +1,15 @@
 import { AttachmentType, ClearValueType, LightingMode, ParameterType, ResolveFlags, ResourceFlags, TaskType } from './types';
 import { ShiftProbe } from './shift-probe';
+import { DescriptorTypeOrder, LayoutType, RenderPassType } from './layout-graph';
+
+export const layoutEnums = {
+    LayoutType: [LayoutType.VULKAN, LayoutType.WEBGPU],
+    DescriptorTypeOrder: [DescriptorTypeOrder.UNIFORM_BUFFER, DescriptorTypeOrder.DYNAMIC_UNIFORM_BUFFER,
+        DescriptorTypeOrder.SAMPLER_TEXTURE, DescriptorTypeOrder.SAMPLER, DescriptorTypeOrder.TEXTURE,
+        DescriptorTypeOrder.STORAGE_BUFFER, DescriptorTypeOrder.DYNAMIC_STORAGE_BUFFER,
+        DescriptorTypeOrder.STORAGE_IMAGE, DescriptorTypeOrder.INPUT_ATTACHMENT],
+    RenderPassType: [RenderPassType.SINGLE_RENDER_PASS, RenderPassType.RENDER_PASS, RenderPassType.RENDER_SUBPASS],
+};
 
 export const resolveFlags = [ResolveFlags.NONE, ResolveFlags.COLOR, ResolveFlags.DEPTH, ResolveFlags.STENCIL];
 export const depthStencil = ResolveFlags.DEPTH | ResolveFlags.STENCIL;

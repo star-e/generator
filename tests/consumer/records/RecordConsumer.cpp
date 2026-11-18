@@ -1,3 +1,4 @@
+#include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 #include "cocos/renderer/pipeline/custom/RenderCommonNames.h"
 #include "cocos/renderer/pipeline/custom/RenderCommonSerialization.h"
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
@@ -52,6 +53,15 @@ constexpr bool hasSequentialValues(std::initializer_list<Enum> members) {
 
 static_assert(hasSequentialValues({UpdateFrequency::PER_INSTANCE, UpdateFrequency::PER_BATCH, UpdateFrequency::PER_PHASE,
                                    UpdateFrequency::PER_PASS, UpdateFrequency::COUNT}));
+using cc::render::DescriptorTypeOrder;
+using cc::render::LayoutType;
+using cc::render::RenderPassType;
+static_assert(hasSequentialValues({LayoutType::VULKAN, LayoutType::WEBGPU}));
+static_assert(hasSequentialValues({DescriptorTypeOrder::UNIFORM_BUFFER, DescriptorTypeOrder::DYNAMIC_UNIFORM_BUFFER,
+                                   DescriptorTypeOrder::SAMPLER_TEXTURE, DescriptorTypeOrder::SAMPLER, DescriptorTypeOrder::TEXTURE,
+                                   DescriptorTypeOrder::STORAGE_BUFFER, DescriptorTypeOrder::DYNAMIC_STORAGE_BUFFER,
+                                   DescriptorTypeOrder::STORAGE_IMAGE, DescriptorTypeOrder::INPUT_ATTACHMENT}));
+static_assert(hasSequentialValues({RenderPassType::SINGLE_RENDER_PASS, RenderPassType::RENDER_PASS, RenderPassType::RENDER_SUBPASS}));
 static_assert(hasSequentialValues({ParameterType::CONSTANTS, ParameterType::CBV, ParameterType::UAV,
                                    ParameterType::SRV, ParameterType::TABLE, ParameterType::SSV}));
 static_assert(hasSequentialValues({ResourceResidency::MANAGED, ResourceResidency::MEMORYLESS, ResourceResidency::PERSISTENT,
@@ -238,6 +248,12 @@ int main(int argc, char** argv) {
     if (argc != 1) return 2;
     using cc::render::getName;
     using namespace std::string_view_literals;
+    using cc::render::Descriptor;
+    static_assert(std::is_convertible_v<cc::gfx::Type, Descriptor>);
+    const Descriptor defaultDescriptor;
+    const Descriptor sampler = cc::gfx::Type::SAMPLER;
+    if (defaultDescriptor.type != cc::gfx::Type::UNKNOWN || defaultDescriptor.count != 1 ||
+        sampler.type != cc::gfx::Type::SAMPLER || sampler.count != 1) return 8;
     if (getName(QueueHint::RENDER_OPAQUE) != "OPAQUE"sv || getName(static_cast<QueueHint>(255)) != ""sv ||
         getName(cc::render::RasterPassTag{}) != "RasterPass"sv || getName(stats) != "PipelineStatistics"sv) return 7;
     if (!checkUploadPair()) return 6;

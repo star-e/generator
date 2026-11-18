@@ -31,9 +31,18 @@
       "typescript": "cocos/rendering/custom/types.ts"
     },
     {
+      "spec": "../spec/render/layout-graph.spec",
+      "backend": "records",
+      "projection": "../spec/render/layout-graph.json",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/LayoutGraphTypes.h",
+      "typescript": "cocos/rendering/custom/layout-graph.ts"
+    },
+    {
       "spec": "../spec/extern/gfx.spec",
       "backend": "model",
       "types": {
+        "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "Type", "tsModule": "cocos/gfx" },
         "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ResolveMode", "tsModule": "cocos/gfx" }
       }
     },

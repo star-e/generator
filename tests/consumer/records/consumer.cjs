@@ -5,7 +5,7 @@ const [jsDir, stage, engine, nativeFile, webFile] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
-const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit }
+const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit, layoutEnums }
     = require(path.join(jsDir, 'enum-consumer.js'));
 
 function compareDeclaration(file, firstLine, lastLine) {
@@ -22,6 +22,33 @@ function compareDeclaration(file, firstLine, lastLine) {
 
 const cpp = 'native/cocos/renderer/pipeline/custom/RenderCommonTypes.h';
 const ts = 'cocos/rendering/custom/types.ts';
+const layoutCpp = 'native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h';
+const layoutTs = 'cocos/rendering/custom/layout-graph.ts';
+const layout = require(path.join(jsDir, 'layout-graph.js'));
+for (const [name, values] of Object.entries(layoutEnums)) {
+    compareDeclaration(layoutCpp, `enum class ${name} : uint8_t {`, '};');
+    compareDeclaration(layoutTs, `export const enum ${name} {`, '}');
+    assert.deepEqual(values, values.map((_, index) => index), name);
+    assert.equal(layout[name], undefined, name);
+}
+compareDeclaration(layoutCpp, 'struct Descriptor {', '};');
+compareDeclaration(layoutTs, 'export class Descriptor {', '}');
+const { getDescriptorTypeOrderName } = require(path.join(jsDir, 'layout-graph-names.js'));
+assert.deepEqual(layoutEnums.DescriptorTypeOrder.map(getDescriptorTypeOrderName), [
+    'UNIFORM_BUFFER', 'DYNAMIC_UNIFORM_BUFFER', 'SAMPLER_TEXTURE', 'SAMPLER', 'TEXTURE',
+    'STORAGE_BUFFER', 'DYNAMIC_STORAGE_BUFFER', 'STORAGE_IMAGE', 'INPUT_ATTACHMENT',
+]);
+assert.equal(getDescriptorTypeOrderName(255), '');
+const { Type } = require(path.resolve(jsDir, '../../gfx'));
+const descriptor = new layout.Descriptor();
+assert.equal(descriptor.type, Type.UNKNOWN);
+assert.equal(descriptor.count, 1);
+const typedDescriptor = new layout.Descriptor(Type.FLOAT4);
+assert.equal(typedDescriptor.type, Type.FLOAT4);
+typedDescriptor.count = 9;
+typedDescriptor.reset(Type.SAMPLER);
+assert.equal(typedDescriptor.type, Type.SAMPLER);
+assert.equal(typedDescriptor.count, 1);
 const engineTypes = fs.readFileSync(path.join(engine, ts), 'utf8').split(/\r?\n/);
 for (const line of fs.readFileSync(path.join(stage, ts), 'utf8').split(/\r?\n/)) {
     if (line.startsWith('import ')) assert.ok(engineTypes.includes(line), line);

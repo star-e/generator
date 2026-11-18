@@ -1,0 +1,5 @@
+{
+  "constEnums": ["LayoutType", "DescriptorTypeOrder", "RenderPassType"],
+  "namedEnums": ["DescriptorTypeOrder"],
+  "resetFromConstructor": ["Descriptor"]
+}

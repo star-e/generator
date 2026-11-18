@@ -13,6 +13,7 @@ file(READ "${SOURCE}/config/baseline.json" baseline)
 file(GLOB_RECURSE files RELATIVE "${output}" "${output}/*")
 set(baselineFiles
     cocos/rendering/custom/archive.ts
+    cocos/rendering/custom/layout-graph-names.ts
     cocos/rendering/custom/types-names.ts
     editor/assets/default_renderpipeline/builtin-pipeline-types.ts
     native/cocos/renderer/pipeline/custom/ArchiveFwd.h
@@ -24,7 +25,8 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/RenderCommonNames.h
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.h)
-set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts
+set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/rendering/custom/layout-graph.ts
+    native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h
     native/cocos/renderer/pipeline/custom/RenderCommonTypes.h native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp)
 list(SORT expectedFiles)
 if(NOT files STREQUAL expectedFiles)
