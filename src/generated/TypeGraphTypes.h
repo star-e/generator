@@ -74,6 +74,7 @@ struct EnumType {
 };
 
 struct RecordType {
+    bool moveOnly = false;
     std::vector<std::vector<uint32_t>> constructors;
     std::vector<TypeId> bases;
     std::vector<FieldInfo> fields;

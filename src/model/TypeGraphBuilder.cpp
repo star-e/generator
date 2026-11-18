@@ -87,7 +87,7 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
 }
 
 RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
-    RecordType result;
+    RecordType result{.moveOnly = syntax.moveOnly};
     for (const auto& field : syntax.fields) {
         auto use = resolve(graph, field.type, scope, owner);
         std::string_view magnitude = field.initializer;

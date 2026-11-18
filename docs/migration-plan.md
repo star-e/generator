@@ -132,6 +132,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `CopyPair` 和 `MovePair` 共用上述 PMR 构造和 TS 对象池生成逻辑。两者的 `mipLevels` 和 `numSlices` 默认值均为 `0xFFFFFFFF`。TypeGraph 按 `uint8_t` 或 `uint32_t` 的范围校验十六进制字段初值，C++ 和 TS 保留声明中的写法。消费测试为各个 mip 和 slice 参数传入不同的值，并检查跨内存资源复制、移动以及对象池重置后的所有字段。[模块声明](../spec/render/render-common.spec) · [消费测试](../tests/RecordInterop.cmake)
 
+`UploadPair` 在声明上标注 `@moveOnly`。TypeGraph 将其保存为 `RecordType.moveOnly`，C++ 后端据此生成移动操作并禁用复制。带分配器移动时，`source` 转移字节存储，`target` 使用传入的内存资源。TS 构造函数接收只读字段 `source` 的初值，默认为 `new Uint8Array(0)`。对象池投影中的 `keepOnReset: ["source"]` 使 `reset()` 和 `createUploadPair()` 只接收其余六个字段，复用时保留原数组及内容。[模块声明](../spec/render/render-common.spec) · [对象池投影](../spec/render/render-common.json)
+
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 
 ### 引擎模块和产物

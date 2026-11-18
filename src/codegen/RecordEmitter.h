@@ -6,6 +6,11 @@
 
 namespace cc::codegen {
 
+struct PoolProjection {
+    std::string member;
+    std::set<std::string> keepOnReset;
+};
+
 struct RecordOutput {
     std::filesystem::path header;
     std::optional<std::filesystem::path> typescript;
@@ -13,7 +18,7 @@ struct RecordOutput {
     std::set<std::string> constEnums;
     std::set<std::string> comparable;
     std::filesystem::path poolModule;
-    std::map<std::string, std::string> pools;
+    std::map<std::string, PoolProjection> pools;
 };
 
 Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, const std::string& preamble);

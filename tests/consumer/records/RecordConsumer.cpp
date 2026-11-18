@@ -25,6 +25,7 @@ using cc::render::ResourceResidency;
 using cc::render::SceneFlags;
 using cc::render::TaskType;
 using cc::render::UpdateFrequency;
+using cc::render::UploadPair;
 
 template<class Enum>
 constexpr bool hasSequentialValues(std::initializer_list<Enum> members) {
@@ -80,6 +81,11 @@ static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::sc
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
 static_assert(std::is_nothrow_move_constructible_v<ResolvePair> && !std::is_copy_constructible_v<ResolvePair>);
 static_assert(std::is_nothrow_move_assignable_v<ResolvePair> && std::is_copy_assignable_v<ResolvePair>);
+static_assert(std::is_nothrow_move_constructible_v<UploadPair> && std::is_nothrow_move_assignable_v<UploadPair>);
+static_assert(!std::is_copy_constructible_v<UploadPair> && !std::is_copy_assignable_v<UploadPair>);
+static_assert(!std::is_constructible_v<UploadPair, const UploadPair&, const UploadPair::allocator_type&>);
+static_assert(std::is_default_constructible_v<cc::MoveProbe> && std::is_move_constructible_v<cc::MoveProbe>);
+static_assert(!std::is_copy_constructible_v<cc::MoveProbe> && !std::is_copy_assignable_v<cc::MoveProbe>);
 
 namespace pmr = boost::container::pmr;
 
@@ -141,7 +147,31 @@ bool checkSubresources(Indices... indices) {
     return matches(moved, &second);
 }
 
+bool checkUploadPair() {
+    pmr::monotonic_buffer_resource first, second;
+    UploadPair empty(&first);
+    if (empty.get_allocator().resource() != &first || !empty.source.empty() || !empty.target.empty() ||
+        empty.mipLevels != UINT32_MAX || empty.numSlices != UINT32_MAX || empty.targetMostDetailedMip != 0 ||
+        empty.targetFirstSlice != 0 || empty.targetPlaneSlice != 0) return false;
+
+    const ccstd::vector<uint8_t> expected{0, 127, 255};
+    auto bytes = expected;
+    const auto* storage = bytes.data();
+    const ccstd::pmr::string target(96, 't', &first);
+    auto matches = [&](const UploadPair& p, pmr::memory_resource* resource) {
+        return p.source.data() == storage && p.source == expected && p.target == target &&
+               p.get_allocator().resource() == resource && p.target.get_allocator().resource() == resource &&
+               p.mipLevels == 1 && p.numSlices == 2 && p.targetMostDetailedMip == 3 &&
+               p.targetFirstSlice == 4 && p.targetPlaneSlice == 5;
+    };
+    UploadPair original(std::move(bytes), target, 1, 2, 3, 4, 5, &first);
+    if (!matches(original, &first)) return false;
+    UploadPair moved(std::move(original), &second);
+    return matches(moved, &second);
+}
+
 int main() {
+    if (!checkUploadPair()) return 6;
     if (!checkResolvePair()) return 3;
     if (!checkSubresources<CopyPair>(1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U)) return 4;
     if (!checkSubresources<MovePair>(1U, 2U, 3U, 4U, 5U)) return 5;

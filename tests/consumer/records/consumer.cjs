@@ -78,12 +78,12 @@ function constructors(root, name) {
     return fs.readFileSync(path.join(root, sourceFile), 'utf8').replace(/\r\n/g, '\n').split('\n\n')
         .filter((block) => block.startsWith(`${name}::${name}(`));
 }
-for (const name of ['ResolvePair', 'CopyPair', 'MovePair']) {
+for (const name of ['ResolvePair', 'CopyPair', 'UploadPair', 'MovePair']) {
     compareDeclaration(cpp, `struct ${name} {`, '};');
     compareDeclaration(ts, `export class ${name} {`, '}');
     compareDeclaration(ts, `    create${name} (`, '    }');
     const definitions = constructors(stage, name);
-    assert.equal(definitions.length, 4, name);
+    assert.equal(definitions.length, name === 'UploadPair' ? 3 : 4, name);
     assert.deepEqual(definitions, constructors(engine, name), name);
 }
 
@@ -153,3 +153,23 @@ function checkSubresources(name, offsets) {
 const targetOffsets = ['targetMostDetailedMip', 'targetFirstSlice', 'targetPlaneSlice'];
 checkSubresources('CopyPair', ['sourceMostDetailedMip', 'sourceFirstSlice', 'sourcePlaneSlice', ...targetOffsets]);
 checkSubresources('MovePair', targetOffsets);
+
+const uploadFields = (p) => [p.target, p.mipLevels, p.numSlices, p.targetMostDetailedMip, p.targetFirstSlice, p.targetPlaneSlice];
+const uploadDefaults = ['', 4294967295, 4294967295, 0, 0, 0];
+const bytes = new Uint8Array([0, 127, 255]);
+const upload = new types.UploadPair(bytes, 'texture', 1, 2, 3, 4, 5);
+assert.deepEqual(uploadFields(upload), ['texture', 1, 2, 3, 4, 5]);
+upload.reset('other', 6, 7, 8, 9, 10);
+assert.deepEqual(uploadFields(upload), ['other', 6, 7, 8, 9, 10]);
+assert.equal(upload.source, bytes);
+assert.deepEqual(Array.from(bytes), [0, 127, 255]);
+
+const pooledUpload = pool.createUploadPair('texture', 1, 2, 3, 4, 5);
+assert.deepEqual(uploadFields(pooledUpload), ['texture', 1, 2, 3, 4, 5]);
+const pooledBytes = pooledUpload.source;
+assert.ok(pooledBytes instanceof Uint8Array);
+assert.equal(pooledBytes.length, 0);
+pool.reset();
+assert.equal(pool.createUploadPair(), pooledUpload);
+assert.equal(pooledUpload.source, pooledBytes);
+assert.deepEqual(uploadFields(pooledUpload), uploadDefaults);

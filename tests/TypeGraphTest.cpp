@@ -110,7 +110,8 @@ void checkImports(const std::filesystem::path& specs) {
         import RenderCommon;
         namespace cc::render { struct PassInfo { light: LightInfo; } }
     )"), {}});
-    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}}, {"ccstd::pmr::string", {}}};
+    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
+                          {"ccstd::pmr::string", {}}, {"ccstd::vector", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
         const auto& info = graph.node(infoId);
@@ -130,6 +131,8 @@ void checkImports(const std::filesystem::path& specs) {
                 "wrong direct imports");
         const auto& pair = std::get<RecordType>(graph.node(graph.findType("cc::render::ResolvePair")).data);
         require(pair.fields.at(3).type.type == mode && pair.fields.at(4).type.type == mode, "wrong resolve mode type");
+        const auto& upload = std::get<RecordType>(graph.node(graph.findType("cc::render::UploadPair")).data);
+        require(upload.moveOnly && !pair.moveOnly && upload.fields.at(0).isReadonly, "wrong upload record policy");
 
         const auto& enumeration = std::get<EnumType>(graph.node(graph.findType("cc::render::AccessType")).data);
         require(enumeration.underlying == graph.findType("uint8_t"), "lost enum underlying type");

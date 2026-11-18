@@ -47,6 +47,7 @@ struct Constructor {
 };
 
 struct Record {
+    bool moveOnly{};
     std::vector<Field> fields;
     std::vector<Constructor> constructors;
     std::vector<Method> methods;

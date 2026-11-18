@@ -163,6 +163,20 @@ namespace cc::render {
                     targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
     }
 
+    @moveOnly
+    struct UploadPair {
+        readonly source: ccstd::vector<uint8_t>;
+        target: ccstd::pmr::string;
+        mipLevels: uint32_t = 0xFFFFFFFF;
+        numSlices: uint32_t = 0xFFFFFFFF;
+        targetMostDetailedMip: uint32_t = 0;
+        targetFirstSlice: uint32_t = 0;
+        targetPlaneSlice: uint32_t = 0;
+
+        constructor(source, target, mipLevels, numSlices,
+                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
+    }
+
     struct MovePair {
         source: ccstd::pmr::string;
         target: ccstd::pmr::string;

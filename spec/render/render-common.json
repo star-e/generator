@@ -3,5 +3,11 @@
   "constEnums": ["ParameterType", "TaskType", "LightingMode", "AttachmentType", "ClearValueType", "ResolveFlags"],
   "poolModule": "cocos/core/memop",
   "comparable": ["ResolvePair"],
-  "pools": { "LightInfo": "li", "ResolvePair": "rp", "CopyPair": "cp", "MovePair": "mp" }
+  "pools": {
+    "LightInfo": "li",
+    "ResolvePair": "rp",
+    "CopyPair": "cp",
+    "UploadPair": { "member": "up", "keepOnReset": ["source"] },
+    "MovePair": "mp"
+  }
 }

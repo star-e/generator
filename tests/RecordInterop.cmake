@@ -3,7 +3,10 @@ test_workspace(work)
 set(stage "${work}/engine")
 # Compile a uint32_t high bit alongside the production enums in both consumer languages.
 file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; namespace cc { flags ShiftProbe : uint32_t { HIGH = 1 << 31 } }")
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; namespace cc {
+    flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
+    @moveOnly struct MoveProbe { value: uint32_t = 0; }
+}")
 set(workspace "${work}/config/workspace.json")
 file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)

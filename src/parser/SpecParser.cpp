@@ -144,7 +144,11 @@ private:
 
     Declaration declaration(std::set<std::string>& names) {
         Declaration result;
-        if (accept("struct")) result.data = Record{};
+        if (accept("@")) {
+            expect("moveOnly");
+            if (!accept("struct")) fail("@moveOnly requires a struct");
+            result.data = Record{.moveOnly = true};
+        } else if (accept("struct")) result.data = Record{};
         else if (accept("flags")) result.data = Enum{.isFlags = true};
         else if (accept("enum")) {
             expect("class");

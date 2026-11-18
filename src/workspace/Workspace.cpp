@@ -131,12 +131,19 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
     }
     if (rules.contains("pools")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": pools require TypeScript output");
-        rules.at("pools").get_to(output.pools);
         output.poolModule = outputPath(rules.at("poolModule"));
         std::set<std::string> members;
-        for (const auto& [name, member] : output.pools) {
-            if (!identifier(member) || !members.insert(member).second) {
-                throw std::runtime_error(projection.string() + ": invalid pool member " + member);
+        const auto& pools = rules.at("pools");
+        if (!pools.is_object()) throw std::runtime_error(projection.string() + ": expected pool declarations");
+        for (const auto& [name, value] : pools.items()) {
+            auto& pool = output.pools[name];
+            if (value.is_string()) value.get_to(pool.member);
+            else {
+                value.at("member").get_to(pool.member);
+                if (value.contains("keepOnReset")) value.at("keepOnReset").get_to(pool.keepOnReset);
+            }
+            if (!identifier(pool.member) || !members.insert(pool.member).second) {
+                throw std::runtime_error(projection.string() + ": invalid pool member " + pool.member);
             }
         }
     }

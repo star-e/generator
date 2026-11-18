@@ -106,12 +106,22 @@ Member projectMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& fi
         m.usesAllocator = true;
         return m;
     }
+    const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
+    if (instance && graph.node(instance->declaration).qualifiedName == "ccstd::vector" &&
+        instance->arguments.size() == 1 && instance->arguments.front() == TemplateArgument{graph.findType("uint8_t")}) {
+        if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed byte vector");
+        m.cpp = nativeType(graph, module, field.type.type, deps);
+        deps.headers.insert("utility");
+        m.move = true;
+        m.ts = "Uint8Array";
+        m.tsDefault = "new Uint8Array(0)";
+        return m;
+    }
     if (!emitTs && !field.isNullable) {
         m.cpp = nativeType(graph, module, field.type.type, deps);
         return m;
     }
     const auto* ptr = std::get_if<PointerType>(&node.data);
-    const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
     if (ptr || instance) {
         if (!field.isNullable || (!field.initializer.empty() && field.initializer != "nullptr" && field.initializer != "null")) {
             invalid(field, "expected a nullable resource with a null default");
@@ -211,7 +221,7 @@ void tsEnumNames(std::ostream& out, const std::string& name, const EnumType& enu
 
 void inlineConstructors(std::ostream& out, const std::string& name, const RecordType& record,
                         const std::vector<Member>& members) {
-    if (!record.constructors.empty()) out << "    " << name << "() = default;\n";
+    if (!record.constructors.empty() || record.moveOnly) out << "    " << name << "() = default;\n";
     for (const auto& ctor : record.constructors) {
         if (ctor.empty()) continue;
         out << "    " << name << "(";
@@ -232,7 +242,7 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
         }
         out << " {}\n";
     }
-    if (!record.constructors.empty()) out << '\n';
+    if (!record.constructors.empty() || record.moveOnly) out << '\n';
 }
 
 enum class CtorArgs { defaults, fields, move, copy };
@@ -282,15 +292,13 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
         pmrInitializers(source, members, CtorArgs::fields, order);
     }
     for (auto args : {CtorArgs::move, CtorArgs::copy}) {
+        if (args == CtorArgs::copy && record.moveOnly) continue;
         const auto rhs = name + (args == CtorArgs::move ? "&& rhs" : " const& rhs");
         header << "    " << name << "(" << rhs << ", " << alloc << ");\n";
         source << constructor << rhs << ", " << alloc << ")";
         pmrInitializers(source, members, args);
     }
-    header << "\n    " << name << "(" << name << "&& rhs) noexcept = default;\n"
-           << "    " << name << "(" << name << " const& rhs) = delete;\n"
-           << "    " << name << "& operator=(" << name << "&& rhs) noexcept = default;\n"
-           << "    " << name << "& operator=(" << name << " const& rhs) = default;\n\n";
+    header << '\n';
 }
 
 void cppEquality(std::ostream& out, const std::string& name, const std::vector<Member>& members) {
@@ -320,6 +328,14 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         inlineConstructors(out, node.name, record, members);
     } else {
         pmrConstructors(out, source, node.name, record, members, *allocator);
+    }
+    if (allocator != members.end() || record.moveOnly) {
+        const auto& name = node.name;
+        const auto moveSpec = allocator != members.end() ? " noexcept" : "";
+        out << "    " << name << "(" << name << "&& rhs)" << moveSpec << " = default;\n"
+            << "    " << name << "(" << name << " const& rhs) = delete;\n"
+            << "    " << name << "& operator=(" << name << "&& rhs)" << moveSpec << " = default;\n"
+            << "    " << name << "& operator=(" << name << " const& rhs) = " << (record.moveOnly ? "delete" : "default") << ";\n\n";
     }
     for (const auto& m : members) {
         out << "    " << m.cpp << " " << m.name;
@@ -353,25 +369,43 @@ std::string tsParams(const std::vector<Member>& members, const Order& order, boo
     return params;
 }
 
-void tsRecord(std::ostream& ts, const std::string& name, const std::vector<Member>& members, const Order& order, bool pooled) {
+Order poolResetOrder(const std::string& name, const std::vector<Member>& members, const Order& order,
+                     const PoolProjection& pool) {
+    Order reset;
+    auto retained = pool.keepOnReset;
+    for (auto index : order) {
+        const auto& m = members.at(index);
+        if (retained.erase(m.name)) continue;
+        if (m.readonly) throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
+        reset.push_back(index);
+    }
+    if (!retained.empty()) throw std::runtime_error(name + ": unknown keepOnReset field " + *retained.begin());
+    return reset;
+}
+
+void tsRecord(std::ostream& ts, const std::string& name, const std::vector<Member>& members, const Order& order,
+              const Order* reset) {
     const auto params = tsParams(members, order, true, ", ");
     const bool multiline = params.size() + std::string_view("    constructor () {").size() > 120;
-    auto signature = [&](bool defaults) {
-        if (multiline) return "\n        " + tsParams(members, order, defaults, ",\n        ") + ",\n    ";
-        return defaults ? params : tsParams(members, order, false, ", ");
+    auto signature = [&](const Order& fields, bool defaults) {
+        if (multiline && !fields.empty()) return "\n        " + tsParams(members, fields, defaults, ",\n        ") + ",\n    ";
+        return defaults ? params : tsParams(members, fields, false, ", ");
     };
-    ts << "export class " << name << " {\n" << "    constructor (" << signature(true) << ") {\n";
-    auto assignments = [&] {
-        for (const auto& m : members) ts << "        this." << m.name << " = " << m.name << ";\n";
+    ts << "export class " << name << " {\n" << "    constructor (" << signature(order, true) << ") {\n";
+    auto assignments = [&](const Order& fields) {
+        for (uint32_t i = 0; i < members.size(); ++i) {
+            const auto& m = members[i];
+            if (std::ranges::find(fields, i) != fields.end()) ts << "        this." << m.name << " = " << m.name << ";\n";
+            else if (m.ts == "Uint8Array") ts << "        // " << m.name << ": Uint8Array size unchanged\n";
+        }
         ts << "    }\n";
     };
-    assignments();
-    if (pooled) {
-        ts << "    reset (" << signature(false) << "): void {\n";
-        assignments();
+    assignments(order);
+    if (reset) {
+        ts << "    reset (" << signature(*reset, false) << "): void {\n";
+        assignments(*reset);
     }
     for (const auto& m : members) {
-        if (pooled && m.readonly) throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
         ts << "    declare " << (m.readonly ? "readonly " : "") << m.comment << m.name << ": " << m.ts << ";\n";
     }
     ts << "}\n";
@@ -454,11 +488,13 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             order = *ctor;
         }
         const auto entry = output.pools.find(node.name);
-        tsRecord(ts, node.name, members, order, entry != output.pools.end());
+        std::optional<Order> reset;
         if (entry != output.pools.end()) {
             ++poolCount;
-            pool.add(node.name, entry->second, members, order);
+            reset = poolResetOrder(node.name, members, order, entry->second);
+            pool.add(node.name, entry->second.member, members, *reset);
         }
+        tsRecord(ts, node.name, members, order, reset ? &*reset : nullptr);
     }
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
     if (!pendingComparable.empty()) throw std::runtime_error("unknown comparable record " + *pendingComparable.begin() + " in " + module.name);

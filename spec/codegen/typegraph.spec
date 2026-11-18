@@ -42,6 +42,7 @@ namespace codegen {
     struct ExternalTypeNode { isStruct: bool = false; }
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
     struct RecordType {
+        moveOnly: bool = false;
         constructors: std::vector<std::vector<uint32_t>>;
         bases: std::vector<TypeId>;
         fields: std::vector<FieldInfo>;
