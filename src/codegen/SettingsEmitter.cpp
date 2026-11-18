@@ -164,7 +164,7 @@ std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsP
         body << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             body << "export enum " << node.name << " {\n";
-            writeEnumMembers(body, *enumeration);
+            writeEnumMembers(body, *enumeration, EnumTarget::typescript);
             body << "}\n";
             if (rules.registerEnums.contains(node.name)) {
                 imports.names.insert("ccenum");

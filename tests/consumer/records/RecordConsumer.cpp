@@ -12,6 +12,7 @@ using cc::render::LightingMode;
 using cc::render::ParameterType;
 using cc::render::QueueHint;
 using cc::render::ResourceDimension;
+using cc::render::ResourceFlags;
 using cc::render::ResourceResidency;
 using cc::render::TaskType;
 using cc::render::UpdateFrequency;
@@ -43,6 +44,17 @@ static_assert(hasSequentialValues({LightingMode::NONE, LightingMode::DEFAULT, Li
 static_assert(hasSequentialValues({AttachmentType::RENDER_TARGET, AttachmentType::DEPTH_STENCIL, AttachmentType::SHADING_RATE}));
 static_assert(hasSequentialValues({AccessType::READ, AccessType::READ_WRITE, AccessType::WRITE}));
 static_assert(hasSequentialValues({ClearValueType::NONE, ClearValueType::FLOAT_TYPE, ClearValueType::INT_TYPE}));
+static_assert(std::is_same_v<std::underlying_type_t<ResourceFlags>, uint32_t>);
+constexpr bool checkResourceFlags() {
+    auto usage = ResourceFlags::COLOR_ATTACHMENT | ResourceFlags::SAMPLED;
+    if (static_cast<uint32_t>(usage) != 0x18 || !any(usage & ResourceFlags::SAMPLED)) return false;
+    if (any(usage & ResourceFlags::STORAGE) || !usage) return false;
+    static_assert(!ResourceFlags::NONE && !any(ResourceFlags::NONE));
+    if (&(usage |= ResourceFlags::STORAGE) != &usage || static_cast<uint32_t>(usage) != 0x1C) return false;
+    if (&(usage &= ~ResourceFlags::SAMPLED) != &usage || static_cast<uint32_t>(usage) != 0x14) return false;
+    return static_cast<uint32_t>(~ResourceFlags::NONE) == UINT32_MAX;
+}
+static_assert(checkResourceFlags());
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
 

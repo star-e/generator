@@ -32,13 +32,14 @@ namespace codegen {
     struct Enumerator {
         name: std::string;
         initializer: std::string;
+        value: std::variant<int64_t, uint64_t>;
     }
 
     struct NamespaceType {}
     struct TagType {}
     struct BuiltinType {}
     struct ExternalTypeNode { isStruct: bool = false; }
-    struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; }
+    struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
     struct RecordType {
         constructors: std::vector<std::vector<uint32_t>>;
         bases: std::vector<TypeId>;

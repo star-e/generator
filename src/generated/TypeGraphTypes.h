@@ -55,6 +55,7 @@ struct FieldInfo {
 struct Enumerator {
     std::string name;
     std::string initializer;
+    std::variant<int64_t, uint64_t> value;
 };
 
 struct NamespaceType {};
@@ -68,6 +69,7 @@ struct ExternalTypeNode {
 struct EnumType {
     TypeId underlying;
     std::vector<Enumerator> values;
+    bool isFlags = false;
 };
 
 struct RecordType {

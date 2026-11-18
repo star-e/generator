@@ -177,6 +177,25 @@ void checkTypes() {
     require(graph.num_vertices() == count && graph.findType("Box") == box, "failed insertion changed graph");
 }
 
+void checkEnumIntegers() {
+    const auto module = parseModule("integers.spec", R"(
+        module Integers;
+        namespace cc {
+            flags Bits : uint32_t { NONE = 0, HIGH = 0X80000000, ALL = 0xffffffff, COPY = ALL }
+            enum class Signed : int64_t { MIN = -9223372036854775808, NEXT, RESTART = MIN, AFTER }
+            enum class Unsigned : uint64_t { MAX = 18446744073709551615 }
+        })");
+    const auto graph = buildTypeGraph({{module, {}}}, {{"uint32_t", {}}, {"int64_t", {}}, {"uint64_t", {}}});
+    const auto& bits = std::get<EnumType>(graph.node(graph.findType("cc::Bits")).data);
+    require(bits.isFlags && bits.values.at(1).initializer == "0X80000000" &&
+            std::get<uint64_t>(bits.values.at(3).value) == UINT32_MAX, "lost flag literal or alias");
+    const auto& signedEnum = std::get<EnumType>(graph.node(graph.findType("cc::Signed")).data);
+    require(!signedEnum.isFlags && std::get<int64_t>(signedEnum.values.at(0).value) == INT64_MIN &&
+            std::get<int64_t>(signedEnum.values.at(3).value) == INT64_MIN + 1, "incorrect signed enum value");
+    const auto& unsignedEnum = std::get<EnumType>(graph.node(graph.findType("cc::Unsigned")).data);
+    require(std::get<uint64_t>(unsignedEnum.values.at(0).value) == UINT64_MAX, "incorrect unsigned enum value");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -188,6 +207,7 @@ int main(int argc, char** argv) {
         checkSettings(specs / "render/render-settings.spec");
         checkImports(specs);
         checkTypes();
+        checkEnumIntegers();
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

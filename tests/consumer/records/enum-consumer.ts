@@ -1,4 +1,9 @@
-import { AttachmentType, ClearValueType, LightingMode, ParameterType, TaskType } from './types';
+import { AttachmentType, ClearValueType, LightingMode, ParameterType, ResourceFlags, TaskType } from './types';
+
+export const attachmentUsage = ResourceFlags.COLOR_ATTACHMENT | ResourceFlags.SAMPLED;
+export function usesStorage(flags: ResourceFlags): boolean {
+    return (flags & ResourceFlags.STORAGE) !== 0;
+}
 
 export const constEnumValues = {
     ParameterType: [ParameterType.CONSTANTS, ParameterType.CBV, ParameterType.UAV,

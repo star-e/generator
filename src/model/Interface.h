@@ -61,6 +61,7 @@ struct EnumMember {
 struct Enum {
     std::vector<EnumMember> values;
     std::optional<TypeRef> underlying;
+    bool isFlags{};
 };
 
 struct ExternalDeclaration { bool isStruct{}; };

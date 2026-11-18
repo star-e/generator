@@ -158,12 +158,29 @@ Member projectMember(const TypeGraph& graph, const TypeModule& module, const Fie
 
 using Order = std::vector<uint32_t>;
 
+void cppFlagOperators(std::ostream& out, const std::string& name, const std::string& base) {
+    for (const char op : {'|', '&'}) {
+        out << "\nconstexpr " << name << " operator" << op << "(const " << name << " lhs, const " << name << " rhs) noexcept {\n"
+            << "    return static_cast<" << name << ">(static_cast<" << base << ">(lhs) " << op
+            << " static_cast<" << base << ">(rhs));\n}\n";
+    }
+    for (const char op : {'|', '&'}) {
+        out << "\nconstexpr " << name << "& operator" << op << "=(" << name << "& lhs, const " << name << " rhs) noexcept {\n"
+            << "    return lhs = lhs " << op << " rhs;\n}\n";
+    }
+    out << "\nconstexpr bool operator!(" << name << " e) noexcept {\n"
+        << "    return e == static_cast<" << name << ">(0);\n}\n"
+        << "\nconstexpr " << name << " operator~(" << name << " e) noexcept {\n"
+        << "    return static_cast<" << name << ">(~static_cast<std::underlying_type_t<" << name << ">>(e));\n}\n"
+        << "\nconstexpr bool any(" << name << " e) noexcept {\n    return !!e;\n}\n";
+}
+
 void tsEnumNames(std::ostream& out, const std::string& name, const EnumType& enumeration) {
     out << "\nexport function get" << name << "Name (e: " << name << "): string {\n"
         << "    switch (e) {\n";
+    std::set<decltype(Enumerator::value)> seen;
     for (const auto& value : enumeration.values) {
-        // An alias shares the earlier member's case.
-        if (!value.initializer.empty()) continue;
+        if (!seen.insert(value.value).second) continue;
         out << "    case " << name << "." << value.name << ":\n"
             << "        return '" << value.name << "';\n";
     }
@@ -281,16 +298,22 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         ts << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             cpp << "enum class " << node.name;
+            std::string baseName = "int";
             if (enumeration->underlying != TypeId{}) {
                 const auto& base = graph.node(enumeration->underlying);
                 if (!base.cppHeader.empty()) deps.headers.insert(base.cppHeader);
-                cpp << " : " << cppName(graph, base, module);
+                baseName = cppName(graph, base, module);
+                cpp << " : " << baseName;
             }
-            cpp << " {\n";
+            cpp << (enumeration->isFlags ? " { // NOLINT(performance-enum-size)\n" : " {\n");
             ts << (pendingConstEnums.erase(node.name) ? "export const enum " : "export enum ") << node.name << " {\n";
-            writeEnumMembers(cpp, *enumeration);
-            writeEnumMembers(ts, *enumeration);
+            writeEnumMembers(cpp, *enumeration, EnumTarget::cpp);
+            if (output.typescript) writeEnumMembers(ts, *enumeration, EnumTarget::typescript);
             cpp << "};\n";
+            if (enumeration->isFlags) {
+                deps.headers.insert("type_traits");
+                cppFlagOperators(cpp, node.name, baseName);
+            }
             ts << "}\n";
             if (pendingEnums.erase(node.name)) {
                 if (!enumImports.empty()) enumImports += ", ";

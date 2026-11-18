@@ -5,7 +5,7 @@ const [jsDir, stage, engine] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
-const { constEnumValues } = require(path.join(jsDir, 'enum-consumer.js'));
+const { constEnumValues, attachmentUsage, usesStorage } = require(path.join(jsDir, 'enum-consumer.js'));
 
 function compareDeclaration(file, firstLine, lastLine) {
     function read(root) {
@@ -37,6 +37,14 @@ for (const [name, values] of Object.entries(constEnumValues)) {
 for (const name of ['UpdateFrequency', 'ResourceResidency', 'QueueHint', 'ResourceDimension', 'AccessType']) {
     compareEnum(name, 'enum');
 }
+const anyFlags = 'constexpr bool any(ResourceFlags e) noexcept {';
+compareDeclaration(cpp, 'enum class ResourceFlags : uint32_t { // NOLINT(performance-enum-size)', anyFlags);
+compareDeclaration(cpp, anyFlags, '}');
+compareDeclaration(ts, 'export enum ResourceFlags {', '}');
+assert.equal(attachmentUsage, 0x18);
+assert.equal(usesStorage(attachmentUsage), false);
+assert.equal(usesStorage(attachmentUsage | types.ResourceFlags.STORAGE), true);
+assert.equal(types.ResourceFlags[0x200], 'TRANSFER_DST');
 compareDeclaration(cpp, 'struct LightInfo {', '};');
 compareDeclaration(ts, 'export class LightInfo {', '}');
 compareDeclaration(ts, '    createLightInfo (', '    }');

@@ -1,8 +1,12 @@
 #include "model/TypeGraphBuilder.h"
 
 #include <algorithm>
+#include <charconv>
+#include <limits>
 #include <set>
 #include <stdexcept>
+#include <string_view>
+#include <type_traits>
 
 namespace cc::codegen {
 namespace {
@@ -122,13 +126,8 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
 
 TypeData declare(const Declaration& decl) {
     if (const auto* syntax = std::get_if<Enum>(&decl.data)) {
-        EnumType enumeration;
+        EnumType enumeration{.isFlags = syntax->isFlags};
         for (const auto& value : syntax->values) {
-            if (!value.initializer.empty() &&
-                std::ranges::find(enumeration.values, value.initializer, &Enumerator::name) == enumeration.values.end()) {
-                throw std::runtime_error(value.initializerLocation.describe() + ": " + decl.name + "." + value.name +
-                                         " must refer to an earlier member of the same enum: " + value.initializer);
-            }
             enumeration.values.push_back({value.name, value.initializer});
         }
         return enumeration;
@@ -136,6 +135,88 @@ TypeData declare(const Declaration& decl) {
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};
     if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) return ExternalTypeNode{external->isStruct};
     return InterfaceType{};
+}
+
+struct IntegerRange {
+    int64_t min;
+    uint64_t max;
+};
+
+template<class T>
+constexpr IntegerRange integerRange() {
+    return {std::numeric_limits<T>::min(), static_cast<uint64_t>(std::numeric_limits<T>::max())};
+}
+
+[[noreturn]] void enumOverflow(const EnumMember& member, const std::string& base) {
+    throw std::runtime_error(member.initializerLocation.describe() + ": enum value out of range for " + base + ": " + member.name);
+}
+
+using EnumValue = decltype(Enumerator::value);
+
+EnumValue integerLiteral(const EnumMember& member, IntegerRange range, const std::string& base) {
+    std::string_view digits = member.initializer;
+    const bool negative = digits.starts_with('-');
+    if (negative) digits.remove_prefix(1);
+    const bool hex = digits.starts_with("0x") || digits.starts_with("0X");
+    if (hex) digits.remove_prefix(2);
+    uint64_t magnitude{};
+    const auto end = digits.data() + digits.size();
+    const auto parsed = std::from_chars(digits.data(), end, magnitude, hex ? 16 : 10);
+    if (parsed.ptr != end || parsed.ec == std::errc::invalid_argument || (!hex && digits.size() > 1 && digits.front() == '0')) {
+        throw std::runtime_error(member.initializerLocation.describe() + ": invalid integer literal " + member.initializer);
+    }
+    const uint64_t limit = negative ? uint64_t{0} - static_cast<uint64_t>(range.min) : range.max;
+    if (parsed.ec == std::errc::result_out_of_range || magnitude > limit) enumOverflow(member, base);
+    if (range.min == 0) return magnitude;
+    // Subtract from zero in the unsigned domain so INT64_MIN is representable.
+    return static_cast<int64_t>(negative ? uint64_t{0} - magnitude : magnitude);
+}
+
+void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::string& scope, ModuleId owner) {
+    static const std::map<std::string, IntegerRange> ranges{
+        {"int", integerRange<int>()}, {"unsigned", integerRange<unsigned>()}, {"short", integerRange<short>()},
+        {"long", integerRange<long>()}, {"char", integerRange<char>()}, {"bool", integerRange<bool>()},
+        {"int8_t", integerRange<int8_t>()}, {"uint8_t", integerRange<uint8_t>()},
+        {"int16_t", integerRange<int16_t>()}, {"uint16_t", integerRange<uint16_t>()},
+        {"int32_t", integerRange<int32_t>()}, {"uint32_t", integerRange<uint32_t>()},
+        {"int64_t", integerRange<int64_t>()}, {"uint64_t", integerRange<uint64_t>()}};
+    TypeId underlying;
+    std::string base = "int";
+    if (syntax.underlying) {
+        const auto use = resolve(graph, *syntax.underlying, scope, owner);
+        underlying = use.type;
+        base = graph.node(underlying).qualifiedName;
+        if (!ranges.contains(base)) throw std::runtime_error(use.location.describe() + ": expected integral enum base");
+    }
+    auto& node = graph.getNode(id.value);
+    auto& enumeration = std::get<EnumType>(node.data);
+    enumeration.underlying = underlying;
+    const auto range = ranges.at(base);
+    std::map<std::string, EnumValue> previous;
+    EnumValue number = range.min == 0 ? EnumValue{uint64_t{0}} : EnumValue{int64_t{0}};
+    for (size_t i = 0; i < syntax.values.size(); ++i) {
+        const auto& member = syntax.values[i];
+        const auto& init = member.initializer;
+        if (init.empty()) {
+            if (i != 0) {
+                std::visit([&](auto& last) {
+                    if (last == static_cast<std::decay_t<decltype(last)>>(range.max)) enumOverflow(member, base);
+                    ++last;
+                }, number);
+            }
+        } else if (init.front() == '-' || (init.front() >= '0' && init.front() <= '9')) {
+            number = integerLiteral(member, range, base);
+        } else {
+            const auto target = previous.find(init);
+            if (target == previous.end()) {
+                throw std::runtime_error(member.initializerLocation.describe() + ": " + node.name + "." + member.name +
+                                         " must refer to an earlier member of the same enum: " + init);
+            }
+            number = target->second;
+        }
+        enumeration.values[i].value = number;
+        previous.emplace(member.name, number);
+    }
 }
 
 std::optional<std::string> projectMethod(const Projection& rules, const std::string& decl, const std::string& name) {
@@ -299,15 +380,8 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             if (const auto* record = std::get_if<Record>(&decl.data)) {
                 auto payload = resolveRecord(graph, *record, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);
-            } else if (const auto* enumeration = std::get_if<Enum>(&decl.data); enumeration && enumeration->underlying) {
-                const auto underlying = resolve(graph, *enumeration->underlying, scopes[i], owner);
-                const auto& base = graph.node(underlying.type);
-                static const std::set<std::string> integral{"int", "unsigned", "short", "long", "char", "bool",
-                    "int8_t", "uint8_t", "int16_t", "uint16_t", "int32_t", "uint32_t", "int64_t", "uint64_t"};
-                if (!integral.contains(base.qualifiedName)) {
-                    throw std::runtime_error(underlying.location.describe() + ": expected integral enum base");
-                }
-                std::get<EnumType>(graph.getNode(id.value).data).underlying = underlying.type;
+            } else if (const auto* enumeration = std::get_if<Enum>(&decl.data)) {
+                resolveEnum(graph, id, *enumeration, scopes[i], owner);
             } else if (std::holds_alternative<Interface>(decl.data)) {
                 auto payload = resolveInterface(graph, decl, input.projection, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);

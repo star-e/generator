@@ -7,7 +7,7 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 
 # Change the schema to distinguish generated values, overloads and enum members from a template snapshot.
 string(REPLACE "uint8_t {" "uint32_t {" changed "${original}")
-string(REPLACE "READ_WRITE," "MODIFY, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE," changed "${changed}")
+string(REPLACE "READ_WRITE," "MODIFY = 0x10, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE," changed "${changed}")
 string(REPLACE "level: uint32_t = 0" "level: uint32_t = 11" changed "${changed}")
 string(REPLACE "constructor(light, level);" "constructor(level, light);" changed "${changed}")
 string(REPLACE "constructor(light, level, culledByLight, probe);" "constructor(light, probe, level, culledByLight);" changed "${changed}")
@@ -20,14 +20,14 @@ file(WRITE "${projection}" "${both}")
 run(${generate})
 file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderCommonTypes.h" cpp)
 file(READ "${work}/stage/cocos/rendering/custom/types.ts" ts)
-foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
+foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
                           "LightInfo(uint32_t levelIn, IntrusivePtr<scene::Light> lightIn)")
     string(FIND "${cpp}" "${fragment}" at)
     if(at EQUAL -1)
         message(FATAL_ERROR "Missing C++ fragment: ${fragment}")
     endif()
 endforeach()
-foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "MODIFY," "LEGACY_CHANGE = CHANGE," "level = 11"
+foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "level = 11"
                           "constructor (light: Light | null = null, probe: ReflectionProbe | null = null, level = 11, culledByLight = false)")
     string(FIND "${ts}" "${fragment}" at)
     if(at EQUAL -1)
@@ -67,6 +67,20 @@ namespace cc::render {
 ")
     expect_failure(2 "render-common[.]spec:6:17: QueueHint[.]ALIAS must refer to an earlier member of the same enum: ${target}" ${generate})
 endforeach()
+
+foreach(literal IN ITEMS 0x100000000 4294967296 -1)
+    string(REPLACE "UNIFORM = 0x1," "UNIFORM = ${literal}," broken "${original}")
+    file(WRITE "${spec}" "${broken}")
+    expect_failure(2 "render-common[.]spec:[0-9]+:19: enum value out of range for uint32_t: UNIFORM" ${generate})
+endforeach()
+foreach(literal IN ITEMS 0x 0xG 01 1.5)
+    string(REPLACE "UNIFORM = 0x1," "UNIFORM = ${literal}," broken "${original}")
+    file(WRITE "${spec}" "${broken}")
+    expect_failure(2 "render-common[.]spec:[0-9]+:19: invalid integer literal" ${generate})
+endforeach()
+string(REPLACE "TRANSFER_DST = 0x200," "TOP = 0xFFFFFFFF, NEXT," broken "${original}")
+file(WRITE "${spec}" "${broken}")
+expect_failure(2 "enum value out of range for uint32_t: NEXT" ${generate})
 
 string(REPLACE "constructor(light, level);" "constructor(light, missing);" broken "${original}")
 file(WRITE "${spec}" "${broken}")

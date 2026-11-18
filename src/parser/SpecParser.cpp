@@ -88,7 +88,10 @@ private:
         size_t length = 0;
         if (!remaining.empty()) {
             length = remaining.starts_with("::") ? 2 : 1;
-            if (std::isdigit(static_cast<unsigned char>(remaining.front()))) {
+            if (remaining.starts_with("0x") || remaining.starts_with("0X")) {
+                length = 2;
+                while (length < remaining.size() && std::isalnum(static_cast<unsigned char>(remaining[length]))) ++length;
+            } else if (std::isdigit(static_cast<unsigned char>(remaining.front()))) {
                 while (length < remaining.size() && std::isdigit(static_cast<unsigned char>(remaining[length]))) ++length;
                 if (length + 1 < remaining.size() && remaining[length] == '.' &&
                     std::isdigit(static_cast<unsigned char>(remaining[length + 1]))) {
@@ -142,6 +145,7 @@ private:
     Declaration declaration(std::set<std::string>& names) {
         Declaration result;
         if (accept("struct")) result.data = Record{};
+        else if (accept("flags")) result.data = Enum{.isFlags = true};
         else if (accept("enum")) {
             expect("class");
             result.data = Enum{};
@@ -177,10 +181,19 @@ private:
             }
         } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {
             while (!accept("}")) {
-                EnumMember value{.name = uniqueName(members)};
+                const auto memberLocation = location;
+                EnumMember value{.name = uniqueName(members), .initializerLocation = memberLocation};
                 if (accept("=")) {
                     value.initializerLocation = location;
-                    value.initializer = identifier();
+                    const bool negative = accept("-");
+                    if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
+                        if (negative) value.initializer = "-";
+                        value.initializer += token;
+                        advance();
+                    } else {
+                        if (negative) fail("expected integer literal");
+                        value.initializer = identifier();
+                    }
                 }
                 enumeration->values.push_back(std::move(value));
                 if (!accept(",")) {
@@ -211,6 +224,7 @@ private:
         if (accept("=")) {
             const bool negative = accept("-");
             if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
+                if (token.starts_with("0x") || token.starts_with("0X")) fail("expected decimal field default");
                 if (negative) result.initializer = "-";
                 result.initializer += token;
                 advance();
