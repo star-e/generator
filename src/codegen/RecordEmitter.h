@@ -13,10 +13,12 @@ struct PoolProjection {
 
 struct RecordOutput {
     std::filesystem::path header;
+    std::optional<std::filesystem::path> forwardHeader;
     std::optional<std::filesystem::path> typescript;
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
     std::set<std::string> comparable;
+    std::set<std::string> hashable;
     std::set<std::string> resetToDefaults;
     std::filesystem::path poolModule;
     std::map<std::string, PoolProjection> pools;

@@ -116,11 +116,17 @@ fs::path typescriptOutput(const Json& config) {
 RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
     RecordOutput output{.header = outputPath(config.at("header"))};
     if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
+    if (config.contains("forwardHeader")) {
+        output.forwardHeader = outputPath(config.at("forwardHeader"));
+        if (output.forwardHeader->extension() != ".h" || *output.forwardHeader == output.header)
+            throw std::runtime_error("expected a distinct .h forwardHeader");
+    }
     if (config.contains("typescript")) output.typescript = typescriptOutput(config);
     if (!config.contains("projection")) return output;
     const auto projection = base / config.at("projection").get<std::string>();
     const auto rules = object(projection);
     if (rules.contains("comparable")) rules.at("comparable").get_to(output.comparable);
+    if (rules.contains("hashable")) rules.at("hashable").get_to(output.hashable);
     if (rules.contains("resetToDefaults")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": resetToDefaults requires TypeScript output");
         rules.at("resetToDefaults").get_to(output.resetToDefaults);

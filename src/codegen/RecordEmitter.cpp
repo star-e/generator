@@ -319,6 +319,59 @@ void cppEquality(std::ostream& out, const std::string& name, const std::vector<M
     out << ";\n}\n\ninline bool operator!=" << params << "    return !(lhs == rhs);\n}\n";
 }
 
+void cppHash(std::ostream& declarations, std::ostream& definitions, const TypeNode& node, const std::vector<Member>& members) {
+    const auto& type = node.qualifiedName;
+    const auto signature = "operator()(const " + type + "& val) const noexcept";
+    declarations << "\ntemplate <>\nstruct hash<" << type << "> {\n    hash_t " << signature << ";\n};\n";
+    definitions << "\ninline hash_t hash<" << type << ">::" << signature << " {\n    hash_t seed = 0;\n";
+    for (const auto& m : members) definitions << "    hash_combine(seed, val." << m.name << ");\n";
+    definitions << "    return seed;\n}\n";
+}
+
+void cppIncludes(std::ostream& out, const std::set<std::string>& includes) {
+    for (const auto& include : includes) {
+        if (include.find('/') == std::string::npos) out << "#include <" << include << ">\n";
+        else out << "#include \"" << include << "\"\n";
+    }
+}
+
+void writeNamespace(std::ostream& out, const TypeModule& module, const std::ostringstream& body) {
+    for (const auto& ns : module.namespaces) out << "\nnamespace " << ns << " {\n";
+    out << body.str();
+    for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) out << "\n} // namespace " << *it << "\n";
+}
+
+std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, const std::ostringstream& hashes,
+                          const std::string& preamble) {
+    std::set<std::string> includes;
+    std::ostringstream header, body;
+    std::optional<bool> previousEnum;
+    for (auto id : module.declarations) {
+        const auto& node = graph.node(id);
+        const auto* enumeration = std::get_if<EnumType>(&node.data);
+        const bool isEnum = enumeration != nullptr;
+        if (previousEnum != isEnum) body << '\n';
+        previousEnum = isEnum;
+        body << (isEnum ? "enum class " : "struct ") << node.name;
+        if (enumeration && enumeration->underlying != TypeId{}) {
+            const auto& base = graph.node(enumeration->underlying);
+            if (!base.cppHeader.empty()) includes.insert(base.cppHeader);
+            body << " : " << cppName(graph, base, module);
+        }
+        body << ";\n";
+    }
+    if (!hashes.view().empty()) {
+        includes.insert("cocos/base/std/hash/hash.h");
+        includes.erase("cstdint"); // The engine hash header already supplies the fixed-width integer types.
+    }
+    header << preamble << "#pragma once\n// clang-format off\n";
+    cppIncludes(header, includes);
+    writeNamespace(header, module, body);
+    if (!hashes.view().empty()) header << "\nnamespace ccstd {\n" << hashes.str() << "\n} // namespace ccstd\n";
+    header << "\n// clang-format on\n";
+    return header.str();
+}
+
 void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, const TypeModule& module,
                const TypeNode& node, const std::vector<Member>& members, Dependencies& deps) {
     const auto& record = std::get<RecordType>(node.data);
@@ -459,15 +512,24 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     const auto& module = graph.modules.at(owner.value);
     Dependencies deps;
     Pool pool;
-    std::ostringstream cpp, definitions, ts, nameFunctions;
+    std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, nameFunctions;
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
     auto pendingComparable = output.comparable;
+    auto pendingHashes = output.hashable;
     auto pendingReset = output.resetToDefaults;
     std::string enumImports;
     size_t poolCount{};
+    bool previousTag = false;
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
+        if (std::holds_alternative<TagType>(node.data)) {
+            if (!previousTag) cpp << '\n';
+            cpp << "struct " << node.name << " {};\n";
+            previousTag = true;
+            continue;
+        }
+        previousTag = false;
         cpp << '\n';
         ts << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
@@ -501,6 +563,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         std::vector<Member> members;
         for (const auto& field : record->fields) members.push_back(projectMember(graph, owner, field, deps, output.typescript.has_value()));
         cppRecord(cpp, definitions, graph, module, node, members, deps);
+        if (pendingHashes.erase(node.name)) cppHash(hashDeclarations, hashDefinitions, node, members);
         if (pendingComparable.erase(node.name)) {
             deps.headers.insert("tuple");
             cppEquality(cpp, node.name, members);
@@ -527,30 +590,34 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
     if (!pendingReset.empty()) throw std::runtime_error("unknown resetToDefaults record " + *pendingReset.begin() + " in " + module.name);
     if (!pendingComparable.empty()) throw std::runtime_error("unknown comparable record " + *pendingComparable.begin() + " in " + module.name);
+    if (!pendingHashes.empty()) throw std::runtime_error("unknown hashable record " + *pendingHashes.begin() + " in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
     if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
 
     std::ostringstream header, script;
     header << preamble << "#pragma once\n";
-    for (const auto& include : deps.headers) {
-        if (include.find('/') == std::string::npos) header << "#include <" << include << ">\n";
-        else header << "#include \"" << include << "\"\n";
+    if (!output.forwardHeader && !hashDefinitions.view().empty()) deps.headers.insert("cocos/base/std/hash/hash.h");
+    cppIncludes(header, deps.headers);
+    if (output.forwardHeader) {
+        const auto include = output.forwardHeader->lexically_relative(output.header.parent_path());
+        header << "#include \"" << include.generic_string() << "\"\n";
     }
     for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
-    auto writeNamespace = [&](std::ostream& out, const std::ostringstream& body) {
-        for (const auto& ns : module.namespaces) out << "\nnamespace " << ns << " {\n";
-        out << body.str();
-        for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) out << "\n} // namespace " << *it << "\n";
-    };
-    writeNamespace(header, cpp);
+    writeNamespace(header, module, cpp);
+    if (!hashDefinitions.view().empty()) {
+        header << "\nnamespace ccstd {\n";
+        if (!output.forwardHeader) header << hashDeclarations.str();
+        header << hashDefinitions.str() << "\n} // namespace ccstd\n";
+    }
 
     Files files{{output.header, header.str()}};
+    if (output.forwardHeader) files.emplace(*output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble));
     if (!definitions.view().empty()) {
         auto path = output.header;
         path.replace_extension(".cpp");
         std::ostringstream source;
         source << preamble << "#include \"" << output.header.filename().generic_string() << "\"\n#include <utility>\n";
-        writeNamespace(source, definitions);
+        writeNamespace(source, module, definitions);
         files.emplace(path, source.str());
     }
     if (!output.typescript) return files;

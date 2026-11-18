@@ -53,5 +53,31 @@ file(WRITE "${common}" "${original}")
 string(REPLACE "namespace" "import RenderCommon;\nnamespace" cyclic "${provider}")
 file(WRITE "${probe}" "${cyclic}")
 expect_failure(2 "module import cycle: ReflectionProbe -> RenderCommon -> ReflectionProbe" ${generate})
+file(WRITE "${probe}" "${provider}")
+
+set(graphSpec "${work}/spec/graph.spec")
+string(JSON config SET "${config}" modules ${count} [[{"backend":"model","spec":"../spec/graph.spec"}]])
+file(WRITE "${workspace}" "${config}")
+set(graph "module GraphConsumer;
+import RenderCommon;
+namespace cc::render {
+    graph Passes {
+        vertex_descriptor Vertex = uint32_t;
+        vertex_storage: indexed;
+        component RasterPassTag: uint32_t { member: passes; }
+    }
+}")
+file(WRITE "${graphSpec}" "${graph}")
+run(${generate} --check --diff)
+function(bad_graph before after error)
+    string(REPLACE "${before}" "${after}" broken "${graph}")
+    file(WRITE "${graphSpec}" "${broken}")
+    expect_failure(2 "graph.spec:[0-9]+:[0-9]+: ${error}" ${generate})
+endfunction()
+bad_graph("import RenderCommon;" "" "cc::render::RasterPassTag requires import RenderCommon")
+bad_graph("RasterPassTag:" "MissingTag:" "unknown type MissingTag")
+bad_graph("RasterPassTag:" "LightInfo:" "component requires an independently declared @tag")
+bad_graph("component RasterPassTag:" "@tag struct LocalTag {} component LocalTag:" "expected graph descriptor, storage or component reference")
+bad_graph("component RasterPassTag:" "component RasterPassTag: uint32_t { member: first; } component RasterPassTag:" "invalid or duplicate component accessor")
 
 finish_workspace("${work}")

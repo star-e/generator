@@ -68,6 +68,8 @@ assert.equal(usesStorage(attachmentUsage), false);
 assert.equal(usesStorage(attachmentUsage | types.ResourceFlags.STORAGE), true);
 assert.equal(types.ResourceFlags[0x200], 'TRANSFER_DST');
 compareDeclaration(cpp, 'struct LightInfo {', '};');
+compareDeclaration(cpp, 'struct RasterPassTag {};', 'struct RaytraceTag {};');
+compareDeclaration(cpp, 'struct BufferTag {};', 'struct TextureTag {};');
 compareDeclaration(ts, 'export class LightInfo {', '}');
 compareDeclaration(ts, '    createLightInfo (', '    }');
 compareDeclaration(cpp, 'struct PipelineStatistics {', '};');
@@ -92,6 +94,7 @@ for (const op of ['==', '!=']) {
     compareDeclaration(cpp, `inline bool operator${op}(const ResolvePair& lhs, const ResolvePair& rhs) noexcept {`, '}');
 }
 const sourceFile = cpp.replace(/\.h$/, '.cpp');
+compareDeclaration(cpp, 'inline hash_t hash<cc::render::ResolvePair>::operator()(const cc::render::ResolvePair& val) const noexcept {', '}');
 function constructors(root, name) {
     return fs.readFileSync(path.join(root, sourceFile), 'utf8').replace(/\r\n/g, '\n').split('\n\n')
         .filter((block) => block.startsWith(`${name}::${name}(`));

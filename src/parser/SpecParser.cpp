@@ -145,10 +145,16 @@ private:
     Declaration declaration(std::set<std::string>& names) {
         Declaration result;
         if (accept("@")) {
-            expect("moveOnly");
-            if (!accept("struct")) fail("@moveOnly requires a struct");
-            result.data = Record{.moveOnly = true};
+            if (accept("tag")) {
+                expect("struct");
+                result.data = TagDeclaration{};
+            } else {
+                expect("moveOnly");
+                if (!accept("struct")) fail("@moveOnly requires a struct");
+                result.data = Record{.moveOnly = true};
+            }
         } else if (accept("struct")) result.data = Record{};
+        else if (accept("graph")) result.data = GraphDeclaration{};
         else if (accept("flags")) result.data = Enum{.isFlags = true};
         else if (accept("enum")) {
             expect("class");
@@ -163,7 +169,11 @@ private:
         }
         expect("{");
         std::set<std::string> members;
-        if (auto* record = std::get_if<Record>(&result.data)) {
+        if (std::holds_alternative<TagDeclaration>(result.data)) {
+            expect("}");
+        } else if (auto* graph = std::get_if<GraphDeclaration>(&result.data)) {
+            parseGraph(*graph);
+        } else if (auto* record = std::get_if<Record>(&result.data)) {
             while (!accept("}")) {
                 const auto start = location;
                 if (token == "constructor" && followedBy("(")) {
@@ -196,6 +206,39 @@ private:
             while (!accept("}")) methods.push_back(method(members));
         }
         return result;
+    }
+
+    void parseGraph(GraphDeclaration& graph) {
+        std::set<std::string> names;
+        while (!accept("}")) {
+            if (accept("vertex_descriptor")) {
+                if (graph.vertexType) fail("duplicate vertex descriptor");
+                graph.vertexAlias = uniqueName(names);
+                expect("=");
+                graph.vertexType = type();
+                expect(";");
+            } else if (accept("vertex_storage")) {
+                if (graph.indexed) fail("duplicate vertex storage");
+                expect(":");
+                expect("indexed");
+                expect(";");
+                graph.indexed = true;
+            } else if (accept("component")) {
+                auto tag = type();
+                expect(":");
+                auto value = type();
+                expect("{");
+                expect("member");
+                expect(":");
+                graph.components.push_back({std::move(tag), std::move(value), uniqueName(names)});
+                expect(";");
+                expect("}");
+            } else {
+                fail("expected graph descriptor, storage or component reference");
+            }
+        }
+        if (!graph.vertexType) fail("graph requires a vertex descriptor");
+        if (!graph.components.empty() && !graph.indexed) fail("components require indexed vertex storage");
     }
 
     std::optional<std::string> deprecationMessage() {

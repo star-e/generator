@@ -135,6 +135,8 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
 }
 
 TypeData declare(const Declaration& decl) {
+    if (std::holds_alternative<TagDeclaration>(decl.data)) return TagType{};
+    if (std::holds_alternative<GraphDeclaration>(decl.data)) return GraphType{};
     if (const auto* syntax = std::get_if<Enum>(&decl.data)) {
         EnumType enumeration{.isFlags = syntax->isFlags};
         for (const auto& value : syntax->values) {
@@ -197,7 +199,7 @@ EnumValue integerLiteral(const EnumMember& member, IntegerRange range, const std
     return static_cast<int64_t>(negative ? uint64_t{0} - magnitude : magnitude);
 }
 
-void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::string& scope, ModuleId owner) {
+const std::map<std::string, IntegerRange>& integerRanges() {
     static const std::map<std::string, IntegerRange> ranges{
         {"int", integerRange<int>()}, {"unsigned", integerRange<unsigned>()}, {"short", integerRange<short>()},
         {"long", integerRange<long>()}, {"char", integerRange<char>()}, {"bool", integerRange<bool>()},
@@ -205,6 +207,48 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
         {"int16_t", integerRange<int16_t>()}, {"uint16_t", integerRange<uint16_t>()},
         {"int32_t", integerRange<int32_t>()}, {"uint32_t", integerRange<uint32_t>()},
         {"int64_t", integerRange<int64_t>()}, {"uint64_t", integerRange<uint64_t>()}};
+    return ranges;
+}
+
+TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
+    std::set<uint32_t> visited;
+    while (const auto* alias = std::get_if<AliasType>(&graph.node(use.type).data)) {
+        if (!visited.insert(use.type.value).second) throw std::runtime_error(use.location.describe() + ": cyclic type alias");
+        use.type = alias->target;
+    }
+    return use.type;
+}
+
+GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const std::string& scope, ModuleId owner) {
+    GraphType result;
+    const auto descriptor = graph.findType(qualify(scope, syntax.vertexAlias));
+    result.vertexType = canonicalType(graph, {descriptor, syntax.vertexType->location});
+    result.indexedVertices = syntax.indexed;
+    const auto& vertex = graph.node(result.vertexType);
+    if (syntax.indexed && (vertex.qualifiedName == "bool" || !integerRanges().contains(vertex.qualifiedName))) {
+        throw std::runtime_error(syntax.vertexType->location.describe() + ": expected an integer descriptor for indexed vertices");
+    }
+    std::set<std::string> accessors;
+    for (const auto& component : syntax.components) {
+        const auto tag = canonicalType(graph, resolve(graph, component.tag, scope, owner));
+        const auto& node = graph.node(tag);
+        if (!std::holds_alternative<TagType>(node.data)) {
+            throw std::runtime_error(component.tag.location.describe() + ": component requires an independently declared @tag: " + component.tag.name);
+        }
+        auto accessor = node.name;
+        if (accessor.ends_with('_')) accessor.pop_back();
+        if (!accessor.empty() && accessor.front() >= 'a' && accessor.front() <= 'z') accessor.front() -= 'a' - 'A';
+        if (accessor.empty() || !accessors.insert(accessor).second) {
+            throw std::runtime_error(component.tag.location.describe() + ": invalid or duplicate component accessor for " + node.qualifiedName);
+        }
+        const auto value = resolve(graph, component.value, scope, owner);
+        result.components.push_back({tag, value.type, component.member});
+    }
+    return result;
+}
+
+void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::string& scope, ModuleId owner) {
+    const auto& ranges = integerRanges();
     TypeId underlying;
     std::string base = "int";
     if (syntax.underlying) {
@@ -379,11 +423,15 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 node.cppHeader = it->second.header;
                 node.typescriptName = it->second.typescript;
                 node.typescriptModule = it->second.typescriptModule;
-            } else if (!external) {
+            } else if (!external && !std::holds_alternative<TagType>(node.data)) {
                 node.typescriptName = decl.name;
             }
             auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
+            if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
+                graph.appendNode(TypeNode{.name = g->vertexAlias, .qualifiedName = qualify(graph.node(id).qualifiedName, g->vertexAlias),
+                                          .module = owner, .data = AliasType{}}, id);
+            }
         }
         for (const auto& [name, mapping] : input.externalTypes) {
             const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
@@ -397,12 +445,23 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
     for (ModuleId owner : bindImports(graph.modules, inputs, moduleNames)) {
         const auto i = owner.value;
         const auto& input = inputs[i];
+        // Bind descriptor aliases before their uses, including references from a preceding graph.
+        for (const auto& decl : input.syntax.declarations) {
+            if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
+                const auto target = resolve(graph, *g->vertexType, scopes[i], owner);
+                const auto alias = graph.findType(qualify(qualify(scopes[i], decl.name), g->vertexAlias));
+                graph.getNode(alias.value).data = AliasType{target.type};
+            }
+        }
         for (size_t j = 0; j < input.syntax.declarations.size(); ++j) {
             const auto& decl = input.syntax.declarations[j];
             const auto id = graph.modules[i].declarations[j];
             // Resolving compound types can grow the graph. Reacquire the node by ID afterwards.
             if (const auto* record = std::get_if<Record>(&decl.data)) {
                 auto payload = resolveRecord(graph, *record, scopes[i], owner);
+                graph.getNode(id.value).data = std::move(payload);
+            } else if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
+                auto payload = resolveGraph(graph, *g, qualify(scopes[i], decl.name), owner);
                 graph.getNode(id.value).data = std::move(payload);
             } else if (const auto* enumeration = std::get_if<Enum>(&decl.data)) {
                 resolveEnum(graph, id, *enumeration, scopes[i], owner);

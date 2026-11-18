@@ -23,6 +23,7 @@
       "backend": "records",
       "projection": "../spec/render/render-common.json",
       "header": "native/cocos/renderer/pipeline/custom/RenderCommonTypes.h",
+      "forwardHeader": "native/cocos/renderer/pipeline/custom/RenderCommonFwd.h",
       "typescript": "cocos/rendering/custom/types.ts"
     },
     {

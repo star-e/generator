@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 
 using cc::render::AccessType;
@@ -118,6 +119,10 @@ bool checkResolvePair() {
         original.resolveFlags != depthStencil || original.mode != ResolveMode::MIN || original.mode1 != ResolveMode::MAX) return false;
     ResolvePair copied(original, &first);
     if (!uses(copied, &first) || copied != original) return false;
+    if (ccstd::hash<ResolvePair>{}(copied) != ccstd::hash<ResolvePair>{}(original)) return false;
+    std::unordered_set<ResolvePair, ccstd::hash<ResolvePair>> keys;
+    keys.emplace(original, &second);
+    if (keys.find(copied) == keys.end()) return false;
     ResolvePair moved(std::move(copied), &second);
     if (!uses(moved, &second) || moved != original) return false;
     empty = moved;

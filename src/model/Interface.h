@@ -73,11 +73,25 @@ struct Enum {
 };
 
 struct ExternalDeclaration { bool isStruct{}; };
+struct TagDeclaration {};
+
+struct GraphComponent {
+    TypeRef tag;
+    TypeRef value;
+    std::string member;
+};
+
+struct GraphDeclaration {
+    std::string vertexAlias;
+    std::optional<TypeRef> vertexType;
+    bool indexed{};
+    std::vector<GraphComponent> components;
+};
 
 struct Declaration {
     std::string name;
     SourceLocation location;
-    std::variant<Interface, Record, Enum, ExternalDeclaration> data;
+    std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration> data;
 };
 
 struct ModuleImport {

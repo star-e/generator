@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区生成四个归档文件、一个编辑器设置文件，以及 `RenderCommon` 的 C++ 类型头、C++ 构造函数实现、TS 类型文件和 TS 枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区生成四个归档文件、一个编辑器设置文件，以及 `RenderCommon` 的 C++ 前置声明头、类型头、构造函数实现、TS 类型文件和 TS 枚举名称查询文件。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -96,7 +96,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 图接口与算法
 
-**C++ 图操作生成在图类型上，取消每个模块的 `*Graphs.h`。** 当前引擎的 `RenderGraphTypes.h` 已有 `reserve` 等成员，`vertices(g)`、`out_edges(v, g)` 和按 tag 访问组件等操作仍在 `RenderGraphGraphs.h` 中以自由函数提供。迁移后分别写成 `g.vertices()`、`g.out_edges(v)` 和 `resg.get(ResourceGraph::DescTag{}, v)`。顶点与边的增删同样通过图对象调用。[现有图类型](../../cocos4/native/cocos/renderer/pipeline/custom/RenderGraphTypes.h) · [现有图操作](../../cocos4/native/cocos/renderer/pipeline/custom/RenderGraphGraphs.h)
+**C++ 图操作生成在图类型上，取消每个模块的 `*Graphs.h`。** 图标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。自举模型的 `TypeGraph::getNode(v)` 是组件成员接口的现有实例。引擎图迁移时，顶点遍历、出边遍历和顶点、边的增删也通过图对象调用。[自举模型声明](../spec/codegen/typegraph.spec) · [现有引擎图操作](../../cocos4/native/cocos/renderer/pipeline/custom/RenderGraphGraphs.h)
 
 成员声明、模板定义和短小的内联实现放在 `*Types.h`，较大的非模板实现放在配套的 `*Types.cpp`。通用遍历仍是手写算法，例如 `depthFirstSearch(g, …)` 调用图的成员接口。旧工具为 `LayoutGraph`、`RenderGraph`、`FGDispatcher` 和 `NativePipeline` 各生成一个 `*Graphs.h`，其中 `NativePipelineGraphs.h` 只有包含指令和头文件保护。这四个旧路径按模块退役。[旧文件规划](../../cocos-engine-generator/Cocos/AST/BuilderImpl.cpp) · [旧 NativePipeline 图头](../../cocos4/native/cocos/renderer/pipeline/custom/NativePipelineGraphs.h)
 
@@ -139,6 +139,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 `PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。TS 投影通过 `resetToDefaults` 生成无参 `reset()`，字段初始化和重置使用相同的声明值。消费测试逐字段检查，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建对象和重置后的值。[声明](../spec/render/render-common.spec) · [TS 投影](../spec/render/render-common.json)
 
 ### 引擎模块和产物
+
+`RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按 `hashable` 投影生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec) · [投影](../spec/render/render-common.json)
 
 旧版 52 个文件作为历史基线。按这 11 个模块的新版计划，退役四个图头后生成 **48 个文件**，其中原生 C++ 文件为 37 个。C++ 默认目录是 `native/cocos/renderer/pipeline/custom/`，引擎 TS 默认目录是 `cocos/rendering/custom/`。模块名与文件前缀分别配置，尤其注意 `PrivateInterface → Private` 和 `PrivateTypes → Native`。
 

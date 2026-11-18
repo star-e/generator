@@ -108,7 +108,21 @@ void checkImports(const std::filesystem::path& specs) {
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
         import RenderCommon;
-        namespace cc::render { struct PassInfo { light: LightInfo; } }
+        namespace cc::render {
+            struct PassInfo { light: LightInfo; }
+            graph Passes {
+                vertex_descriptor Vertex = uint32_t;
+                vertex_storage: indexed;
+                component RasterPassTag: PassInfo { member: passes; }
+                component Label_: Vertex { member: labels; }
+            }
+            graph PassCounts {
+                vertex_descriptor Vertex = uint32_t;
+                vertex_storage: indexed;
+                component cc::render::RasterPassTag: uint32_t { member: counts; }
+            }
+            @tag struct Label_ {}
+        }
     )"), {}});
     const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
                           {"ccstd::pmr::string", {}}, {"ccstd::vector", {}}};
@@ -117,6 +131,18 @@ void checkImports(const std::filesystem::path& specs) {
         const auto& info = graph.node(infoId);
         const auto& pass = graph.node(graph.findType("cc::render::PassInfo"));
         require(std::get<RecordType>(pass.data).fields.at(0).type.type == infoId, "wrong imported record");
+        const auto raster = graph.findType("cc::render::RasterPassTag");
+        const auto& tag = graph.node(raster);
+        require(std::holds_alternative<TagType>(tag.data) && tag.module == info.module && !tag.typescriptName,
+                "wrong tag ownership or TS projection");
+        const auto& passes = std::get<GraphType>(graph.node(graph.findType("cc::render::Passes")).data);
+        const auto& counts = std::get<GraphType>(graph.node(graph.findType("cc::render::PassCounts")).data);
+        require(passes.components.at(0).tag == raster && counts.components.at(0).tag == raster &&
+                passes.components[0].valueType == graph.findType("cc::render::PassInfo") && passes.components[0].name == "passes",
+                "graphs did not reuse the imported tag");
+        require(passes.components.at(1).tag == graph.findType("cc::render::Label_") &&
+                passes.components[1].valueType == graph.findType("cc::render::Passes::Vertex") &&
+                graph.findType("cc::render::Passes::RasterPassTag") == TypeId{}, "wrong graph component scope");
         const auto light = graph.findType("cc::scene::Light");
         const auto probe = graph.findType("cc::scene::ReflectionProbe");
         const auto& lightNode = graph.node(light);

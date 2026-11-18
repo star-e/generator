@@ -17,7 +17,8 @@ set(baselineFiles
     editor/assets/default_renderpipeline/builtin-pipeline-types.ts
     native/cocos/renderer/pipeline/custom/ArchiveFwd.h
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
-    native/cocos/renderer/pipeline/custom/ArchiveTypes.h)
+    native/cocos/renderer/pipeline/custom/ArchiveTypes.h
+    native/cocos/renderer/pipeline/custom/RenderCommonFwd.h)
 set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts
     native/cocos/renderer/pipeline/custom/RenderCommonTypes.h native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp)
 list(SORT expectedFiles)

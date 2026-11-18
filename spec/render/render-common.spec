@@ -21,6 +21,15 @@ namespace cc::render {
         SSV,
     }
 
+    @tag struct RasterPassTag {}
+    @tag struct RasterSubpassTag {}
+    @tag struct ComputeSubpassTag {}
+    @tag struct ComputeTag {}
+    @tag struct ResolveTag {}
+    @tag struct CopyTag {}
+    @tag struct MoveTag {}
+    @tag struct RaytraceTag {}
+
     enum class ResourceResidency : uint8_t {
         MANAGED,
         MEMORYLESS,
@@ -60,6 +69,9 @@ namespace cc::render {
         TRANSFER_SRC = 0x100,
         TRANSFER_DST = 0x200,
     }
+
+    @tag struct BufferTag {}
+    @tag struct TextureTag {}
 
     enum class TaskType : uint8_t {
         SYNC,
