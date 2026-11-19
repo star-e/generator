@@ -29,6 +29,7 @@ struct TypeScriptBinding {
     std::map<std::string, std::string> renamedFrom;
     std::optional<PoolBinding> pool;
     std::optional<ResetBinding> reset;
+    bool jsonMapKey{};
     bool names{};
     bool registerEnum{};
     bool helpers{};

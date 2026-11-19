@@ -75,6 +75,17 @@ std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId 
     });
 }
 
+bool hasPmrStorage(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
+    const auto& data = graph.node(id).data;
+    if (const auto* external = std::get_if<ExternalTypeNode>(&data)) return external->isPmr;
+    if (const auto* instance = std::get_if<TemplateInstanceType>(&data))
+        return std::get<ExternalTypeNode>(graph.node(instance->declaration).data).isPmr;
+    const auto* record = std::get_if<RecordType>(&data);
+    return record && visited.insert(id.value).second && std::ranges::any_of(record->fields, [&](const FieldInfo& field) {
+        return hasPmrStorage(graph, field.type.type, visited);
+    });
+}
+
 Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field, Dependencies& deps,
                      bool emitTs) {
     const auto& module = graph.modules.at(owner.value);
@@ -105,6 +116,18 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
             m.tsDefault = typeScriptContainerInitializer(node);
             if (node.typescriptContainer == ContainerKind::Array) m.tsClear = ".length = 0";
             if (node.typescriptContainer == ContainerKind::Map) m.tsClear = ".clear()";
+        }
+        return m;
+    }
+    if (std::holds_alternative<RecordType>(node.data) && !field.isNullable && field.initializer.empty()) {
+        m.cpp = nativeType(graph, module, field.type.type, deps);
+        std::set<uint32_t> visited;
+        m.usesAllocator = hasPmrStorage(graph, field.type.type, visited);
+        m.move = true;
+        if (emitTs) {
+            if (node.module != owner && node.typescriptModule.empty()) invalid(field, "missing external record mapping");
+            m.ts = boundTypeScriptName(graph, field.type, owner, deps.valueImports);
+            m.tsDefault = "new " + m.ts + "()";
         }
         return m;
     }
@@ -271,12 +294,12 @@ void pmrInitializers(std::ostream& source, const std::vector<Member>& members, C
 void pmrConstructors(std::ostream& header, std::ostream& source, const std::string& name,
                      const RecordType& record, const std::vector<Member>& members, const Member& allocatorMember) {
     const std::string alloc = "const allocator_type& alloc";
-    const auto defaultAlloc = alloc + " = boost::container::pmr::get_default_resource()";
+    const auto allocParameter = record.requireAllocator ? alloc : alloc + " = boost::container::pmr::get_default_resource()";
     const auto constructor = "\n" + name + "::" + name + "(";
     header << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
            << "    allocator_type get_allocator() const noexcept { // NOLINT\n"
            << "        return {" << allocatorMember.name << ".get_allocator().resource()};\n    }\n\n"
-           << "    " << name << "(" << defaultAlloc << ") noexcept; // NOLINT\n";
+           << "    " << name << "(" << allocParameter << ") noexcept; // NOLINT\n";
     source << constructor << alloc << ") noexcept";
     pmrInitializers(source, members, CtorArgs::defaults);
     for (const auto& order : record.constructors) {
@@ -286,7 +309,7 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
             const auto& m = members.at(index);
             params += m.cpp + " " + m.name + "In, ";
         }
-        header << "    " << name << "(" << params << defaultAlloc << ");\n";
+        header << "    " << name << "(" << params << allocParameter << ");\n";
         source << constructor << params << alloc << ") // NOLINT";
         pmrInitializers(source, members, CtorArgs::fields, order);
     }
@@ -407,6 +430,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     out << "struct " << node.name << " {\n";
     const auto allocator = std::ranges::find(members, true, &Member::usesAllocator);
     if (allocator == members.end()) {
+        if (record.requireAllocator) throw std::runtime_error(node.qualifiedName + ": @requireAllocator requires a PMR field");
         inlineConstructors(out, node.name, record, members, deps.headers);
     } else {
         pmrConstructors(out, source, node.name, record, members, *allocator);

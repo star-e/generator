@@ -305,6 +305,32 @@ bool checkDescriptorGroupBlockIndex() {
     return true;
 }
 
+bool checkDescriptorDB() {
+    using cc::render::DescriptorBlockIndex;
+    using cc::render::DescriptorDB;
+    using cc::render::DescriptorGroupBlockIndex;
+    static_assert(!std::is_default_constructible_v<DescriptorDB> && !std::is_copy_constructible_v<DescriptorDB>);
+    static_assert(std::is_nothrow_move_constructible_v<DescriptorDB> && std::is_copy_assignable_v<DescriptorDB>);
+    pmr::monotonic_buffer_resource first, second;
+    auto usesResource = [](const DescriptorDB& db, pmr::memory_resource& resource) {
+        return db.get_allocator().resource() == &resource && db.blocks.get_allocator().resource() == &resource &&
+               db.groupBlocks.get_allocator().resource() == &resource;
+    };
+    cc::NestedProbe owner{&first};
+    if (owner.pair.get_allocator().resource() != &first) return false;
+    DescriptorDB original{&first};
+    if (!usesResource(original, first) || !original.blocks.empty() || !original.groupBlocks.empty()) return false;
+    original.blocks[DescriptorBlockIndex{}].count = 3;
+    original.groupBlocks[DescriptorGroupBlockIndex{}].capacity = 5;
+    DescriptorDB copy{original, &second};
+    if (!usesResource(copy, second)) return false;
+    original.blocks.clear();
+    original.groupBlocks.clear();
+    DescriptorDB moved{std::move(copy), &first};
+    return usesResource(moved, first) && moved.blocks.at(DescriptorBlockIndex{}).count == 3 &&
+           moved.groupBlocks.at(DescriptorGroupBlockIndex{}).capacity == 5;
+}
+
 bool checkLayoutGraph();
 
 int main(int argc, char** argv) {
@@ -313,6 +339,7 @@ int main(int argc, char** argv) {
     if (!checkLayoutGraph()) return 9;
     if (!checkDescriptorBlockIndex()) return 10;
     if (!checkDescriptorGroupBlockIndex()) return 12;
+    if (!checkDescriptorDB()) return 15;
     cc::render::DescriptorBlock block;
     if (!block.descriptors.empty() || !block.uniformBlocks.empty() || block.capacity != 0 || block.count != 0) return 14;
     block.descriptors.try_emplace("buffer", cc::gfx::Type::FLOAT4);

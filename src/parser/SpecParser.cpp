@@ -211,6 +211,9 @@ private:
                 auto name = identifier();
                 expect("renamedFrom");
                 if (!rule.renamedFrom.emplace(name, identifier()).second) fail("duplicate field binding " + name);
+            } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
+                expect("json");
+                rule.jsonMapKey = true;
             } else if (rule.kind == BindingTarget::classType && key == "reset") {
                 if (accept("constructor")) rule.reset = ResetBinding::constructor;
                 else { expect("defaults"); rule.reset = ResetBinding::defaults; }
@@ -308,6 +311,7 @@ private:
                 do {
                     const auto annotation = identifier();
                     if (annotation == "moveOnly" && !record.moveOnly) record.moveOnly = true;
+                    else if (annotation == "requireAllocator" && !record.requireAllocator) record.requireAllocator = true;
                     else if (annotation == "serialize" && !record.serializable) record.serializable = true;
                     else if (annotation == "comparison" && record.comparisons.empty()) comparison(record);
                     else if (annotation == "hash" && !record.hashable) record.hashable = true;

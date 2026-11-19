@@ -3,6 +3,7 @@ import Gfx;
 import RenderCommon;
 import Strings;
 import Containers;
+import PmrContainers;
 import GfxUniformBlock;
 
 namespace cc::render {
@@ -68,6 +69,11 @@ namespace cc::render {
         constructor(updateFrequency, parameterType, descriptorType, visibility, accessType, viewDimension, sampleType, format);
     }
 
+    @requireAllocator struct DescriptorDB {
+        readonly blocks: ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>;
+        readonly groupBlocks: ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorBlock>;
+    }
+
     enum class RenderPassType : uint8_t {
         SINGLE_RENDER_PASS,
         RENDER_PASS,
@@ -95,4 +101,7 @@ binding typescript {
     Descriptor => class { reset constructor; };
     DescriptorBlock => class { reset defaults; };
     DescriptorBlockFlattened => class { reset defaults; };
+    DescriptorBlockIndex => class { mapKey json; };
+    DescriptorGroupBlockIndex => class { mapKey json; };
+    DescriptorDB => class { reset defaults; };
 }

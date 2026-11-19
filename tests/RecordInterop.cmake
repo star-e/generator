@@ -7,7 +7,7 @@ file(WRITE "${work}/spec/text.spec" [[extern module Text;
 namespace sample { @string class Text; @string struct Label; }
 binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 ]])
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import Strings; import Containers; import GfxUniformBlock; import Text; import ArchiveInterface;
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import RenderCommon; import Strings; import Containers; import GfxUniformBlock; import Text; import ArchiveInterface;
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
@@ -15,6 +15,10 @@ namespace cc {
         rows: ccstd::vector<ccstd::vector<render::Descriptor>>;
         byteArrays: ccstd::vector<ccstd::vector<uint8_t>>;
         tables: ccstd::vector<ccstd::map<render::LayoutType, ccstd::vector<gfx::UniformBlock>>>;
+        keyed: ccstd::vector<ccstd::map<render::DescriptorGroupBlockIndex, render::DescriptorBlockIndex>>;
+        index: render::DescriptorBlockIndex;
+        pair: render::ResolvePair;
+        constructor(index);
     }
     @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
@@ -52,6 +56,9 @@ if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
 endif()
 foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []"
                           "tables: Map<LayoutType, UniformBlock[]>[] = []"
+                          "keyed: Map<string, DescriptorBlockIndex>[] = []"
+                          "index: DescriptorBlockIndex = new DescriptorBlockIndex()"
+                          [[import { DescriptorBlockIndex } from './layout-graph';]]
                           [[import type { Descriptor, LayoutType } from './layout-graph';]]
                           [[import type { UniformBlock } from '../../gfx';]])
     string(FIND "${script}" "${expected}" pos)

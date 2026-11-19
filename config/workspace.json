@@ -16,6 +16,11 @@
     },
     {
       "backend": "model",
+      "spec": "../spec/extern/pmr-containers.spec",
+      "types": { "map": { "header": "cocos/base/std/container/map.h" } }
+    },
+    {
+      "backend": "model",
       "spec": "../spec/extern/uniform-block.spec",
       "types": { "UniformBlock": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
     },

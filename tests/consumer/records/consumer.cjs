@@ -91,18 +91,39 @@ assert.deepEqual(layoutEnums.DescriptorTypeOrder.map(getDescriptorTypeOrderName)
 assert.equal(getDescriptorTypeOrderName(255), '');
 const { Type } = require(path.resolve(jsDir, '../../gfx'));
 const engineIndices = require(path.join(jsDir, 'engine-index.js'));
-for (const [name, values] of [['DescriptorBlockIndex', descriptorBlockArgs], ['DescriptorGroupBlockIndex', descriptorGroupBlockArgs]]) {
+const { NestedProbe } = require(path.join(jsDir, 'shift-probe.js'));
+const ordinaryIndex = new layout.DescriptorBlockIndex();
+assert.ok(new NestedProbe().index instanceof layout.DescriptorBlockIndex);
+assert.equal(new NestedProbe(ordinaryIndex).index, ordinaryIndex);
+compareDeclaration(layoutCpp, 'struct DescriptorDB {', '};');
+compareDeclaration(layoutTs, 'export class DescriptorDB {', '}');
+const db = new layout.DescriptorDB();
+const otherDB = new layout.DescriptorDB();
+const { blocks, groupBlocks } = db;
+assert.notEqual(blocks, groupBlocks);
+for (const [name, values, field] of [
+    ['DescriptorBlockIndex', descriptorBlockArgs, 'blocks'],
+    ['DescriptorGroupBlockIndex', descriptorGroupBlockArgs, 'groupBlocks'],
+]) {
     compareDeclaration(layoutCpp, `struct ${name} {`, '};');
     compareDeclaration(layoutCpp, `inline bool operator<(const ${name}& lhs, const ${name}& rhs) noexcept {`, '}');
-    const blocks = new Map();
+    assert.notEqual(db[field], otherDB[field]);
     for (let count = 0; count <= values.length; ++count) {
         const args = values.slice(0, count);
         const engineKey = JSON.stringify(new engineIndices[name](...args));
-        blocks.set(engineKey, count);
-        assert.equal(blocks.get(JSON.stringify(new layout[name](...args))), count, `${name} with ${count} arguments`);
+        const entry = new layout.DescriptorBlock();
+        entry.count = count;
+        db[field].set(engineKey, entry);
+        assert.equal(db[field].get(JSON.stringify(new layout[name](...args))), entry, `${name} with ${count} arguments`);
     }
-    assert.equal(blocks.size, values.length + 1, name);
+    assert.equal(db[field].size, values.length + 1, name);
+    assert.equal(otherDB[field].size, 0);
 }
+db.reset();
+assert.equal(db.blocks, blocks);
+assert.equal(db.groupBlocks, groupBlocks);
+assert.equal(blocks.size, 0);
+assert.equal(groupBlocks.size, 0);
 const descriptor = new layout.Descriptor();
 assert.equal(descriptor.type, Type.UNKNOWN);
 assert.equal(descriptor.count, 1);

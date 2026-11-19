@@ -51,6 +51,7 @@ namespace codegen {
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
     struct RecordType {
         moveOnly: bool = false;
+        requireAllocator: bool = false;
         serializable: bool = false;
         compareEqual: bool = false;
         compareLess: bool = false;
@@ -99,6 +100,7 @@ namespace codegen {
         typescriptName: std::optional<std::string>;
         typescriptModule: std::string;
         typescriptContainer: ContainerKind = ContainerKind::None;
+        typescriptJsonMapKey: bool = false;
         templateParameters: std::vector<TypeId>;
     }
     struct TypeModule {

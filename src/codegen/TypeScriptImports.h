@@ -18,8 +18,11 @@ void visitTypeScriptImportSources(const TypeGraph& graph, const TypeNode& node, 
         visit(node);
         return;
     }
-    for (const auto& argument : std::get<TemplateInstanceType>(node.data).arguments)
-        visitTypeScriptImportSources(graph, graph.node(std::get<TypeId>(argument)), visit);
+    const auto& arguments = std::get<TemplateInstanceType>(node.data).arguments;
+    for (size_t i = 0; i < arguments.size(); ++i) {
+        const auto& argument = graph.node(std::get<TypeId>(arguments[i]));
+        if (!usesJsonMapKey(node, i, argument)) visitTypeScriptImportSources(graph, argument, visit);
+    }
 }
 
 inline const std::string& boundTypeScriptName(const TypeGraph& graph, const TypeUse& use, ModuleId owner, TypeImports& imports) {

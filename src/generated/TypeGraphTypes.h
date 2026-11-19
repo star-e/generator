@@ -86,6 +86,7 @@ struct EnumType {
 
 struct RecordType {
     bool moveOnly = false;
+    bool requireAllocator = false;
     bool serializable = false;
     bool compareEqual = false;
     bool compareLess = false;
@@ -192,6 +193,7 @@ struct TypeNode {
     std::optional<std::string> typescriptName;
     std::string typescriptModule;
     ContainerKind typescriptContainer = ContainerKind::None;
+    bool typescriptJsonMapKey = false;
     std::vector<TypeId> templateParameters;
 };
 

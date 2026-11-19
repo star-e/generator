@@ -45,6 +45,7 @@ struct Constructor {
 
 struct Record {
     bool moveOnly{};
+    bool requireAllocator{};
     bool serializable{};
     std::set<std::string> comparisons;
     bool hashable{};

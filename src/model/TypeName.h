@@ -4,6 +4,10 @@
 
 namespace cc::codegen {
 
+inline bool usesJsonMapKey(const TypeNode& container, size_t position, const TypeNode& argument) {
+    return container.typescriptContainer == ContainerKind::Map && position == 0 && argument.typescriptJsonMapKey;
+}
+
 inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph, const TypeNode& container) {
     const auto& arguments = std::get<TemplateInstanceType>(container.data).arguments;
     const auto& first = graph.node(std::get<TypeId>(arguments.front()));
@@ -12,7 +16,7 @@ inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph
     if (container.typescriptContainer == ContainerKind::Map) {
         const auto& value = graph.node(std::get<TypeId>(arguments.at(1)));
         if (!value.typescriptName) return std::nullopt;
-        return "Map<" + name + ", " + *value.typescriptName + ">";
+        return "Map<" + (usesJsonMapKey(container, 0, first) ? "string" : name) + ", " + *value.typescriptName + ">";
     }
     if (first.typescriptContainer != ContainerKind::None ||
         name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$.") == std::string::npos) {

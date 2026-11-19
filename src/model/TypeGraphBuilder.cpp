@@ -111,7 +111,7 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
 }
 
 RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
-    RecordType result{.moveOnly = syntax.moveOnly, .serializable = syntax.serializable,
+    RecordType result{.moveOnly = syntax.moveOnly, .requireAllocator = syntax.requireAllocator, .serializable = syntax.serializable,
                       .compareEqual = syntax.comparisons.contains("=="),
                       .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
                       .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
@@ -393,6 +393,7 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 methods.emplace(id.value, rule.methods);
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
                 if (!isRecord || !rule.methods.empty()) reject("expected a record binding");
+                node.typescriptJsonMapKey = rule.jsonMapKey;
             } else if (!isEnum) reject("expected an enum binding");
         }
     }
