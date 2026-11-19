@@ -379,6 +379,19 @@ private:
         return result;
     }
 
+    GraphComponent graphColumn(std::set<std::string>& names) {
+        auto tag = type();
+        expect(":");
+        auto value = type();
+        expect("{");
+        expect("member");
+        expect(":");
+        auto member = uniqueName(names);
+        expect(";");
+        expect("}");
+        return {std::move(tag), std::move(value), std::move(member)};
+    }
+
     void parseGraph(GraphDeclaration& graph) {
         std::set<std::string> names;
         while (!accept("}")) {
@@ -430,15 +443,14 @@ private:
                 advance();
                 expect(";");
             } else if (accept("component")) {
-                auto tag = type();
-                expect(":");
-                auto value = type();
+                graph.components.push_back(graphColumn(names));
+            } else if (accept("polymorphic_graph")) {
+                if (!graph.alternatives.empty()) fail("duplicate polymorphic_graph");
                 expect("{");
-                expect("member");
-                expect(":");
-                graph.components.push_back({std::move(tag), std::move(value), uniqueName(names)});
-                expect(";");
-                expect("}");
+                if (token == "}") fail("polymorphic_graph requires at least one alternative");
+                do {
+                    graph.alternatives.push_back(graphColumn(names));
+                } while (!accept("}"));
             } else {
                 fail("expected graph descriptor, storage, capability or component reference");
             }
@@ -446,6 +458,7 @@ private:
         if (!graph.vertexType) fail("graph requires a vertex descriptor");
         if (graph.hierarchy && !graph.indexed) fail("shared hierarchy edges require indexed vertex storage");
         if (!graph.components.empty() && !graph.indexed) fail("components require indexed vertex storage");
+        if (!graph.alternatives.empty() && !graph.indexed) fail("polymorphic_graph requires indexed vertex storage");
     }
 
     std::string quotedString(const std::string& description) {

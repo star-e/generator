@@ -87,6 +87,8 @@ namespace cc::render {
 
     @tag struct Name_ {}
     @tag struct Descriptors_ {}
+    @tag struct RenderStage_ {}
+    @tag struct RenderPhase_ {}
     graph LayoutGraph {
         vertex_descriptor Vertex = uint32_t;
         vertex_storage: indexed;
@@ -95,6 +97,10 @@ namespace cc::render {
         hierarchy_graph { storage: shared_edges; }
         component Name_: ccstd::pmr::string { member: names; }
         component Descriptors_: DescriptorDB { member: descriptors; }
+        polymorphic_graph {
+            RenderStage_: RenderPassType { member: stages; }
+            RenderPhase_: RenderPhase { member: phases; }
+        }
         named_graph { component: Name_; }
         parent_graph;
         addressable_graph;

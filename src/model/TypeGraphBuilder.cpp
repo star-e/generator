@@ -261,20 +261,24 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     if (syntax.indexed && (vertex.qualifiedName == "bool" || !integerRanges().contains(vertex.qualifiedName))) {
         throw std::runtime_error(syntax.vertexType->location.describe() + ": expected an integer descriptor for indexed vertices");
     }
-    std::set<std::string> accessors;
-    for (const auto& component : syntax.components) {
+    std::set<std::string> accessors, kinds;
+    const auto bindColumn = [&](const GraphComponent& component, bool alternative) -> ComponentInfo {
+        const std::string role = alternative ? "alternative" : "component";
         const auto tag = canonicalType(graph, resolve(graph, component.tag, scope, owner));
         const auto& node = graph.node(tag);
         if (!std::holds_alternative<TagType>(node.data)) {
-            throw std::runtime_error(component.tag.location.describe() + ": component requires an independently declared @tag: " + component.tag.name);
+            throw std::runtime_error(component.tag.location.describe() + ": " + role + " requires an independently declared @tag: " + component.tag.name);
         }
         const auto accessor = componentAccessorSuffix(node.name);
-        if (accessor.empty() || !accessors.insert(accessor).second) {
-            throw std::runtime_error(component.tag.location.describe() + ": invalid or duplicate component accessor for " + node.qualifiedName);
+        if (accessor.empty() || !(alternative ? kinds : accessors).insert(accessor).second) {
+            const auto description = alternative ? "alternative kind" : "component accessor";
+            throw std::runtime_error(component.tag.location.describe() + ": invalid or duplicate " + description + " for " + node.qualifiedName);
         }
         const auto value = resolve(graph, component.value, scope, owner);
-        result.components.push_back({tag, value.type, component.member});
-    }
+        return {tag, value.type, component.member};
+    };
+    for (const auto& component : syntax.components) result.components.push_back(bindColumn(component, false));
+    for (const auto& alternative : syntax.alternatives) result.alternatives.push_back(bindColumn(alternative, true));
     if (syntax.nameComponent) {
         const auto& selected = *syntax.nameComponent;
         const auto tag = canonicalType(graph, resolve(graph, selected, scope, owner));

@@ -137,6 +137,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 组件标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。组件访问提供两种成员调用，例如自举模型中的 `g.get(Node_{}, v)` 和 `g.getNode(v)`。具名访问器采用 `get` 加组件名的形式。[自举模型声明](../spec/codegen/typegraph.spec) · [生成的成员接口](../src/generated/TypeGraphTypes.h)
 
+多态顶点在 `polymorphic_graph` 块内按 `RenderStage_: RenderPassType { member: stages; }` 声明。每个顶点保存类别和在该类别数组中的索引。C++ 用 `g.add_vertex(RenderPhase_{}, "shadow", parent)` 创建相位，用 `g.kind(v)` 或 `g.holds<RenderPhase_>(v)` 查询类别，用 `g.value(RenderPhase_{}, v)` 读写载荷。类别不符或顶点越界时，`holds` 返回 false，`value` 抛出 `std::bad_variant_access`。已有的 `add_vertex(name, parent)` 默认创建声明顺序中的第一类，载荷按值初始化。`LayoutGraph` 的第一类是阶段，初值为 `SINGLE_RENDER_PASS`。[布局图声明](../spec/render/layout-graph.spec)
+
 成员声明、模板定义和短小的内联实现放在 `*Types.h`，较大的非模板实现放在配套的 `*Types.cpp`。通用遍历仍是手写算法，例如 `depthFirstSearch(g, …)` 调用图的成员接口。旧工具为 `LayoutGraph`、`RenderGraph`、`FGDispatcher` 和 `NativePipeline` 各生成一个 `*Graphs.h`，其中 `NativePipelineGraphs.h` 只有包含指令和头文件保护。这四个旧路径按模块退役。[旧文件规划](../../cocos-engine-generator/Cocos/AST/BuilderImpl.cpp) · [旧 NativePipeline 图头](../../cocos4/native/cocos/renderer/pipeline/custom/NativePipelineGraphs.h)
 
 图算法由 Cocos 独立实现。生成器和后续迁移的图运行时从构建依赖中排除 `boost-graph`，算法直接使用 Cocos 的顶点、边和访问接口。现有 `boost::container::pmr` 分配器属于引擎的容器契约，按原生签名保留。旧生成器的 `CppBuilder.cpp` 在输出类型声明和定义时都调用了 `boost::depth_first_visit`，这两处遍历随生成器一起替换。[旧声明输出](../../cocos-engine-generator/Cocos/AST/CppBuilder.cpp) · [旧依赖清单](../../cocos-engine-generator/vcpkg.json)

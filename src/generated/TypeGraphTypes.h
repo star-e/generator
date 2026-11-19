@@ -122,6 +122,7 @@ struct GraphType {
     bool parentGraph = false;
     bool addressableGraph = false;
     std::vector<ComponentInfo> components;
+    std::vector<ComponentInfo> alternatives;
     std::vector<FieldInfo> fields;
     std::vector<MethodInfo> methods;
 };

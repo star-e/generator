@@ -216,6 +216,10 @@ void checkImports(const std::filesystem::path& specs) {
                 component RasterPassTag: PassInfo { member: passes; }
                 component Label_: Vertex { member: labels; }
                 component BufferTag: ccstd::pmr::string { member: names; }
+                polymorphic_graph {
+                    Phase_: PassInfo { member: phases; }
+                    cc::render::RasterPassTag: Vertex { member: indices; }
+                }
             }
             graph PassCounts {
                 vertex_descriptor Vertex = uint32_t;
@@ -223,6 +227,7 @@ void checkImports(const std::filesystem::path& specs) {
                 component cc::render::RasterPassTag: uint32_t { member: counts; }
             }
             @tag struct Label_ {}
+            @tag struct Phase_ {}
         }
     )"), {}});
     const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
@@ -243,6 +248,13 @@ void checkImports(const std::filesystem::path& specs) {
         require(passes.parentGraph && passes.nameComponentIndex == 2 && !counts.parentGraph && !counts.nameComponentIndex,
                 "parent lookup did not bind the selected name component");
         require(passes.addressableGraph && !counts.addressableGraph, "lost graph path capability");
+        require(counts.alternatives.empty() && passes.alternatives.size() == 2 &&
+                passes.alternatives[0].tag == graph.findType("cc::render::Phase_") &&
+                passes.alternatives[0].valueType == graph.findType("cc::render::PassInfo") &&
+                passes.alternatives[0].name == "phases" && passes.alternatives[1].name == "indices" &&
+                passes.alternatives[1].tag == raster &&
+                passes.alternatives[1].valueType == graph.findType("cc::render::Passes::Vertex"),
+                "polymorphic alternatives lost their order, tag, value type or storage member");
         require(passes.components.at(0).tag == raster && counts.components.at(0).tag == raster &&
                 passes.components[0].valueType == graph.findType("cc::render::PassInfo") && passes.components[0].name == "passes",
                 "graphs did not reuse the imported tag");

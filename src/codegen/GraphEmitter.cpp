@@ -178,8 +178,35 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
     }
 }
 
+struct Alternative {
+    std::string tag;
+    std::string kind;
+    std::string type;
+    std::string member;
+};
+
+void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternatives,
+                   const std::string& vertex, const std::string& handles) {
+    const auto tagParam = vertex == "Tag" ? "VertexTag" : "Tag";
+    out << "\n    enum class Kind { ";
+    for (size_t i = 0; i < alternatives.size(); ++i) out << (i ? ", " : "") << alternatives[i].kind;
+    out << " };\n    Kind kind(" << vertex << " v) const { return this->" << handles << ".at(v).kind; }\n"
+        << "    template<class " << tagParam << ">\n    bool holds(" << vertex << " v) const noexcept {\n"
+        << "        return static_cast<std::uintmax_t>(v) < this->" << handles << ".size() && this->" << handles
+        << "[v].kind == kindOf(static_cast<" << tagParam << "*>(nullptr));\n    }\n";
+    for (const auto& alt : alternatives) {
+        for (const std::string qualifier : {"", " const"}) {
+            out << "    " << alt.type << qualifier << "& value(const " << alt.tag << "&, " << vertex << " v)" << qualifier << " {\n"
+                << "        if (!holds<" << alt.tag << ">(v)) throw std::bad_variant_access{};\n"
+                << "        return this->" << alt.member << "[this->" << handles << "[v].index]"
+                << (alt.type == "bool" ? "[0]" : "") << ";\n    }\n";
+        }
+    }
+}
+
 void addVertex(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
-               const std::vector<std::string>& storage, const std::string& input, const std::string& rows) {
+               const std::vector<std::string>& storage, const std::string& input, const std::string& rows,
+               const std::vector<Alternative>& alternatives, const std::string& handles) {
     const bool hierarchy = !rows.empty();
     const auto& member = storage.front();
     const std::string value = input.empty() ? "" : "std::string_view value";
@@ -189,9 +216,22 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
         out << ") { return add_vertex(" << (value.empty() ? "" : "value, ") << "null_vertex()); }\n"
             << "    " << vertex << " add_vertex(" << value << (value.empty() ? "" : ", ") << vertex << " parent";
     }
-    out << ");\n";
-    source << "\n" << name << "::" << vertex << " " << name << "::add_vertex(" << value;
-    if (hierarchy) source << (value.empty() ? "" : ", ") << vertex << " parent";
+    if (alternatives.empty()) {
+        out << ");\n";
+        source << "\n" << name << "::" << vertex << " " << name << "::add_vertex(" << value;
+    } else {
+        const std::string args = (input.empty() ? "" : ", value") + std::string(hierarchy ? ", parent" : "");
+        out << ") { return addVertexImpl(Kind::" << alternatives.front().kind << args << "); }\n";
+        for (const auto& alt : alternatives) {
+            out << "    " << vertex << " add_vertex(const " << alt.tag << "&";
+            if (!input.empty()) out << ", " << value;
+            if (hierarchy) out << ", " << vertex << " parent = null_vertex()";
+            out << ") { return addVertexImpl(Kind::" << alt.kind << args << "); }\n";
+        }
+        source << "\n" << name << "::" << vertex << " " << name << "::addVertexImpl(Kind kind"
+               << (value.empty() ? "" : ", ") << value;
+    }
+    if (hierarchy) source << (value.empty() && alternatives.empty() ? "" : ", ") << vertex << " parent";
     source << ") {\n";
     if (hierarchy) {
         source << "    if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= this->" << member << ".size())\n"
@@ -200,7 +240,7 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     source << "    if (this->" << member << ".size() >= (std::numeric_limits<" << name << "::" << vertex << ">::max)())\n"
            << "        throw std::length_error(\"" << name << " vertex limit exceeded\");\n"
            << "    const auto vertex = static_cast<" << name << "::" << vertex << ">(this->" << member << ".size());\n";
-    const bool hasDefaults = storage.size() > static_cast<size_t>(hierarchy) + (input.empty() ? 0U : 1U);
+    const bool hasDefaults = !alternatives.empty() || storage.size() > static_cast<size_t>(hierarchy) + (input.empty() ? 0U : 1U);
     if (hasDefaults) {
         source << R"(    auto appendDefault = [](auto& items) {
         if (!items.empty() && items.size() == items.capacity()) {
@@ -218,16 +258,27 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     };
 )";
     }
-    const bool parallel = storage.size() > 1;
+    const bool parallel = storage.size() > 1 || !alternatives.empty();
     const auto indent = parallel ? "        " : "    ";
     if (hierarchy) source << "    auto& edges = this->" << rows << ";\n";
     if (parallel) source << "    try {\n";
     // Consume the view before growing other columns: it can refer to text in this graph.
     if (!input.empty()) source << indent << "this->" << input << ".emplace_back(value);\n";
     for (const auto& field : storage) {
-        if (field != input && field != rows) source << indent << "appendDefault(this->" << field << ");\n";
+        if (field != input && field != rows && field != handles) source << indent << "appendDefault(this->" << field << ");\n";
     }
     if (hierarchy) source << indent << "edges.push_back(VertexLinks{parent});\n";
+    if (!alternatives.empty()) {
+        source << indent << "switch (kind) {\n";
+        for (const auto& alt : alternatives) {
+            source << indent << "case Kind::" << alt.kind << ":\n"
+                   << indent << "    this->" << handles << ".push_back({kind, static_cast<" << vertex
+                   << ">(this->" << alt.member << ".size())});\n"
+                   << indent << "    appendDefault(this->" << alt.member << ");\n"
+                   << indent << "    break;\n";
+        }
+        source << indent << "}\n";
+    }
     if (parallel) {
         source << "    } catch (...) {\n";
         for (const auto& field : storage) {
@@ -257,8 +308,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
                   std::set<std::string>& headers, std::set<std::string>& forwards) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
-    if (!model.indexedVertices || model.components.empty())
-        throw std::runtime_error(node.qualifiedName + ": C++ graph output requires indexed storage and at least one component");
+    if (!model.indexedVertices || (model.components.empty() && model.alternatives.empty()))
+        throw std::runtime_error(node.qualifiedName + ": C++ graph output requires indexed storage and at least one component or alternative");
     // The descriptor alias is a scoped declaration. Its resolved integer type is stored on the graph.
     const auto children = graph.out_edges(id.value);
     const auto alias = std::ranges::find_if(children, [&](auto edge) {
@@ -270,48 +321,72 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     const auto& name = node.name;
     headers.insert("cocos/base/std/container/vector.h");
     if (!integer.cppHeader.empty()) headers.insert(integer.cppHeader);
-    std::vector<std::string> storage;
-    std::vector<std::string> types;
-    for (const auto& component : model.components) {
-        storage.push_back(component.name);
-        types.push_back(formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
-            if (!type.cppHeader.empty()) headers.insert(type.cppHeader);
-            return type.qualifiedName;
-        }));
+    const auto columnType = [&](const ComponentInfo& component) {
         const auto& tag = graph.node(component.tag);
         if (component.tag.value > id.value || tag.module != node.module) {
             const auto ns = tag.qualifiedName.rfind("::");
             const auto declaration = "struct " + tag.name + ";";
             forwards.insert(ns == std::string::npos ? declaration : "namespace " + tag.qualifiedName.substr(0, ns) + " { " + declaration + " }");
         }
+        return formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
+            if (!type.cppHeader.empty()) headers.insert(type.cppHeader);
+            return type.qualifiedName;
+        });
+    };
+    std::vector<std::string> storage;
+    std::vector<std::string> types;
+    std::set<std::string> members{vertex, name};
+    for (const auto& component : model.components) {
+        storage.push_back(component.name);
+        members.insert(component.name);
+        types.push_back(columnType(component));
     }
-    std::string rows;
-    if (model.hierarchy) {
-        rows = "links_";
-        for (size_t i = 0; std::ranges::find(storage, rows) != storage.end(); ++i)
-            rows = "adjacency" + std::to_string(i) + "_";
-        storage.push_back(rows);
+    std::vector<Alternative> alternatives;
+    for (const auto& alt : model.alternatives) {
+        const auto& tag = graph.node(alt.tag);
+        const auto& payload = graph.node(alt.valueType);
+        const auto* record = std::get_if<RecordType>(&payload.data);
+        if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data) || (record && record->moveOnly))
+            throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires a copyable object type");
+        alternatives.push_back({"::" + tag.qualifiedName, componentAccessorSuffix(tag.name), columnType(alt), alt.name});
+        members.insert(alt.name);
     }
+    if (!alternatives.empty()) {
+        for (const auto* symbol : {"Kind", "kind", "holds", "value", "kindOf", "VertexHandle", "addVertexImpl"}) {
+            if (members.contains(symbol))
+                throw std::runtime_error(node.qualifiedName + ": polymorphic graph member name collision: " + symbol);
+        }
+    }
+    const auto internalColumn = [&](std::string field) {
+        while (!members.insert(field).second) field += "0";
+        storage.push_back(field);
+        return field;
+    };
+    const std::string rows = model.hierarchy ? internalColumn("links_") : "";
+    const std::string handles = alternatives.empty() ? "" : internalColumn("handles_");
+    // Only these columns have one entry per vertex. Each payload column grows for its own kind.
+    auto allStorage = storage;
+    for (const auto& alt : alternatives) allStorage.push_back(alt.member);
 
     out << "\nstruct " << name << " {\n"
         << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    graphConstructors(out, source, name, storage);
+    graphConstructors(out, source, name, allStorage);
     if (model.vertexList) {
         headers.insert("cstddef");
         headers.insert("iterator");
         vertexRange(out, vertex);
         out << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
     }
+    std::string input;
     if (model.mutableGraph) {
         headers.insert("limits");
         headers.insert("stdexcept");
-        std::string input;
         if (model.nameComponentIndex) input = storage.at(*model.nameComponentIndex);
-        else if (types.front() == "ccstd::pmr::string") input = storage.front();
+        else if (!types.empty() && types.front() == "ccstd::pmr::string") input = storage.front();
         if (!input.empty()) headers.insert("string_view");
-        if (input.empty() || types.size() > 1) headers.insert("type_traits");
-        addVertex(out, source, name, vertex, storage, input, rows);
+        if (input.empty() || types.size() > 1 || !alternatives.empty()) headers.insert("type_traits");
+        addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles);
     }
     if (model.hierarchy) {
         headers.insert({"cstddef", "cstdint", "iterator", "limits"});
@@ -341,6 +416,10 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
                 << qualifier << " noexcept { return " << accessor << "(v); }\n";
         }
     }
+    if (!alternatives.empty()) {
+        headers.insert({"cstdint", "variant"});
+        payloadAccess(out, alternatives, vertex, handles);
+    }
     out << "\nprivate:\n";
     for (size_t i = 0; i < types.size(); ++i)
         out << "    ccstd::pmr::vector<" << types[i] << "> " << storage[i] << ";\n";
@@ -353,7 +432,24 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             << "        " << vertex << " childCount{};\n    };\n"
             << "    ccstd::pmr::vector<VertexLinks> " << rows << ";\n";
     }
-    if (storage.size() > 1) out << "    void swapStorage(" << name << "& other) noexcept;\n";
+    if (!alternatives.empty()) {
+        out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n"
+            << "    ccstd::pmr::vector<VertexHandle> " << handles << ";\n";
+        for (const auto& alt : alternatives) {
+            out << "    static constexpr Kind kindOf(" << alt.tag << "*) noexcept { return Kind::" << alt.kind << "; }\n";
+            // Keep value() addressable even when the C++ container specializes vector<bool>.
+            if (alt.type == "bool") headers.insert("array");
+            out << "    ccstd::pmr::vector<" << (alt.type == "bool" ? "std::array<bool, 1>" : alt.type)
+                << "> " << alt.member << ";\n";
+        }
+        if (model.mutableGraph) {
+            out << "    " << vertex << " addVertexImpl(Kind kind";
+            if (!input.empty()) out << ", std::string_view value";
+            if (model.hierarchy) out << ", " << vertex << " parent";
+            out << ");\n";
+        }
+    }
+    if (allStorage.size() > 1) out << "    void swapStorage(" << name << "& other) noexcept;\n";
     out << "};\n";
 }
 

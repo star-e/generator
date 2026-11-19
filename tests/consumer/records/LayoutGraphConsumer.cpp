@@ -17,6 +17,10 @@ namespace {
 using cc::render::LayoutGraph;
 using cc::render::DescriptorDB;
 using cc::render::Descriptors_;
+using cc::render::RenderPassType;
+using cc::render::RenderPhase;
+using cc::render::RenderPhase_;
+using cc::render::RenderStage_;
 using Vertex = LayoutGraph::Vertex;
 
 bool usesResource(const DescriptorDB& db, const LayoutGraph& g) {
@@ -43,13 +47,29 @@ bool checkHierarchy() {
     graph.getDescriptors(root).blocks[{}].count = 7;
     const auto ui = graph.add_vertex("ui", LayoutGraph::null_vertex());
     graph.get(Descriptors_{}, ui).groupBlocks[{}].capacity = 11;
-    const auto shadow = graph.add_vertex("shadow", root);
-    const auto cascade = graph.add_vertex("cascade", shadow);
-    const auto overlay = graph.add_vertex("overlay", ui);
-    const auto color = graph.add_vertex("color", root);
+    const auto shadow = graph.add_vertex(RenderPhase_{}, "shadow", root);
+    constexpr std::string_view shader{"a shader name long enough to allocate its own storage"};
+    graph.value(RenderPhase_{}, shadow).shaders.emplace(shader);
+    const auto cascade = graph.add_vertex(RenderStage_{}, "cascade", shadow);
+    graph.value(RenderStage_{}, cascade) = RenderPassType::RENDER_SUBPASS;
+    const auto overlay = graph.add_vertex(RenderPhase_{}, "overlay", ui);
+    const auto color = graph.add_vertex(RenderStage_{}, "color", root);
+    static_assert(std::is_same_v<decltype(graph.value(RenderPhase_{}, shadow)), RenderPhase&>);
+    static_assert(std::is_same_v<decltype(std::as_const(graph).value(RenderStage_{}, root)), const RenderPassType&>);
+    static_assert(noexcept(graph.holds<RenderStage_>(root)));
     auto intact = [&](const LayoutGraph& g) {
         const auto none = LayoutGraph::null_vertex();
+        const auto& shaders = g.value(RenderPhase_{}, shadow).shaders;
+        const auto item = shaders.find(shader);
         return g.num_vertices() == 6 && g.get_parent(root) == none && g.get_parent(ui) == none &&
+               g.kind(root) == LayoutGraph::Kind::RenderStage && g.kind(shadow) == LayoutGraph::Kind::RenderPhase &&
+               g.value(RenderStage_{}, root) == RenderPassType::SINGLE_RENDER_PASS &&
+               g.value(RenderStage_{}, cascade) == RenderPassType::RENDER_SUBPASS &&
+               g.holds<RenderPhase_>(overlay) && !g.holds<RenderStage_>(overlay) && !g.holds<RenderPhase_>(none) &&
+               !g.holds<RenderPhase_>(g.num_vertices()) && g.value(RenderPhase_{}, overlay).shaders.empty() &&
+               g.locate("/main/shadow/cascade") == cascade && item != shaders.end() &&
+               item->get_allocator().resource() == g.get_allocator().resource() &&
+               shaders.get_allocator().resource() == g.get_allocator().resource() &&
                g.get_parent(none) == none && hasChildren(g, root, {shadow, color}) &&
                hasChildren(g, ui, {overlay}) && hasChildren(g, shadow, {cascade}) &&
                hasChildren(g, cascade, {}) && hasChildren(g, color, {}) && hasChildren(g, overlay, {}) &&
@@ -60,12 +80,19 @@ bool checkHierarchy() {
                usesResource(g.getDescriptors(ui), g);
     };
     try {
+        graph.value(RenderPhase_{}, root);
+        return false;
+    } catch (const std::bad_variant_access&) {}
+    try {
         graph.add_vertex("invalid", graph.num_vertices());
         return false;
     } catch (const std::out_of_range&) {
         if (!intact(graph)) return false;
     }
     LayoutGraph copied{graph, &secondArena};
+    copied.value(RenderPhase_{}, shadow).shaders.clear();
+    if (graph.value(RenderPhase_{}, shadow).shaders.size() != 1) return false;
+    copied.value(RenderPhase_{}, shadow).shaders.emplace(shader);
     copied.getDescriptors(root).blocks.at({}).count = 13;
     if (graph.getDescriptors(root).blocks.at({}).count != 7) return false;
     copied.getDescriptors(root).blocks.at({}).count = 7;
@@ -100,17 +127,21 @@ bool checkFailedInsertion() {
         FailingResource resource;
         LayoutGraph graph{&resource};
         const auto root = graph.add_vertex("root");
-        const auto first = graph.add_vertex("first", root);
+        const auto first = graph.add_vertex(RenderPhase_{}, "first", root);
+        graph.value(RenderPhase_{}, first).shaders.emplace(longName.c_str());
         graph.getDescriptors(root).blocks[{}].count = 3;
         graph.getDescriptors(first).groupBlocks[{}].capacity = 9;
         auto intact = [&] {
-            return graph.getDescriptors(root).blocks.at({}).count == 3 && graph.getDescriptors(root).groupBlocks.empty() &&
+            const auto& shaders = graph.value(RenderPhase_{}, first).shaders;
+            return shaders.size() == 1 && *shaders.begin() == longName.c_str() && graph.holds<RenderStage_>(root) &&
+                   graph.getDescriptors(root).blocks.at({}).count == 3 && graph.getDescriptors(root).groupBlocks.empty() &&
                    graph.getDescriptors(first).groupBlocks.at({}).capacity == 9 && graph.getDescriptors(first).blocks.empty();
         };
         resource.allocationsBeforeFailure = failAfter;
         try {
-            const auto added = graph.add_vertex(longName, root);
+            const auto added = graph.add_vertex(RenderPhase_{}, longName, root);
             return failAfter > 0 && added == 2 && hasChildren(graph, root, {first, added}) && intact() &&
+                   graph.value(RenderPhase_{}, added).shaders.empty() &&
                    graph.getDescriptors(added).blocks.empty() && usesResource(graph.getDescriptors(added), graph);
         } catch (const std::bad_alloc&) {
             if (resource.allocationsBeforeFailure != 0) throw;
@@ -118,13 +149,15 @@ bool checkFailedInsertion() {
                 graph.getName(root) != "root" || graph.getName(first) != "first" || !intact()) return false;
         }
         resource.allocationsBeforeFailure = -1;
-        const auto retry = graph.add_vertex(longName, root);
+        const auto retry = graph.add_vertex(RenderPhase_{}, longName, root);
         if (retry != 2 || !intact() || !graph.getDescriptors(retry).blocks.empty() ||
             graph.getName(retry) != longName.c_str() || !hasChildren(graph, root, {first, retry})) return false;
         // A leftover component after rollback would shift the next appended data by one.
         graph.getDescriptors(retry).blocks[{}].count = 4;
-        const auto next = graph.add_vertex();
-        if (!graph.getDescriptors(next).blocks.empty() || graph.getDescriptors(retry).blocks.at({}).count != 4) return false;
+        graph.value(RenderPhase_{}, retry).shaders.emplace("retry");
+        const auto next = graph.add_vertex(RenderPhase_{}, "next");
+        if (!graph.getDescriptors(next).blocks.empty() || graph.getDescriptors(retry).blocks.at({}).count != 4 ||
+            !graph.value(RenderPhase_{}, next).shaders.empty() || graph.value(RenderPhase_{}, retry).shaders.size() != 1) return false;
     }
 }
 
@@ -217,7 +250,8 @@ bool checkFailedAssignment(bool move) {
     FailingResource resource;
     LayoutGraph source{&arena};
     const auto root = source.add_vertex("original");
-    const auto leaf = source.add_vertex("leaf", root);
+    const auto leaf = source.add_vertex(RenderPhase_{}, "leaf", root);
+    source.value(RenderPhase_{}, leaf).shaders.emplace("original");
     source.getDescriptors(leaf).blocks[{}].count = 42;
     for (int failAfter = 0; ; ++failAfter) {
         resource.allocationsBeforeFailure = -1;
@@ -230,11 +264,14 @@ bool checkFailedAssignment(bool move) {
             else target = source;
             return hasChildren(target, root, {leaf}) && target.getName(leaf) == "leaf" &&
                    target.getName(leaf).get_allocator().resource() == &resource &&
+                   target.value(RenderPhase_{}, leaf).shaders.size() == 1 &&
+                   target.value(RenderPhase_{}, leaf).get_allocator().resource() == &resource &&
                    target.getDescriptors(leaf).blocks.at({}).count == 42 && usesResource(target.getDescriptors(leaf), target);
         } catch (const std::bad_alloc&) {
             if (resource.allocationsBeforeFailure != 0) throw;
             if (target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
                 source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf}) ||
+                !target.holds<RenderStage_>(0) || source.value(RenderPhase_{}, leaf).shaders.size() != 1 ||
                 target.getDescriptors(0).groupBlocks.at({}).capacity != 8 || source.getDescriptors(leaf).blocks.at({}).count != 42)
                 return false;
         }
@@ -243,6 +280,12 @@ bool checkFailedAssignment(bool move) {
 
 bool checkFlatComponents() {
     boost::container::pmr::monotonic_buffer_resource sourceArena, targetArena;
+    cc::Toggles toggles{&sourceArena};
+    const auto enabled = toggles.add_vertex();
+    const auto disabled = toggles.add_vertex(cc::render::ComputeTag{});
+    toggles.value(cc::Count_{}, enabled) = true;
+    if (toggles.num_vertices() != 2 || toggles.holds<cc::Count_>(2) || !toggles.holds<cc::Count_>(enabled) ||
+        !toggles.value(cc::Count_{}, enabled) || toggles.value(cc::render::ComputeTag{}, disabled)) return false;
     cc::FlatComponents source{&sourceArena};
     const auto a = source.add_vertex("a");
     source.getCount(a) = 12;

@@ -41,6 +41,16 @@ namespace cc {
         component Count_: uint32_t { member: counts; }
         named_graph { component: cc::render::Name_; }
     }
+    graph Toggles {
+        vertex_descriptor Index = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        polymorphic_graph {
+            Count_: bool { member: handles_; }
+            render::ComputeTag: bool { member: flags; }
+        }
+    }
     @tag struct Count_ {}
 }
 binding typescript { ::ccstd::vector<::uint32_t> => Uint32Array; }")

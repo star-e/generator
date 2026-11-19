@@ -99,6 +99,7 @@ struct GraphDeclaration {
     std::optional<SourceLocation> parentGraph;
     std::optional<SourceLocation> addressableGraph;
     std::vector<GraphComponent> components;
+    std::vector<GraphComponent> alternatives;
 };
 
 struct Declaration {

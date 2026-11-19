@@ -76,6 +76,7 @@ namespace codegen {
         parentGraph: bool = false;
         addressableGraph: bool = false;
         components: std::vector<ComponentInfo>;
+        alternatives: std::vector<ComponentInfo>;
         fields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;
     }
