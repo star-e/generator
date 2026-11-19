@@ -2,8 +2,6 @@
   "namedEnums": ["UpdateFrequency"],
   "constEnums": ["ParameterType", "TaskType", "LightingMode", "AttachmentType", "ClearValueType", "ResolveFlags"],
   "poolModule": "cocos/core/memop",
-  "comparable": ["ResolvePair"],
-  "hashable": ["ResolvePair"],
   "resetToDefaults": ["PipelineStatistics"],
   "jsb": {
     "records": ["LightInfo", "ResolvePair", "CopyPair", "UploadPair", "MovePair"],

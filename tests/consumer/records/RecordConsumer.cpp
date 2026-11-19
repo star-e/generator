@@ -272,6 +272,8 @@ int main(int argc, char** argv) {
     if (argc != 1) return 2;
     if (!checkLayoutGraph()) return 9;
     if (!checkDescriptorBlockIndex()) return 10;
+    const cc::ComparisonProbe first{1, 3}, second{2, 0}, same{1, 3};
+    if (!(first == same && first != second && first < second && second > first) || same > first) return 11;
     using cc::render::getName;
     using namespace std::string_view_literals;
     using cc::render::Descriptor;

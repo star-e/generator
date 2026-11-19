@@ -1,6 +1,5 @@
 {
   "constEnums": ["LayoutType", "DescriptorTypeOrder", "RenderPassType"],
   "namedEnums": ["DescriptorTypeOrder"],
-  "orderable": ["DescriptorBlockIndex"],
   "resetFromConstructor": ["Descriptor"]
 }

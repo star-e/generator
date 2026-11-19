@@ -20,6 +20,7 @@ namespace codegen {
         parameters: std::vector<ParameterInfo>;
         isConst: bool = false;
         isNoexcept: bool = false;
+        cppOnly: bool = false;
         typescriptName: std::optional<std::string>;
     }
     struct FieldInfo {
@@ -45,6 +46,10 @@ namespace codegen {
     struct RecordType {
         moveOnly: bool = false;
         serializable: bool = false;
+        compareEqual: bool = false;
+        compareLess: bool = false;
+        compareGreater: bool = false;
+        hashable: bool = false;
         constructors: std::vector<std::vector<uint32_t>>;
         bases: std::vector<TypeId>;
         fields: std::vector<FieldInfo>;

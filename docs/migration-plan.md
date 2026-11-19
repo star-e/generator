@@ -44,7 +44,7 @@ ctest --test-dir build/host --output-on-failure
 
 `cocos-codegen` 的构建、自举、代码生成和 `--check` 均独立于 V8、Node.js 和 .NET。引擎工作区生成 C++17、Web 和编辑器所用的 TypeScript，以及 Cocos JSB 所需的 `se::Value` 转换和 `render.i`。引擎的 SWIG 步骤处理 `render.i`。Node.js/npm 用于 `cocos4` 侧的 Web 打包、TypeScript 检查和测试。生成器自身的工作区复用同一套 `.spec` 语法、解析器和 C++ 后端，产物编入 C++20 宿主工具，只使用 `generator` 声明的依赖。[引擎绑定入口](../../cocos4/native/tools/swig-config/render.i) · [引擎构建与测试脚本](../../cocos4/package.json)
 
-以 `ArchiveInterface` 为例，一份声明描述 `OutputArchive` 和 `InputArchive` 的八个 C++ 方法。类型图记录签名，语言投影把布尔值、数值、字符串的读写方法分别映射成 TS 接口上的 `b`、`n`、`s`，两个 `scratch()` 仅对原生代码可见。文件计划为这个模块列出三个原生文件和一个 TS 文件。后端分别按引擎的 C++17 和 `target: es6` 配置生成。[旧模块声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [原生接口](../../cocos4/native/cocos/renderer/pipeline/custom/ArchiveTypes.h) · [TS 接口](../../cocos4/cocos/rendering/custom/archive.ts) · [引擎 C++ 配置](../../cocos4/native/cmake/predefine.cmake) · [引擎 TS 配置](../../cocos4/tsconfig.json)
+以 `ArchiveInterface` 为例，一份声明描述 `OutputArchive` 和 `InputArchive` 的八个 C++ 方法。类型图记录签名，语言投影把布尔值、数值、字符串的读写方法分别映射成 TS 接口上的 `b`、`n`、`s`，两个 `scratch()` 在接口声明中标注 `@cppOnly`，由 TypeGraph 记录其原生可见性。文件计划为这个模块列出三个原生文件和一个 TS 文件。后端分别按引擎的 C++17 和 `target: es6` 配置生成。[旧模块声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [原生接口](../../cocos4/native/cocos/renderer/pipeline/custom/ArchiveTypes.h) · [TS 接口](../../cocos4/cocos/rendering/custom/archive.ts) · [引擎 C++ 配置](../../cocos4/native/cmake/predefine.cmake) · [引擎 TS 配置](../../cocos4/tsconfig.json)
 
 | 层 | 建议实现 |
 | --- | --- |
@@ -130,7 +130,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `LightInfo` 的模型记录字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区为其配置原生头文件和 TS 导入路径。
 
-`ResolvePair` 的两个 PMR 字符串在构造、带分配器的复制和移动时都使用目标内存资源。后端将这些构造函数写入暂存目录的 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp`，并按 `comparable` 投影生成五个字段的相等比较。TS 从引擎的 gfx 模块导入 `ResolveMode` 作为运行时值，供构造函数和 `createResolvePair()` 的默认参数使用。消费测试逐段对照引擎实现，验证两个 C++ 内存资源之间的复制与移动，以及 TS 对象池复用后五个字段的默认值。[Gfx 声明](../spec/extern/gfx.spec) · [消费测试](../tests/RecordInterop.cmake)
+`ResolvePair` 的两个 PMR 字符串在构造、带分配器的复制和移动时都使用目标内存资源。后端将这些构造函数写入暂存目录的 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp`，并按声明上的 `@comparison("==")`生成五个字段的相等比较。TS 从引擎的 gfx 模块导入 `ResolveMode` 作为运行时值，供构造函数和 `createResolvePair()` 的默认参数使用。消费测试逐段对照引擎实现，验证两个 C++ 内存资源之间的复制与移动，以及 TS 对象池复用后五个字段的默认值。[Gfx 声明](../spec/extern/gfx.spec) · [消费测试](../tests/RecordInterop.cmake)
 
 `CopyPair` 和 `MovePair` 共用上述 PMR 构造和 TS 对象池生成逻辑。两者的 `mipLevels` 和 `numSlices` 默认值均为 `0xFFFFFFFF`。TypeGraph 按 `uint8_t` 或 `uint32_t` 的范围校验十六进制字段初值，C++ 和 TS 保留声明中的写法。消费测试为各个 mip 和 slice 参数传入不同的值，并检查跨内存资源复制、移动以及对象池重置后的所有字段。[模块声明](../spec/render/render-common.spec) · [消费测试](../tests/RecordInterop.cmake)
 
@@ -144,7 +144,9 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`resetFromConstructor` 使 TS 的 `reset(type)` 更新类型，并把 `count` 恢复为声明值。TS 名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec) · [TS 投影](../spec/render/layout-graph.json)
 
-`DescriptorBlockIndex` 从 `RenderCommon` 引入 `UpdateFrequency` 和 `ParameterType`，从 `Gfx` 引入 `ShaderStageFlagBit`。生成模块之间的枚举引用使用提供方配置的头文件和 TS 输出路径。`orderable` 投影按字段声明顺序生成 C++ 的 `operator<`。该键依次比较 `updateFrequency`、`parameterType`、`descriptorType`、`visibility`。TS 构造函数以相同顺序写入字段，保留引擎用 `JSON.stringify(index)` 查表时的键字符串。[C++ 键测试](../tests/consumer/records/RecordConsumer.cpp) · [TS 键测试](../tests/consumer/records/consumer.cjs)
+`DescriptorBlockIndex` 从 `RenderCommon` 引入 `UpdateFrequency` 和 `ParameterType`，从 `Gfx` 引入 `ShaderStageFlagBit`。生成模块之间的枚举引用使用提供方配置的头文件和 TS 输出路径。声明上的 `@comparison("<")` 让 C++ 后端按字段声明顺序生成 C++ 的 `operator<`。该键依次比较 `updateFrequency`、`parameterType`、`descriptorType`、`visibility`。TS 构造函数以相同顺序写入字段，保留引擎用 `JSON.stringify(index)` 查表时的键字符串。[C++ 键测试](../tests/consumer/records/RecordConsumer.cpp) · [TS 键测试](../tests/consumer/records/consumer.cjs)
+
+记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。JSON 管理具体输出，包括 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。
 
 C++ 图生成目前支持索引顶点和一个 PMR 字符串组件。`LayoutGraph` 引用命名空间中的 `Name_` 标签。`mutable_graph` 启用 `add_vertex(name)`，`vertex_list_graph` 启用 `vertices()` 和 `num_vertices()`。顶点编号依插入顺序从零递增，`getName(v)` 与 `get(Name_{}, v)` 返回同一字符串的引用。图用构造时指定的内存资源存储组件。C++17 消费测试覆盖空图、扩容、读写、跨资源构造和顶点编号上限。[生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
@@ -154,7 +156,7 @@ C++ 图生成目前支持索引顶点和一个 PMR 字符串组件。`LayoutGrap
 
 `addressable_graph;` 在 `parent_graph;` 上启用 `locate(refPath, start)`、`exists(refPath, start)` 和 `path(v)`。查找从指定顶点开始，起点默认为虚根 `null_vertex()`，前导 `/` 始终从虚根开始。`.` 保留当前位置，`..` 向上一级，连续和末尾的分隔符会被跳过。空字符串、缺失的路径段、越过虚根均返回 `null_vertex()`。`path(v)` 用图的内存资源返回绝对路径，传入虚根得到空字符串，其他越界编号会触发 `std::out_of_range`。路径按当前的节点名称计算，祖先改名对后代立即生效。[引擎路径规则](../../cocos4/cocos/rendering/custom/graph.ts) · [C++17 路径测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
-`RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按 `hashable` 投影生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec) · [投影](../spec/render/render-common.json)
+`RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec) · [投影](../spec/render/render-common.json)
 
 记录模块可以用 `namesHeader` 指定 C++ 名称查询头，原生头文件路径相对于 `nativeRoot`。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)
 

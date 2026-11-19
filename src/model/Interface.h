@@ -3,6 +3,7 @@
 #include "model/SourceLocation.h"
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <variant>
 #include <vector>
@@ -27,6 +28,7 @@ struct Method {
     std::vector<Parameter> parameters;
     bool isConst{};
     bool isNoexcept{};
+    bool cppOnly{};
 };
 
 struct Interface {
@@ -50,6 +52,8 @@ struct Constructor {
 struct Record {
     bool moveOnly{};
     bool serializable{};
+    std::set<std::string> comparisons;
+    bool hashable{};
     std::vector<Field> fields;
     std::vector<Constructor> constructors;
     std::vector<Method> methods;
@@ -121,5 +125,5 @@ struct ExternalType {
     std::string typescriptModule;
 };
 using TypeTable = std::map<std::string, ExternalType>;
-using Projection = std::map<std::string, std::map<std::string, std::optional<std::string>>>;
+using Projection = std::map<std::string, std::map<std::string, std::string>>;
 } // namespace cc::codegen

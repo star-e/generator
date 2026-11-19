@@ -86,7 +86,7 @@ TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, 
 
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
-                      .isConst = method.isConst, .isNoexcept = method.isNoexcept};
+                      .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly};
     for (const auto& parameter : method.parameters) {
         member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name});
     }
@@ -94,7 +94,10 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
 }
 
 RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
-    RecordType result{.moveOnly = syntax.moveOnly, .serializable = syntax.serializable};
+    RecordType result{.moveOnly = syntax.moveOnly, .serializable = syntax.serializable,
+                      .compareEqual = syntax.comparisons.contains("=="),
+                      .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
+                      .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
     for (const auto& field : syntax.fields) {
         auto use = resolve(graph, field.type, scope, owner);
         std::string_view magnitude = field.initializer;
@@ -316,11 +319,16 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
     }
 }
 
-std::optional<std::string> projectMethod(const Projection& rules, const std::string& decl, const std::string& name) {
+std::optional<std::string> projectMethod(const Projection& rules, const std::string& decl, const Method& method) {
     if (auto group = rules.find(decl); group != rules.end()) {
-        if (auto rule = group->second.find(name); rule != group->second.end()) return rule->second;
+        if (auto rule = group->second.find(method.name); rule != group->second.end()) {
+            if (method.cppOnly) throw std::runtime_error(method.result.location.describe() +
+                ": cannot assign a TS name to @cppOnly method " + decl + "." + method.name);
+            return rule->second;
+        }
     }
-    return name;
+    if (method.cppOnly) return std::nullopt;
+    return method.name;
 }
 
 InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const Projection& projection,
@@ -329,7 +337,7 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
     std::set<std::string> visibleNames;
     for (const auto& method : std::get<Interface>(decl.data).methods) {
         auto member = resolveMethod(graph, method, scope, module);
-        member.typescriptName = projectMethod(projection, decl.name, method.name);
+        member.typescriptName = projectMethod(projection, decl.name, method);
         if (member.typescriptName && !visibleNames.insert(*member.typescriptName).second) {
             throw std::runtime_error(method.result.location.describe() + ": duplicate TS method " +
                                      decl.name + "." + *member.typescriptName);

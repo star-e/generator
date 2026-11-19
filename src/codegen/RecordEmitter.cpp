@@ -306,9 +306,8 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
     header << '\n';
 }
 
-void cppComparison(std::ostream& out, const std::string& name, const std::vector<Member>& members, std::string_view op) {
+void cppComparisons(std::ostream& out, const std::string& name, const std::vector<Member>& members, const RecordType& record) {
     const auto params = "(const " + name + "& lhs, const " + name + "& rhs) noexcept {\n";
-    out << "\ninline bool operator" << op << params;
     auto writeTuple = [&](std::string_view object) {
         out << "std::forward_as_tuple(";
         for (size_t i = 0; i < members.size(); ++i) {
@@ -317,12 +316,19 @@ void cppComparison(std::ostream& out, const std::string& name, const std::vector
         }
         out << ")";
     };
-    out << "    return ";
-    writeTuple("lhs");
-    out << ' ' << op << "\n           ";
-    writeTuple("rhs");
-    out << ";\n}\n";
-    if (op == "==") out << "\ninline bool operator!=" << params << "    return !(lhs == rhs);\n}\n";
+    auto writeComparison = [&](std::string_view op) {
+        out << "\ninline bool operator" << op << params << "    return ";
+        writeTuple("lhs");
+        out << ' ' << op << "\n           ";
+        writeTuple("rhs");
+        out << ";\n}\n";
+    };
+    if (record.compareEqual) {
+        writeComparison("==");
+        out << "\ninline bool operator!=" << params << "    return !(lhs == rhs);\n}\n";
+    }
+    if (record.compareLess) writeComparison("<");
+    if (record.compareGreater) out << "\ninline bool operator>" << params << "    return rhs < lhs;\n}\n";
 }
 
 void cppHash(std::ostream& declarations, std::ostream& definitions, const TypeNode& node, const std::vector<Member>& members) {
@@ -661,9 +667,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, nameFunctions;
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
-    auto pendingComparable = output.comparable;
-    auto pendingOrderable = output.orderable;
-    auto pendingHashes = output.hashable;
     auto pendingReset = output.resetToDefaults;
     auto pendingCtorReset = output.resetFromConstructor;
     std::string enumImports;
@@ -720,14 +723,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
             archives.add(graph, archive->module, node, archiveFields(graph, *record, members), output.typescript.has_value());
         }
-        if (pendingHashes.erase(node.name)) cppHash(hashDeclarations, hashDefinitions, node, members);
-        if (pendingComparable.erase(node.name)) {
+        if (record->hashable) cppHash(hashDeclarations, hashDefinitions, node, members);
+        if (record->compareEqual || record->compareLess) {
             deps.headers.insert("tuple");
-            cppComparison(cpp, node.name, members, "==");
-        }
-        if (pendingOrderable.erase(node.name)) {
-            deps.headers.insert("tuple");
-            cppComparison(cpp, node.name, members, "<");
+            cppComparisons(cpp, node.name, members, *record);
         }
         if (!output.typescript) continue;
         Order order(members.size());
@@ -755,9 +754,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
     if (!pendingReset.empty()) throw std::runtime_error("unknown resetToDefaults record " + *pendingReset.begin() + " in " + module.name);
     if (!pendingCtorReset.empty()) throw std::runtime_error("unknown resetFromConstructor record " + *pendingCtorReset.begin() + " in " + module.name);
-    if (!pendingComparable.empty()) throw std::runtime_error("unknown comparable record " + *pendingComparable.begin() + " in " + module.name);
-    if (!pendingOrderable.empty()) throw std::runtime_error("unknown orderable record " + *pendingOrderable.begin() + " in " + module.name);
-    if (!pendingHashes.empty()) throw std::runtime_error("unknown hashable record " + *pendingHashes.begin() + " in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
     if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
 

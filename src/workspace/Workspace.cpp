@@ -13,6 +13,7 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 
 #include <nlohmann/json.hpp>
 
@@ -80,11 +81,11 @@ Projection loadProjection(const fs::path& path, const Module& module) {
             if (std::ranges::find(methods, method, &Method::name) == methods.end()) {
                 throw std::runtime_error(path.string() + ": unknown method " + name + "." + method);
             }
-            auto& target = projection[name][method];
-            if (!value.is_null()) {
-                target = value.get<std::string>();
-                if (!identifier(*target)) throw std::runtime_error(path.string() + ": invalid TS name " + *target);
-            }
+            if (value.is_null())
+                throw std::runtime_error(path.string() + ": replace null with @cppOnly on the .spec declaration of " + name + "." + method);
+            auto target = value.get<std::string>();
+            if (!identifier(target)) throw std::runtime_error(path.string() + ": invalid TS name " + target);
+            projection[name].emplace(method, std::move(target));
         }
     }
     return projection;
@@ -157,9 +158,11 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
                 output.jsbIncludes.insert(outputPath(include));
         }
     }
-    if (rules.contains("comparable")) rules.at("comparable").get_to(output.comparable);
-    if (rules.contains("orderable")) rules.at("orderable").get_to(output.orderable);
-    if (rules.contains("hashable")) rules.at("hashable").get_to(output.hashable);
+    for (const auto& [key, annotation] : {std::pair{"comparable", "@comparison(\"==\")"},
+                                         std::pair{"orderable", "@comparison(\"<\")"}, std::pair{"hashable", "@hash"}}) {
+        if (rules.contains(key))
+            throw std::runtime_error(projection.string() + ": replace '" + key + "' with " + annotation + " on the .spec declaration");
+    }
     if (rules.contains("resetToDefaults")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": resetToDefaults requires TypeScript output");
         rules.at("resetToDefaults").get_to(output.resetToDefaults);

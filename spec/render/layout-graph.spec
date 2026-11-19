@@ -27,7 +27,7 @@ namespace cc::render {
         constructor(type);
     }
 
-    struct DescriptorBlockIndex {
+    @comparison("<") struct DescriptorBlockIndex {
         updateFrequency: UpdateFrequency = UpdateFrequency::PER_INSTANCE;
         parameterType: ParameterType = ParameterType::CONSTANTS;
         descriptorType: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;

@@ -142,6 +142,16 @@ private:
         return parts;
     }
 
+    void comparison(Record& record) {
+        expect("(");
+        do {
+            const auto op = quotedString("comparison operator");
+            if (op != "==" && op != "<" && op != ">") fail("unsupported comparison operator '" + op + "'");
+            if (!record.comparisons.insert(op).second) fail("duplicate comparison operator '" + op + "'");
+        } while (accept(","));
+        expect(")");
+    }
+
     Declaration declaration(std::set<std::string>& names) {
         Declaration result;
         if (accept("@")) {
@@ -154,6 +164,8 @@ private:
                     const auto annotation = identifier();
                     if (annotation == "moveOnly" && !record.moveOnly) record.moveOnly = true;
                     else if (annotation == "serialize" && !record.serializable) record.serializable = true;
+                    else if (annotation == "comparison" && record.comparisons.empty()) comparison(record);
+                    else if (annotation == "hash" && !record.hashable) record.hashable = true;
                     else fail("unknown or duplicate record annotation @" + annotation);
                     if (token != "@" && token != "struct") fail("@" + annotation + " requires a struct");
                 } while (accept("@"));
@@ -284,11 +296,8 @@ private:
         if (!graph.components.empty() && !graph.indexed) fail("components require indexed vertex storage");
     }
 
-    std::optional<std::string> deprecationMessage() {
-        if (!accept("@")) return std::nullopt;
-        expect("deprecated");
-        expect("(");
-        if (token != "\"") fail("expected quoted deprecation message");
+    std::string quotedString(const std::string& description) {
+        if (token != "\"") fail("expected quoted " + description);
         // The opening quote is the current token. Read its contents before skipping whitespace or comments.
         std::string message;
         while (!remaining.empty()) {
@@ -297,19 +306,27 @@ private:
             consume(1);
             if (ch == '"') {
                 advance();
-                expect(")");
                 return message;
             }
             if (ch == '\\') {
                 if (remaining.empty() || (remaining.front() != '"' && remaining.front() != '\\')) {
-                    fail("invalid escape in deprecation message");
+                    fail("invalid escape in " + description);
                 }
                 ch = remaining.front();
                 consume(1);
             }
             message.push_back(ch);
         }
-        fail("unterminated deprecation message");
+        fail("unterminated " + description);
+    }
+
+    std::optional<std::string> deprecationMessage() {
+        if (!accept("@")) return std::nullopt;
+        expect("deprecated");
+        expect("(");
+        auto message = quotedString("deprecation message");
+        expect(")");
+        return message;
     }
 
     EnumMember enumMember(std::set<std::string>& members) {
@@ -407,7 +424,10 @@ private:
     }
 
     Method method(std::set<std::string>& names) {
+        const bool cppOnly = accept("@");
+        if (cppOnly) expect("cppOnly");
         Method result{type(), uniqueName(names)};
+        result.cppOnly = cppOnly;
         expect("(");
         std::set<std::string> parameters;
         if (!accept(")")) {

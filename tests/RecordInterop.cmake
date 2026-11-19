@@ -6,6 +6,7 @@ file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
 file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
+    @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; minor: uint32_t = 0; }
     graph TinyNames {
         vertex_descriptor Index = uint8_t;
         vertex_storage: indexed;

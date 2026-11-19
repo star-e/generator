@@ -40,8 +40,7 @@ Module readModule(const std::filesystem::path& spec) {
 }
 
 void checkArchive(const std::filesystem::path& spec) {
-    const Projection projection{{"InputArchive", {{"scratch", std::nullopt}}},
-                                {"OutputArchive", {{"scratch", std::nullopt}, {"writeBool", "b"}}}};
+    const Projection projection{{"OutputArchive", {{"writeBool", "b"}}}};
     const TypeTable types{{"void", {"", "void", true}}, {"bool", {"", "boolean", true}},
                           {"double", {"", "number", true}}, {"std::string_view", {"string_view", "string"}},
                           {"boost::container::pmr::memory_resource", {"boost/container/pmr/memory_resource.hpp", {}}}};
@@ -53,7 +52,8 @@ void checkArchive(const std::filesystem::path& spec) {
     require(first.result.type == second.result.type, "return types must share one pointer ID");
     require(first.result.location.line != second.result.location.line, "each use must retain its source position");
     require(first.result.location.file == spec && second.result.location.file == spec, "wrong source file");
-    require(first.isConst && second.isNoexcept && !first.typescriptName, "lost method qualifiers or visibility");
+    require(first.isConst && second.isNoexcept && first.cppOnly && second.cppOnly &&
+            !first.typescriptName && !second.typescriptName, "lost method qualifiers or visibility");
     const auto& pointer = std::get<PointerType>(graph.node(first.result.type).data);
     require(pointer.pointee == graph.findType("boost::container::pmr::memory_resource"), "wrong pointee");
     require(graph.modules.at(0).declarations == std::vector<TypeId>{output, input}, "declaration order changed");
@@ -170,6 +170,8 @@ void checkImports(const std::filesystem::path& specs) {
         const auto& pair = std::get<RecordType>(graph.node(graph.findType("cc::render::ResolvePair")).data);
         require(pair.fields.at(3).type.type == mode && pair.fields.at(4).type.type == mode, "wrong resolve mode type");
         const auto& upload = std::get<RecordType>(graph.node(graph.findType("cc::render::UploadPair")).data);
+        require(pair.compareEqual && pair.hashable && !pair.compareLess && !pair.compareGreater &&
+                !upload.compareEqual && !upload.hashable, "wrong record comparison or hash policy");
         require(upload.moveOnly && !pair.moveOnly && upload.fields.at(0).isReadonly, "wrong upload record policy");
 
         const auto& enumeration = std::get<EnumType>(graph.node(graph.findType("cc::render::AccessType")).data);

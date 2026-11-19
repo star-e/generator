@@ -41,6 +41,7 @@ struct MethodInfo {
     std::vector<ParameterInfo> parameters;
     bool isConst = false;
     bool isNoexcept = false;
+    bool cppOnly = false;
     std::optional<std::string> typescriptName;
 };
 
@@ -77,6 +78,10 @@ struct EnumType {
 struct RecordType {
     bool moveOnly = false;
     bool serializable = false;
+    bool compareEqual = false;
+    bool compareLess = false;
+    bool compareGreater = false;
+    bool hashable = false;
     std::vector<std::vector<uint32_t>> constructors;
     std::vector<TypeId> bases;
     std::vector<FieldInfo> fields;

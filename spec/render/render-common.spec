@@ -151,7 +151,7 @@ namespace cc::render {
         STENCIL = 1 << 2,
     }
 
-    @serialize struct ResolvePair {
+    @serialize @comparison("==") @hash struct ResolvePair {
         source: ccstd::pmr::string;
         target: ccstd::pmr::string;
         resolveFlags: ResolveFlags = ResolveFlags::NONE;
