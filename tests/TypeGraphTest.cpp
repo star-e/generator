@@ -91,12 +91,14 @@ void checkContainerBindings() {
         namespace sample {
             @container("array") template<Item> struct List;
             @container("map") template<Key, Value> class Table;
+            @container("set") template<Item> class Collection;
             @string class Text;
             @string class Label;
         }
         binding typescript {
             List<List<Text>> => Uint16Array;
             List<Table<Label, List<Text>>> => Uint8Array;
+            List<Collection<Text>> => Uint32Array;
             Text => Caption from "text";
             Label => Tag from "labels";
         }
@@ -125,6 +127,9 @@ void checkContainerBindings() {
     const auto reversed = graph.makeTemplateInstance(table, {inner, label});
     require(graph.node(graph.makeTemplateInstance(list, {reversed})).typescriptName == "Map<Caption[], Tag>[]",
             "nested map did not preserve the order of its arguments");
+    const auto set = graph.makeTemplateInstance(graph.findType("sample::Collection"), {text});
+    require(graph.node(set).typescriptContainer == ContainerKind::Set && graph.node(set).typescriptName == "Set<Caption>",
+            "set did not follow the explicit element binding");
 }
 
 void checkArchive(const std::filesystem::path& spec) {

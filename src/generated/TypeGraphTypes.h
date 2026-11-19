@@ -69,6 +69,7 @@ enum class ContainerKind : uint32_t {
     None,
     Array,
     Map,
+    Set,
 };
 
 struct ExternalTypeNode {

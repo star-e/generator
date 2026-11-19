@@ -67,6 +67,7 @@ private:
                         const auto kind = quotedString("container kind");
                         if (kind == "array") decl.container = ContainerKind::Array;
                         else if (kind == "map") decl.container = ContainerKind::Map;
+                        else if (kind == "set") decl.container = ContainerKind::Set;
                         else fail("unsupported container kind '" + kind + "'");
                         expect(")");
                         continue;
@@ -83,6 +84,8 @@ private:
                     fail("@container(\"array\") requires exactly one type parameter");
                 if (decl.container == ContainerKind::Map && decl.templateParameters.size() != 2)
                     fail("@container(\"map\") requires exactly two type parameters");
+                if (decl.container == ContainerKind::Set && decl.templateParameters.size() != 1)
+                    fail("@container(\"set\") requires exactly one type parameter");
                 if (decl.isString && !decl.templateParameters.empty()) fail("@string requires a non-template declaration");
                 decl.isStruct = accept("struct");
                 if (!decl.isStruct) expect("class");

@@ -4,6 +4,10 @@
 
 namespace cc::codegen {
 
+inline bool isAssociativeContainer(ContainerKind kind) {
+    return kind == ContainerKind::Map || kind == ContainerKind::Set;
+}
+
 inline bool usesJsonMapKey(const TypeNode& container, size_t position, const TypeNode& argument) {
     return container.typescriptContainer == ContainerKind::Map && position == 0 && argument.typescriptJsonMapKey;
 }
@@ -13,6 +17,7 @@ inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph
     const auto& first = graph.node(std::get<TypeId>(arguments.front()));
     if (!first.typescriptName) return std::nullopt;
     const auto& name = *first.typescriptName;
+    if (container.typescriptContainer == ContainerKind::Set) return "Set<" + name + ">";
     if (container.typescriptContainer == ContainerKind::Map) {
         const auto& value = graph.node(std::get<TypeId>(arguments.at(1)));
         if (!value.typescriptName) return std::nullopt;

@@ -4,6 +4,7 @@ import RenderCommon;
 import Strings;
 import Containers;
 import PmrContainers;
+import Sets;
 import GfxUniformBlock;
 
 namespace cc::render {
@@ -74,6 +75,10 @@ namespace cc::render {
         readonly groupBlocks: ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorBlock>;
     }
 
+    @requireAllocator struct RenderPhase {
+        readonly shaders: PmrTransparentSet<ccstd::pmr::string>;
+    }
+
     enum class RenderPassType : uint8_t {
         SINGLE_RENDER_PASS,
         RENDER_PASS,
@@ -106,4 +111,5 @@ binding typescript {
     DescriptorBlockIndex => class { mapKey json; };
     DescriptorGroupBlockIndex => class { mapKey json; };
     DescriptorDB => class { reset defaults; };
+    RenderPhase => class { reset defaults; };
 }

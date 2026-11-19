@@ -64,6 +64,7 @@ binding typescript {
 | 具体模板实例 | `ccstd::vector<uint8_t> => Uint8Array;` 只匹配该模板和这组类型实参。`ccstd::vector<uint32_t>` 可以单独绑定到 `Uint32Array`。目标使用 ES2015 内置 TypedArray 名称，字段默认值为相应类型的零长度新数组。 |
 | 普通数组 | 在外部类型声明上写 `@container("array") template<T> class vector;`。TypeGraph 递归解析元素的 TS 类型，字段使用 `T[]` 和独立的空数组。具体实例的显式绑定优先，例如 `ccstd::vector<ccstd::vector<uint8_t>>` 对应 `Uint8Array[]`。 |
 | Map | 在外部类型声明上写 `@container("map") template<K, V> class map;`。TypeGraph 按键、值各自的绑定生成 `Map<K, V>`，从两侧递归收集导入。每个字段用 `new Map<K, V>()` 初始化。 |
+| Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，`reset defaults;` 通过 `.clear()` 原地清空。 |
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
 | 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`Descriptor => class { reset constructor; };` 按构造参数重置。 |
@@ -79,6 +80,8 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 `DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型都声明 `reset defaults;`，通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
 `DescriptorDB` 的 `blocks` 和 `groupBlocks` 在 C++ 中分别以 `DescriptorBlockIndex`、`DescriptorGroupBlockIndex` 为键，在 TS 中都绑定为 `Map<string, DescriptorBlock>`。`@requireAllocator` 要求原生调用方在新建记录时提供 allocator。两个 PMR map 都使用传入的资源，带 allocator 的复制和移动构造使用目标资源。[PMR 容器声明](../spec/extern/pmr-containers.spec) · [布局声明](../spec/render/layout-graph.spec)
+
+`RenderPhase.shaders` 在 C++ 中使用引擎的 `PmrTransparentSet<ccstd::pmr::string>`。集合支持以 `std::string_view` 直接查找，带 allocator 的复制和移动构造使集合及其字符串使用目标资源。原生 allocator 构造函数的异常规格取决于集合的构造。TS 将其绑定为 `Set<string>`。[集合声明](../spec/extern/sets.spec) · [布局声明](../spec/render/layout-graph.spec)
 
 | 层 | 建议实现 |
 | --- | --- |

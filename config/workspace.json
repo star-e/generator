@@ -21,6 +21,11 @@
     },
     {
       "backend": "model",
+      "spec": "../spec/extern/sets.spec",
+      "types": { "PmrTransparentSet": { "header": "cocos/renderer/pipeline/custom/details/Set.h" } }
+    },
+    {
+      "backend": "model",
       "spec": "../spec/extern/uniform-block.spec",
       "types": { "UniformBlock": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
     },

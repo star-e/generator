@@ -41,7 +41,7 @@ namespace codegen {
     struct NamespaceType {}
     struct TagType {}
     struct BuiltinType {}
-    enum class ContainerKind : uint32_t { None, Array, Map }
+    enum class ContainerKind : uint32_t { None, Array, Map, Set }
     struct ExternalTypeNode {
         isStruct: bool = false;
         isString: bool = false;

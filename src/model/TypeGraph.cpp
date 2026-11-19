@@ -94,7 +94,7 @@ TypeId TypeGraph::makeTemplateInstance(TypeId declaration, std::vector<TemplateA
     const auto* external = std::get_if<ExternalTypeNode>(&decl.data);
     const auto container = external ? external->container : ContainerKind::None;
     if ((!decl.templateParameters.empty() && arguments.size() != decl.templateParameters.size()) ||
-        (container == ContainerKind::Array && arguments.size() != 1) ||
+        ((container == ContainerKind::Array || container == ContainerKind::Set) && arguments.size() != 1) ||
         (container == ContainerKind::Map && arguments.size() != 2))
         throw std::invalid_argument("wrong number of template arguments for " + decl.qualifiedName);
     for (const auto& arg : arguments) {

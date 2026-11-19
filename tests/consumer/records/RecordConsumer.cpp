@@ -335,6 +335,36 @@ bool checkDescriptorDB() {
            moved.groupBlocks.at(DescriptorGroupBlockIndex{}).capacity == 5;
 }
 
+bool checkRenderPhase() {
+    using cc::render::RenderPhase;
+    using Shaders = decltype(RenderPhase::shaders);
+    using Alloc = const RenderPhase::allocator_type&;
+    static_assert(std::is_same_v<Shaders, cc::PmrTransparentSet<ccstd::pmr::string>>);
+    static_assert(!std::is_default_constructible_v<RenderPhase>);
+    static_assert(std::is_nothrow_constructible_v<RenderPhase, Alloc> == std::is_nothrow_constructible_v<Shaders, Alloc>);
+    constexpr std::string_view vertex = "forward/opaque/lighting/vertex";
+    constexpr std::string_view fragment = "forward/opaque/lighting/fragment";
+    pmr::monotonic_buffer_resource first, second;
+    auto matches = [&](const RenderPhase& phase, pmr::memory_resource& resource) {
+        if (phase.get_allocator().resource() != &resource || phase.shaders.get_allocator().resource() != &resource ||
+            phase.shaders.size() != 2 || phase.shaders.find(vertex) == phase.shaders.end() ||
+            phase.shaders.find(fragment) == phase.shaders.end()) return false;
+        for (const auto& shader : phase.shaders) {
+            if (shader.get_allocator().resource() != &resource) return false;
+        }
+        return true;
+    };
+    RenderPhase original{&first};
+    if (!original.shaders.empty() || !original.shaders.emplace(vertex).second ||
+        !original.shaders.emplace(fragment).second || original.shaders.emplace(vertex).second ||
+        !matches(original, first)) return false;
+    RenderPhase copy{original, &second};
+    original.shaders.clear();
+    if (!matches(copy, second)) return false;
+    RenderPhase moved{std::move(copy), &first};
+    return matches(moved, first);
+}
+
 bool checkLayoutGraph();
 
 int main(int argc, char** argv) {
@@ -344,6 +374,7 @@ int main(int argc, char** argv) {
     if (!checkDescriptorBlockIndex()) return 10;
     if (!checkDescriptorGroupBlockIndex()) return 12;
     if (!checkDescriptorDB()) return 15;
+    if (!checkRenderPhase()) return 16;
     cc::render::DescriptorBlock block;
     if (!block.descriptors.empty() || !block.uniformBlocks.empty() || block.capacity != 0 || block.count != 0) return 14;
     block.descriptors.try_emplace("buffer", cc::gfx::Type::FLOAT4);

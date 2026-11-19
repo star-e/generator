@@ -113,12 +113,12 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         m.move = true;
         const auto& container = std::get<ExternalTypeNode>(graph.node(instance->declaration).data);
         m.usesAllocator = container.isPmr;
-        m.checkDefaultConstruction = container.container == ContainerKind::Map;
+        m.checkDefaultConstruction = isAssociativeContainer(container.container);
         if (emitTs) {
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.typeImports);
             m.tsDefault = typeScriptContainerInitializer(node);
             if (node.typescriptContainer == ContainerKind::Array) m.tsClear = ".length = 0";
-            if (node.typescriptContainer == ContainerKind::Map) m.tsClear = ".clear()";
+            if (isAssociativeContainer(node.typescriptContainer)) m.tsClear = ".clear()";
         }
         return m;
     }
