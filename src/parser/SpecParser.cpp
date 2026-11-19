@@ -247,6 +247,19 @@ private:
                 expect(";");
                 expect("}");
                 graph.hierarchy = true;
+            } else if (accept("named_graph")) {
+                if (graph.nameComponent) fail("duplicate named_graph");
+                expect("{");
+                expect("component");
+                expect(":");
+                graph.nameComponent = type();
+                expect(";");
+                expect("}");
+            } else if (token == "parent_graph") {
+                if (graph.parentGraph) fail("duplicate parent_graph");
+                graph.parentGraph = location;
+                advance();
+                expect(";");
             } else if (accept("component")) {
                 auto tag = type();
                 expect(":");

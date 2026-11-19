@@ -77,6 +77,26 @@ void hierarchyInterface(std::ostream& out, const std::string& name, const std::s
         << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n";
 }
 
+void parentLookup(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
+                  const ComponentInfo& component, const TypeGraph& graph) {
+    const auto accessor = "get" + componentAccessorSuffix(graph.node(component.tag).name);
+    out << "    " << vertex << " locate_child(" << vertex << " parent, std::string_view name) const noexcept;\n";
+    source << "\n" << name << "::" << vertex << " " << name << "::locate_child(" << vertex
+           << " parent, std::string_view name) const noexcept {\n"
+           << "    const auto count = this->" << component.name << ".size();\n"
+           << "    if (parent == null_vertex()) {\n"
+           << "        for (std::size_t i = 0; i < count; ++i) {\n"
+           << "            const auto v = static_cast<" << vertex << ">(i);\n"
+           << "            if (get_parent(v) == null_vertex() && std::string_view{this->" << accessor << "(v)} == name) return v;\n"
+           << "        }\n"
+           << "    } else if (static_cast<std::uintmax_t>(parent) < count) {\n"
+           << "        for (const auto link : child_links(parent)) {\n"
+           << "            const auto v = child(link);\n"
+           << "            if (std::string_view{this->" << accessor << "(v)} == name) return v;\n"
+           << "        }\n"
+           << "    }\n    return null_vertex();\n}\n";
+}
+
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
                        const std::string& member, const std::string& rows) {
     const bool hierarchy = !rows.empty();
@@ -212,6 +232,10 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     if (model.hierarchy) {
         headers.insert({"cstddef", "cstdint", "iterator", "limits"});
         hierarchyInterface(out, name, vertex, rows);
+    }
+    if (model.parentGraph) {
+        headers.insert("string_view");
+        parentLookup(out, source, name, vertex, model.components.at(model.nameComponentIndex.value()), graph);
     }
     for (const auto qualifier : {std::string_view{}, std::string_view{" const"}}) {
         out << "\n    " << value.qualifiedName << qualifier << "& " << accessor << "(" << vertex << " v)" << qualifier

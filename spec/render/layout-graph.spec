@@ -40,5 +40,7 @@ namespace cc::render {
         mutable_graph;
         hierarchy_graph { storage: shared_edges; }
         component Name_: ccstd::pmr::string { member: names; }
+        named_graph { component: Name_; }
+        parent_graph;
     }
 }

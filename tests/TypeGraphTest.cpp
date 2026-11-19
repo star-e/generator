@@ -115,8 +115,11 @@ void checkImports(const std::filesystem::path& specs) {
                 vertex_descriptor Vertex = uint32_t;
                 vertex_storage: indexed;
                 hierarchy_graph { storage: shared_edges; }
+                parent_graph;
+                named_graph { component: cc::render::BufferTag; }
                 component RasterPassTag: PassInfo { member: passes; }
                 component Label_: Vertex { member: labels; }
+                component BufferTag: ccstd::pmr::string { member: names; }
             }
             graph PassCounts {
                 vertex_descriptor Vertex = uint32_t;
@@ -141,6 +144,8 @@ void checkImports(const std::filesystem::path& specs) {
         const auto& passes = std::get<GraphType>(graph.node(graph.findType("cc::render::Passes")).data);
         const auto& counts = std::get<GraphType>(graph.node(graph.findType("cc::render::PassCounts")).data);
         require(passes.hierarchy && !counts.hierarchy, "lost graph hierarchy capability");
+        require(passes.parentGraph && passes.nameComponentIndex == 2 && !counts.parentGraph && !counts.nameComponentIndex,
+                "parent lookup did not bind the selected name component");
         require(passes.components.at(0).tag == raster && counts.components.at(0).tag == raster &&
                 passes.components[0].valueType == graph.findType("cc::render::PassInfo") && passes.components[0].name == "passes",
                 "graphs did not reuse the imported tag");

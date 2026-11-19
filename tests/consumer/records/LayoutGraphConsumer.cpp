@@ -9,6 +9,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -98,6 +99,42 @@ bool checkFailedInsertion() {
     }
 }
 
+bool checkChildLookup() {
+    using cc::render::Name_;
+    FailingResource resource;
+    LayoutGraph graph{&resource};
+    const auto& view = std::as_const(graph);
+    const auto none = LayoutGraph::null_vertex();
+    static_assert(noexcept(view.locate_child(none, "main")));
+    if (view.locate_child(none, "main") != none) return false;
+
+    const auto main = graph.add_vertex("main");
+    const auto shadow = graph.add_vertex("shadow", main);
+    const auto grandchild = graph.add_vertex("lighting", shadow);
+    const auto other = graph.add_vertex("lighting");
+    const auto otherShadow = graph.add_vertex("shadow", other);
+    const auto laterRoot = graph.add_vertex("main");
+    const auto laterShadow = graph.add_vertex("shadow", main);
+    const auto leaf = graph.add_vertex();
+    const std::string_view binaryName{"x\0y", 3};
+    const auto binary = graph.add_vertex(binaryName, main);
+
+    if (view.locate_child(none, "main") != main || view.locate_child(none, "lighting") != other ||
+        view.locate_child(none, "") != leaf || view.locate_child(none, "shadow") != none ||
+        view.locate_child(main, "shadow") != shadow || view.locate_child(other, "shadow") != otherShadow ||
+        view.locate_child(shadow, "lighting") != grandchild || view.locate_child(main, "lighting") != none ||
+        view.locate_child(leaf, "shadow") != none || view.locate_child(view.num_vertices(), "shadow") != none ||
+        view.locate_child(main, binaryName) != binary || view.locate_child(main, "x") != none) return false;
+
+    const std::string newName(160, 'r');
+    graph.getName(shadow).assign(newName.data(), newName.size());
+    graph.get(Name_{}, main) = "renamed";
+    resource.allocationsBeforeFailure = 0;
+    return view.locate_child(none, "main") == laterRoot && view.locate_child(none, "renamed") == main &&
+           view.locate_child(main, newName) == shadow && view.locate_child(main, "shadow") == laterShadow &&
+           view.locate_child(other, newName) == none;
+}
+
 bool checkFailedAssignment(bool move) {
     boost::container::pmr::monotonic_buffer_resource arena;
     FailingResource resource;
@@ -124,6 +161,7 @@ bool checkFailedAssignment(bool move) {
 } // namespace
 
 bool checkLayoutGraph() {
+    if (!checkChildLookup()) return false;
     if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;

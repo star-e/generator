@@ -148,6 +148,8 @@ C++ 图生成目前支持索引顶点和一个 PMR 字符串组件。`LayoutGrap
 
 `LayoutGraph` 声明 `hierarchy_graph { storage: shared_edges; }`，父子关系存储在图的邻接表中。`add_vertex(name)` 创建根节点，`add_vertex(name, parent)` 创建子节点。`get_parent(v)` 和 `num_children(v)` 的时间复杂度为 O(1)，根节点的父节点为 `null_vertex()`。`child_links(v)` 按插入顺序遍历直接子边，`child(link)` 取得子节点。无效父节点会触发 `std::out_of_range`。消费测试还逐次注入分配失败，检查已有顶点、名称和边，并在同一张图上重试。[层级声明](../spec/render/layout-graph.spec) · [C++17 消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
+`named_graph { component: Name_; }` 将本图的字符串组件选作名称，`parent_graph;` 启用 C++ 成员函数 `locate_child(parent, name)`。传入普通父节点时查询其直接子节点，传入 `null_vertex()` 时按顶点插入顺序查找根。重名时返回第一个匹配项，未命中返回 `null_vertex()`。查询逐项比较组件中的当前值，通过 `getName(v)` 或 `get(Name_{}, v)` 改名后立即生效。[模块声明](../spec/render/layout-graph.spec) · [查找测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按 `hashable` 投影生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec) · [投影](../spec/render/render-common.json)
 
 记录模块可以用 `namesHeader` 指定 C++ 名称查询头，原生头文件路径相对于 `nativeRoot`。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)

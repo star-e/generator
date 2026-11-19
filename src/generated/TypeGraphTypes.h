@@ -102,6 +102,8 @@ struct GraphType {
     bool bidirectional = false;
     bool mutableGraph = false;
     bool hierarchy = false;
+    std::optional<uint32_t> nameComponentIndex;
+    bool parentGraph = false;
     std::vector<ComponentInfo> components;
     std::vector<FieldInfo> fields;
     std::vector<MethodInfo> methods;

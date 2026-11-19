@@ -60,6 +60,8 @@ namespace codegen {
         bidirectional: bool = false;
         mutableGraph: bool = false;
         hierarchy: bool = false;
+        nameComponentIndex: std::optional<uint32_t>;
+        parentGraph: bool = false;
         components: std::vector<ComponentInfo>;
         fields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;

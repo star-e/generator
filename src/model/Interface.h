@@ -90,6 +90,8 @@ struct GraphDeclaration {
     bool vertexList{};
     bool mutableGraph{};
     bool hierarchy{};
+    std::optional<TypeRef> nameComponent;
+    std::optional<SourceLocation> parentGraph;
     std::vector<GraphComponent> components;
 };
 

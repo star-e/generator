@@ -252,6 +252,22 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
         const auto value = resolve(graph, component.value, scope, owner);
         result.components.push_back({tag, value.type, component.member});
     }
+    if (syntax.nameComponent) {
+        const auto& selected = *syntax.nameComponent;
+        const auto tag = canonicalType(graph, resolve(graph, selected, scope, owner));
+        const auto it = std::ranges::find(result.components, tag, &ComponentInfo::tag);
+        if (it == result.components.end())
+            throw std::runtime_error(selected.location.describe() + ": named_graph requires a component of this graph: " + selected.name);
+        const auto& value = graph.node(canonicalType(graph, {it->valueType, selected.location})).qualifiedName;
+        if (value != "ccstd::pmr::string" && value != "ccstd::string" && value != "std::pmr::string" && value != "std::string")
+            throw std::runtime_error(selected.location.describe() + ": named_graph requires a string component: " + selected.name);
+        result.nameComponentIndex = static_cast<uint32_t>(it - result.components.begin());
+    }
+    if (syntax.parentGraph) {
+        if (!result.hierarchy) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires hierarchy_graph");
+        if (!result.nameComponentIndex) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires named_graph");
+        result.parentGraph = true;
+    }
     return result;
 }
 
