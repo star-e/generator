@@ -1,5 +1,6 @@
 #include "codegen/RecordEmitter.h"
 #include "codegen/EnumEmitter.h"
+#include "codegen/GraphEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
 #include "model/IntegerLiteral.h"
@@ -676,6 +677,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             continue;
         }
         previousTag = false;
+        if (std::holds_alternative<GraphType>(node.data)) {
+            emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations);
+            continue;
+        }
         cpp << '\n';
         ts << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {

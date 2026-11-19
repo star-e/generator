@@ -14,4 +14,6 @@ struct ModuleInput {
 // Register declarations before binding direct imports and resolving type uses in dependency order.
 TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes);
 
+std::string componentAccessorSuffix(std::string tagName);
+
 } // namespace cc::codegen

@@ -243,9 +243,12 @@ int exchangeRecords(std::string_view command, const char* path) {
     return file.good() && file.peek() == std::char_traits<char>::eof() ? 0 : 1;
 }
 
+bool checkLayoutGraph();
+
 int main(int argc, char** argv) {
     if (argc == 3) return exchangeRecords(argv[1], argv[2]);
     if (argc != 1) return 2;
+    if (!checkLayoutGraph()) return 9;
     using cc::render::getName;
     using namespace std::string_view_literals;
     using cc::render::Descriptor;

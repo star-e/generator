@@ -230,6 +230,14 @@ private:
                 expect("indexed");
                 expect(";");
                 graph.indexed = true;
+            } else if (accept("vertex_list_graph")) {
+                if (graph.vertexList) fail("duplicate vertex_list_graph");
+                expect(";");
+                graph.vertexList = true;
+            } else if (accept("mutable_graph")) {
+                if (graph.mutableGraph) fail("duplicate mutable_graph");
+                expect(";");
+                graph.mutableGraph = true;
             } else if (accept("component")) {
                 auto tag = type();
                 expect(":");
@@ -241,7 +249,7 @@ private:
                 expect(";");
                 expect("}");
             } else {
-                fail("expected graph descriptor, storage or component reference");
+                fail("expected graph descriptor, storage, capability or component reference");
             }
         }
         if (!graph.vertexType) fail("graph requires a vertex descriptor");

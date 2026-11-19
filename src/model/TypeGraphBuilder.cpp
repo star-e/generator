@@ -10,6 +10,13 @@
 #include <type_traits>
 
 namespace cc::codegen {
+
+std::string componentAccessorSuffix(std::string tagName) {
+    if (tagName.ends_with('_')) tagName.pop_back();
+    if (!tagName.empty() && tagName.front() >= 'a' && tagName.front() <= 'z') tagName.front() -= 'a' - 'A';
+    return tagName;
+}
+
 namespace {
 
 std::string qualify(const std::string& scope, const std::string& name) {
@@ -224,6 +231,8 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     const auto descriptor = graph.findType(qualify(scope, syntax.vertexAlias));
     result.vertexType = canonicalType(graph, {descriptor, syntax.vertexType->location});
     result.indexedVertices = syntax.indexed;
+    result.vertexList = syntax.vertexList;
+    result.mutableGraph = syntax.mutableGraph;
     const auto& vertex = graph.node(result.vertexType);
     if (syntax.indexed && (vertex.qualifiedName == "bool" || !integerRanges().contains(vertex.qualifiedName))) {
         throw std::runtime_error(syntax.vertexType->location.describe() + ": expected an integer descriptor for indexed vertices");
@@ -235,9 +244,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
         if (!std::holds_alternative<TagType>(node.data)) {
             throw std::runtime_error(component.tag.location.describe() + ": component requires an independently declared @tag: " + component.tag.name);
         }
-        auto accessor = node.name;
-        if (accessor.ends_with('_')) accessor.pop_back();
-        if (!accessor.empty() && accessor.front() >= 'a' && accessor.front() <= 'z') accessor.front() -= 'a' - 'A';
+        const auto accessor = componentAccessorSuffix(node.name);
         if (accessor.empty() || !accessors.insert(accessor).second) {
             throw std::runtime_error(component.tag.location.describe() + ": invalid or duplicate component accessor for " + node.qualifiedName);
         }

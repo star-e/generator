@@ -31,4 +31,13 @@ namespace cc::render {
         RENDER_PASS,
         RENDER_SUBPASS,
     }
+
+    @tag struct Name_ {}
+    graph LayoutGraph {
+        vertex_descriptor Vertex = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        component Name_: ccstd::pmr::string { member: names; }
+    }
 }

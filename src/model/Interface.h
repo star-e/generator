@@ -87,6 +87,8 @@ struct GraphDeclaration {
     std::string vertexAlias;
     std::optional<TypeRef> vertexType;
     bool indexed{};
+    bool vertexList{};
+    bool mutableGraph{};
     std::vector<GraphComponent> components;
 };
 

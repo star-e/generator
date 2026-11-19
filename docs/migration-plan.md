@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区生成 18 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 第一批生成 `LayoutGraphTypes.h`、`layout-graph.ts` 和 `layout-graph-names.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区生成 19 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphTypes.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -142,7 +142,9 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ### 引擎模块和产物
 
-`LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`resetFromConstructor` 使 TS 的 `reset(type)` 更新类型，并把 `count` 恢复为声明值。类型头和 TS 类型文件目前仅覆盖这四个声明，名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec) · [TS 投影](../spec/render/layout-graph.json)
+`LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`resetFromConstructor` 使 TS 的 `reset(type)` 更新类型，并把 `count` 恢复为声明值。TS 名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec) · [TS 投影](../spec/render/layout-graph.json)
+
+C++ 图生成目前支持索引顶点和一个 PMR 字符串组件。`LayoutGraph` 引用命名空间中的 `Name_` 标签。`mutable_graph` 启用 `add_vertex(name)`，`vertex_list_graph` 启用 `vertices()` 和 `num_vertices()`。顶点编号依插入顺序从零递增，`getName(v)` 与 `get(Name_{}, v)` 返回同一字符串的引用。图用构造时指定的内存资源存储组件。C++17 消费测试覆盖空图、扩容、读写、跨资源构造和顶点编号上限。[生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按 `hashable` 投影生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec) · [投影](../spec/render/render-common.json)
 
