@@ -233,6 +233,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     result.indexedVertices = syntax.indexed;
     result.vertexList = syntax.vertexList;
     result.mutableGraph = syntax.mutableGraph;
+    result.hierarchy = syntax.hierarchy;
     const auto& vertex = graph.node(result.vertexType);
     if (syntax.indexed && (vertex.qualifiedName == "bool" || !integerRanges().contains(vertex.qualifiedName))) {
         throw std::runtime_error(syntax.vertexType->location.describe() + ": expected an integer descriptor for indexed vertices");

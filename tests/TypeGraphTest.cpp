@@ -114,6 +114,7 @@ void checkImports(const std::filesystem::path& specs) {
             graph Passes {
                 vertex_descriptor Vertex = uint32_t;
                 vertex_storage: indexed;
+                hierarchy_graph { storage: shared_edges; }
                 component RasterPassTag: PassInfo { member: passes; }
                 component Label_: Vertex { member: labels; }
             }
@@ -139,6 +140,7 @@ void checkImports(const std::filesystem::path& specs) {
                 "wrong tag ownership or TS projection");
         const auto& passes = std::get<GraphType>(graph.node(graph.findType("cc::render::Passes")).data);
         const auto& counts = std::get<GraphType>(graph.node(graph.findType("cc::render::PassCounts")).data);
+        require(passes.hierarchy && !counts.hierarchy, "lost graph hierarchy capability");
         require(passes.components.at(0).tag == raster && counts.components.at(0).tag == raster &&
                 passes.components[0].valueType == graph.findType("cc::render::PassInfo") && passes.components[0].name == "passes",
                 "graphs did not reuse the imported tag");

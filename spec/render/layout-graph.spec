@@ -38,6 +38,7 @@ namespace cc::render {
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;
+        hierarchy_graph { storage: shared_edges; }
         component Name_: ccstd::pmr::string { member: names; }
     }
 }

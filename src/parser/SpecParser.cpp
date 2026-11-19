@@ -238,6 +238,15 @@ private:
                 if (graph.mutableGraph) fail("duplicate mutable_graph");
                 expect(";");
                 graph.mutableGraph = true;
+            } else if (accept("hierarchy_graph")) {
+                if (graph.hierarchy) fail("duplicate hierarchy_graph");
+                expect("{");
+                expect("storage");
+                expect(":");
+                expect("shared_edges");
+                expect(";");
+                expect("}");
+                graph.hierarchy = true;
             } else if (accept("component")) {
                 auto tag = type();
                 expect(":");
@@ -253,6 +262,7 @@ private:
             }
         }
         if (!graph.vertexType) fail("graph requires a vertex descriptor");
+        if (graph.hierarchy && !graph.indexed) fail("shared hierarchy edges require indexed vertex storage");
         if (!graph.components.empty() && !graph.indexed) fail("components require indexed vertex storage");
     }
 

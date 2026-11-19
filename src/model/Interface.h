@@ -89,6 +89,7 @@ struct GraphDeclaration {
     bool indexed{};
     bool vertexList{};
     bool mutableGraph{};
+    bool hierarchy{};
     std::vector<GraphComponent> components;
 };
 

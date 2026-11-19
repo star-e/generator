@@ -1,15 +1,130 @@
 #include "ShiftProbe.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
+#include <boost/container/pmr/global_resource.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
+#include <initializer_list>
 #include <iterator>
 #include <limits>
+#include <new>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
 
+namespace {
+using cc::render::LayoutGraph;
+using Vertex = LayoutGraph::Vertex;
+
+bool hasChildren(const LayoutGraph& g, Vertex parent, std::initializer_list<Vertex> expected) {
+    if (g.num_children(parent) != expected.size()) return false;
+    auto next = expected.begin();
+    for (const auto link : g.child_links(parent)) {
+        if (next == expected.end() || link.source != parent || g.child(link) != *next ||
+            g.get_parent(*next) != parent) return false;
+        ++next;
+    }
+    return next == expected.end();
+}
+
+bool checkHierarchy() {
+    boost::container::pmr::monotonic_buffer_resource firstArena, secondArena;
+    LayoutGraph graph{&firstArena};
+    const auto root = graph.add_vertex("main");
+    const auto ui = graph.add_vertex("ui", LayoutGraph::null_vertex());
+    const auto shadow = graph.add_vertex("shadow", root);
+    const auto cascade = graph.add_vertex("cascade", shadow);
+    const auto overlay = graph.add_vertex("overlay", ui);
+    const auto color = graph.add_vertex("color", root);
+    auto intact = [&](const LayoutGraph& g) {
+        const auto none = LayoutGraph::null_vertex();
+        return g.num_vertices() == 6 && g.get_parent(root) == none && g.get_parent(ui) == none &&
+               g.get_parent(none) == none && hasChildren(g, root, {shadow, color}) &&
+               hasChildren(g, ui, {overlay}) && hasChildren(g, shadow, {cascade}) &&
+               hasChildren(g, cascade, {}) && hasChildren(g, color, {}) && hasChildren(g, overlay, {}) &&
+               g.getName(root) == "main" && g.getName(color) == "color";
+    };
+    try {
+        graph.add_vertex("invalid", graph.num_vertices());
+        return false;
+    } catch (const std::out_of_range&) {
+        if (!intact(graph)) return false;
+    }
+    LayoutGraph copied{graph, &secondArena};
+    LayoutGraph assigned{&firstArena};
+    assigned = copied;
+    if (!intact(assigned) || !intact(copied)) return false;
+    assigned = std::move(copied);
+    if (!intact(assigned) || copied.num_vertices() != 0) return false;
+    LayoutGraph moved{std::move(assigned), &firstArena};
+    return intact(moved) && assigned.num_vertices() == 0 && intact(graph);
+}
+
+// Fail each allocation in turn, including allocations after the new adjacency row was appended.
+class FailingResource final : public boost::container::pmr::memory_resource {
+public:
+    int allocationsBeforeFailure{-1};
+private:
+    void* do_allocate(std::size_t bytes, std::size_t alignment) override {
+        if (allocationsBeforeFailure == 0) throw std::bad_alloc();
+        if (allocationsBeforeFailure > 0) --allocationsBeforeFailure;
+        return boost::container::pmr::new_delete_resource()->allocate(bytes, alignment);
+    }
+    void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
+        boost::container::pmr::new_delete_resource()->deallocate(p, bytes, alignment);
+    }
+    bool do_is_equal(const memory_resource& other) const noexcept override { return this == &other; }
+};
+
+bool checkFailedInsertion() {
+    const std::string longName(160, 'x');
+    for (int failAfter = 0; ; ++failAfter) {
+        FailingResource resource;
+        LayoutGraph graph{&resource};
+        const auto root = graph.add_vertex("root");
+        const auto first = graph.add_vertex("first", root);
+        resource.allocationsBeforeFailure = failAfter;
+        try {
+            const auto added = graph.add_vertex(longName, root);
+            return failAfter > 0 && added == 2 && hasChildren(graph, root, {first, added});
+        } catch (const std::bad_alloc&) {
+            if (resource.allocationsBeforeFailure != 0) throw;
+            if (graph.num_vertices() != 2 || !hasChildren(graph, root, {first}) || !hasChildren(graph, first, {}) ||
+                graph.getName(root) != "root" || graph.getName(first) != "first") return false;
+        }
+        resource.allocationsBeforeFailure = -1;
+        const auto retry = graph.add_vertex(longName, root);
+        if (retry != 2 || graph.getName(retry) != longName.c_str() || !hasChildren(graph, root, {first, retry})) return false;
+    }
+}
+
+bool checkFailedAssignment(bool move) {
+    boost::container::pmr::monotonic_buffer_resource arena;
+    FailingResource resource;
+    LayoutGraph source{&arena};
+    const auto root = source.add_vertex("original");
+    const auto leaf = source.add_vertex("leaf", root);
+    for (int failAfter = 0; ; ++failAfter) {
+        resource.allocationsBeforeFailure = -1;
+        LayoutGraph target{&resource};
+        target.add_vertex("previous");
+        resource.allocationsBeforeFailure = failAfter;
+        try {
+            if (move) target = std::move(source);
+            else target = source;
+            return hasChildren(target, root, {leaf}) && target.getName(leaf) == "leaf" &&
+                   target.getName(leaf).get_allocator().resource() == &resource;
+        } catch (const std::bad_alloc&) {
+            if (resource.allocationsBeforeFailure != 0) throw;
+            if (target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
+                source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf})) return false;
+        }
+    }
+}
+} // namespace
+
 bool checkLayoutGraph() {
+    if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;
     using Name = ccstd::pmr::string;

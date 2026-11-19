@@ -82,6 +82,9 @@ bad_graph("RasterPassTag:" "LightInfo:" "component requires an independently dec
 bad_graph("component RasterPassTag:" "@tag struct LocalTag {} component LocalTag:" "expected graph descriptor, storage, capability or component reference")
 bad_graph("vertex_storage: indexed;" "vertex_list_graph; vertex_list_graph;" "duplicate vertex_list_graph")
 bad_graph("vertex_storage: indexed;" "mutable_graph; mutable_graph;" "duplicate mutable_graph")
+bad_graph("vertex_storage: indexed;" "hierarchy_graph { storage: separate; }" "expected 'shared_edges'")
+bad_graph("vertex_storage: indexed;" "hierarchy_graph { storage: shared_edges; }" "shared hierarchy edges require indexed vertex storage")
+bad_graph("vertex_storage: indexed;" "hierarchy_graph { storage: shared_edges; } hierarchy_graph { storage: shared_edges; }" "duplicate hierarchy_graph")
 bad_graph("component RasterPassTag:" "component RasterPassTag: uint32_t { member: first; } component RasterPassTag:" "invalid or duplicate component accessor")
 
 finish_workspace("${work}")
