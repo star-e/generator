@@ -82,15 +82,23 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
 
     // Array indices stop at 2^32 - 2. Reserve the null descriptor for narrower index types too.
     const auto limit = std::min<uint64_t>(indexedVertexLimit(graph.node(model.vertexType).qualifiedName).value(), UINT32_MAX);
+    if (model.serializable) out << "\nconst cc$adopt" << node.name << " = Symbol();\n";
+    const auto storage = model.serializable ? "private " : "private readonly ";
     out << "\nexport class " << node.name << " {\n    readonly N = " << limit << ";\n"
-        << "    private readonly vertices: {\n";
+        << "    " << storage << "vertices: {\n";
     if (!alternatives.empty())
         out << "        readonly id: " << kinds << ";\n        readonly object: " << node.name << "Object;\n";
     for (const auto& component : components)
         out << "        readonly component" << component.tagName << ": " << component.type << ";\n";
     if (model.hierarchy) out << "        readonly parent: number;\n        readonly children: cc$graph.OutE[];\n";
     out << "    }[] = [];\n";
-    if (model.parentGraph) out << "    private readonly roots: cc$graph.OutE[] = [];\n";
+    if (model.parentGraph) out << "    " << storage << "roots: cc$graph.OutE[] = [];\n";
+    if (model.serializable) {
+        out << "\n    [cc$adopt" << node.name << "] (decoded: " << node.name << "): void {\n"
+            << "        this.vertices = decoded.vertices;\n";
+        if (model.parentGraph) out << "        this.roots = decoded.roots;\n";
+        out << "    }\n";
+    }
     if (model.vertexList)
         out << "\n    v (): IterableIterator<number> { return this.vertices.keys(); }\n"
             << "    nv (): number { return this.vertices.length; }\n";

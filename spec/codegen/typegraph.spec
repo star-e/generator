@@ -65,6 +65,7 @@ namespace codegen {
     struct InterfaceType { bases: std::vector<TypeId>; methods: std::vector<MethodInfo>; }
     struct ComponentInfo { tag: TypeId; valueType: TypeId; name: std::string; }
     struct GraphType {
+        serializable: bool = false;
         vertexType: TypeId;
         indexedVertices: bool = false;
         vertexList: bool = false;
@@ -100,6 +101,7 @@ namespace codegen {
         cppHeader: std::string;
         typescriptName: std::optional<std::string>;
         typescriptModule: std::string;
+        typescriptArchiveModule: std::string;
         typescriptContainer: ContainerKind = ContainerKind::None;
         typescriptJsonMapKey: bool = false;
         templateParameters: std::vector<TypeId>;

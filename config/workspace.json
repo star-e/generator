@@ -62,6 +62,7 @@
       "backend": "records",
       "nativeRoot": "native",
       "header": "cocos/renderer/pipeline/custom/LayoutGraphTypes.h",
+      "serializationHeader": "cocos/renderer/pipeline/custom/LayoutGraphSerialization.h",
       "typescript": "cocos/rendering/custom/layout-graph.ts",
       "runtimeFiles": {
         "native/cocos/base/GraphDFS.h": "../runtime/cpp/GraphDFS.h",

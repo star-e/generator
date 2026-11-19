@@ -25,6 +25,7 @@ struct TypeScriptBinding {
     BindingTarget kind{};
     std::string target;
     std::filesystem::path from;
+    std::filesystem::path archiveFrom;
     std::map<std::string, std::string> methods;
     std::map<std::string, std::string> renamedFrom;
     std::optional<PoolBinding> pool;

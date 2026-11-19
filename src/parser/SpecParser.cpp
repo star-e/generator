@@ -257,6 +257,10 @@ private:
                         return identifierStart(c) || std::isdigit(static_cast<unsigned char>(c));
                     })) fail("expected a named TypeScript import");
                 rule.from = bindingPath();
+                if (accept("archive")) {
+                    expect("from");
+                    rule.archiveFrom = bindingPath();
+                }
             }
         }
         if (rule.kind != BindingTarget::type && accept("{")) bindingOptions(rule);
@@ -319,10 +323,17 @@ private:
                     else if (annotation == "comparison" && record.comparisons.empty()) comparison(record);
                     else if (annotation == "hash" && !record.hashable) record.hashable = true;
                     else fail("unknown or duplicate record annotation @" + annotation);
-                    if (token != "@" && token != "struct") fail("@" + annotation + " requires a struct");
+                    if (token != "@" && token != "struct" && !(annotation == "serialize" && token == "graph"))
+                        fail("@" + annotation + " requires a struct");
                 } while (accept("@"));
-                expect("struct");
-                result.data = std::move(record);
+                if (accept("graph")) {
+                    if (record.moveOnly || record.requireAllocator || record.hashable || !record.comparisons.empty())
+                        fail("only @serialize applies to a graph");
+                    result.data = GraphDeclaration{.serializable = true};
+                } else {
+                    expect("struct");
+                    result.data = std::move(record);
+                }
             }
         } else if (accept("struct")) result.data = Record{};
         else if (accept("graph")) result.data = GraphDeclaration{};

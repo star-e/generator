@@ -1,4 +1,5 @@
 #include "codegen/RecordEmitter.h"
+#include "codegen/ArchiveEmitter.h"
 #include "codegen/EnumEmitter.h"
 #include "codegen/GraphEmitter.h"
 #include "codegen/TypeScriptImports.h"
@@ -577,17 +578,17 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>&
 // Both writers consume this sequence in declaration order, independently of constructor and pool order.
 struct ArchiveField {
     std::string name;
-    std::string primitive;
+    TypeId type;
+    bool transient{};
     std::string cppDescription;
     std::string tsDescription;
 };
 
-std::vector<ArchiveField> archiveFields(const TypeGraph& graph, const RecordType& record, const std::vector<Member>& members) {
+std::vector<ArchiveField> archiveFields(const TypeGraph& graph, ModuleId owner, const RecordType& record, const std::vector<Member>& members) {
     std::vector<ArchiveField> fields;
     for (size_t i = 0; i < record.fields.size(); ++i) {
         const auto& field = record.fields[i];
-        const auto& node = graph.node(field.type.type);
-        ArchiveField entry{.name = field.name};
+        ArchiveField entry{.name = field.name, .type = field.type.type, .transient = field.transient};
         if (field.transient) {
             std::string_view cpp = members[i].cpp, ts = members[i].ts;
             if (cpp.ends_with('*')) cpp.remove_suffix(1);
@@ -595,42 +596,20 @@ std::vector<ArchiveField> archiveFields(const TypeGraph& graph, const RecordType
             entry.cppDescription = cpp;
             entry.tsDescription = ts;
         } else {
-            if (field.isReadonly) invalid(field, "archive load requires a writable field");
-            std::string_view type = node.qualifiedName;
-            if (const auto* enumeration = std::get_if<EnumType>(&node.data))
-                type = enumeration->underlying == TypeId{} ? std::string_view{"int"} : graph.node(enumeration->underlying).qualifiedName;
-            static constexpr std::string_view numbers[]{"int", "unsigned", "short", "char", "bool", "int8_t", "uint8_t",
-                "int16_t", "uint16_t", "int32_t", "uint32_t", "float", "double"};
-            if (node.qualifiedName == "bool") entry.primitive = "Bool";
-            else if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString)
-                entry.primitive = "String";
-            else if (std::ranges::find(numbers, type) != std::end(numbers)) entry.primitive = "Number";
-            else invalid(field, "unsupported archive field type " + node.qualifiedName);
+            if (field.isReadonly && !archivePrimitive(graph, field.type.type).empty())
+                invalid(field, "archive load requires a writable field");
+            checkArchiveType(graph, owner, field.type.type, field.type.location.describe() + ": " + field.name);
         }
         fields.push_back(std::move(entry));
     }
     return fields;
 }
 
-const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& module, std::string_view name) {
-    for (auto id : module.declarations) {
-        const auto& type = graph.node(id);
-        if (type.name == name && std::holds_alternative<InterfaceType>(type.data)) return type;
-    }
-    throw std::runtime_error(module.name + ": missing archive interface " + std::string(name));
-}
-
-const std::string& archiveMethod(const TypeNode& interfaceType, const std::string& method) {
-    const auto& methods = std::get<InterfaceType>(interfaceType.data).methods;
-    const auto found = std::ranges::find(methods, method, &MethodInfo::name);
-    if (found != methods.end() && found->typescriptName) return *found->typescriptName;
-    throw std::runtime_error("missing TypeScript binding for " + interfaceType.qualifiedName + "." + method);
-}
-
 struct RecordArchives {
     std::ostringstream declarations, definitions, script;
+    bool needsReadSize{};
 
-    void add(const TypeGraph& graph, const TypeModule& archive, const TypeNode& record, const std::vector<ArchiveField>& fields, bool emitTs) {
+    void add(const TypeGraph& graph, const TypeModule& archive, const TypeNode& record, const std::vector<ArchiveField>& fields, bool emitTs, TypeImports& imports) {
         const auto& name = record.name;
         declarations << '\n';
         for (bool save : {true, false}) {
@@ -643,16 +622,15 @@ struct RecordArchives {
             if (emitTs) script << "\nexport function " << op << name << " (a: " << api.name << ", v: " << name << "): void {\n";
             for (const auto& field : fields) {
                 const auto member = "v." + field.name;
-                if (field.primitive.empty()) {
+                if (field.transient) {
                     definitions << "    // skip, " << field.name << ": " << field.cppDescription << '\n';
                     if (emitTs) script << "    // skip, " << member << ": " << field.tsDescription << '\n';
                     continue;
                 }
                 definitions << "    " << op << "(ar, " << member << ");\n";
                 if (emitTs) {
-                    const auto& method = archiveMethod(api, (save ? "write" : "read") + field.primitive);
-                    if (save) script << "    a." << method << "(" << member << ");\n";
-                    else script << "    " << member << " = a." << method << "();\n";
+                    ArchiveScript{graph, api, imports, save}.value(script, field.type, member, "    ");
+                    if (isAssociativeContainer(graph.node(field.type).typescriptContainer)) needsReadSize = true;
                 }
             }
             definitions << "}\n";
@@ -730,6 +708,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 emitTypeScriptGraph(graph, id, ts, deps.typeImports);
                 if (model->hierarchy) usesGraphRuntime = true;
             }
+            if (model->serializable) {
+                if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
+                emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
+                                 output.typescript ? &archives.script : nullptr, deps.valueImports);
+                archives.needsReadSize = true;
+            }
             continue;
         }
         cpp << '\n';
@@ -767,7 +751,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable) {
             if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
-            archives.add(graph, archive->module, node, archiveFields(graph, *record, members), output.typescript.has_value());
+            archives.add(graph, archive->module, node, archiveFields(graph, owner, *record, members), output.typescript.has_value(), deps.valueImports);
         }
         if (record->hashable) cppHash(hashDeclarations, hashDefinitions, node, members);
         if (record->compareEqual || record->compareLess) {
@@ -856,7 +840,15 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         auto path = archive->layout.typescript;
         script << "import type { OutputArchive, InputArchive } from '" << modulePath(path.replace_extension(), *output.typescript) << "';\n";
     }
-    script << ts.str() << archives.script.str();
+    script << ts.str();
+    if (archives.needsReadSize) {
+        const auto& input = archiveInterface(graph, archive->module, "InputArchive");
+        script << "\nfunction cc$readSize (a: InputArchive): number {\n"
+               << "    const n = a." << archiveMethod(input, "readNumber") << "();\n"
+               << "    if (!Number.isInteger(n) || n < 0 || n > 0xFFFFFFFF) throw new RangeError('Invalid archive size');\n"
+               << "    return n;\n}\n";
+    }
+    script << archives.script.str();
     files.emplace(*output.typescript, script.str());
     if (!enumImports.empty()) {
         const auto stem = output.typescript->stem().generic_string();

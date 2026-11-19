@@ -1,0 +1,189 @@
+#include "codegen/ArchiveEmitter.h"
+#include "model/TypeGraphBuilder.h"
+#include <algorithm>
+
+namespace cc::codegen {
+
+const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& module, std::string_view name) {
+    for (auto id : module.declarations) {
+        const auto& type = graph.node(id);
+        if (type.name == name && std::holds_alternative<InterfaceType>(type.data)) return type;
+    }
+    throw std::runtime_error(module.name + ": missing archive interface " + std::string(name));
+}
+
+const std::string& archiveMethod(const TypeNode& api, const std::string& method) {
+    const auto& methods = std::get<InterfaceType>(api.data).methods;
+    const auto found = std::ranges::find(methods, method, &MethodInfo::name);
+    if (found != methods.end() && found->typescriptName) return *found->typescriptName;
+    throw std::runtime_error("missing TypeScript binding for " + api.qualifiedName + "." + method);
+}
+
+std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
+    const auto& node = graph.node(id);
+    if (node.qualifiedName == "bool") return "Bool";
+    if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) return "String";
+    std::string_view type = node.qualifiedName;
+    if (const auto* enumeration = std::get_if<EnumType>(&node.data))
+        type = enumeration->underlying == TypeId{} ? std::string_view{"int"} : graph.node(enumeration->underlying).qualifiedName;
+    static constexpr std::string_view numbers[]{"int", "unsigned", "short", "char", "int8_t", "uint8_t",
+        "int16_t", "uint16_t", "int32_t", "uint32_t", "float", "double"};
+    return std::ranges::find(numbers, type) != std::end(numbers) ? "Number" : "";
+}
+
+void checkArchiveType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context) {
+    const auto& node = graph.node(id);
+    if (!archivePrimitive(graph, id).empty() || !node.typescriptArchiveModule.empty()) return;
+    if (const auto* record = std::get_if<RecordType>(&node.data); record && record->serializable && node.module == owner) return;
+    if (isAssociativeContainer(node.typescriptContainer)) {
+        for (const auto& arg : std::get<TemplateInstanceType>(node.data).arguments)
+            checkArchiveType(graph, owner, std::get<TypeId>(arg), context);
+        return;
+    }
+    throw std::runtime_error(context + ": unsupported archive field type " + node.qualifiedName);
+}
+
+void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr, const std::string& indent,
+                          bool declare, unsigned depth) const {
+    const auto& node = graph.node(id);
+    const auto primitive = archivePrimitive(graph, id);
+    if (!primitive.empty()) {
+        const auto& method = archiveMethod(api, (save ? "write" : "read") + primitive);
+        if (save) out << indent << "a." << method << "(" << expr << ");\n";
+        else out << indent << (declare ? "const " : "") << expr << " = a." << method << "();\n";
+        return;
+    }
+    const auto& name = node.typescriptName.value();
+    if (declare) out << indent << "const " << expr << " = new " << name << "();\n";
+    if (!isAssociativeContainer(node.typescriptContainer)) {
+        const auto codec = (save ? "save" : "load") + name;
+        if (!node.typescriptArchiveModule.empty()) {
+            imports[node.typescriptArchiveModule].insert(codec);
+            if (declare) imports[node.typescriptModule].insert(name);
+        }
+        out << indent << codec << "(a, " << expr << ");\n";
+        return;
+    }
+    const auto& args = std::get<TemplateInstanceType>(node.data).arguments;
+    const bool map = node.typescriptContainer == ContainerKind::Map;
+    const auto keyType = std::get<TypeId>(args.front());
+    const auto element = std::get<TypeId>(args.back());
+    const bool json = map && usesJsonMapKey(node, 0, graph.node(keyType));
+    const auto key = "key" + std::to_string(depth);
+    const auto item = "item" + std::to_string(depth);
+    const auto inner = indent + "    ";
+    if (save) {
+        out << indent << "a." << archiveMethod(api, "writeNumber") << "(" << expr << ".size);\n"
+            << indent << "for (const " << (map ? "[" + key + ", " + item + "]" : item) << " of " << expr << ") {\n";
+        if (map) value(out, keyType, json ? "JSON.parse(" + key + ")" : key, inner, false, depth + 1);
+        value(out, element, item, inner, false, depth + 1);
+    } else {
+        const auto i = "left" + std::to_string(depth);
+        out << indent << "for (let " << i << " = cc$readSize(a); " << i << " > 0; --" << i << ") {\n";
+        if (map) value(out, keyType, key, inner, true, depth + 1);
+        value(out, element, item, inner, true, depth + 1);
+        out << inner << expr;
+        if (map) out << ".set(" << (json ? "JSON.stringify(" + key + ")" : key) << ", " << item << ");\n";
+        else out << ".add(" << item << ");\n";
+    }
+    out << indent << "}\n";
+}
+
+void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
+                      std::ostream& declarations, std::ostream& cpp, std::ostream* ts, TypeImports& imports) {
+    const auto& model = std::get<GraphType>(node.data);
+    const auto& name = node.name;
+    if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.alternatives.empty() ||
+        graph.node(model.vertexType).qualifiedName != "uint32_t")
+        throw std::runtime_error(node.qualifiedName + ": graph archive requires a mutable uint32_t vertex list with shared edges and polymorphic payloads");
+    for (const auto& columns : {&model.components, &model.alternatives})
+        for (const auto& column : *columns) checkArchiveType(graph, node.module, column.valueType, node.qualifiedName + "." + column.name);
+    const auto suffix = [&](const ComponentInfo& column) { return componentAccessorSuffix(graph.node(column.tag).name); };
+    const auto tag = [&](const ComponentInfo& column) { return "::" + graph.node(column.tag).qualifiedName + "{}"; };
+    const auto count = model.alternatives.size();
+    const auto archiveName = [&](std::string_view type) {
+        const auto& api = archiveInterface(graph, archive, type);
+        return graph.modules.at(node.module.value).namespaces == archive.namespaces ? api.name : "::" + api.qualifiedName;
+    };
+    const std::string save = "void save(" + archiveName("OutputArchive") + "& ar, const " + name + "& g)";
+    const std::string load = "void load(" + archiveName("InputArchive") + "& ar, " + name + "& g)";
+    const bool takesName = model.nameComponentIndex || (!model.components.empty() &&
+        graph.node(model.components.front().valueType).qualifiedName == "ccstd::pmr::string");
+    declarations << '\n' << save << ";\n" << load << ";\n";
+    cpp << '\n' << save << " {\n"
+        << "    uint32_t edges = 0, counts[" << count << "]{};\n"
+        << "    for (auto v : g.vertices()) {\n        edges += g.out_degree(v);\n"
+        << "        ++counts[static_cast<uint32_t>(g.kind(v))];\n    }\n"
+        << "    save(ar, g.num_vertices());\n    save(ar, edges);\n    for (auto n : counts) save(ar, n);\n"
+        << "    for (auto v : g.vertices()) {\n        save(ar, static_cast<uint32_t>(g.kind(v)));\n        save(ar, g.get_parent(v));\n";
+    for (const auto& c : model.components) cpp << "        save(ar, g.get" << suffix(c) << "(v));\n";
+    cpp << "        switch (g.kind(v)) {\n";
+    for (const auto& c : model.alternatives)
+        cpp << "        case " << name << "::Kind::" << suffix(c) << ": save(ar, g.value(" << tag(c) << ", v)); break;\n";
+    cpp << "        }\n    }\n}\n\n" << load << " {\n"
+        << "    " << name << " decoded{g.get_allocator()};\n"
+        << R"(    const auto readSize = [&ar]() -> uint32_t {
+        const auto n = ar.readNumber();
+        if (!(n >= 0 && n <= UINT32_MAX) || n != static_cast<uint32_t>(n))
+            throw std::runtime_error("Invalid graph archive size");
+        return static_cast<uint32_t>(n);
+    };
+    const auto size = readSize();
+    auto edges = readSize();
+)"
+        << "    uint32_t counts[" << count << "];\n    for (auto& n : counts) n = readSize();\n"
+        << "    for (uint32_t i = 0; i < size; ++i) {\n        const auto kind = readSize();\n        const auto parent = readSize();\n"
+        << "        if (kind >= " << count << " || counts[kind] == 0) throw std::runtime_error(\"Invalid graph archive kind\");\n"
+        << "        --counts[kind];\n        if (parent != decoded.null_vertex()) {\n"
+        << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n"
+        << "        const auto readVertex = [&](auto tag) {\n            const auto v = decoded.add_vertex(tag, "
+        << (takesName ? "{}, " : "") << "parent);\n";
+    for (const auto& c : model.components) cpp << "            load(ar, decoded.get" << suffix(c) << "(v));\n";
+    cpp << "            load(ar, decoded.value(tag, v));\n        };\n        switch (kind) {\n";
+    for (size_t i = 0; i != count; ++i) cpp << "        case " << i << ": readVertex(" << tag(model.alternatives[i]) << "); break;\n";
+    cpp << "        }\n    }\n    if (edges) throw std::runtime_error(\"Invalid graph archive edge count\");\n"
+        << "    for (auto n : counts) if (n) throw std::runtime_error(\"Invalid graph archive kind count\");\n"
+        << "    g = std::move(decoded);\n}\n";
+    if (!ts) return;
+
+    const ArchiveScript writer{graph, archiveInterface(graph, archive, "OutputArchive"), imports, true};
+    const ArchiveScript reader{graph, archiveInterface(graph, archive, "InputArchive"), imports, false};
+    const auto number = "a." + archiveMethod(writer.api, "writeNumber");
+    const auto kinds = name + "Value.";
+    *ts << "\nexport function save" << name << " (a: OutputArchive, g: " << name << "): void {\n"
+        << "    let edges = 0;\n    const counts = new Array<number>(" << count << ").fill(0);\n"
+        << "    for (const v of g.v()) { edges += g.od(v); ++counts[g.w(v)]; }\n"
+        << "    " << number << "(g.nv());\n    " << number << "(edges);\n    for (const n of counts) " << number << "(n);\n"
+        << "    for (const v of g.v()) {\n        " << number << "(g.w(v));\n        " << number << "(g.getParent(v));\n";
+    for (const auto& c : model.components) writer.value(*ts, c.valueType, "g.get" + suffix(c) + "(v)", "        ");
+    *ts << "        switch (g.w(v)) {\n";
+    for (const auto& c : model.alternatives) {
+        const auto kind = kinds + suffix(c);
+        *ts << "        case " << kind << ":\n";
+        writer.value(*ts, c.valueType, "g.value(" + kind + ", v)", "            ");
+        *ts << "            break;\n";
+    }
+    *ts << "        }\n    }\n}\n\nexport function load" << name << " (a: InputArchive, g: " << name << "): void {\n"
+        << "    const decoded = new " << name << "();\n    const size = cc$readSize(a);\n    let edges = cc$readSize(a);\n"
+        << "    const counts = Array.from({ length: " << count << " }, () => cc$readSize(a));\n"
+        << "    for (let i = 0; i < size; ++i) {\n        const kind = cc$readSize(a);\n        const parent = cc$readSize(a);\n"
+        << "        if (kind >= counts.length || !counts[kind]) throw new RangeError('Invalid graph archive kind');\n        --counts[kind];\n"
+        << "        if (parent !== decoded.N) {\n            if (parent >= i || !edges) throw new RangeError('Invalid graph archive parent');\n            --edges;\n        }\n";
+    std::string arguments;
+    for (const auto& c : model.components) {
+        const auto component = "component" + suffix(c);
+        reader.value(*ts, c.valueType, component, "        ", true);
+        arguments += ", " + component;
+    }
+    *ts << "        switch (kind) {\n";
+    for (const auto& c : model.alternatives) {
+        const auto kind = kinds + suffix(c);
+        *ts << "        case " << kind << ": {\n";
+        reader.value(*ts, c.valueType, "payload", "            ", true);
+        *ts << "            decoded.addVertex(" << kind << ", payload" << arguments << ", parent);\n            break;\n        }\n";
+    }
+    *ts << "        }\n    }\n    if (edges || counts.some(n => n !== 0)) throw new RangeError('Invalid graph archive counts');\n"
+        << "    g[cc$adopt" << name << "](decoded);\n}\n";
+}
+
+} // namespace cc::codegen

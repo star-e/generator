@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 21 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphTypes.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h` 和 `graph-dfs.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 23 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h` 和 `graph-dfs.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -208,6 +208,10 @@ C++ 索引图为每个组件生成一个按顶点编号访问的 PMR 数组。`L
 `addressable_graph;` 在 `parent_graph;` 上启用 `locate(refPath, start)`、`exists(refPath, start)` 和 `path(v)`。查找从指定顶点开始，起点默认为虚根 `null_vertex()`，前导 `/` 始终从虚根开始。`.` 保留当前位置，`..` 向上一级，连续和末尾的分隔符会被跳过。空字符串、缺失的路径段、越过虚根均返回 `null_vertex()`。`path(v)` 用图的内存资源返回绝对路径，传入虚根得到空字符串，其他越界编号会触发 `std::out_of_range`。路径按当前的节点名称计算，祖先改名对后代立即生效。[引擎路径规则](../../cocos4/cocos/rendering/custom/graph.ts) · [C++17 路径测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = this.N)` 指定起点，用 `path(v)` 生成绝对路径。路径段取自 `named_graph` 指定的名称组件。同一父节点下有重复名称时，查询返回最先插入的匹配项。查找失败返回 `g.N`，`path(g.N)` 返回空字符串，其他无效的顶点编号触发 `RangeError`。消费测试在 TS 中重建 C++ 用例的顶点和父子关系，逐项比较绝对路径和查询结果。[TS 寻址测试](../tests/consumer/records/layout-graph-consumer.ts.in)
+
+在 `layout-graph.spec` 中，`@serialize graph LayoutGraph` 和相应的 `@serialize struct` 声明共同定义图归档。四个头部数值依次为顶点数、边数、阶段数和相位数。接下来按顶点编号写类别、父编号、名称、描述符库和载荷；根的父编号为 `0xFFFFFFFF`。描述符映射的键在 TS 内存中使用 JSON 字符串，在归档中按索引结构的字段顺序写入。`UniformBlock` 的外部 TS 编解码函数由 `archive from` 指向引擎模块。读入整张图并核对类别和边的计数后，两端才替换目标图。[布局声明](../spec/render/layout-graph.spec) · [外部类型绑定](../spec/extern/uniform-block.spec)
+
+互操作测试使用引擎提交 `81f9296d` 的 TS 写入器生成的 628 字节固定样本，包含空图和一片有两个根的森林。C++ 和 TS 均读取该样本，并分别写出与其逐字节一致的数据。用例覆盖同名相位、两种描述符映射、含成员的 uniform block 和着色器集合。字符串沿用引擎 `BinaryArchive` 的单字节编码。[旧格式样本](../tests/consumer/records/fixtures/layout-graph.bin) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 

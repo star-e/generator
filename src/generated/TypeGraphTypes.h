@@ -111,6 +111,7 @@ struct ComponentInfo {
 };
 
 struct GraphType {
+    bool serializable = false;
     TypeId vertexType;
     bool indexedVertices = false;
     bool vertexList = false;
@@ -194,6 +195,7 @@ struct TypeNode {
     std::string cppHeader;
     std::optional<std::string> typescriptName;
     std::string typescriptModule;
+    std::string typescriptArchiveModule;
     ContainerKind typescriptContainer = ContainerKind::None;
     bool typescriptJsonMapKey = false;
     std::vector<TypeId> templateParameters;

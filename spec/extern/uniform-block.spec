@@ -4,5 +4,5 @@ namespace cc::gfx {
 }
 
 binding typescript {
-    UniformBlock => UniformBlock from "cocos/gfx";
+    UniformBlock => UniformBlock from "cocos/gfx" archive from "cocos/rendering/custom/serialization";
 }

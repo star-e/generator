@@ -75,6 +75,9 @@ if(hierarchyHeader MATCHES "locate_child[(]" OR NOT hierarchyHeader MATCHES "get
 endif()
 string(REPLACE "hierarchy_graph { storage: shared_edges; }" "" flat "${hierarchyOnly}")
 file(WRITE "${layoutSpec}" "${flat}")
+expect_failure(2 "graph archive requires" ${generate})
+string(REPLACE "@serialize graph" "graph" flat "${flat}")
+file(WRITE "${layoutSpec}" "${flat}")
 run(${generate})
 file(READ "${layoutHeader}" flatHeader)
 if(flatHeader MATCHES "child_links[(]|get_parent[(]|num_children[(]|VertexLinks|out_edges[(]|out_degree[(]|using Edge ="
@@ -87,6 +90,7 @@ if(script MATCHES "from './graph'|numChildren [(]" OR NOT script MATCHES "j<T ex
 endif()
 foreach(capability IN ITEMS mutable_graph vertex_list_graph)
     string(REPLACE "${capability};" "" subset "${layout}")
+    string(REPLACE "@serialize graph" "graph" subset "${subset}")
     string(REPLACE "Name_" "caption_" subset "${subset}")
     file(WRITE "${layoutSpec}" "${subset}")
     run(${generate})

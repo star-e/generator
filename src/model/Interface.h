@@ -89,6 +89,7 @@ struct GraphComponent {
 };
 
 struct GraphDeclaration {
+    bool serializable{};
     std::string vertexAlias;
     std::optional<TypeRef> vertexType;
     bool indexed{};

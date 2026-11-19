@@ -251,6 +251,7 @@ TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
 
 GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const std::string& scope, ModuleId owner) {
     GraphType result;
+    result.serializable = syntax.serializable;
     const auto descriptor = graph.findType(qualify(scope, syntax.vertexAlias));
     result.vertexType = canonicalType(graph, {descriptor, syntax.vertexType->location});
     result.indexedVertices = syntax.indexed;
@@ -385,6 +386,9 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                     !(isEnum && input.modelOnly)) reject("expected an external type");
                 node.typescriptName = rule.target;
                 node.typescriptModule = rule.from.generic_string();
+                if (!rule.archiveFrom.empty() && !std::holds_alternative<ExternalTypeNode>(node.data))
+                    reject("external archive codec requires an external type");
+                node.typescriptArchiveModule = rule.archiveFrom.generic_string();
             } else if (rule.kind == BindingTarget::interfaceType && std::holds_alternative<InterfaceType>(node.data)) {
                 if (rule.helpers || !rule.renamedFrom.empty()) reject("editor settings options on an interface method binding");
                 const auto decl = std::ranges::find(input.syntax.declarations, node.name, &Declaration::name);

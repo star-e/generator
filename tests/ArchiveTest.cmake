@@ -28,6 +28,7 @@ set(baselineFiles
 set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/rendering/custom/layout-graph.ts
     cocos/rendering/custom/graph-dfs.ts
     native/cocos/base/GraphDFS.h
+    native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.h native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp
     native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp
     native/cocos/renderer/pipeline/custom/RenderCommonTypes.h native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp)
 list(SORT expectedFiles)

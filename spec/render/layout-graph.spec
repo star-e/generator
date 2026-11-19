@@ -1,4 +1,5 @@
 module LayoutGraph;
+import ArchiveInterface;
 import Gfx;
 import RenderCommon;
 import Strings;
@@ -25,14 +26,14 @@ namespace cc::render {
         INPUT_ATTACHMENT,
     }
 
-    struct Descriptor {
+    @serialize struct Descriptor {
         type: gfx::Type = gfx::Type::UNKNOWN;
         count: uint32_t = 1;
 
         constructor(type);
     }
 
-    struct DescriptorBlock {
+    @serialize struct DescriptorBlock {
         readonly descriptors: ccstd::map<ccstd::string, Descriptor>;
         readonly uniformBlocks: ccstd::map<ccstd::string, gfx::UniformBlock>;
         capacity: uint32_t = 0;
@@ -48,7 +49,7 @@ namespace cc::render {
         count: uint32_t = 0;
     }
 
-    @comparison("<") struct DescriptorBlockIndex {
+    @serialize @comparison("<") struct DescriptorBlockIndex {
         updateFrequency: UpdateFrequency = UpdateFrequency::PER_INSTANCE;
         parameterType: ParameterType = ParameterType::CONSTANTS;
         descriptorType: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;
@@ -57,7 +58,7 @@ namespace cc::render {
         constructor(updateFrequency, parameterType, descriptorType, visibility);
     }
 
-    @comparison("<") struct DescriptorGroupBlockIndex {
+    @serialize @comparison("<") struct DescriptorGroupBlockIndex {
         updateFrequency: UpdateFrequency = UpdateFrequency::PER_INSTANCE;
         parameterType: ParameterType = ParameterType::CONSTANTS;
         descriptorType: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;
@@ -70,12 +71,12 @@ namespace cc::render {
         constructor(updateFrequency, parameterType, descriptorType, visibility, accessType, viewDimension, sampleType, format);
     }
 
-    @requireAllocator struct DescriptorDB {
+    @serialize @requireAllocator struct DescriptorDB {
         readonly blocks: ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>;
         readonly groupBlocks: ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorBlock>;
     }
 
-    @requireAllocator struct RenderPhase {
+    @serialize @requireAllocator struct RenderPhase {
         readonly shaders: PmrTransparentSet<ccstd::pmr::string>;
     }
 
@@ -89,7 +90,7 @@ namespace cc::render {
     @tag struct Descriptors_ {}
     @tag struct RenderStage_ {}
     @tag struct RenderPhase_ {}
-    graph LayoutGraph {
+    @serialize graph LayoutGraph {
         vertex_descriptor Vertex = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
