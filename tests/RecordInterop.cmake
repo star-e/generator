@@ -10,6 +10,7 @@ binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import Strings; import Text; import ArchiveInterface;
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
+    struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
     @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
     @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; minor: uint32_t = 0; }
@@ -20,7 +21,8 @@ namespace cc {
         mutable_graph;
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
     }
-}")
+}
+binding typescript { ::ccstd::vector<::uint32_t> => Uint32Array; }")
 set(workspace "${work}/config/workspace.json")
 file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)

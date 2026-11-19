@@ -1,6 +1,7 @@
 #include "codegen/InterfaceEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
+#include "model/TypeName.h"
 
 #include <set>
 #include <sstream>
@@ -12,34 +13,40 @@ namespace {
 constexpr auto lintBegin = "// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
 constexpr auto lintEnd = "// NOLINTEND(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
 
-const TypeNode& baseType(const TypeGraph& graph, TypeId id) {
-    while (const auto* pointer = std::get_if<PointerType>(&graph.node(id).data)) id = pointer->pointee;
-    return graph.node(id);
+const std::string& tsType(const TypeGraph& graph, const TypeUse& use, TypeImports& imports) {
+    const auto& node = graph.node(use.type);
+    if (!node.typescriptName) throw std::runtime_error(use.location.describe() + ": no TS mapping for " + qualifiedTypeName(graph, use.type));
+    if (!node.typescriptModule.empty()) imports[node.typescriptModule].insert(*node.typescriptName);
+    return *node.typescriptName;
 }
 
-const std::string& tsType(const TypeGraph& graph, const TypeUse& use) {
-    const auto& name = graph.node(use.type).typescriptName;
-    if (!name) throw std::runtime_error(use.location.describe() + ": no TS mapping for " + baseType(graph, use.type).qualifiedName);
-    return *name;
-}
-
-void cppDeclarator(std::ostream& out, const TypeGraph& graph, TypeId id, const std::string& name) {
+void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use, const std::string& name,
+                   ModuleId owner, std::set<std::string>& headers) {
+    auto id = use.type;
     size_t pointers = 0;
     while (const auto* pointer = std::get_if<PointerType>(&graph.node(id).data)) {
         ++pointers;
         id = pointer->pointee;
     }
-    out << graph.node(id).qualifiedName << ' ' << std::string(pointers, '*') << name;
+    const auto type = formatTypeName(graph, id, [&](const TypeNode& decl) {
+        if (decl.qualifiedName.empty()) throw std::runtime_error(use.location.describe() + ": unsupported C++ interface type");
+        if (decl.module != ModuleId{} && decl.module != owner && decl.cppHeader.empty()) {
+            throw std::runtime_error(use.location.describe() + ": missing C++ header for imported type " + decl.qualifiedName);
+        }
+        if (!decl.cppHeader.empty()) headers.insert(decl.cppHeader);
+        return qualifyIfShadowed(graph, decl, graph.modules.at(owner.value), decl.qualifiedName);
+    });
+    out << type << ' ' << std::string(pointers, '*') << name;
 }
 
-void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method) {
+void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers) {
     out << "    virtual ";
-    cppDeclarator(out, graph, method.result.type, method.name);
+    cppDeclarator(out, graph, method.result, method.name, owner, headers);
     out << '(';
     for (size_t i = 0; i < method.parameters.size(); ++i) {
         const auto& param = method.parameters[i];
         if (i) out << ", ";
-        cppDeclarator(out, graph, param.type.type, param.name);
+        cppDeclarator(out, graph, param.type, param.name, owner, headers);
     }
     out << ')';
     if (method.isConst) out << " const";
@@ -47,7 +54,7 @@ void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& meth
     out << " = 0;\n";
 }
 
-void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl) {
+void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, std::set<std::string>& headers) {
     const auto& name = decl.name;
     out << "class " << name << " {\npublic:\n"
         << "    " << name << "() noexcept = default;\n"
@@ -56,11 +63,11 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
         << "    " << name << "& operator=(" << name << "&& rhs) = delete;\n"
         << "    " << name << "& operator=(" << name << " const& rhs) = delete;\n"
         << "    virtual ~" << name << "() noexcept = default;\n\n";
-    for (const auto& method : std::get<InterfaceType>(decl.data).methods) cppMethod(out, graph, method);
+    for (const auto& method : std::get<InterfaceType>(decl.data).methods) cppMethod(out, graph, method, decl.module, headers);
     out << "};\n\n";
 }
 
-void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl) {
+void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, TypeImports& imports) {
     out << "export interface " << decl.name << " {\n";
     for (const auto& method : std::get<InterfaceType>(decl.data).methods) {
         if (!method.typescriptName) continue;
@@ -68,9 +75,9 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
             if (i) out << ", ";
-            out << param.name << ": " << tsType(graph, param.type);
+            out << param.name << ": " << tsType(graph, param.type, imports);
         }
-        out << "): " << tsType(graph, method.result) << ";\n";
+        out << "): " << tsType(graph, method.result, imports) << ";\n";
     }
     out << "}\n";
 }
@@ -82,28 +89,13 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
     const auto& module = graph.modules.at(owner.value);
     std::set<std::string> headers;
     TypeImports typeImports;
-    auto collectDependencies = [&](const TypeUse& type, bool visible) {
-        const auto& node = graph.node(type.type);
-        if (visible && node.typescriptName && !node.typescriptModule.empty()) {
-            typeImports[node.typescriptModule].insert(*node.typescriptName);
-        }
-        const auto& base = baseType(graph, type.type);
-        if (base.qualifiedName.empty()) throw std::runtime_error(type.location.describe() + ": unsupported C++ interface type");
-        const auto& header = base.cppHeader;
-        if (base.module != ModuleId{} && base.module != owner && header.empty()) {
-            throw std::runtime_error(type.location.describe() + ": missing C++ header for imported type " + base.qualifiedName);
-        }
-        if (!header.empty()) headers.insert(header);
-    };
+    std::ostringstream cppBody, tsBody;
     for (auto id : module.declarations) {
         const auto& decl = graph.node(id);
-        const auto* interfaceType = std::get_if<InterfaceType>(&decl.data);
-        if (!interfaceType) throw std::runtime_error("expected an interface declaration for " + decl.qualifiedName);
-        for (const auto& method : interfaceType->methods) {
-            const bool visible = method.typescriptName.has_value();
-            collectDependencies(method.result, visible);
-            for (const auto& param : method.parameters) collectDependencies(param.type, visible);
-        }
+        if (!std::holds_alternative<InterfaceType>(decl.data)) throw std::runtime_error("expected an interface declaration for " + decl.qualifiedName);
+        cppInterface(cppBody, graph, decl, headers);
+        if (id != module.declarations.front()) tsBody << '\n';
+        tsInterface(tsBody, graph, decl, typeImports);
     }
 
     std::ostringstream fwd, header, impl, ts;
@@ -121,13 +113,9 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
         for (const auto& name : module.namespaces) *out << "\nnamespace " << name << " {\n";
         *out << '\n';
     }
-    for (size_t i = 0; i < module.declarations.size(); ++i) {
-        const auto& decl = graph.node(module.declarations[i]);
-        fwd << "class " << decl.name << ";\n";
-        cppInterface(header, graph, decl);
-        if (i) ts << '\n';
-        tsInterface(ts, graph, decl);
-    }
+    for (auto id : module.declarations) fwd << "class " << graph.node(id).name << ";\n";
+    header << cppBody.view();
+    ts << tsBody.view();
     fwd << '\n';
     for (auto* out : {&fwd, &header, &impl}) {
         for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) {

@@ -79,14 +79,14 @@ std::string bindingName(const std::string& qualified) {
 }
 
 [[noreturn]] void invalidBinding(const TypeScriptBinding& rule, std::string_view backend) {
-    throw std::runtime_error(rule.location.describe() + ": unsupported " + std::string(backend) + " binding for " + rule.source);
+    throw std::runtime_error(rule.source.location.describe() + ": unsupported " + std::string(backend) + " binding for " + rule.source.name);
 }
 
 SettingsBinding settingsBinding(const Module& module) {
     SettingsBinding result;
     for (const auto& rule : module.bindings.typescript) {
-        const auto name = bindingName(rule.source);
         if (rule.kind == BindingTarget::type) continue;
+        const auto name = bindingName(rule.source.name);
         if (rule.kind == BindingTarget::constEnum || rule.kind == BindingTarget::classType || rule.names || !rule.methods.empty())
             invalidBinding(rule, "settings");
         if (rule.kind == BindingTarget::interfaceType && !rule.helpers) result.interfaceOnly.insert(name);
@@ -138,8 +138,8 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
     output.poolModule = bindings.poolModule;
     std::set<std::string> poolMembers;
     for (const auto& rule : bindings.typescript) {
-        const auto name = bindingName(rule.source);
         if (rule.kind == BindingTarget::type) continue;
+        const auto name = bindingName(rule.source.name);
         if (!output.typescript || rule.kind == BindingTarget::interfaceType || rule.registerEnum || !rule.renamedFrom.empty())
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
@@ -147,9 +147,9 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
         if (rule.reset == ResetBinding::defaults) output.resetToDefaults.insert(name);
         if (rule.reset == ResetBinding::constructor) output.resetFromConstructor.insert(name);
         if (rule.pool) {
-            if (output.poolModule.empty()) throw std::runtime_error(rule.location.describe() + ": pool binding requires poolModule");
+            if (output.poolModule.empty()) throw std::runtime_error(rule.source.location.describe() + ": pool binding requires poolModule");
             if (!poolMembers.insert(rule.pool->member).second)
-                throw std::runtime_error(rule.location.describe() + ": duplicate pool member " + rule.pool->member);
+                throw std::runtime_error(rule.source.location.describe() + ": duplicate pool member " + rule.pool->member);
             output.pools.emplace(name, *rule.pool);
         }
     }

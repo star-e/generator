@@ -10,13 +10,6 @@
 
 namespace cc::codegen {
 
-struct TypeRef {
-    SourceLocation location;
-    std::string name;
-    bool pointer{};
-    std::vector<TypeRef> arguments;
-};
-
 struct Parameter {
     TypeRef type;
     std::string name;

@@ -3,6 +3,7 @@
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
 #include "model/IntegerLiteral.h"
+#include "model/TypeName.h"
 
 #include <algorithm>
 #include <cctype>
@@ -59,6 +60,11 @@ BoundField bindField(const TypeGraph& graph, const FieldInfo& field, Imports& im
         }
         const auto& target = graph.node(std::get<TypeId>(ptr->arguments.front()));
         return {FieldKind::resource, typeName(target, field, imports) + " | null", "null"};
+    }
+    if (std::holds_alternative<TemplateInstanceType>(node.data)) {
+        if (!node.typescriptName) invalid(field, "missing TypeScript binding for " + qualifiedTypeName(graph, field.type.type));
+        if (!field.initializer.empty()) invalid(field, "expected a default-constructed TypedArray field");
+        return {FieldKind::scalar, *node.typescriptName, "new " + *node.typescriptName + "(0)"};
     }
     const auto name = typeName(node, field, imports);
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {

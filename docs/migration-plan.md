@@ -61,6 +61,7 @@ binding typescript {
 | 用途 | 模块内的实际规则 |
 | --- | --- |
 | 外部类型 | `cc::gfx::SampleCount => "gfx.SampleCount";` 和 `Light => Light from "cocos/render-scene/scene";`。导入路径相对于工作区输出根目录，后端按消费文件的位置生成相对导入。 |
+| 具体模板实例 | `ccstd::vector<uint8_t> => Uint8Array;` 只匹配该模板和这组类型实参。`ccstd::vector<uint32_t>` 可以单独绑定到 `Uint32Array`。目标使用 ES2015 内置 TypedArray 名称，字段默认值为相应类型的零长度新数组。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
 | 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`Descriptor => class { reset constructor; };` 按构造参数重置。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |

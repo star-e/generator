@@ -160,7 +160,7 @@ private:
         return parts;
     }
 
-    std::string bindingName() {
+    std::string qualifiedTypeName() {
         std::string name = accept("::") ? "::" : "";
         name += identifier();
         while (accept("::")) name += "::" + identifier();
@@ -212,15 +212,18 @@ private:
     }
 
     TypeScriptBinding typeScriptBinding() {
-        TypeScriptBinding rule{.location = location, .source = bindingName()};
+        TypeScriptBinding rule{.source = type()};
         expect("=>");
         if (accept("interface")) rule.kind = BindingTarget::interfaceType;
         else if (accept("class")) rule.kind = BindingTarget::classType;
         else if (accept("const")) { expect("enum"); rule.kind = BindingTarget::constEnum; }
         else if (accept("enum")) rule.kind = BindingTarget::enumeration;
         else {
-            if (accept("extern") && !accept("class") && !accept("interface") && !accept("enum"))
-                fail("expected an external class, interface or enum binding");
+            if (accept("extern")) {
+                if (!rule.source.arguments.empty()) fail("expected a built-in TypedArray target for a template instance");
+                if (!accept("class") && !accept("interface") && !accept("enum"))
+                    fail("expected an external class, interface or enum binding");
+            }
             rule.target = token == "\"" ? quotedString("TypeScript type") : identifier();
             if (rule.target.empty()) fail("empty TypeScript type binding");
             if (accept("from")) {
@@ -255,7 +258,7 @@ private:
                 } else {
                     expect("record");
                     const auto start = location;
-                    const auto name = bindingName();
+                    const auto name = qualifiedTypeName();
                     if (!rules.jsbRecords.emplace(name, start).second) fail("duplicate JSB record " + name);
                 }
                 expect(";");
@@ -511,8 +514,7 @@ private:
     }
 
     TypeRef type() {
-        TypeRef result{location, identifier()};
-        while (accept("::")) result.name += "::" + identifier();
+        TypeRef result{location, qualifiedTypeName()};
         if (accept("<")) {
             do {
                 result.arguments.push_back(type());

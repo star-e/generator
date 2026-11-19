@@ -1,5 +1,6 @@
 #include "model/TypeGraphBuilder.h"
 #include "model/IntegerLiteral.h"
+#include "model/TypeName.h"
 
 #include <algorithm>
 #include <bit>
@@ -62,6 +63,7 @@ void registerExternalTypes(TypeGraph& graph, const TypeTable& types) {
 
 TypeId resolveName(const TypeGraph& graph, const std::string& name, const SourceLocation& location,
                    std::string scope, ModuleId owner) {
+    if (name.starts_with("::")) return resolveName(graph, name.substr(2), location, {}, owner);
     for (;;) {
         const auto id = graph.findType(qualify(scope, name));
         if (id != TypeId{}) {
@@ -87,6 +89,8 @@ TypeId resolveName(const TypeGraph& graph, const std::string& name, const Source
 TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, ModuleId owner) {
     auto id = resolveName(graph, use.name, use.location, scope, owner);
     if (!use.arguments.empty()) {
+        if (!std::holds_alternative<ExternalTypeNode>(graph.node(id).data))
+            throw std::runtime_error(use.location.describe() + ": expected an external template for " + graph.node(id).qualifiedName);
         std::vector<TemplateArgument> arguments;
         for (const auto& argument : use.arguments) arguments.emplace_back(resolve(graph, argument, scope, owner).type);
         id = graph.makeTemplateInstance(id, std::move(arguments));
@@ -336,33 +340,38 @@ using InterfaceBindings = std::map<uint32_t, MethodBindings>;
 
 InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inputs, const std::vector<std::string>& scopes) {
     InterfaceBindings methods;
-    std::set<uint32_t> bound;
+    std::map<uint32_t, SourceLocation> bound;
     for (uint32_t i = 0; i < inputs.size(); ++i) {
         const auto& input = inputs[i];
         const ModuleId owner{i};
-        auto findSource = [&](const std::string& name, const SourceLocation& at) {
-            if (name.starts_with("::")) return resolveName(graph, name.substr(2), at, {}, owner);
-            return resolveName(graph, name, at, scopes[i], owner);
-        };
         std::set<uint32_t> jsbRecords;
         for (const auto& [name, at] : input.syntax.bindings.jsbRecords) {
-            const auto id = findSource(name, at);
+            const auto id = resolveName(graph, name, at, scopes[i], owner);
             const auto& node = graph.node(id);
             if (node.module != owner || !std::holds_alternative<RecordType>(node.data))
                 throw std::runtime_error(at.describe() + ": expected a local JSB record " + name);
             if (!jsbRecords.insert(id.value).second) throw std::runtime_error(at.describe() + ": duplicate JSB record " + name);
         }
         for (const auto& rule : input.syntax.bindings.typescript) {
-            const auto id = findSource(rule.source, rule.location);
+            const auto id = resolve(graph, rule.source, scopes[i], owner).type;
             auto& node = graph.getNode(id.value);
+            const auto& at = rule.source.location;
             auto reject = [&](const std::string& reason) {
-                throw std::runtime_error(rule.location.describe() + ": " + reason + " for " + node.qualifiedName);
+                throw std::runtime_error(at.describe() + ": " + reason + " for " + qualifiedTypeName(graph, id));
             };
             if (node.module != ModuleId{} && node.module != owner) reject("bind the type in its declaring module");
-            if (!bound.insert(id.value).second) reject("duplicate TypeScript binding");
+            const auto [first, inserted] = bound.emplace(id.value, at);
+            if (!inserted) {
+                throw std::runtime_error(at.describe() + ": duplicate TypeScript binding for " + qualifiedTypeName(graph, id) +
+                                         " (first bound at " + first->second.describe() + ")");
+            }
             const bool isEnum = std::holds_alternative<EnumType>(node.data);
             const bool isRecord = std::holds_alternative<RecordType>(node.data);
-            if (rule.kind == BindingTarget::type) {
+            if (std::holds_alternative<TemplateInstanceType>(node.data)) {
+                if (rule.kind != BindingTarget::type || !isTypedArrayName(rule.target) || !rule.from.empty())
+                    reject("expected a built-in ES2015 TypedArray target without an import");
+                node.typescriptName = rule.target;
+            } else if (rule.kind == BindingTarget::type) {
                 if (!std::holds_alternative<BuiltinType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data) &&
                     !(isEnum && input.modelOnly)) reject("expected an external type");
                 node.typescriptName = rule.target;

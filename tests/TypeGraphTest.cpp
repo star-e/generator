@@ -63,6 +63,28 @@ void checkScalarBindings() {
             "explicit binding did not override the default scalar binding");
 }
 
+void checkTemplateBindings() {
+    const auto module = parseModule("buffers.spec", R"(
+        module Buffers;
+        namespace vendor {
+            struct Element {}
+            interface Input { Buffer<Element, ::Element> get(); }
+        }
+        binding typescript { Buffer<Element, ::Element> => Uint8Array; }
+    )");
+    auto graph = buildTypeGraph({{module, {}}}, {{"vendor::Buffer", {}}, {"Element", {}}});
+    const auto buffer = graph.findType("vendor::Buffer");
+    const auto local = graph.findType("vendor::Element");
+    const auto global = graph.findType("Element");
+    const auto bound = graph.makeTemplateInstance(buffer, {local, global});
+    const auto other = graph.makeTemplateInstance(buffer, {global, local});
+    const auto& input = std::get<InterfaceType>(graph.node(graph.findType("vendor::Input")).data);
+    require(input.methods.at(0).result.type == bound && graph.node(bound).typescriptName == "Uint8Array",
+            "method and binding resolved to different template instances");
+    require(!graph.node(other).typescriptName && !graph.node(buffer).typescriptName,
+            "exact binding also bound the template or a different argument list");
+}
+
 void checkArchive(const std::filesystem::path& spec) {
     const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}},
                           {"double", {.builtin = true}}, {"std::string_view", {"string_view", "string"}},
@@ -287,6 +309,7 @@ int main(int argc, char** argv) {
         const std::filesystem::path specs = argv[1];
         checkSourceLocation();
         checkScalarBindings();
+        checkTemplateBindings();
         checkArchive(specs / "render/archive.spec");
         checkSettings(specs / "render/render-settings.spec");
         checkImports(specs);

@@ -4,6 +4,7 @@
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
 #include "model/IntegerLiteral.h"
+#include "model/TypeName.h"
 
 #include <algorithm>
 #include <iterator>
@@ -43,14 +44,7 @@ std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModu
         scope += ns + "::";
         if (type.qualifiedName.starts_with(scope)) name = type.qualifiedName.substr(scope.size());
     }
-    // Qualify from the root if a closer declaration shadows the shortened name.
-    scope.clear();
-    for (auto it = module.namespaces.begin(); it != module.namespaces.end(); ++it) {
-        scope += *it + "::";
-        const auto other = graph.findType(scope + name);
-        if (other != TypeId{} && graph.node(other).qualifiedName != type.qualifiedName) return "::" + type.qualifiedName;
-    }
-    return name;
+    return qualifyIfShadowed(graph, type, module, std::move(name));
 }
 
 [[noreturn]] void invalid(const FieldInfo& field, const std::string& reason) {
@@ -74,20 +68,10 @@ bool numericDefault(const std::string& type, const std::string& literal) {
 }
 
 std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
-    const auto& node = graph.node(id);
-    if (const auto* ptr = std::get_if<PointerType>(&node.data)) return nativeType(graph, module, ptr->pointee, deps) + "*";
-    if (const auto* instance = std::get_if<TemplateInstanceType>(&node.data)) {
-        std::string name = nativeType(graph, module, instance->declaration, deps) + "<";
-        for (size_t i = 0; i < instance->arguments.size(); ++i) {
-            if (i) name += ", ";
-            const auto& arg = instance->arguments[i];
-            if (const auto* type = std::get_if<TypeId>(&arg)) name += nativeType(graph, module, *type, deps);
-            else name += std::get<std::string>(arg);
-        }
-        return name + ">";
-    }
-    if (!node.cppHeader.empty()) deps.headers.insert(node.cppHeader);
-    return cppName(graph, node, module);
+    return formatTypeName(graph, id, [&](const TypeNode& type) {
+        if (!type.cppHeader.empty()) deps.headers.insert(type.cppHeader);
+        return cppName(graph, type, module);
+    });
 }
 
 Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field, Dependencies& deps,
@@ -109,14 +93,13 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         return m;
     }
     const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
-    if (instance && graph.node(instance->declaration).qualifiedName == "ccstd::vector" &&
-        instance->arguments.size() == 1 && instance->arguments.front() == TemplateArgument{graph.findType("uint8_t")}) {
-        if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed byte vector");
+    if (instance && node.typescriptName) {
+        if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed TypedArray field");
         m.cpp = nativeType(graph, module, field.type.type, deps);
         deps.headers.insert("utility");
         m.move = true;
-        m.ts = "Uint8Array";
-        m.tsDefault = "new Uint8Array(0)";
+        m.ts = *node.typescriptName;
+        m.tsDefault = "new " + m.ts + "(0)";
         return m;
     }
     if (!emitTs && !field.isNullable) {
@@ -125,6 +108,8 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
     }
     const auto* ptr = std::get_if<PointerType>(&node.data);
     if (ptr || instance) {
+        if (instance && !field.isNullable)
+            invalid(field, "missing TypeScript binding for " + qualifiedTypeName(graph, field.type.type));
         if (!field.isNullable || (!field.initializer.empty() && field.initializer != "nullptr" && field.initializer != "null")) {
             invalid(field, "expected a nullable resource with a null default");
         }
@@ -500,7 +485,7 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members,
         for (uint32_t i = 0; i < members.size(); ++i) {
             const auto& m = members[i];
             if (keepOnReset.contains(m.name)) {
-                if (m.ts == "Uint8Array") ts << "        // " << m.name << ": Uint8Array size unchanged\n";
+                if (isTypedArrayName(m.ts)) ts << "        // " << m.name << ": " << m.ts << " size unchanged\n";
                 continue;
             }
             const auto& value = std::ranges::find(order, i) != order.end() ? m.name : m.tsDefault;
