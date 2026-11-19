@@ -144,7 +144,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`resetFromConstructor` 使 TS 的 `reset(type)` 更新类型，并把 `count` 恢复为声明值。TS 名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec) · [TS 投影](../spec/render/layout-graph.json)
 
-`DescriptorBlockIndex` 从 `RenderCommon` 引入 `UpdateFrequency` 和 `ParameterType`，从 `Gfx` 引入 `ShaderStageFlagBit`。生成模块之间的枚举引用使用提供方配置的头文件和 TS 输出路径。声明上的 `@comparison("<")` 让 C++ 后端按字段声明顺序生成 C++ 的 `operator<`。该键依次比较 `updateFrequency`、`parameterType`、`descriptorType`、`visibility`。TS 构造函数以相同顺序写入字段，保留引擎用 `JSON.stringify(index)` 查表时的键字符串。[C++ 键测试](../tests/consumer/records/RecordConsumer.cpp) · [TS 键测试](../tests/consumer/records/consumer.cjs)
+`DescriptorBlockIndex` 从 `RenderCommon` 引入 `UpdateFrequency` 和 `ParameterType`，从 `Gfx` 引入 `ShaderStageFlagBit`。生成模块之间的枚举引用使用提供方配置的头文件和 TS 输出路径。声明上的 `@comparison("<")` 让 C++ 后端按字段声明顺序生成 `operator<`。该键依次比较 `updateFrequency`、`parameterType`、`descriptorType`、`visibility`。`DescriptorGroupBlockIndex` 在这四项之后依次比较 `accessType`、`viewDimension`、`sampleType`、`format`。两个索引的 TS 构造函数以相同顺序写入字段，保留引擎用 `JSON.stringify(index)` 查表时的键字符串。[C++ 键测试](../tests/consumer/records/RecordConsumer.cpp) · [TS 键测试](../tests/consumer/records/consumer.cjs)
 
 记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。JSON 管理具体输出，包括 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。
 

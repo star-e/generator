@@ -44,7 +44,11 @@
       "types": {
         "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "Type", "tsModule": "cocos/gfx" },
         "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ResolveMode", "tsModule": "cocos/gfx" },
-        "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ShaderStageFlagBit", "tsModule": "cocos/gfx" }
+        "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ShaderStageFlagBit", "tsModule": "cocos/gfx" },
+        "MemoryAccessBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "MemoryAccessBit", "tsModule": "cocos/gfx" },
+        "ViewDimension": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ViewDimension", "tsModule": "cocos/gfx" },
+        "SampleType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "SampleType", "tsModule": "cocos/gfx" },
+        "Format": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "Format", "tsModule": "cocos/gfx" }
       }
     },
     {

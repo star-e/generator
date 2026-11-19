@@ -265,6 +265,40 @@ bool checkDescriptorBlockIndex() {
     return true;
 }
 
+bool checkDescriptorGroupBlockIndex() {
+    using cc::gfx::Format;
+    using cc::gfx::MemoryAccessBit;
+    using cc::gfx::SampleType;
+    using cc::gfx::ShaderStageFlagBit;
+    using cc::gfx::ViewDimension;
+    using cc::render::DescriptorGroupBlockIndex;
+    // Change one field at a time, from the least significant to the most significant.
+    std::array<DescriptorGroupBlockIndex, 9> keys{};
+    keys[1].format = Format::ASTC_SRGBA_12X12;
+    keys[2].sampleType = SampleType::UINT;
+    keys[3].viewDimension = ViewDimension::TEX2D_ARRAY;
+    keys[4].accessType = MemoryAccessBit::READ_WRITE;
+    keys[5].visibility = ShaderStageFlagBit::FRAGMENT;
+    keys[6].descriptorType = DescriptorTypeOrder::SAMPLER;
+    keys[7].parameterType = ParameterType::UAV;
+    keys[8].updateFrequency = UpdateFrequency::PER_PASS;
+
+    ccstd::pmr::map<DescriptorGroupBlockIndex, size_t> blocks;
+    for (size_t i = keys.size(); i > 0; --i) {
+        if (!blocks.emplace(keys[i - 1], i - 1).second) return false;
+    }
+    const DescriptorGroupBlockIndex equivalent{UpdateFrequency::PER_INSTANCE, ParameterType::CONSTANTS,
+        DescriptorTypeOrder::UNIFORM_BUFFER, ShaderStageFlagBit::NONE, MemoryAccessBit::READ_ONLY,
+        ViewDimension::UNKNOWN, SampleType::FLOAT, Format::UNKNOWN};
+    const auto found = blocks.find(equivalent);
+    if (found == blocks.end() || found->second != 0) return false;
+    size_t expected = 0;
+    for (const auto& block : blocks) {
+        if (block.second != expected++) return false;
+    }
+    return true;
+}
+
 bool checkLayoutGraph();
 
 int main(int argc, char** argv) {
@@ -272,6 +306,7 @@ int main(int argc, char** argv) {
     if (argc != 1) return 2;
     if (!checkLayoutGraph()) return 9;
     if (!checkDescriptorBlockIndex()) return 10;
+    if (!checkDescriptorGroupBlockIndex()) return 12;
     const cc::ComparisonProbe first{1, 3}, second{2, 0}, same{1, 3};
     if (!(first == same && first != second && first < second && second > first) || same > first) return 11;
     using cc::render::getName;

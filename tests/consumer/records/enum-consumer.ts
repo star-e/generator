@@ -1,5 +1,5 @@
 import { AttachmentType, ClearValueType, LightingMode, ParameterType, ResolveFlags, ResourceFlags, TaskType, UpdateFrequency } from './types';
-import { ShaderStageFlagBit } from '../../gfx';
+import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, ViewDimension } from '../../gfx';
 import { ShiftProbe } from './shift-probe';
 import { DescriptorTypeOrder, LayoutType, RenderPassType } from './layout-graph';
 
@@ -14,6 +14,8 @@ export const layoutEnums = {
 
 export const descriptorBlockArgs = [UpdateFrequency.PER_PASS, ParameterType.UAV, DescriptorTypeOrder.DYNAMIC_STORAGE_BUFFER,
     ShaderStageFlagBit.VERTEX | ShaderStageFlagBit.FRAGMENT];
+export const descriptorGroupBlockArgs = [...descriptorBlockArgs, MemoryAccessBit.READ_WRITE, ViewDimension.TEX2D_ARRAY,
+    SampleType.UINT, Format.ASTC_SRGBA_12X12];
 
 export const resolveFlags = [ResolveFlags.NONE, ResolveFlags.COLOR, ResolveFlags.DEPTH, ResolveFlags.STENCIL];
 export const depthStencil = ResolveFlags.DEPTH | ResolveFlags.STENCIL;

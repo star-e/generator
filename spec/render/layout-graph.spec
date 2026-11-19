@@ -36,6 +36,19 @@ namespace cc::render {
         constructor(updateFrequency, parameterType, descriptorType, visibility);
     }
 
+    @comparison("<") struct DescriptorGroupBlockIndex {
+        updateFrequency: UpdateFrequency = UpdateFrequency::PER_INSTANCE;
+        parameterType: ParameterType = ParameterType::CONSTANTS;
+        descriptorType: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;
+        visibility: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
+        accessType: gfx::MemoryAccessBit = gfx::MemoryAccessBit::READ_ONLY;
+        viewDimension: gfx::ViewDimension = gfx::ViewDimension::UNKNOWN;
+        sampleType: gfx::SampleType = gfx::SampleType::FLOAT;
+        format: gfx::Format = gfx::Format::UNKNOWN;
+
+        constructor(updateFrequency, parameterType, descriptorType, visibility, accessType, viewDimension, sampleType, format);
+    }
+
     enum class RenderPassType : uint8_t {
         SINGLE_RENDER_PASS,
         RENDER_PASS,
