@@ -22,6 +22,7 @@ namespace cc {
         constructor(index);
     }
     @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
+    @serialize struct ArrayArchiveProbe { readonly rows: ccstd::vector<ccstd::vector<bool>>; }
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
     @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; minor: uint32_t = 0; }
     graph TinyNames {
@@ -247,9 +248,12 @@ run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/render
 run("${consumer}" read "${work}/web.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${work}/native.bin" "${work}/web.bin")
 run("${consumer}" layout-write "${work}/layout-native.bin")
+run("${consumer}" flat-write "${work}/flat-native.bin")
 set(legacyFixture "${SOURCE}/tests/consumer/records/fixtures/layout-graph.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/layout-archive.cjs" "${work}/js/rendering/custom"
-    "${work}/layout-native.bin" "${work}/layout-web.bin" "${work}/layout-legacy.bin" "${work}/layout-invalid.bin" "${legacyFixture}")
+    "${work}/layout-native.bin" "${work}/layout-web.bin" "${work}/layout-legacy.bin" "${work}/layout-invalid.bin" "${legacyFixture}"
+    "${work}/flat-native.bin" "${work}/flat-web.bin")
+run("${consumer}" flat-read "${work}/flat-web.bin")
 run("${consumer}" layout-read "${work}/layout-web.bin")
 run("${consumer}" layout-read "${work}/layout-legacy.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy.bin")

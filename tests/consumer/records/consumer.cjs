@@ -372,7 +372,8 @@ for (const [name, expected] of fixtures) {
     }
     types['save' + name](output, expected);
 }
-const { TextProbe, loadTextProbe, saveTextProbe, VectorProbe } = require(path.join(jsDir, 'shift-probe.js'));
+const { TextProbe, loadTextProbe, saveTextProbe, VectorProbe,
+    ArrayArchiveProbe, loadArrayArchiveProbe, saveArrayArchiveProbe } = require(path.join(jsDir, 'shift-probe.js'));
 const vectors = new VectorProbe();
 assert.deepEqual(vectors.bytes, new Uint8Array(0));
 assert.deepEqual(vectors.words, new Uint32Array(0));
@@ -384,6 +385,10 @@ assert.deepEqual([textProbe.text, textProbe.label], ['', '']);
 loadTextProbe(input, textProbe);
 assert.deepEqual([textProbe.text, textProbe.label], ['plain text', 'caption']);
 saveTextProbe(output, textProbe);
+const arrayProbe = new ArrayArchiveProbe();
+loadArrayArchiveProbe(input, arrayProbe);
+assert.deepEqual(arrayProbe.rows, [[true, false], [], [false, true, true]]);
+saveArrayArchiveProbe(output, arrayProbe);
 assert.equal(input.offset, input.dataView.byteLength);
 assert.equal(types.saveUploadPair, undefined);
 assert.equal(types.loadUploadPair, undefined);

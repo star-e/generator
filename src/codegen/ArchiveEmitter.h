@@ -5,7 +5,12 @@
 namespace cc::codegen {
 
 std::string archivePrimitive(const TypeGraph& graph, TypeId id);
-void checkArchiveType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context);
+struct ArchiveRequirements {
+    bool needsReadSize{};
+    bool needsBoolVectorLoad{};
+
+    void checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context);
+};
 const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& module, std::string_view name);
 const std::string& archiveMethod(const TypeNode& api, const std::string& method);
 
@@ -21,6 +26,7 @@ struct ArchiveScript {
 };
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
-                      std::ostream& declarations, std::ostream& definitions, std::ostream* script, TypeImports& imports);
+                      std::ostream& declarations, std::ostream& definitions, std::ostream* script, TypeImports& imports,
+                      ArchiveRequirements& requirements);
 
 } // namespace cc::codegen

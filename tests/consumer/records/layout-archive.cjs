@@ -1,7 +1,7 @@
 const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
-const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture] = process.argv.slice(2);
+const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture, flatNativeFile, flatWebFile] = process.argv.slice(2);
 const current = require(path.join(jsDir, 'layout-graph.js'));
 const legacy = require(path.join(jsDir, 'legacy-layout.js'));
 const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
@@ -93,3 +93,48 @@ assert.equal(reused.locate('/previous'), 0);
 current.loadLayoutGraph(input(valid), reused);
 assert.equal(reused.nv(), 5);
 assert.equal(reused.locate('/main/shadow'), 2);
+
+function flattened(api, size) {
+    const value = new api.DescriptorBlockFlattened();
+    for (let i = 2 - size; i < 2; ++i) {
+        value.descriptorNames.push(i === 0 ? 'z-depth' : 'albedo');
+        value.uniformBlockNames.push(i === 0 ? 'u-view' : 'u-draw');
+        const descriptor = new api.Descriptor(i === 0 ? Type.SAMPLER2D : Type.FLOAT4);
+        descriptor.count = i + 2;
+        value.descriptors.push(descriptor);
+        value.uniformBlocks.push(new UniformBlock(i + 1, i + 7, i === 0 ? 'View' : 'Draw',
+            i === 0 ? [new Uniform('tint', Type.FLOAT4, 2)] : [], i + 4));
+    }
+    value.capacity = size * 4;
+    value.count = size * 2;
+    return value;
+}
+
+const sizes = [0, 2, 1, 0];
+function encodeFlattened(api) {
+    const output = new BinaryOutputArchive();
+    for (const size of sizes) api.saveDescriptorBlockFlattened(output, flattened(api, size));
+    return Buffer.from(output.data);
+}
+
+function verifyFlattened(api, bytes) {
+    const archive = input(bytes);
+    const value = flattened(api, 2);
+    const fields = ['descriptorNames', 'uniformBlockNames', 'descriptors', 'uniformBlocks'];
+    const refs = fields.map(field => value[field]);
+    for (const size of sizes) {
+        api.loadDescriptorBlockFlattened(archive, value);
+        fields.forEach((field, i) => assert.strictEqual(value[field], refs[i], field));
+        assert.deepEqual(value, flattened(api, size));
+    }
+    assert.equal(archive.offset, bytes.length);
+}
+
+const flatLegacy = encodeFlattened(legacy);
+const flatWeb = encodeFlattened(current);
+const flatNative = fs.readFileSync(flatNativeFile);
+assert.deepEqual(flatWeb, flatLegacy);
+assert.deepEqual(flatNative, flatLegacy);
+verifyFlattened(current, flatNative);
+verifyFlattened(legacy, flatWeb);
+fs.writeFileSync(flatWebFile, flatWeb);

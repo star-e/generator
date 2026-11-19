@@ -212,6 +212,9 @@ int exchangeRecords(std::string_view command, const char* path) {
         save(archive, MovePair{"move-src", "move-dst", 11, 12, 13, 14, 15, &memory});
         save(archive, PipelineStatistics{21, 22, 23, 24, 25, 26, 27, 28, 29, 30, UINT32_MAX});
         save(archive, cc::TextProbe{"plain text", "caption"});
+        cc::ArrayArchiveProbe arrays;
+        arrays.rows = {{true, false}, {}, {false, true, true}};
+        save(archive, arrays);
         file.close();
         return file.good() ? 0 : 1;
     }
@@ -234,6 +237,9 @@ int exchangeRecords(std::string_view command, const char* path) {
     load(archive, statistics);
     cc::TextProbe text;
     load(archive, text);
+    cc::ArrayArchiveProbe arrays;
+    load(archive, arrays);
+    if (arrays.rows != decltype(arrays.rows){{true, false}, {}, {false, true, true}}) return 9;
     if (text.text != "plain text" || text.label != "caption") return 8;
     if (light.level != 77 || !light.culledByLight || light.probe != probe) return 3;
     if (resolve.source != "color-msaa" || resolve.target != "color" || resolve.resolveFlags != depthStencil ||
@@ -368,12 +374,15 @@ bool checkRenderPhase() {
 bool checkLayoutGraph(const char* pathSamples);
 bool writeDfsCases(const char* path);
 bool exchangeLayoutArchive(std::string_view mode, const char* path);
+bool exchangeFlattenedArchive(bool writing, const char* path);
 
 int main(int argc, char** argv) {
     if (argc == 3) {
         const std::string_view mode(argv[1]);
         if (mode == "layout-write" || mode == "layout-read" || mode == "layout-invalid")
             return exchangeLayoutArchive(mode, argv[2]) ? 0 : 1;
+        if (mode == "flat-write" || mode == "flat-read")
+            return exchangeFlattenedArchive(mode == "flat-write", argv[2]) ? 0 : 1;
     }
     if (argc == 3 && std::string_view(argv[1]) == "dfs-cases") return writeDfsCases(argv[2]) ? 0 : 1;
     const bool writePathCases = argc == 3 && std::string_view(argv[1]) == "path-cases";

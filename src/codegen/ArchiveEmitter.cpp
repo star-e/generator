@@ -31,13 +31,16 @@ std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
     return std::ranges::find(numbers, type) != std::end(numbers) ? "Number" : "";
 }
 
-void checkArchiveType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context) {
+void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context) {
     const auto& node = graph.node(id);
     if (!archivePrimitive(graph, id).empty() || !node.typescriptArchiveModule.empty()) return;
     if (const auto* record = std::get_if<RecordType>(&node.data); record && record->serializable && node.module == owner) return;
-    if (isAssociativeContainer(node.typescriptContainer)) {
-        for (const auto& arg : std::get<TemplateInstanceType>(node.data).arguments)
-            checkArchiveType(graph, owner, std::get<TypeId>(arg), context);
+    if (node.typescriptContainer != ContainerKind::None) {
+        needsReadSize = true;
+        const auto& args = std::get<TemplateInstanceType>(node.data).arguments;
+        if (node.typescriptContainer == ContainerKind::Array && graph.node(std::get<TypeId>(args.front())).qualifiedName == "bool")
+            needsBoolVectorLoad = true;
+        for (const auto& arg : args) checkType(graph, owner, std::get<TypeId>(arg), context);
         return;
     }
     throw std::runtime_error(context + ": unsupported archive field type " + node.qualifiedName);
@@ -54,8 +57,12 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
         return;
     }
     const auto& name = node.typescriptName.value();
-    if (declare) out << indent << "const " << expr << " = new " << name << "();\n";
-    if (!isAssociativeContainer(node.typescriptContainer)) {
+    const bool array = node.typescriptContainer == ContainerKind::Array;
+    if (declare) {
+        if (array) out << indent << "const " << expr << ": " << name << " = [];\n";
+        else out << indent << "const " << expr << " = new " << name << "();\n";
+    }
+    if (node.typescriptContainer == ContainerKind::None) {
         const auto codec = (save ? "save" : "load") + name;
         if (!node.typescriptArchiveModule.empty()) {
             imports[node.typescriptArchiveModule].insert(codec);
@@ -73,31 +80,39 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
     const auto item = "item" + std::to_string(depth);
     const auto inner = indent + "    ";
     if (save) {
-        out << indent << "a." << archiveMethod(api, "writeNumber") << "(" << expr << ".size);\n"
+        out << indent << "a." << archiveMethod(api, "writeNumber") << "(" << expr << (array ? ".length" : ".size") << ");\n"
             << indent << "for (const " << (map ? "[" + key + ", " + item + "]" : item) << " of " << expr << ") {\n";
         if (map) value(out, keyType, json ? "JSON.parse(" + key + ")" : key, inner, false, depth + 1);
         value(out, element, item, inner, false, depth + 1);
     } else {
-        const auto i = "left" + std::to_string(depth);
-        out << indent << "for (let " << i << " = cc$readSize(a); " << i << " > 0; --" << i << ") {\n";
+        const auto i = (array ? "index" : "left") + std::to_string(depth);
+        if (array) {
+            out << indent << expr << ".length = cc$readSize(a);\n"
+                << indent << "for (let " << i << " = 0; " << i << " < " << expr << ".length; ++" << i << ") {\n";
+        } else {
+            out << indent << "for (let " << i << " = cc$readSize(a); " << i << " > 0; --" << i << ") {\n";
+        }
         if (map) value(out, keyType, key, inner, true, depth + 1);
         value(out, element, item, inner, true, depth + 1);
         out << inner << expr;
-        if (map) out << ".set(" << (json ? "JSON.stringify(" + key + ")" : key) << ", " << item << ");\n";
+        if (array) out << "[" << i << "] = " << item << ";\n";
+        else if (map) out << ".set(" << (json ? "JSON.stringify(" + key + ")" : key) << ", " << item << ");\n";
         else out << ".add(" << item << ");\n";
     }
     out << indent << "}\n";
 }
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
-                      std::ostream& declarations, std::ostream& cpp, std::ostream* ts, TypeImports& imports) {
+                      std::ostream& declarations, std::ostream& cpp, std::ostream* ts, TypeImports& imports,
+                      ArchiveRequirements& requirements) {
     const auto& model = std::get<GraphType>(node.data);
     const auto& name = node.name;
     if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.alternatives.empty() ||
         graph.node(model.vertexType).qualifiedName != "uint32_t")
         throw std::runtime_error(node.qualifiedName + ": graph archive requires a mutable uint32_t vertex list with shared edges and polymorphic payloads");
+    requirements.needsReadSize = true;
     for (const auto& columns : {&model.components, &model.alternatives})
-        for (const auto& column : *columns) checkArchiveType(graph, node.module, column.valueType, node.qualifiedName + "." + column.name);
+        for (const auto& column : *columns) requirements.checkType(graph, node.module, column.valueType, node.qualifiedName + "." + column.name);
     const auto suffix = [&](const ComponentInfo& column) { return componentAccessorSuffix(graph.node(column.tag).name); };
     const auto tag = [&](const ComponentInfo& column) { return "::" + graph.node(column.tag).qualifiedName + "{}"; };
     const auto count = model.alternatives.size();

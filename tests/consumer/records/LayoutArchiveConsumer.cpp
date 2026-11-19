@@ -55,6 +55,24 @@ bool matches(const LayoutGraph& g) {
            uniform.members[0].name == "tint" && uniform.members[0].type == cc::gfx::Type::FLOAT4 && uniform.members[0].count == 2 &&
            db.get_allocator().resource() == g.get_allocator().resource() && phase.get_allocator().resource() == g.get_allocator().resource();
 }
+DescriptorBlockFlattened flattened(uint32_t size) {
+    using cc::gfx::Type;
+    DescriptorBlockFlattened value;
+    for (uint32_t i = 2 - size; i < 2; ++i) {
+        value.descriptorNames.emplace_back(i == 0 ? "z-depth" : "albedo");
+        value.uniformBlockNames.emplace_back(i == 0 ? "u-view" : "u-draw");
+        value.descriptors.emplace_back(i == 0 ? Type::SAMPLER2D : Type::FLOAT4).count = i + 2;
+        auto& uniform = value.uniformBlocks.emplace_back();
+        uniform.set = i + 1;
+        uniform.binding = i + 7;
+        uniform.name = i == 0 ? "View" : "Draw";
+        if (i == 0) uniform.members.push_back({"tint", Type::FLOAT4, 2});
+        uniform.count = i + 4;
+    }
+    value.capacity = size * 4;
+    value.count = size * 2;
+    return value;
+}
 } // namespace
 
 bool exchangeLayoutArchive(std::string_view mode, const char* path) {
@@ -82,4 +100,37 @@ bool exchangeLayoutArchive(std::string_view mode, const char* path) {
     if (g.num_vertices()) return false;
     load(archive, g);
     return matches(g) && file.peek() == std::char_traits<char>::eof();
+}
+
+bool exchangeFlattenedArchive(bool writing, const char* path) {
+    boost::container::pmr::monotonic_buffer_resource arena;
+    constexpr uint32_t sizes[] = {0, 2, 1, 0};
+    if (writing) {
+        std::ofstream file(path, std::ios::binary);
+        BinaryOutputArchive archive(file, &arena);
+        for (auto size : sizes) save(archive, flattened(size));
+        file.close();
+        return !file.fail();
+    }
+    std::ifstream file(path, std::ios::binary);
+    file.exceptions(std::ios::badbit | std::ios::failbit);
+    BinaryInputArchive archive(file, &arena);
+    auto value = flattened(2);
+    for (auto size : sizes) {
+        load(archive, value);
+        const auto expected = flattened(size);
+        if (value.capacity != expected.capacity || value.count != expected.count ||
+            value.descriptorNames != expected.descriptorNames || value.uniformBlockNames != expected.uniformBlockNames ||
+            value.descriptors.size() != size || value.uniformBlocks.size() != size) return false;
+        for (uint32_t i = 0; i < size; ++i) {
+            const auto& uniform = value.uniformBlocks[i];
+            const auto& want = expected.uniformBlocks[i];
+            if (value.descriptors[i].type != expected.descriptors[i].type || value.descriptors[i].count != expected.descriptors[i].count ||
+                uniform.set != want.set || uniform.binding != want.binding || uniform.name != want.name ||
+                uniform.count != want.count || uniform.members.size() != want.members.size()) return false;
+            if (!want.members.empty() && (uniform.members[0].name != "tint" || uniform.members[0].type != cc::gfx::Type::FLOAT4 ||
+                                          uniform.members[0].count != 2)) return false;
+        }
+    }
+    return file.peek() == std::char_traits<char>::eof();
 }

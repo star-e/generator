@@ -40,7 +40,7 @@ namespace cc::render {
         count: uint32_t = 0;
     }
 
-    struct DescriptorBlockFlattened {
+    @serialize struct DescriptorBlockFlattened {
         readonly descriptorNames: ccstd::vector<ccstd::string>;
         readonly uniformBlockNames: ccstd::vector<ccstd::string>;
         readonly descriptors: ccstd::vector<Descriptor>;
