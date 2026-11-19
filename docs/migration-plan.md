@@ -182,7 +182,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。同一模块的绑定块声明 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。工作区 JSON 指定后端、原生头文件和输出位置。
 
-C++ 图生成目前支持索引顶点和一个 PMR 字符串组件。`LayoutGraph` 引用命名空间中的 `Name_` 标签。`mutable_graph` 启用 `add_vertex(name)`，`vertex_list_graph` 启用 `vertices()` 和 `num_vertices()`。顶点编号依插入顺序从零递增，`getName(v)` 与 `get(Name_{}, v)` 返回同一字符串的引用。图用构造时指定的内存资源存储组件。C++17 消费测试覆盖空图、扩容、读写、跨资源构造和顶点编号上限。[生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+C++ 索引图为每个组件生成一个按顶点编号访问的 PMR 数组。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。带 allocator 的复制、移动和赋值使用目标资源。插入失败时回滚本次已追加的组件，成功后才更新父子关系。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `LayoutGraph` 声明 `hierarchy_graph { storage: shared_edges; }`，父子关系存储在图的邻接表中。`add_vertex(name)` 创建根节点，`add_vertex(name, parent)` 创建子节点。`get_parent(v)` 和 `num_children(v)` 的时间复杂度为 O(1)，根节点的父节点为 `null_vertex()`。`child_links(v)` 按插入顺序遍历直接子边，`child(link)` 取得子节点。无效父节点会触发 `std::out_of_range`。消费测试还逐次注入分配失败，检查已有顶点、名称和边，并在同一张图上重试。[层级声明](../spec/render/layout-graph.spec) · [C++17 消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 

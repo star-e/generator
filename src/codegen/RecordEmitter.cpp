@@ -35,6 +35,7 @@ struct Member {
     bool move{};
     bool readonly{};
     bool usesAllocator{};
+    bool checkDefaultConstruction{};
     std::string_view tsClear;
 };
 
@@ -110,7 +111,9 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         m.cpp = nativeType(graph, module, field.type.type, deps);
         if (node.typescriptContainer == ContainerKind::None) deps.headers.insert("utility");
         m.move = true;
-        m.usesAllocator = std::get<ExternalTypeNode>(graph.node(instance->declaration).data).isPmr;
+        const auto& container = std::get<ExternalTypeNode>(graph.node(instance->declaration).data);
+        m.usesAllocator = container.isPmr;
+        m.checkDefaultConstruction = container.container == ContainerKind::Map;
         if (emitTs) {
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.typeImports);
             m.tsDefault = typeScriptContainerInitializer(node);
@@ -123,6 +126,7 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         m.cpp = nativeType(graph, module, field.type.type, deps);
         std::set<uint32_t> visited;
         m.usesAllocator = hasPmrStorage(graph, field.type.type, visited);
+        m.checkDefaultConstruction = true;
         m.move = true;
         if (emitTs) {
             if (node.module != owner && node.typescriptModule.empty()) invalid(field, "missing external record mapping");
@@ -296,11 +300,18 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
     const std::string alloc = "const allocator_type& alloc";
     const auto allocParameter = record.requireAllocator ? alloc : alloc + " = boost::container::pmr::get_default_resource()";
     const auto constructor = "\n" + name + "::" + name + "(";
+    std::string checks;
+    for (const auto& member : members) {
+        if (!member.checkDefaultConstruction) continue;
+        if (!checks.empty()) checks += " && ";
+        checks += "noexcept(decltype(" + member.name + ")(" + (member.usesAllocator ? "alloc" : "") + "))";
+    }
+    const auto exceptionSpec = checks.empty() ? " noexcept" : " noexcept(" + checks + ")";
     header << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
            << "    allocator_type get_allocator() const noexcept { // NOLINT\n"
            << "        return {" << allocatorMember.name << ".get_allocator().resource()};\n    }\n\n"
-           << "    " << name << "(" << allocParameter << ") noexcept; // NOLINT\n";
-    source << constructor << alloc << ") noexcept";
+           << "    " << name << "(" << allocParameter << ")" << exceptionSpec << "; // NOLINT\n";
+    source << constructor << alloc << ")" << exceptionSpec;
     pmrInitializers(source, members, CtorArgs::defaults);
     for (const auto& order : record.constructors) {
         if (order.empty()) continue;

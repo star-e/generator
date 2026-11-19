@@ -310,6 +310,10 @@ bool checkDescriptorDB() {
     using cc::render::DescriptorDB;
     using cc::render::DescriptorGroupBlockIndex;
     static_assert(!std::is_default_constructible_v<DescriptorDB> && !std::is_copy_constructible_v<DescriptorDB>);
+    using Alloc = const DescriptorDB::allocator_type&;
+    static_assert(std::is_nothrow_constructible_v<DescriptorDB, Alloc> ==
+                  (std::is_nothrow_constructible_v<decltype(DescriptorDB::blocks), Alloc> &&
+                   std::is_nothrow_constructible_v<decltype(DescriptorDB::groupBlocks), Alloc>));
     static_assert(std::is_nothrow_move_constructible_v<DescriptorDB> && std::is_copy_assignable_v<DescriptorDB>);
     pmr::monotonic_buffer_resource first, second;
     auto usesResource = [](const DescriptorDB& db, pmr::memory_resource& resource) {

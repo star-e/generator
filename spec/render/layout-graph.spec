@@ -81,6 +81,7 @@ namespace cc::render {
     }
 
     @tag struct Name_ {}
+    @tag struct Descriptors_ {}
     graph LayoutGraph {
         vertex_descriptor Vertex = uint32_t;
         vertex_storage: indexed;
@@ -88,6 +89,7 @@ namespace cc::render {
         mutable_graph;
         hierarchy_graph { storage: shared_edges; }
         component Name_: ccstd::pmr::string { member: names; }
+        component Descriptors_: DescriptorDB { member: descriptors; }
         named_graph { component: Name_; }
         parent_graph;
         addressable_graph;

@@ -30,6 +30,17 @@ namespace cc {
         mutable_graph;
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
     }
+    graph FlatComponents {
+        vertex_descriptor Index = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        component cc::render::Descriptors_: render::DescriptorDB { member: data; }
+        component cc::render::Name_: ccstd::pmr::string { member: labels; }
+        component Count_: uint32_t { member: counts; }
+        named_graph { component: cc::render::Name_; }
+    }
+    @tag struct Count_ {}
 }
 binding typescript { ::ccstd::vector<::uint32_t> => Uint32Array; }")
 set(workspace "${work}/config/workspace.json")

@@ -8,7 +8,7 @@ const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
 const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit,
     layoutEnums, descriptorBlockArgs, descriptorGroupBlockArgs } = require(path.join(jsDir, 'enum-consumer.js'));
 
-function compareDeclaration(file, firstLine, lastLine) {
+function compareDeclaration(file, firstLine, lastLine, normalize = line => line) {
     function read(root) {
         const lines = fs.readFileSync(path.join(root, file), 'utf8').split(/\r?\n/);
         const start = lines.indexOf(firstLine);
@@ -17,7 +17,7 @@ function compareDeclaration(file, firstLine, lastLine) {
         assert.ok(end > start, lastLine);
         return lines.slice(start, end + 1);
     }
-    assert.deepEqual(read(stage), read(engine), firstLine);
+    assert.deepEqual(read(stage).map(normalize), read(engine), firstLine);
 }
 
 const cpp = 'native/cocos/renderer/pipeline/custom/RenderCommonTypes.h';
@@ -95,7 +95,9 @@ const { NestedProbe } = require(path.join(jsDir, 'shift-probe.js'));
 const ordinaryIndex = new layout.DescriptorBlockIndex();
 assert.ok(new NestedProbe().index instanceof layout.DescriptorBlockIndex);
 assert.equal(new NestedProbe(ordinaryIndex).index, ordinaryIndex);
-compareDeclaration(layoutCpp, 'struct DescriptorDB {', '};');
+// Map construction can allocate its sentinel. The C++ consumer checks the platform's exception specification.
+compareDeclaration(layoutCpp, 'struct DescriptorDB {', '};', line => line.replace(
+    'noexcept(noexcept(decltype(blocks)(alloc)) && noexcept(decltype(groupBlocks)(alloc)))', 'noexcept'));
 compareDeclaration(layoutTs, 'export class DescriptorDB {', '}');
 const db = new layout.DescriptorDB();
 const otherDB = new layout.DescriptorDB();

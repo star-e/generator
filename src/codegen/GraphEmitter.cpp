@@ -1,5 +1,6 @@
 #include "codegen/GraphEmitter.h"
 #include "model/TypeGraphBuilder.h"
+#include "model/TypeName.h"
 
 #include <algorithm>
 #include <ostream>
@@ -141,35 +142,35 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
 }
 
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
-                       const std::string& member, const std::string& rows) {
-    const bool hierarchy = !rows.empty();
-    out << "    explicit " << name << "(const allocator_type& alloc) noexcept : " << member << "(alloc)";
-    if (hierarchy) out << ", " << rows << "(alloc)";
+                       const std::vector<std::string>& storage) {
+    const auto& member = storage.front();
+    out << "    explicit " << name << "(const allocator_type& alloc) noexcept";
+    for (const auto& field : storage) out << (field == member ? " : " : ", ") << field << "(alloc)";
     out << " {}\n"
         << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc);\n"
         << "    " << name << "(" << name << "&& rhs, const allocator_type& alloc);\n"
         << "    " << name << "(" << name << "&&) noexcept = default;\n"
         << "    " << name << "(const " << name << "&) = delete;\n";
-    const auto assignment = hierarchy ? ";\n" : " = default;\n";
+    const auto assignment = storage.size() > 1 ? ";\n" : " = default;\n";
     out << "    " << name << "& operator=(" << name << "&&)" << assignment
         << "    " << name << "& operator=(const " << name << "&)" << assignment
         << "    allocator_type get_allocator() const noexcept { return {this->" << member << ".get_allocator().resource()}; }\n";
-    source << "\n" << name << "::" << name << "(const " << name << "& rhs, const allocator_type& alloc)\n"
-           << ": " << member << "(rhs." << member << ", alloc)";
-    if (hierarchy) source << ", " << rows << "(rhs." << rows << ", alloc)";
+    source << "\n" << name << "::" << name << "(const " << name << "& rhs, const allocator_type& alloc)\n";
+    for (const auto& field : storage)
+        source << (field == member ? ": " : ", ") << field << "(rhs." << field << ", alloc)";
     source << " {}\n\n" << name << "::" << name << "(" << name << "&& rhs, const allocator_type& alloc)\n";
-    if (!hierarchy) {
+    if (storage.size() == 1) {
         source << ": " << member << "(std::move(rhs." << member << "), alloc) {}\n";
         return;
     }
     // Keep parallel component and adjacency storage together if the destination resource fails.
     source << ": " << name << "(alloc) {\n"
            << "    if (alloc.resource() == rhs.get_allocator().resource()) {\n        swapStorage(rhs);\n    } else {\n"
-           << "        " << name << " copy(rhs, alloc);\n        swapStorage(copy);\n"
-           << "        rhs." << rows << ".clear();\n        rhs." << member << ".clear();\n    }\n}\n"
-           << "\nvoid " << name << "::swapStorage(" << name << "& other) noexcept {\n"
-           << "    this->" << member << ".swap(other." << member << ");\n"
-           << "    this->" << rows << ".swap(other." << rows << ");\n}\n";
+           << "        " << name << " copy(rhs, alloc);\n        swapStorage(copy);\n";
+    for (const auto& field : storage) source << "        rhs." << field << ".clear();\n";
+    source << "    }\n}\n\nvoid " << name << "::swapStorage(" << name << "& other) noexcept {\n";
+    for (const auto& field : storage) source << "    this->" << field << ".swap(other." << field << ");\n";
+    source << "}\n";
     for (bool move : {false, true}) {
         source << "\n" << name << "& " << name << "::operator=(" << (move ? "" : "const ") << name << (move ? "&&" : "&") << " rhs) {\n"
                << "    if (this != &rhs) {\n        " << name << " replacement(" << (move ? "std::move(rhs)" : "rhs")
@@ -178,16 +179,19 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
 }
 
 void addVertex(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
-               const std::string& member, const std::string& rows) {
+               const std::vector<std::string>& storage, const std::string& input, const std::string& rows) {
     const bool hierarchy = !rows.empty();
-    out << "\n    " << vertex << " add_vertex(std::string_view value = {})";
+    const auto& member = storage.front();
+    const std::string value = input.empty() ? "" : "std::string_view value";
+    out << "\n    " << vertex << " add_vertex(" << value;
+    if (!value.empty()) out << " = {}";
     if (hierarchy) {
-        out << " { return add_vertex(value, null_vertex()); }\n"
-            << "    " << vertex << " add_vertex(std::string_view value, " << vertex << " parent)";
+        out << ") { return add_vertex(" << (value.empty() ? "" : "value, ") << "null_vertex()); }\n"
+            << "    " << vertex << " add_vertex(" << value << (value.empty() ? "" : ", ") << vertex << " parent";
     }
-    out << ";\n";
-    source << "\n" << name << "::" << vertex << " " << name << "::add_vertex(std::string_view value";
-    if (hierarchy) source << ", " << vertex << " parent";
+    out << ");\n";
+    source << "\n" << name << "::" << vertex << " " << name << "::add_vertex(" << value;
+    if (hierarchy) source << (value.empty() ? "" : ", ") << vertex << " parent";
     source << ") {\n";
     if (hierarchy) {
         source << "    if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= this->" << member << ".size())\n"
@@ -196,15 +200,43 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     source << "    if (this->" << member << ".size() >= (std::numeric_limits<" << name << "::" << vertex << ">::max)())\n"
            << "        throw std::length_error(\"" << name << " vertex limit exceeded\");\n"
            << "    const auto vertex = static_cast<" << name << "::" << vertex << ">(this->" << member << ".size());\n";
-    if (hierarchy) {
-        source << "    auto& edges = this->" << rows << ";\n"
-               << "    edges.push_back(VertexLinks{parent});\n"
-               << "    try {\n        this->" << member << ".emplace_back(value);\n"
-               << R"(    } catch (...) {
-        edges.pop_back();
-        throw;
+    const bool hasDefaults = storage.size() > static_cast<size_t>(hierarchy) + (input.empty() ? 0U : 1U);
+    if (hasDefaults) {
+        source << R"(    auto appendDefault = [](auto& items) {
+        if (!items.empty() && items.size() == items.capacity()) {
+            // Allocator-extended moves may throw after modifying an earlier element.
+            // Grow from const copies and publish the new column only after insertion succeeds.
+            std::decay_t<decltype(items)> grown(items.get_allocator());
+            const auto size = items.size();
+            grown.reserve(size > items.max_size() - size ? items.max_size() : size * 2);
+            for (const auto& item : items) grown.emplace_back(item);
+            grown.emplace_back();
+            items.swap(grown);
+        } else {
+            items.emplace_back();
+        }
+    };
+)";
     }
-    if (parent != null_vertex()) {
+    const bool parallel = storage.size() > 1;
+    const auto indent = parallel ? "        " : "    ";
+    if (hierarchy) source << "    auto& edges = this->" << rows << ";\n";
+    if (parallel) source << "    try {\n";
+    // Consume the view before growing other columns: it can refer to text in this graph.
+    if (!input.empty()) source << indent << "this->" << input << ".emplace_back(value);\n";
+    for (const auto& field : storage) {
+        if (field != input && field != rows) source << indent << "appendDefault(this->" << field << ");\n";
+    }
+    if (hierarchy) source << indent << "edges.push_back(VertexLinks{parent});\n";
+    if (parallel) {
+        source << "    } catch (...) {\n";
+        for (const auto& field : storage) {
+            source << "        if (this->" << field << ".size() > vertex) this->" << field << ".pop_back();\n";
+        }
+        source << "        throw;\n    }\n";
+    }
+    if (hierarchy) {
+        source << R"(    if (parent != null_vertex()) {
         auto& parentLinks = edges[parent];
         if (parentLinks.lastChild == null_vertex()) {
             parentLinks.firstChild = vertex;
@@ -215,8 +247,6 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
         ++parentLinks.childCount;
     }
 )";
-    } else {
-        source << "    this->" << member << ".emplace_back(value);\n";
     }
     source << "    return vertex;\n}\n";
 }
@@ -227,12 +257,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
                   std::set<std::string>& headers, std::set<std::string>& forwards) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
-    if (!model.indexedVertices || model.components.size() != 1)
-        throw std::runtime_error(node.qualifiedName + ": C++ graph output currently requires indexed storage and one component");
-    const auto& component = model.components.front();
-    const auto& value = graph.node(component.valueType);
-    if (value.qualifiedName != "ccstd::pmr::string" || value.cppHeader.empty())
-        throw std::runtime_error(node.qualifiedName + ": expected a ccstd::pmr::string component with a native header");
+    if (!model.indexedVertices || model.components.empty())
+        throw std::runtime_error(node.qualifiedName + ": C++ graph output requires indexed storage and at least one component");
     // The descriptor alias is a scoped declaration. Its resolved integer type is stored on the graph.
     const auto children = graph.out_edges(id.value);
     const auto alias = std::ranges::find_if(children, [&](auto edge) {
@@ -241,36 +267,51 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     if (alias == children.end()) throw std::runtime_error(node.qualifiedName + ": missing vertex descriptor alias");
     const auto& vertex = graph.node(TypeId{graph.target(*alias)}).name;
     const auto& integer = graph.node(model.vertexType);
-    const auto& tag = graph.node(component.tag);
-    const auto& member = component.name;
-    const auto accessor = "get" + componentAccessorSuffix(tag.name);
     const auto& name = node.name;
-    std::string rows;
-    if (model.hierarchy) rows = member == "links_" ? "adjacency_" : "links_";
     headers.insert("cocos/base/std/container/vector.h");
-    headers.insert(value.cppHeader);
     if (!integer.cppHeader.empty()) headers.insert(integer.cppHeader);
-    if (component.tag.value > id.value || tag.module != node.module) {
-        const auto ns = tag.qualifiedName.rfind("::");
-        const auto declaration = "struct " + tag.name + ";";
-        forwards.insert(ns == std::string::npos ? declaration : "namespace " + tag.qualifiedName.substr(0, ns) + " { " + declaration + " }");
+    std::vector<std::string> storage;
+    std::vector<std::string> types;
+    for (const auto& component : model.components) {
+        storage.push_back(component.name);
+        types.push_back(formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
+            if (!type.cppHeader.empty()) headers.insert(type.cppHeader);
+            return type.qualifiedName;
+        }));
+        const auto& tag = graph.node(component.tag);
+        if (component.tag.value > id.value || tag.module != node.module) {
+            const auto ns = tag.qualifiedName.rfind("::");
+            const auto declaration = "struct " + tag.name + ";";
+            forwards.insert(ns == std::string::npos ? declaration : "namespace " + tag.qualifiedName.substr(0, ns) + " { " + declaration + " }");
+        }
+    }
+    std::string rows;
+    if (model.hierarchy) {
+        rows = "links_";
+        for (size_t i = 0; std::ranges::find(storage, rows) != storage.end(); ++i)
+            rows = "adjacency" + std::to_string(i) + "_";
+        storage.push_back(rows);
     }
 
     out << "\nstruct " << name << " {\n"
         << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    graphConstructors(out, source, name, member, rows);
+    graphConstructors(out, source, name, storage);
     if (model.vertexList) {
         headers.insert("cstddef");
         headers.insert("iterator");
         vertexRange(out, vertex);
-        out << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << member << ".size()); }\n";
+        out << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
     }
     if (model.mutableGraph) {
-        headers.insert("string_view");
         headers.insert("limits");
         headers.insert("stdexcept");
-        addVertex(out, source, name, vertex, member, rows);
+        std::string input;
+        if (model.nameComponentIndex) input = storage.at(*model.nameComponentIndex);
+        else if (types.front() == "ccstd::pmr::string") input = storage.front();
+        if (!input.empty()) headers.insert("string_view");
+        if (input.empty() || types.size() > 1) headers.insert("type_traits");
+        addVertex(out, source, name, vertex, storage, input, rows);
     }
     if (model.hierarchy) {
         headers.insert({"cstddef", "cstdint", "iterator", "limits"});
@@ -283,16 +324,26 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         parentLookup(out, source, name, vertex, selected.name, nameAccessor);
         if (model.addressableGraph) {
             headers.insert("stdexcept");
+            headers.insert("cocos/base/std/container/string.h");
             addressableGraph(out, source, name, vertex, selected.name, nameAccessor);
         }
     }
-    for (const auto qualifier : {std::string_view{}, std::string_view{" const"}}) {
-        out << "\n    " << value.qualifiedName << qualifier << "& " << accessor << "(" << vertex << " v)" << qualifier
-            << " noexcept { return this->" << member << "[v]; }\n"
-            << "    " << value.qualifiedName << qualifier << "& get(const ::" << tag.qualifiedName << "&, " << vertex << " v)"
-            << qualifier << " noexcept { return " << accessor << "(v); }\n";
+    for (size_t i = 0; i < model.components.size(); ++i) {
+        const auto& tag = graph.node(model.components[i].tag);
+        const auto accessor = "get" + componentAccessorSuffix(tag.name);
+        for (const std::string qualifier : {"", " const"}) {
+            const auto result = types[i] == "bool"
+                ? "ccstd::pmr::vector<bool>::" + std::string(qualifier.empty() ? "reference" : "const_reference")
+                : types[i] + qualifier + "&";
+            out << "\n    " << result << " " << accessor << "(" << vertex << " v)" << qualifier
+                << " noexcept { return this->" << storage[i] << "[v]; }\n"
+                << "    " << result << " get(const ::" << tag.qualifiedName << "&, " << vertex << " v)"
+                << qualifier << " noexcept { return " << accessor << "(v); }\n";
+        }
     }
-    out << "\nprivate:\n    ccstd::pmr::vector<" << value.qualifiedName << "> " << member << ";\n";
+    out << "\nprivate:\n";
+    for (size_t i = 0; i < types.size(); ++i)
+        out << "    ccstd::pmr::vector<" << types[i] << "> " << storage[i] << ";\n";
     if (model.hierarchy) {
         out << "    struct VertexLinks {\n"
             << "        " << vertex << " parent{null_vertex()};\n"
@@ -300,9 +351,9 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             << "        " << vertex << " lastChild{null_vertex()};\n"
             << "        " << vertex << " nextSibling{null_vertex()};\n"
             << "        " << vertex << " childCount{};\n    };\n"
-            << "    ccstd::pmr::vector<VertexLinks> " << rows << ";\n"
-            << "    void swapStorage(" << name << "& other) noexcept;\n";
+            << "    ccstd::pmr::vector<VertexLinks> " << rows << ";\n";
     }
+    if (storage.size() > 1) out << "    void swapStorage(" << name << "& other) noexcept;\n";
     out << "};\n";
 }
 

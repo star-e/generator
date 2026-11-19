@@ -15,7 +15,15 @@
 
 namespace {
 using cc::render::LayoutGraph;
+using cc::render::DescriptorDB;
+using cc::render::Descriptors_;
 using Vertex = LayoutGraph::Vertex;
+
+bool usesResource(const DescriptorDB& db, const LayoutGraph& g) {
+    const auto* resource = g.get_allocator().resource();
+    return db.get_allocator().resource() == resource && db.blocks.get_allocator().resource() == resource &&
+           db.groupBlocks.get_allocator().resource() == resource;
+}
 
 bool hasChildren(const LayoutGraph& g, Vertex parent, std::initializer_list<Vertex> expected) {
     if (g.num_children(parent) != expected.size()) return false;
@@ -32,7 +40,9 @@ bool checkHierarchy() {
     boost::container::pmr::monotonic_buffer_resource firstArena, secondArena;
     LayoutGraph graph{&firstArena};
     const auto root = graph.add_vertex("main");
+    graph.getDescriptors(root).blocks[{}].count = 7;
     const auto ui = graph.add_vertex("ui", LayoutGraph::null_vertex());
+    graph.get(Descriptors_{}, ui).groupBlocks[{}].capacity = 11;
     const auto shadow = graph.add_vertex("shadow", root);
     const auto cascade = graph.add_vertex("cascade", shadow);
     const auto overlay = graph.add_vertex("overlay", ui);
@@ -43,7 +53,11 @@ bool checkHierarchy() {
                g.get_parent(none) == none && hasChildren(g, root, {shadow, color}) &&
                hasChildren(g, ui, {overlay}) && hasChildren(g, shadow, {cascade}) &&
                hasChildren(g, cascade, {}) && hasChildren(g, color, {}) && hasChildren(g, overlay, {}) &&
-               g.getName(root) == "main" && g.getName(color) == "color";
+               g.getName(root) == "main" && g.getName(color) == "color" &&
+               g.get(Descriptors_{}, root).blocks.at({}).count == 7 && g.getDescriptors(root).groupBlocks.empty() &&
+               g.getDescriptors(ui).groupBlocks.at({}).capacity == 11 && g.getDescriptors(ui).blocks.empty() &&
+               g.getDescriptors(color).blocks.empty() && usesResource(g.getDescriptors(root), g) &&
+               usesResource(g.getDescriptors(ui), g);
     };
     try {
         graph.add_vertex("invalid", graph.num_vertices());
@@ -52,6 +66,9 @@ bool checkHierarchy() {
         if (!intact(graph)) return false;
     }
     LayoutGraph copied{graph, &secondArena};
+    copied.getDescriptors(root).blocks.at({}).count = 13;
+    if (graph.getDescriptors(root).blocks.at({}).count != 7) return false;
+    copied.getDescriptors(root).blocks.at({}).count = 7;
     LayoutGraph assigned{&firstArena};
     assigned = copied;
     if (!intact(assigned) || !intact(copied)) return false;
@@ -61,7 +78,7 @@ bool checkHierarchy() {
     return intact(moved) && assigned.num_vertices() == 0 && intact(graph);
 }
 
-// Fail each allocation in turn, including allocations after the new adjacency row was appended.
+// Fail each allocation in turn, including map construction and copying populated components during growth.
 class FailingResource final : public boost::container::pmr::memory_resource {
 public:
     int allocationsBeforeFailure{-1};
@@ -84,18 +101,30 @@ bool checkFailedInsertion() {
         LayoutGraph graph{&resource};
         const auto root = graph.add_vertex("root");
         const auto first = graph.add_vertex("first", root);
+        graph.getDescriptors(root).blocks[{}].count = 3;
+        graph.getDescriptors(first).groupBlocks[{}].capacity = 9;
+        auto intact = [&] {
+            return graph.getDescriptors(root).blocks.at({}).count == 3 && graph.getDescriptors(root).groupBlocks.empty() &&
+                   graph.getDescriptors(first).groupBlocks.at({}).capacity == 9 && graph.getDescriptors(first).blocks.empty();
+        };
         resource.allocationsBeforeFailure = failAfter;
         try {
             const auto added = graph.add_vertex(longName, root);
-            return failAfter > 0 && added == 2 && hasChildren(graph, root, {first, added});
+            return failAfter > 0 && added == 2 && hasChildren(graph, root, {first, added}) && intact() &&
+                   graph.getDescriptors(added).blocks.empty() && usesResource(graph.getDescriptors(added), graph);
         } catch (const std::bad_alloc&) {
             if (resource.allocationsBeforeFailure != 0) throw;
             if (graph.num_vertices() != 2 || !hasChildren(graph, root, {first}) || !hasChildren(graph, first, {}) ||
-                graph.getName(root) != "root" || graph.getName(first) != "first") return false;
+                graph.getName(root) != "root" || graph.getName(first) != "first" || !intact()) return false;
         }
         resource.allocationsBeforeFailure = -1;
         const auto retry = graph.add_vertex(longName, root);
-        if (retry != 2 || graph.getName(retry) != longName.c_str() || !hasChildren(graph, root, {first, retry})) return false;
+        if (retry != 2 || !intact() || !graph.getDescriptors(retry).blocks.empty() ||
+            graph.getName(retry) != longName.c_str() || !hasChildren(graph, root, {first, retry})) return false;
+        // A leftover component after rollback would shift the next appended data by one.
+        graph.getDescriptors(retry).blocks[{}].count = 4;
+        const auto next = graph.add_vertex();
+        if (!graph.getDescriptors(next).blocks.empty() || graph.getDescriptors(retry).blocks.at({}).count != 4) return false;
     }
 }
 
@@ -189,27 +218,48 @@ bool checkFailedAssignment(bool move) {
     LayoutGraph source{&arena};
     const auto root = source.add_vertex("original");
     const auto leaf = source.add_vertex("leaf", root);
+    source.getDescriptors(leaf).blocks[{}].count = 42;
     for (int failAfter = 0; ; ++failAfter) {
         resource.allocationsBeforeFailure = -1;
         LayoutGraph target{&resource};
         target.add_vertex("previous");
+        target.getDescriptors(0).groupBlocks[{}].capacity = 8;
         resource.allocationsBeforeFailure = failAfter;
         try {
             if (move) target = std::move(source);
             else target = source;
             return hasChildren(target, root, {leaf}) && target.getName(leaf) == "leaf" &&
-                   target.getName(leaf).get_allocator().resource() == &resource;
+                   target.getName(leaf).get_allocator().resource() == &resource &&
+                   target.getDescriptors(leaf).blocks.at({}).count == 42 && usesResource(target.getDescriptors(leaf), target);
         } catch (const std::bad_alloc&) {
             if (resource.allocationsBeforeFailure != 0) throw;
             if (target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
-                source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf})) return false;
+                source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf}) ||
+                target.getDescriptors(0).groupBlocks.at({}).capacity != 8 || source.getDescriptors(leaf).blocks.at({}).count != 42)
+                return false;
         }
     }
+}
+
+bool checkFlatComponents() {
+    boost::container::pmr::monotonic_buffer_resource sourceArena, targetArena;
+    cc::FlatComponents source{&sourceArena};
+    const auto a = source.add_vertex("a");
+    source.getCount(a) = 12;
+    source.getDescriptors(a).blocks[{}].count = 5;
+    const auto b = source.add_vertex(source.getName(a));
+    if (a != 0 || b != 1 || source.getName(b) != "a" || source.get(cc::Count_{}, b) != 0) return false;
+    cc::FlatComponents target{&targetArena};
+    target = std::move(source);
+    return source.num_vertices() == 0 && target.num_vertices() == 2 &&
+           target.getName(b).get_allocator().resource() == &targetArena && target.getCount(a) == 12 &&
+           target.getDescriptors(a).blocks.get_allocator().resource() == &targetArena &&
+           target.getDescriptors(a).blocks.at({}).count == 5 && target.getDescriptors(b).blocks.empty();
 }
 } // namespace
 
 bool checkLayoutGraph() {
-    if (!checkChildLookup() || !checkGraphPaths()) return false;
+    if (!checkChildLookup() || !checkGraphPaths() || !checkFlatComponents()) return false;
     if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;
@@ -219,6 +269,10 @@ bool checkLayoutGraph() {
     static_assert(std::is_same_v<decltype(std::declval<LayoutGraph&>().get(Name_{}, 0)), Name&>);
     static_assert(std::is_same_v<decltype(std::declval<const LayoutGraph&>().getName(0)), const Name&>);
     static_assert(std::is_same_v<decltype(std::declval<const LayoutGraph&>().get(Name_{}, 0)), const Name&>);
+    static_assert(std::is_same_v<decltype(std::declval<LayoutGraph&>().getDescriptors(0)), DescriptorDB&>);
+    static_assert(std::is_same_v<decltype(std::declval<LayoutGraph&>().get(Descriptors_{}, 0)), DescriptorDB&>);
+    static_assert(std::is_same_v<decltype(std::declval<const LayoutGraph&>().getDescriptors(0)), const DescriptorDB&>);
+    static_assert(std::is_same_v<decltype(std::declval<const LayoutGraph&>().get(Descriptors_{}, 0)), const DescriptorDB&>);
 
     boost::container::pmr::monotonic_buffer_resource arena;
     LayoutGraph graph{&arena};
@@ -234,7 +288,8 @@ bool checkLayoutGraph() {
     LayoutGraph::Vertex expected{};
     for (const auto v : vertices) {
         if (v != expected++ || &view.get(Name_{}, v) != &view.getName(v) ||
-            view.getName(v).get_allocator().resource() != &arena) return false;
+            view.getName(v).get_allocator().resource() != &arena ||
+            &view.get(Descriptors_{}, v) != &view.getDescriptors(v) || !usesResource(view.getDescriptors(v), view)) return false;
     }
     graph.get(Name_{}, second).assign(200, 'b');
     if (view.getName(second).size() != 200 || view.getName(second).back() != 'b') return false;
