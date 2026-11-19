@@ -25,19 +25,24 @@ void visitTypeScriptImportSources(const TypeGraph& graph, const TypeNode& node, 
     }
 }
 
-inline const std::string& boundTypeScriptName(const TypeGraph& graph, const TypeUse& use, ModuleId owner, TypeImports& imports) {
-    const auto& node = graph.node(use.type);
-    if (!node.typescriptName) throw std::runtime_error(use.location.describe() + ": no TS mapping for " + qualifiedTypeName(graph, use.type));
+inline const std::string& boundTypeScriptName(const TypeGraph& graph, TypeId id, ModuleId owner, TypeImports& imports,
+                                              const std::string& context) {
+    const auto& node = graph.node(id);
+    if (!node.typescriptName) throw std::runtime_error(context + ": no TS mapping for " + qualifiedTypeName(graph, id));
     visitTypeScriptImportSources(graph, node, [&](const TypeNode& source) {
         if (source.module == owner) return;
         if (!source.typescriptModule.empty()) imports[source.typescriptModule].insert(*source.typescriptName);
         else if (node.typescriptContainer != ContainerKind::None && source.module != ModuleId{} &&
                  (std::holds_alternative<RecordType>(source.data) || std::holds_alternative<EnumType>(source.data) ||
-                  std::holds_alternative<InterfaceType>(source.data))) {
-            throw std::runtime_error(use.location.describe() + ": missing TypeScript import mapping for " + source.qualifiedName);
+                  std::holds_alternative<InterfaceType>(source.data) || std::holds_alternative<GraphType>(source.data))) {
+            throw std::runtime_error(context + ": missing TypeScript import mapping for " + source.qualifiedName);
         }
     });
     return *node.typescriptName;
+}
+
+inline const std::string& boundTypeScriptName(const TypeGraph& graph, const TypeUse& use, ModuleId owner, TypeImports& imports) {
+    return boundTypeScriptName(graph, use.type, owner, imports, use.location.describe());
 }
 
 inline std::string typeScriptContainerInitializer(const TypeNode& node) {

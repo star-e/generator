@@ -725,6 +725,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         previousTag = false;
         if (std::holds_alternative<GraphType>(node.data)) {
             emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations);
+            if (output.typescript) emitTypeScriptGraph(graph, id, ts, deps.typeImports);
             continue;
         }
         cpp << '\n';

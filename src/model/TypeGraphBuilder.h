@@ -15,5 +15,6 @@ struct ModuleInput {
 TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes);
 
 std::string componentAccessorSuffix(std::string tagName);
+std::optional<uint64_t> indexedVertexLimit(const std::string& type);
 
 } // namespace cc::codegen

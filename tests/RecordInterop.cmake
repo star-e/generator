@@ -49,9 +49,11 @@ namespace cc {
         polymorphic_graph {
             Count_: bool { member: handles_; }
             render::ComputeTag: bool { member: flags; }
+            Layout_: render::LayoutGraph { member: layouts; }
         }
     }
     @tag struct Count_ {}
+    @tag struct Layout_ {}
 }
 binding typescript { ::ccstd::vector<::uint32_t> => Uint32Array; }")
 set(workspace "${work}/config/workspace.json")
@@ -82,7 +84,7 @@ foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] 
                           "keyed: Map<string, DescriptorBlockIndex>[] = []"
                           "index: DescriptorBlockIndex = new DescriptorBlockIndex()"
                           [[import { DescriptorBlockIndex } from './layout-graph';]]
-                          [[import type { Descriptor, LayoutType, RenderPassType } from './layout-graph';]]
+                          [[import type { Descriptor, DescriptorDB, LayoutGraph, LayoutType, RenderPassType } from './layout-graph';]]
                           [[import type { UniformBlock } from '../../gfx';]])
     string(FIND "${script}" "${expected}" pos)
     if(pos EQUAL -1)
@@ -155,6 +157,18 @@ run("${CMAKE_COMMAND}" -E compare_files "${stage}/${layoutNames}" "${ENGINE}/${l
 set(enumConsumer "${stage}/cocos/rendering/custom/enum-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsumer}" COPYONLY)
 
+# Exercise the editor's three lookup-or-create methods directly against the generated graph.
+file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-editor.ts" editor)
+foreach(method IN ITEMS getPassID getSubpassID getPhaseID)
+    string(REGEX MATCH "    private ${method} [(][^\n]*\n(        [^\n]*\n|\n)*    [}]" definition "${editor}")
+    if(NOT definition)
+        message(FATAL_ERROR "Missing layout editor method ${method}")
+    endif()
+    string(APPEND editorMethods "${definition}\n")
+endforeach()
+set(graphConsumer "${stage}/cocos/rendering/custom/layout-graph-consumer.ts")
+configure_file("${SOURCE}/tests/consumer/records/layout-graph-consumer.ts.in" "${graphConsumer}" @ONLY)
+
 # Compile both versions against the same engine imports to exercise the bound defaults at runtime.
 set(commonSpec "${work}/spec/render/render-common.spec")
 file(READ "${commonSpec}" common)
@@ -169,7 +183,8 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${ENGINE}/node_modules/typescript/bin/tsc" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${enumConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}")
+    "${enumConsumer}" "${graphConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}")
+run("${node}" "${work}/js/rendering/custom/layout-graph-consumer.js")
 run("${consumer}" write "${work}/native.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin")
 run("${consumer}" read "${work}/web.bin")

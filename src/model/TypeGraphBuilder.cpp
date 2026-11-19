@@ -258,7 +258,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     result.mutableGraph = syntax.mutableGraph;
     result.hierarchy = syntax.hierarchy;
     const auto& vertex = graph.node(result.vertexType);
-    if (syntax.indexed && (vertex.qualifiedName == "bool" || !integerRanges().contains(vertex.qualifiedName))) {
+    if (syntax.indexed && !indexedVertexLimit(vertex.qualifiedName)) {
         throw std::runtime_error(syntax.vertexType->location.describe() + ": expected an integer descriptor for indexed vertices");
     }
     std::set<std::string> accessors, kinds;
@@ -518,6 +518,13 @@ void checkRecordCycles(const TypeGraph& graph) {
 
 } // namespace
 
+std::optional<uint64_t> indexedVertexLimit(const std::string& type) {
+    const auto& ranges = integerRanges();
+    const auto it = ranges.find(type);
+    if (it == ranges.end() || type == "bool") return std::nullopt;
+    return it->second.max;
+}
+
 TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes) {
     TypeGraph graph;
     registerExternalTypes(graph, externalTypes);
@@ -562,11 +569,11 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         }
         for (const auto& [name, mapping] : input.externalTypes) {
             const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
-            if (it == module.declarations.end() || (!std::holds_alternative<ExternalDeclaration>(it->data) &&
-                                                    !std::holds_alternative<Enum>(it->data) &&
-                                                    (input.modelOnly || !std::holds_alternative<Record>(it->data)))) {
-                throw std::runtime_error(module.name + ": mapping for unknown external type " + name);
+            if (it != module.declarations.end()) {
+                if (std::holds_alternative<ExternalDeclaration>(it->data) || std::holds_alternative<Enum>(it->data)) continue;
+                if (!input.modelOnly && (std::holds_alternative<Record>(it->data) || std::holds_alternative<GraphDeclaration>(it->data))) continue;
             }
+            throw std::runtime_error(module.name + ": mapping for unknown external type " + name);
         }
         scopes.push_back(std::move(scope));
     }

@@ -27,6 +27,7 @@ set_target_properties(CocosCodegenModel PROPERTIES CXX_EXTENSIONS OFF)
 add_executable(CocosCodegen
     src/cli/Main.cpp
     src/codegen/GraphEmitter.cpp
+    src/codegen/TypeScriptGraphEmitter.cpp
     src/codegen/InterfaceEmitter.cpp
     src/codegen/JsbEmitter.cpp
     src/codegen/RecordEmitter.cpp

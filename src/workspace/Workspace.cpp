@@ -199,7 +199,8 @@ Files plan(const Json& settings, const fs::path& base) {
             tsModule.replace_extension();
             TypeTable mappings;
             for (const auto& decl : module.declarations) {
-                if (std::holds_alternative<Enum>(decl.data) || std::holds_alternative<Record>(decl.data)) {
+                if (std::holds_alternative<Enum>(decl.data) || std::holds_alternative<Record>(decl.data) ||
+                    std::holds_alternative<GraphDeclaration>(decl.data)) {
                     mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string(),
                         .typescript = decl.name, .typescriptModule = tsModule.generic_string()});
                 }

@@ -1,0 +1,72 @@
+import { DescriptorDB, LayoutGraph, LayoutGraphValue, RenderPassType, RenderPhase } from './layout-graph';
+import { FlatComponents, TinyNames, Toggles, TogglesValue } from './shift-probe';
+
+function assert (ok: boolean, message = 'Editor layout assertion failed'): void {
+    if (!ok) throw new Error(message);
+}
+
+class EditorFixture {
+    readonly lg = new LayoutGraph();
+@editorMethods@
+    run (): void {
+        const lg = this.lg;
+        const stage = LayoutGraphValue.RenderStage;
+        const phase = LayoutGraphValue.RenderPhase;
+        const root = this.getPassID('main', RenderPassType.RENDER_PASS);
+        const sub = this.getSubpassID('deferred', root);
+        const shadow = this.getPhaseID('shadow', sub);
+        const other = this.getPhaseID('shadow', root);
+        assert(root === this.getPassID('main', RenderPassType.RENDER_PASS) &&
+            sub === this.getSubpassID('deferred', root) && shadow === this.getPhaseID('shadow', sub), 'Vertex reuse');
+        assert(shadow !== other && [...lg.v()].length === 4 && lg.nv() === 4, 'Scoped phase names');
+        assert(lg.N === 0xFFFFFFFF && lg.getParent(root) === lg.N && lg.getParent(lg.N) === lg.N &&
+            lg.getParent(shadow) === sub && lg.getParent(other) === root, 'Parent lookup');
+        assert(lg.locateChild(lg.N, 'shadow') === lg.N && lg.locateChild(lg.nv(), 'shadow') === lg.N, 'Missing child');
+        assert(lg.getName(shadow) === 'shadow' && lg.w(shadow) === phase && lg.w(sub) === stage, 'Vertex kind and name');
+        const passType: RenderPassType = lg.value(stage, sub);
+        assert(passType === RenderPassType.RENDER_SUBPASS, 'Stage payload');
+        lg.value(phase, shadow).shaders.add('shadow-caster');
+        assert(lg.value(phase, this.getPhaseID('shadow', sub)).shaders.has('shadow-caster') &&
+            !lg.value(phase, other).shaders.has('shadow-caster'), 'Independent phase payloads');
+
+        const db = new DescriptorDB();
+        const payload = new RenderPhase();
+        const extra = lg.addVertex(phase, payload, 'shadow', db, sub);
+        assert(lg.getDescriptors(extra) === db && lg.value(phase, extra) === payload, 'Supplied objects');
+        assert(lg.locateChild(sub, 'shadow') === shadow, 'First matching child');
+        let mismatched = false;
+        try { lg.value(phase, root); } catch { mismatched = true; }
+        assert(mismatched, 'Wrong payload kind');
+        const count = lg.nv();
+        let invalidParent = false;
+        try { lg.addVertex(phase, payload, 'invalid', db, count); } catch (e) { invalidParent = e instanceof RangeError; }
+        assert(invalidParent && lg.nv() === count, 'Invalid parent left a partial vertex');
+    }
+}
+
+// Kept out of the runtime path so tsc independently checks the rejected calls.
+function checkTypes (lg: LayoutGraph, db: DescriptorDB): void {
+    // @ts-expect-error A stage takes a RenderPassType.
+    lg.addVertex(LayoutGraphValue.RenderStage, new RenderPhase(), 'bad', db);
+    // @ts-expect-error The value returned for a stage has no shaders.
+    lg.value(LayoutGraphValue.RenderStage, 0).shaders;
+}
+
+new EditorFixture().run();
+
+const flat = new FlatComponents();
+const db = new DescriptorDB();
+const index = flat.addVertex(db, 'flat', 42);
+assert(flat.getDescriptors(index) === db && flat.getCount(index) === 42 && flat.getName(index) === 'flat', 'Component order');
+const toggles = new Toggles();
+const toggle = toggles.addVertex(TogglesValue.ComputeTag, false);
+assert(toggles.w(toggle) === TogglesValue.ComputeTag && toggles.value(TogglesValue.ComputeTag, toggle) === false,
+    'Distinct tags sharing a payload type');
+const nested = new LayoutGraph();
+const layout = toggles.addVertex(TogglesValue.Layout, nested);
+assert(toggles.value(TogglesValue.Layout, layout) === nested, 'Imported graph payload');
+const tiny = new TinyNames();
+for (let i = 0; i < 255; ++i) assert(tiny.addVertex('v') === i);
+let full = false;
+try { tiny.addVertex('overflow'); } catch (e) { full = e instanceof RangeError; }
+assert(full && tiny.nv() === tiny.N, 'Narrow vertex descriptor');
