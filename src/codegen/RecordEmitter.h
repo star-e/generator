@@ -24,6 +24,7 @@ struct RecordOutput {
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
     std::set<std::string> comparable;
+    std::set<std::string> orderable;
     std::set<std::string> hashable;
     std::set<std::string> resetToDefaults;
     std::set<std::string> resetFromConstructor;

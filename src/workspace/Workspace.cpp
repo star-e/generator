@@ -158,6 +158,7 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
         }
     }
     if (rules.contains("comparable")) rules.at("comparable").get_to(output.comparable);
+    if (rules.contains("orderable")) rules.at("orderable").get_to(output.orderable);
     if (rules.contains("hashable")) rules.at("hashable").get_to(output.hashable);
     if (rules.contains("resetToDefaults")) {
         if (!output.typescript) throw std::runtime_error(projection.string() + ": resetToDefaults requires TypeScript output");
@@ -225,8 +226,18 @@ Files plan(const Json& settings, const fs::path& base) {
             continue;
         }
         if (backend == "records") {
-            layouts.emplace_back(loadRecordOutput(config, base));
-            inputs.push_back({std::move(module), {}});
+            auto output = loadRecordOutput(config, base);
+            auto tsModule = output.typescript.value_or(fs::path{});
+            tsModule.replace_extension();
+            TypeTable mappings;
+            for (const auto& decl : module.declarations) {
+                if (std::holds_alternative<Enum>(decl.data)) {
+                    mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string(),
+                        .typescript = decl.name, .typescriptModule = tsModule.generic_string()});
+                }
+            }
+            layouts.emplace_back(std::move(output));
+            inputs.push_back({std::move(module), {}, std::move(mappings)});
             continue;
         }
         const auto projection = base / config.at("projection").get<std::string>();

@@ -5,7 +5,7 @@ const [jsDir, stage, engine, nativeFile, webFile] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
-const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit, layoutEnums }
+const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit, layoutEnums, descriptorBlockArgs }
     = require(path.join(jsDir, 'enum-consumer.js'));
 
 function compareDeclaration(file, firstLine, lastLine) {
@@ -32,6 +32,8 @@ for (const [name, values] of Object.entries(layoutEnums)) {
     assert.equal(layout[name], undefined, name);
 }
 compareDeclaration(layoutCpp, 'struct Descriptor {', '};');
+compareDeclaration(layoutCpp, 'struct DescriptorBlockIndex {', '};');
+compareDeclaration(layoutCpp, 'inline bool operator<(const DescriptorBlockIndex& lhs, const DescriptorBlockIndex& rhs) noexcept {', '}');
 compareDeclaration(layoutTs, 'export class Descriptor {', '}');
 const { getDescriptorTypeOrderName } = require(path.join(jsDir, 'layout-graph-names.js'));
 assert.deepEqual(layoutEnums.DescriptorTypeOrder.map(getDescriptorTypeOrderName), [
@@ -40,6 +42,15 @@ assert.deepEqual(layoutEnums.DescriptorTypeOrder.map(getDescriptorTypeOrderName)
 ]);
 assert.equal(getDescriptorTypeOrderName(255), '');
 const { Type } = require(path.resolve(jsDir, '../../gfx'));
+const { DescriptorBlockIndex: EngineIndex } = require(path.join(jsDir, 'engine-index.js'));
+const blocks = new Map();
+for (let count = 0; count <= descriptorBlockArgs.length; ++count) {
+    const args = descriptorBlockArgs.slice(0, count);
+    const engineKey = JSON.stringify(new EngineIndex(...args));
+    blocks.set(engineKey, count);
+    assert.equal(blocks.get(JSON.stringify(new layout.DescriptorBlockIndex(...args))), count);
+}
+assert.equal(blocks.size, 5);
 const descriptor = new layout.Descriptor();
 assert.equal(descriptor.type, Type.UNKNOWN);
 assert.equal(descriptor.count, 1);

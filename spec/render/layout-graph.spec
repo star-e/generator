@@ -1,5 +1,6 @@
 module LayoutGraph;
 import Gfx;
+import RenderCommon;
 
 namespace cc::render {
     enum class LayoutType : uint8_t {
@@ -24,6 +25,15 @@ namespace cc::render {
         count: uint32_t = 1;
 
         constructor(type);
+    }
+
+    struct DescriptorBlockIndex {
+        updateFrequency: UpdateFrequency = UpdateFrequency::PER_INSTANCE;
+        parameterType: ParameterType = ParameterType::CONSTANTS;
+        descriptorType: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;
+        visibility: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
+
+        constructor(updateFrequency, parameterType, descriptorType, visibility);
     }
 
     enum class RenderPassType : uint8_t {

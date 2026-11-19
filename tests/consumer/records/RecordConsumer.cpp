@@ -3,6 +3,7 @@
 #include "cocos/renderer/pipeline/custom/RenderCommonSerialization.h"
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "ShiftProbe.h"
+#include "cocos/base/std/container/map.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <array>
@@ -243,12 +244,34 @@ int exchangeRecords(std::string_view command, const char* path) {
     return file.good() && file.peek() == std::char_traits<char>::eof() ? 0 : 1;
 }
 
+bool checkDescriptorBlockIndex() {
+    using cc::gfx::ShaderStageFlagBit;
+    using cc::render::DescriptorBlockIndex;
+    const DescriptorBlockIndex base{};
+    const DescriptorBlockIndex equivalent{UpdateFrequency::PER_INSTANCE, ParameterType::CONSTANTS,
+                                          DescriptorTypeOrder::UNIFORM_BUFFER, ShaderStageFlagBit::NONE};
+    const DescriptorBlockIndex visibility{base.updateFrequency, base.parameterType, base.descriptorType, ShaderStageFlagBit::FRAGMENT};
+    const DescriptorBlockIndex descriptor{base.updateFrequency, base.parameterType, DescriptorTypeOrder::SAMPLER, base.visibility};
+    const DescriptorBlockIndex parameter{base.updateFrequency, ParameterType::CBV, base.descriptorType, base.visibility};
+    const DescriptorBlockIndex frequency{UpdateFrequency::PER_BATCH, base.parameterType, base.descriptorType, base.visibility};
+
+    ccstd::pmr::map<DescriptorBlockIndex, int> blocks{
+        {frequency, 4}, {visibility, 1}, {parameter, 3}, {base, 0}, {descriptor, 2}};
+    if (blocks.size() != 5 || blocks.emplace(equivalent, 5).second || blocks.at(equivalent) != 0) return false;
+    int expected = 0;
+    for (const auto& block : blocks) {
+        if (block.second != expected++) return false;
+    }
+    return true;
+}
+
 bool checkLayoutGraph();
 
 int main(int argc, char** argv) {
     if (argc == 3) return exchangeRecords(argv[1], argv[2]);
     if (argc != 1) return 2;
     if (!checkLayoutGraph()) return 9;
+    if (!checkDescriptorBlockIndex()) return 10;
     using cc::render::getName;
     using namespace std::string_view_literals;
     using cc::render::Descriptor;

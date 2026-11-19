@@ -43,7 +43,8 @@
       "backend": "model",
       "types": {
         "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "Type", "tsModule": "cocos/gfx" },
-        "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ResolveMode", "tsModule": "cocos/gfx" }
+        "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ResolveMode", "tsModule": "cocos/gfx" },
+        "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ShaderStageFlagBit", "tsModule": "cocos/gfx" }
       }
     },
     {

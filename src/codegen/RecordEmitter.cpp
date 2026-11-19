@@ -306,9 +306,9 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
     header << '\n';
 }
 
-void cppEquality(std::ostream& out, const std::string& name, const std::vector<Member>& members) {
+void cppComparison(std::ostream& out, const std::string& name, const std::vector<Member>& members, std::string_view op) {
     const auto params = "(const " + name + "& lhs, const " + name + "& rhs) noexcept {\n";
-    out << "\ninline bool operator==" << params;
+    out << "\ninline bool operator" << op << params;
     auto writeTuple = [&](std::string_view object) {
         out << "std::forward_as_tuple(";
         for (size_t i = 0; i < members.size(); ++i) {
@@ -319,9 +319,10 @@ void cppEquality(std::ostream& out, const std::string& name, const std::vector<M
     };
     out << "    return ";
     writeTuple("lhs");
-    out << " ==\n           ";
+    out << ' ' << op << "\n           ";
     writeTuple("rhs");
-    out << ";\n}\n\ninline bool operator!=" << params << "    return !(lhs == rhs);\n}\n";
+    out << ";\n}\n";
+    if (op == "==") out << "\ninline bool operator!=" << params << "    return !(lhs == rhs);\n}\n";
 }
 
 void cppHash(std::ostream& declarations, std::ostream& definitions, const TypeNode& node, const std::vector<Member>& members) {
@@ -661,6 +662,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
     auto pendingComparable = output.comparable;
+    auto pendingOrderable = output.orderable;
     auto pendingHashes = output.hashable;
     auto pendingReset = output.resetToDefaults;
     auto pendingCtorReset = output.resetFromConstructor;
@@ -721,7 +723,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (pendingHashes.erase(node.name)) cppHash(hashDeclarations, hashDefinitions, node, members);
         if (pendingComparable.erase(node.name)) {
             deps.headers.insert("tuple");
-            cppEquality(cpp, node.name, members);
+            cppComparison(cpp, node.name, members, "==");
+        }
+        if (pendingOrderable.erase(node.name)) {
+            deps.headers.insert("tuple");
+            cppComparison(cpp, node.name, members, "<");
         }
         if (!output.typescript) continue;
         Order order(members.size());
@@ -750,6 +756,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (!pendingReset.empty()) throw std::runtime_error("unknown resetToDefaults record " + *pendingReset.begin() + " in " + module.name);
     if (!pendingCtorReset.empty()) throw std::runtime_error("unknown resetFromConstructor record " + *pendingCtorReset.begin() + " in " + module.name);
     if (!pendingComparable.empty()) throw std::runtime_error("unknown comparable record " + *pendingComparable.begin() + " in " + module.name);
+    if (!pendingOrderable.empty()) throw std::runtime_error("unknown orderable record " + *pendingOrderable.begin() + " in " + module.name);
     if (!pendingHashes.empty()) throw std::runtime_error("unknown hashable record " + *pendingHashes.begin() + " in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
     if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
@@ -757,6 +764,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     std::ostringstream header, script;
     header << preamble << "#pragma once\n";
     if (!output.forwardHeader && !hashDefinitions.view().empty()) deps.headers.insert("cocos/base/std/hash/hash.h");
+    deps.headers.erase(output.header.generic_string());
     cppIncludes(header, deps.headers);
     if (output.forwardHeader) {
         const auto include = output.forwardHeader->lexically_relative(output.header.parent_path());
