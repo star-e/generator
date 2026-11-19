@@ -86,6 +86,7 @@ string(REPLACE "method writeBool => b;" "method writeBool => n;" broken "${origi
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "duplicate TS method OutputArchive.n" ${generate})
 string(REPLACE "bool value" "double enabled" changed "${original}")
+string(REPLACE "module ArchiveInterface;" "module ArchiveInterface; import Containers;" changed "${changed}")
 string(REPLACE "interface InputArchive {" "interface InputArchive { ccstd::vector<uint8_t> copyBytes(ccstd::vector<uint8_t> value);" changed "${changed}")
 file(WRITE "${spec}" "${changed}")
 run(${generate})

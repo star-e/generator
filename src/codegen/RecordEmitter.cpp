@@ -35,6 +35,7 @@ struct Member {
     bool move{};
     bool readonly{};
     bool usesAllocator{};
+    bool isArray{};
 };
 
 std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
@@ -93,13 +94,17 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         return m;
     }
     const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
-    if (instance && node.typescriptName) {
-        if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed TypedArray field");
+    if (instance && (node.typescriptName || node.typescriptArrayElement != TypeId{})) {
+        if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed array field");
         m.cpp = nativeType(graph, module, field.type.type, deps);
-        deps.headers.insert("utility");
+        m.isArray = node.typescriptArrayElement != TypeId{};
+        if (!m.isArray) deps.headers.insert("utility");
         m.move = true;
-        m.ts = *node.typescriptName;
-        m.tsDefault = "new " + m.ts + "(0)";
+        m.usesAllocator = std::get<ExternalTypeNode>(graph.node(instance->declaration).data).isPmr;
+        if (emitTs) {
+            m.ts = boundTypeScriptName(graph, field.type, owner, deps.typeImports);
+            m.tsDefault = m.isArray ? "[]" : "new " + m.ts + "(0)";
+        }
         return m;
     }
     if (!emitTs && !field.isNullable) {
@@ -456,10 +461,12 @@ Order resetParameters(const std::string& name, const std::vector<Member>& member
         return {};
     }
     auto retained = keepOnReset;
-    for (const auto& m : members) {
+    for (uint32_t i = 0; i < members.size(); ++i) {
+        const auto& m = members[i];
         if (m.name == "reset") throw std::runtime_error(name + ".reset: field conflicts with reset method");
         if (retained.erase(m.name)) continue;
-        if (m.readonly) throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
+        if (m.readonly && !(m.isArray && std::ranges::find(order, i) == order.end()))
+            throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
     }
     if (!retained.empty()) throw std::runtime_error(name + ": unknown keepOnReset field " + *retained.begin());
     auto reset = order;
@@ -488,7 +495,12 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members,
                 if (isTypedArrayName(m.ts)) ts << "        // " << m.name << ": " << m.ts << " size unchanged\n";
                 continue;
             }
-            const auto& value = std::ranges::find(order, i) != order.end() ? m.name : m.tsDefault;
+            const bool parameter = std::ranges::find(order, i) != order.end();
+            if (m.isArray && !parameter) {
+                ts << "        this." << m.name << ".length = 0;\n";
+                continue;
+            }
+            const auto& value = parameter ? m.name : m.tsDefault;
             ts << "        this." << m.name << " = " << value << ";\n";
         }
         ts << "    }\n";
@@ -503,8 +515,12 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>&
     if (resetToDefaults) {
         ts << "    reset (): void {\n";
         for (const auto& m : members) {
-            if (m.readonly) throw std::runtime_error(node.name + "." + m.name + ": reset requires a writable field");
             if (m.name == "reset") throw std::runtime_error(node.name + ".reset: field conflicts with reset method");
+            if (m.isArray) {
+                ts << "        this." << m.name << ".length = 0;\n";
+                continue;
+            }
+            if (m.readonly) throw std::runtime_error(node.name + "." + m.name + ": reset requires a writable field");
             ts << "        this." << m.name << " = " << m.tsDefault << ";\n";
         }
         ts << "    }\n";
@@ -779,6 +795,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (!output.typescript) return files;
     script << preamble << "/* eslint-disable max-len */\n";
     writeImports(script, deps.valueImports, *output.typescript, false);
+    for (const auto& [modulePath, names] : deps.valueImports) {
+        auto it = deps.typeImports.find(modulePath);
+        if (it == deps.typeImports.end()) continue;
+        for (const auto& name : names) it->second.erase(name);
+        if (it->second.empty()) deps.typeImports.erase(it);
+    }
     writeImports(script, deps.typeImports, *output.typescript, true);
     if (poolCount) {
         script << "import { RecyclePool } from '" << modulePath(output.poolModule, *output.typescript) << "';\n";

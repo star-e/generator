@@ -7,10 +7,14 @@ file(WRITE "${work}/spec/text.spec" [[extern module Text;
 namespace sample { @string class Text; @string struct Label; }
 binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 ]])
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import Strings; import Text; import ArchiveInterface;
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import Strings; import Containers; import Text; import ArchiveInterface;
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
+    struct NestedProbe {
+        rows: ccstd::vector<ccstd::vector<render::Descriptor>>;
+        byteArrays: ccstd::vector<ccstd::vector<uint8_t>>;
+    }
     @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
     @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; minor: uint32_t = 0; }
@@ -45,6 +49,12 @@ string(FIND "${script}" [[import type { Caption } from './caption';]] captionImp
 if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
     message(FATAL_ERROR "Explicit TS binding on an owning string was lost")
 endif()
+foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []" [[import type { Descriptor } from './layout-graph';]])
+    string(FIND "${script}" "${expected}" pos)
+    if(pos EQUAL -1)
+        message(FATAL_ERROR "Missing nested array binding: ${expected}")
+    endif()
+endforeach()
 set(build "${work}/build")
 build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)
@@ -78,7 +88,20 @@ foreach(name IN ITEMS ResolveMode Type ShaderStageFlagBit MemoryAccessBit ViewDi
     endif()
     string(APPEND gfxEnums "${definition}\n")
 endforeach()
-file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}")
+# Include the engine's value classes used by DescriptorBlockFlattened.
+string(REGEX MATCH "interface ICopyable [^\n]+\n\nconst deepCopy[^\n]+(\n[ \t][^\n]*)*\n[}];" copyHelper "${gfx}")
+if(NOT copyHelper)
+    message(FATAL_ERROR "Missing UniformBlock copy helper in engine gfx definitions")
+endif()
+set(gfxClasses "type Constructor<T> = new () => T;\n${copyHelper}\n")
+foreach(name IN ITEMS Uniform UniformBlock)
+    string(REGEX MATCH "export class ${name} [{]\n([ \t][^\n]*\n|\n)*[}]" definition "${gfx}")
+    if(NOT definition)
+        message(FATAL_ERROR "Missing ${name} class in engine gfx definitions")
+    endif()
+    string(APPEND gfxClasses "${definition}\n")
+endforeach()
+file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}")
 file(READ "${ENGINE}/cocos/rendering/custom/layout-graph.ts" layout)
 foreach(name IN ITEMS DescriptorBlockIndex DescriptorGroupBlockIndex)
     string(REGEX MATCH "export class ${name} [^\n]+(\n[ \t][^\n]*)*\n}" definition "${layout}")

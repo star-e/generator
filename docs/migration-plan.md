@@ -62,6 +62,7 @@ binding typescript {
 | --- | --- |
 | 外部类型 | `cc::gfx::SampleCount => "gfx.SampleCount";` 和 `Light => Light from "cocos/render-scene/scene";`。导入路径相对于工作区输出根目录，后端按消费文件的位置生成相对导入。 |
 | 具体模板实例 | `ccstd::vector<uint8_t> => Uint8Array;` 只匹配该模板和这组类型实参。`ccstd::vector<uint32_t>` 可以单独绑定到 `Uint32Array`。目标使用 ES2015 内置 TypedArray 名称，字段默认值为相应类型的零长度新数组。 |
+| 普通数组 | 在外部类型声明上写 `@container("array") template<T> class vector;`。TypeGraph 递归解析元素的 TS 类型，字段使用 `T[]` 和独立的空数组。具体实例的显式绑定优先，例如 `ccstd::vector<ccstd::vector<uint8_t>>` 对应 `Uint8Array[]`。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
 | 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`Descriptor => class { reset constructor; };` 按构造参数重置。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
@@ -72,6 +73,8 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 在 `extern module` 的无定义 `class` 或 `struct` 上用 `@string` 声明拥有 UTF-8 文本的原生类型。字段默认绑定为 TS `string`，初值为 `''`，序列化使用字符串读写接口。显式 TS 绑定可以指定兼容的字符串别名及其导入路径。需要传递内存资源的字符串另加 `@pmr`。例如 `ccstd::pmr::string` 同时声明这两个注解，`std::string_view` 作为借用视图只声明 TS 绑定。[原生字符串声明](../spec/extern/strings.spec) · [借用视图绑定](../spec/extern/types.spec)
 
 原生头文件、输出路径继续在工作区配置中声明。多个模块共用的外部类型绑定可以集中在仅包含绑定的模块里。[通用类型绑定](../spec/extern/types.spec) · [外部 Gfx 类型](../spec/extern/gfx.spec) · [RenderCommon 绑定](../spec/render/render-common.spec)
+
+`DescriptorBlockFlattened` 的四个数组字段分别使用字符串、`Descriptor` 和外部 `UniformBlock` 作为元素类型。`reset defaults;` 通过 `length = 0` 原地清空普通数组，使调用方保留的引用继续有效，并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
 | 层 | 建议实现 |
 | --- | --- |

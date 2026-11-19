@@ -4,6 +4,17 @@
 
 namespace cc::codegen {
 
+inline std::optional<std::string> typeScriptArrayName(const TypeNode& element) {
+    if (!element.typescriptName) return std::nullopt;
+    const auto& name = *element.typescriptName;
+    if (element.typescriptArrayElement != TypeId{} ||
+        name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$.") == std::string::npos) {
+        return name + "[]";
+    }
+    // Preserve grouping in explicit bindings such as "A | B".
+    return "Array<" + name + ">";
+}
+
 template<class NameOf>
 std::string formatTypeName(const TypeGraph& graph, TypeId id, const NameOf& nameOf) {
     const auto& node = graph.node(id);

@@ -65,10 +65,16 @@ struct NamespaceType {};
 struct TagType {};
 struct BuiltinType {};
 
+enum class ContainerKind : uint32_t {
+    None,
+    Array,
+};
+
 struct ExternalTypeNode {
     bool isStruct = false;
     bool isString = false;
     bool isPmr = false;
+    ContainerKind container = ContainerKind::None;
 };
 
 struct EnumType {
@@ -184,6 +190,7 @@ struct TypeNode {
     std::string cppHeader;
     std::optional<std::string> typescriptName;
     std::string typescriptModule;
+    TypeId typescriptArrayElement;
     std::vector<TypeId> templateParameters;
 };
 

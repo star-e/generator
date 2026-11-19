@@ -1,4 +1,5 @@
 module EngineTypes;
+import Containers;
 
 binding typescript {
     cc::gfx::SampleCount => "gfx.SampleCount";

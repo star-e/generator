@@ -33,6 +33,29 @@ for (const [name, values] of Object.entries(layoutEnums)) {
 }
 compareDeclaration(layoutCpp, 'struct Descriptor {', '};');
 compareDeclaration(layoutTs, 'export class Descriptor {', '}');
+compareDeclaration(layoutCpp, 'struct DescriptorBlockFlattened {', '};');
+compareDeclaration(layoutTs, 'export class DescriptorBlockFlattened {', '}');
+const flat = new layout.DescriptorBlockFlattened();
+const otherFlat = new layout.DescriptorBlockFlattened();
+const { UniformBlock } = require(path.resolve(jsDir, '../../gfx'));
+const elements = { descriptorNames: 'buffer', uniformBlockNames: 'camera', descriptors: new layout.Descriptor(), uniformBlocks: new UniformBlock() };
+const arrays = {};
+for (const [name, element] of Object.entries(elements)) {
+    arrays[name] = flat[name];
+    assert.notEqual(flat[name], otherFlat[name]);
+    assert.deepEqual(flat[name], []);
+    flat[name].push(element);
+}
+assert.equal(new Set(Object.values(arrays)).size, 4);
+flat.capacity = 8;
+flat.count = 4;
+flat.reset();
+for (const [name, original] of Object.entries(arrays)) {
+    assert.equal(flat[name], original);
+    assert.equal(original.length, 0);
+}
+assert.equal(flat.count, 0);
+assert.equal(flat.capacity, 0);
 const { getDescriptorTypeOrderName } = require(path.join(jsDir, 'layout-graph-names.js'));
 assert.deepEqual(layoutEnums.DescriptorTypeOrder.map(getDescriptorTypeOrderName), [
     'UNIFORM_BUFFER', 'DYNAMIC_UNIFORM_BUFFER', 'SAMPLER_TEXTURE', 'SAMPLER', 'TEXTURE',

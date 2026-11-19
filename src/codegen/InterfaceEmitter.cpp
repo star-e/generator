@@ -13,13 +13,6 @@ namespace {
 constexpr auto lintBegin = "// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
 constexpr auto lintEnd = "// NOLINTEND(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
 
-const std::string& tsType(const TypeGraph& graph, const TypeUse& use, TypeImports& imports) {
-    const auto& node = graph.node(use.type);
-    if (!node.typescriptName) throw std::runtime_error(use.location.describe() + ": no TS mapping for " + qualifiedTypeName(graph, use.type));
-    if (!node.typescriptModule.empty()) imports[node.typescriptModule].insert(*node.typescriptName);
-    return *node.typescriptName;
-}
-
 void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use, const std::string& name,
                    ModuleId owner, std::set<std::string>& headers) {
     auto id = use.type;
@@ -75,9 +68,9 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
             if (i) out << ", ";
-            out << param.name << ": " << tsType(graph, param.type, imports);
+            out << param.name << ": " << boundTypeScriptName(graph, param.type, decl.module, imports);
         }
-        out << "): " << tsType(graph, method.result, imports) << ";\n";
+        out << "): " << boundTypeScriptName(graph, method.result, decl.module, imports) << ";\n";
     }
     out << "}\n";
 }

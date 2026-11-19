@@ -81,14 +81,22 @@ constexpr bool validateFixedLayout_CocosTypeGraph() {
         static_assert(alignof(CheckedType) == 1ULL, "fixed layout alignment: ::cc::codegen::BuiltinType");
     }
     {
+        using CheckedType = ::cc::codegen::ContainerKind;
+        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::ContainerKind");
+        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::ContainerKind");
+        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::ContainerKind");
+        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::ContainerKind");
+    }
+    {
         using CheckedType = ::cc::codegen::ExternalTypeNode;
         static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::ExternalTypeNode");
         static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::ExternalTypeNode");
-        static_assert(sizeof(CheckedType) == 3ULL, "fixed layout size: ::cc::codegen::ExternalTypeNode");
-        static_assert(alignof(CheckedType) == 1ULL, "fixed layout alignment: ::cc::codegen::ExternalTypeNode");
+        static_assert(sizeof(CheckedType) == 8ULL, "fixed layout size: ::cc::codegen::ExternalTypeNode");
+        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::ExternalTypeNode");
         static_assert(offsetof(CheckedType, isStruct) == 0ULL, "fixed layout offset isStruct: ::cc::codegen::ExternalTypeNode");
         static_assert(offsetof(CheckedType, isString) == 1ULL, "fixed layout offset isString: ::cc::codegen::ExternalTypeNode");
         static_assert(offsetof(CheckedType, isPmr) == 2ULL, "fixed layout offset isPmr: ::cc::codegen::ExternalTypeNode");
+        static_assert(offsetof(CheckedType, container) == 4ULL, "fixed layout offset container: ::cc::codegen::ExternalTypeNode");
     }
     {
         using CheckedType = ::cc::codegen::AliasType;

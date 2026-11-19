@@ -75,6 +75,8 @@ struct ExternalDeclaration {
     bool isStruct{};
     bool isString{};
     bool isPmr{};
+    bool isArray{};
+    std::vector<std::string> templateParameters;
 };
 struct TagDeclaration {};
 

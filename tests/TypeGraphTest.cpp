@@ -85,6 +85,36 @@ void checkTemplateBindings() {
             "exact binding also bound the template or a different argument list");
 }
 
+void checkArrayBindings() {
+    const auto module = parseModule("lists.spec", R"(
+        extern module Lists;
+        namespace sample {
+            @container("array") template<Item> struct List;
+            @string class Text;
+        }
+        binding typescript {
+            List<List<Text>> => Uint16Array;
+            Text => Caption from "text";
+        }
+    )");
+    auto graph = buildTypeGraph({{module, {}, true}}, {});
+    const auto list = graph.findType("sample::List");
+    const auto text = graph.findType("sample::Text");
+    const auto parameter = graph.node(list).templateParameters.at(0);
+    require(std::get<ExternalTypeNode>(graph.node(list).data).container == ContainerKind::Array &&
+            graph.node(parameter).name == "Item" && std::get<TemplateParameterType>(graph.node(parameter).data).owner == list,
+            "lost array template declaration");
+    const auto inner = graph.makeTemplateInstance(list, {text});
+    const auto exact = graph.makeTemplateInstance(list, {inner});
+    const auto outer = graph.makeTemplateInstance(list, {exact});
+    require(graph.node(inner).typescriptName == "Caption[]" && graph.node(inner).typescriptArrayElement == text,
+            "default array binding did not follow the explicit element binding");
+    require(graph.node(exact).typescriptName == "Uint16Array" && graph.node(exact).typescriptArrayElement == TypeId{},
+            "exact binding did not override the nested array default");
+    require(graph.node(outer).typescriptName == "Uint16Array[]" && graph.node(outer).typescriptArrayElement == exact,
+            "new array instance did not use the resolved element type");
+}
+
 void checkArchive(const std::filesystem::path& spec) {
     const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}},
                           {"double", {.builtin = true}}, {"std::string_view", {"string_view", "string"}},
@@ -151,6 +181,7 @@ void checkImports(const std::filesystem::path& specs) {
                                     {readModule(specs / "extern/reflection-probe.spec"), {}},
                                     {readModule(specs / "extern/gfx.spec"), {}, true},
                                     {readModule(specs / "extern/strings.spec"), {}, true},
+                                    {readModule(specs / "extern/containers.spec"), {}, true},
                                     {readModule(specs / "render/archive.spec"), {}}};
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
@@ -178,7 +209,7 @@ void checkImports(const std::filesystem::path& specs) {
         }
     )"), {}});
     const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
-                          {"ccstd::vector", {}}, {"void", {}}, {"double", {}},
+                          {"void", {}}, {"double", {}},
                           {"std::string_view", {}}, {"boost::container::pmr::memory_resource", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
@@ -216,7 +247,7 @@ void checkImports(const std::filesystem::path& specs) {
         const auto& nativeString = std::get<ExternalTypeNode>(text.data);
         require(nativeString.isString && nativeString.isPmr && text.typescriptName == "string", "lost PMR string traits");
         require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module, graph.node(mode).module,
-                                                        graph.node(archive).module, text.module},
+                                                        graph.node(archive).module, text.module, graph.node(graph.findType("ccstd::vector")).module},
                 "wrong direct imports");
         const auto& pair = std::get<RecordType>(graph.node(graph.findType("cc::render::ResolvePair")).data);
         require(pair.fields.at(3).type.type == mode && pair.fields.at(4).type.type == mode, "wrong resolve mode type");
@@ -310,6 +341,7 @@ int main(int argc, char** argv) {
         checkSourceLocation();
         checkScalarBindings();
         checkTemplateBindings();
+        checkArrayBindings();
         checkArchive(specs / "render/archive.spec");
         checkSettings(specs / "render/render-settings.spec");
         checkImports(specs);

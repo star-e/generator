@@ -1,5 +1,7 @@
 #pragma once
 
+#include "model/GraphSupport.h" // IWYU pragma: export
+
 namespace cc {
 
 namespace codegen {
@@ -14,6 +16,7 @@ struct Enumerator;
 struct NamespaceType;
 struct TagType;
 struct BuiltinType;
+enum class ContainerKind : uint32_t;
 struct ExternalTypeNode;
 struct EnumType;
 struct RecordType;

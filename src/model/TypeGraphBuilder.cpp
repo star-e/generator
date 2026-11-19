@@ -88,6 +88,9 @@ TypeId resolveName(const TypeGraph& graph, const std::string& name, const Source
 
 TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, ModuleId owner) {
     auto id = resolveName(graph, use.name, use.location, scope, owner);
+    const auto& declaration = graph.node(id);
+    if (!declaration.templateParameters.empty() && declaration.templateParameters.size() != use.arguments.size())
+        throw std::runtime_error(use.location.describe() + ": wrong number of template arguments for " + declaration.qualifiedName);
     if (!use.arguments.empty()) {
         if (!std::holds_alternative<ExternalTypeNode>(graph.node(id).data))
             throw std::runtime_error(use.location.describe() + ": expected an external template for " + graph.node(id).qualifiedName);
@@ -172,7 +175,8 @@ TypeData declare(const Declaration& decl) {
     }
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};
     if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) {
-        return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString, .isPmr = external->isPmr};
+        return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString,
+                                .isPmr = external->isPmr, .container = external->isArray ? ContainerKind::Array : ContainerKind::None};
     }
     return InterfaceType{};
 }
@@ -370,6 +374,7 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
             if (std::holds_alternative<TemplateInstanceType>(node.data)) {
                 if (rule.kind != BindingTarget::type || !isTypedArrayName(rule.target) || !rule.from.empty())
                     reject("expected a built-in ES2015 TypedArray target without an import");
+                node.typescriptArrayElement = {};
                 node.typescriptName = rule.target;
             } else if (rule.kind == BindingTarget::type) {
                 if (!std::holds_alternative<BuiltinType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data) &&
@@ -390,6 +395,13 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 if (!isRecord || !rule.methods.empty()) reject("expected a record binding");
             } else if (!isEnum) reject("expected an enum binding");
         }
+    }
+    // Binding sources can instantiate inner arrays before their elements receive an explicit binding.
+    // Recompute those defaults in creation order, with each element preceding its array.
+    for (auto v : graph.vertices()) {
+        auto& node = graph.getNode(v);
+        if (node.typescriptArrayElement != TypeId{})
+            node.typescriptName = typeScriptArrayName(graph.node(node.typescriptArrayElement));
     }
     return methods;
 }
@@ -531,6 +543,13 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             if (external && external->isString && !node.typescriptName) node.typescriptName = "string";
             auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
+            if (external) {
+                for (uint32_t p = 0; p < external->templateParameters.size(); ++p) {
+                    auto param = graph.appendNode(TypeNode{.name = external->templateParameters[p], .module = owner,
+                                                           .data = TemplateParameterType{id, p}}, id);
+                    graph.getNode(id.value).templateParameters.push_back(param);
+                }
+            }
             if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
                 graph.appendNode(TypeNode{.name = g->vertexAlias, .qualifiedName = qualify(graph.node(id).qualifiedName, g->vertexAlias),
                                           .module = owner, .data = AliasType{}}, id);
@@ -539,7 +558,8 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         for (const auto& [name, mapping] : input.externalTypes) {
             const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
             if (it == module.declarations.end() || (!std::holds_alternative<ExternalDeclaration>(it->data) &&
-                                                    !std::holds_alternative<Enum>(it->data))) {
+                                                    !std::holds_alternative<Enum>(it->data) &&
+                                                    (input.modelOnly || !std::holds_alternative<Record>(it->data)))) {
                 throw std::runtime_error(module.name + ": mapping for unknown external type " + name);
             }
         }

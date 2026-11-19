@@ -313,6 +313,15 @@ int main(int argc, char** argv) {
     if (!checkLayoutGraph()) return 9;
     if (!checkDescriptorBlockIndex()) return 10;
     if (!checkDescriptorGroupBlockIndex()) return 12;
+    cc::render::DescriptorBlockFlattened flat;
+    flat.descriptorNames.emplace_back("buffer");
+    flat.uniformBlockNames.emplace_back("camera");
+    flat.descriptors.emplace_back(cc::gfx::Type::FLOAT4);
+    flat.uniformBlocks.emplace_back().name = flat.uniformBlockNames.front();
+    const auto copy = flat;
+    flat.uniformBlocks.clear();
+    if (copy.uniformBlocks.front().name != "camera" || copy.descriptorNames.front() != "buffer" ||
+        copy.descriptors.front().type != cc::gfx::Type::FLOAT4 || copy.capacity != 0 || copy.count != 0) return 13;
     const cc::ComparisonProbe first{1, 3}, second{2, 0}, same{1, 3};
     if (!(first == same && first != second && first < second && second > first) || same > first) return 11;
     using cc::render::getName;

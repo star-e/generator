@@ -2,6 +2,8 @@ module LayoutGraph;
 import Gfx;
 import RenderCommon;
 import Strings;
+import Containers;
+import GfxUniformBlock;
 
 namespace cc::render {
     enum class LayoutType : uint8_t {
@@ -26,6 +28,15 @@ namespace cc::render {
         count: uint32_t = 1;
 
         constructor(type);
+    }
+
+    struct DescriptorBlockFlattened {
+        readonly descriptorNames: ccstd::vector<ccstd::string>;
+        readonly uniformBlockNames: ccstd::vector<ccstd::string>;
+        readonly descriptors: ccstd::vector<Descriptor>;
+        readonly uniformBlocks: ccstd::vector<gfx::UniformBlock>;
+        capacity: uint32_t = 0;
+        count: uint32_t = 0;
     }
 
     @comparison("<") struct DescriptorBlockIndex {
@@ -75,4 +86,5 @@ binding typescript {
     DescriptorTypeOrder => const enum { names; };
     RenderPassType => const enum;
     Descriptor => class { reset constructor; };
+    DescriptorBlockFlattened => class { reset defaults; };
 }

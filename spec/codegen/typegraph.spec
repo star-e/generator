@@ -41,10 +41,12 @@ namespace codegen {
     struct NamespaceType {}
     struct TagType {}
     struct BuiltinType {}
+    enum class ContainerKind : uint32_t { None, Array }
     struct ExternalTypeNode {
         isStruct: bool = false;
         isString: bool = false;
         isPmr: bool = false;
+        container: ContainerKind = ContainerKind::None;
     }
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
     struct RecordType {
@@ -96,6 +98,7 @@ namespace codegen {
         cppHeader: std::string;
         typescriptName: std::optional<std::string>;
         typescriptModule: std::string;
+        typescriptArrayElement: TypeId;
         templateParameters: std::vector<TypeId>;
     }
     struct TypeModule {

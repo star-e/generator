@@ -61,13 +61,29 @@ private:
                     const auto annotation = identifier();
                     if (annotation == "string" && !decl.isString) decl.isString = true;
                     else if (annotation == "pmr" && !decl.isPmr) decl.isPmr = true;
-                    else fail("unknown or duplicate external type annotation @" + annotation);
+                    else if (annotation == "container" && !decl.isArray) {
+                        expect("(");
+                        const auto kind = quotedString("container kind");
+                        if (kind != "array") fail("unsupported container kind '" + kind + "'");
+                        expect(")");
+                        decl.isArray = true;
+                        continue;
+                    } else fail("unknown or duplicate external type annotation @" + annotation);
                     if (token == "(") fail("@" + annotation + " takes no arguments");
                 }
+                if (accept("template")) {
+                    expect("<");
+                    std::set<std::string> parameters;
+                    do { decl.templateParameters.push_back(uniqueName(parameters)); } while (accept(","));
+                    expect(">");
+                }
+                if (decl.isArray && decl.templateParameters.size() != 1)
+                    fail("@container(\"array\") requires exactly one type parameter");
+                if (decl.isString && !decl.templateParameters.empty()) fail("@string requires a non-template declaration");
                 decl.isStruct = accept("struct");
                 if (!decl.isStruct) expect("class");
                 const auto start = location;
-                module.declarations.push_back({uniqueName(names), start, decl});
+                module.declarations.push_back({uniqueName(names), start, std::move(decl)});
                 expect(";");
             } else {
                 module.declarations.push_back(declaration(names));

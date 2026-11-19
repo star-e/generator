@@ -7,6 +7,19 @@
     { "backend": "model", "spec": "../spec/extern/types.spec" },
     {
       "backend": "model",
+      "spec": "../spec/extern/containers.spec",
+      "types": {
+        "string": { "header": "cocos/base/std/container/string.h" },
+        "vector": { "header": "cocos/base/std/container/vector.h" }
+      }
+    },
+    {
+      "backend": "model",
+      "spec": "../spec/extern/uniform-block.spec",
+      "types": { "UniformBlock": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
+    },
+    {
+      "backend": "model",
       "spec": "../spec/extern/strings.spec",
       "types": { "string": { "header": "cocos/base/std/container/string.h" } }
     },
