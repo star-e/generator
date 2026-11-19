@@ -63,6 +63,7 @@ binding typescript {
 | 外部类型 | `cc::gfx::SampleCount => "gfx.SampleCount";` 和 `Light => Light from "cocos/render-scene/scene";`。导入路径相对于工作区输出根目录，后端按消费文件的位置生成相对导入。 |
 | 具体模板实例 | `ccstd::vector<uint8_t> => Uint8Array;` 只匹配该模板和这组类型实参。`ccstd::vector<uint32_t>` 可以单独绑定到 `Uint32Array`。目标使用 ES2015 内置 TypedArray 名称，字段默认值为相应类型的零长度新数组。 |
 | 普通数组 | 在外部类型声明上写 `@container("array") template<T> class vector;`。TypeGraph 递归解析元素的 TS 类型，字段使用 `T[]` 和独立的空数组。具体实例的显式绑定优先，例如 `ccstd::vector<ccstd::vector<uint8_t>>` 对应 `Uint8Array[]`。 |
+| Map | 在外部类型声明上写 `@container("map") template<K, V> class map;`。TypeGraph 按键、值各自的绑定生成 `Map<K, V>`，从两侧递归收集导入。每个字段用 `new Map<K, V>()` 初始化。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
 | 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`Descriptor => class { reset constructor; };` 按构造参数重置。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
@@ -74,7 +75,7 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 
 原生头文件、输出路径继续在工作区配置中声明。多个模块共用的外部类型绑定可以集中在仅包含绑定的模块里。[通用类型绑定](../spec/extern/types.spec) · [外部 Gfx 类型](../spec/extern/gfx.spec) · [RenderCommon 绑定](../spec/render/render-common.spec)
 
-`DescriptorBlockFlattened` 的四个数组字段分别使用字符串、`Descriptor` 和外部 `UniformBlock` 作为元素类型。`reset defaults;` 通过 `length = 0` 原地清空普通数组，使调用方保留的引用继续有效，并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
+`DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型都声明 `reset defaults;`，通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
 | 层 | 建议实现 |
 | --- | --- |

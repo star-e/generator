@@ -1,4 +1,5 @@
 #include "parser/SpecParser.h"
+#include "generated/TypeGraphTypes.h"
 
 #include <algorithm>
 #include <cctype>
@@ -61,12 +62,13 @@ private:
                     const auto annotation = identifier();
                     if (annotation == "string" && !decl.isString) decl.isString = true;
                     else if (annotation == "pmr" && !decl.isPmr) decl.isPmr = true;
-                    else if (annotation == "container" && !decl.isArray) {
+                    else if (annotation == "container" && decl.container == ContainerKind::None) {
                         expect("(");
                         const auto kind = quotedString("container kind");
-                        if (kind != "array") fail("unsupported container kind '" + kind + "'");
+                        if (kind == "array") decl.container = ContainerKind::Array;
+                        else if (kind == "map") decl.container = ContainerKind::Map;
+                        else fail("unsupported container kind '" + kind + "'");
                         expect(")");
-                        decl.isArray = true;
                         continue;
                     } else fail("unknown or duplicate external type annotation @" + annotation);
                     if (token == "(") fail("@" + annotation + " takes no arguments");
@@ -77,8 +79,10 @@ private:
                     do { decl.templateParameters.push_back(uniqueName(parameters)); } while (accept(","));
                     expect(">");
                 }
-                if (decl.isArray && decl.templateParameters.size() != 1)
+                if (decl.container == ContainerKind::Array && decl.templateParameters.size() != 1)
                     fail("@container(\"array\") requires exactly one type parameter");
+                if (decl.container == ContainerKind::Map && decl.templateParameters.size() != 2)
+                    fail("@container(\"map\") requires exactly two type parameters");
                 if (decl.isString && !decl.templateParameters.empty()) fail("@string requires a non-template declaration");
                 decl.isStruct = accept("struct");
                 if (!decl.isStruct) expect("class");

@@ -176,7 +176,7 @@ TypeData declare(const Declaration& decl) {
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};
     if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) {
         return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString,
-                                .isPmr = external->isPmr, .container = external->isArray ? ContainerKind::Array : ContainerKind::None};
+                                .isPmr = external->isPmr, .container = external->container};
     }
     return InterfaceType{};
 }
@@ -374,7 +374,7 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
             if (std::holds_alternative<TemplateInstanceType>(node.data)) {
                 if (rule.kind != BindingTarget::type || !isTypedArrayName(rule.target) || !rule.from.empty())
                     reject("expected a built-in ES2015 TypedArray target without an import");
-                node.typescriptArrayElement = {};
+                node.typescriptContainer = ContainerKind::None;
                 node.typescriptName = rule.target;
             } else if (rule.kind == BindingTarget::type) {
                 if (!std::holds_alternative<BuiltinType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data) &&
@@ -396,12 +396,12 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
             } else if (!isEnum) reject("expected an enum binding");
         }
     }
-    // Binding sources can instantiate inner arrays before their elements receive an explicit binding.
-    // Recompute those defaults in creation order, with each element preceding its array.
+    // Binding sources can instantiate containers before their arguments receive explicit bindings.
+    // Each argument precedes its enclosing container in creation order.
     for (auto v : graph.vertices()) {
         auto& node = graph.getNode(v);
-        if (node.typescriptArrayElement != TypeId{})
-            node.typescriptName = typeScriptArrayName(graph.node(node.typescriptArrayElement));
+        if (node.typescriptContainer != ContainerKind::None)
+            node.typescriptName = typeScriptContainerName(graph, node);
     }
     return methods;
 }

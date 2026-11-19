@@ -92,19 +92,21 @@ TypeId TypeGraph::makeFunction(TypeId result, std::vector<TypeId> parameters, bo
 TypeId TypeGraph::makeTemplateInstance(TypeId declaration, std::vector<TemplateArgument> arguments) {
     const auto& decl = node(declaration);
     const auto* external = std::get_if<ExternalTypeNode>(&decl.data);
-    const bool array = external && external->container == ContainerKind::Array;
+    const auto container = external ? external->container : ContainerKind::None;
     if ((!decl.templateParameters.empty() && arguments.size() != decl.templateParameters.size()) ||
-        (array && arguments.size() != 1)) throw std::invalid_argument("wrong number of template arguments for " + decl.qualifiedName);
+        (container == ContainerKind::Array && arguments.size() != 1) ||
+        (container == ContainerKind::Map && arguments.size() != 2))
+        throw std::invalid_argument("wrong number of template arguments for " + decl.qualifiedName);
     for (const auto& arg : arguments) {
         if (const auto* type = std::get_if<TypeId>(&arg)) node(*type);
-        else if (!decl.templateParameters.empty() || array) throw std::invalid_argument("expected a type argument for " + decl.qualifiedName);
+        else if (!decl.templateParameters.empty() || container != ContainerKind::None)
+            throw std::invalid_argument("expected a type argument for " + decl.qualifiedName);
     }
-    const auto element = array ? std::get<TypeId>(arguments.front()) : TypeId{};
     const auto id = intern(*this, TemplateInstanceType{declaration, std::move(arguments)});
     auto& instance = getNode(id.value);
-    if (array && !instance.typescriptName) {
-        instance.typescriptArrayElement = element;
-        instance.typescriptName = typeScriptArrayName(node(element));
+    if (container != ContainerKind::None && !instance.typescriptName) {
+        instance.typescriptContainer = container;
+        instance.typescriptName = typeScriptContainerName(*this, instance);
     }
     return id;
 }

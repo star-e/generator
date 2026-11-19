@@ -62,14 +62,12 @@ BoundField bindField(const TypeGraph& graph, const FieldInfo& field, Imports& im
         return {FieldKind::resource, typeName(target, field, imports) + " | null", "null"};
     }
     if (std::holds_alternative<TemplateInstanceType>(node.data)) {
-        if (!field.initializer.empty()) invalid(field, "expected a default-constructed array field");
-        const auto& name = boundTypeScriptName(graph, field.type, imports.owner, imports.modules);
-        if (node.typescriptArrayElement != TypeId{}) {
-            const auto& source = typeScriptImportSource(graph, field.type.type);
+        if (!field.initializer.empty()) invalid(field, "expected a default-constructed container field");
+        if (!node.typescriptName) invalid(field, "missing TypeScript binding for " + qualifiedTypeName(graph, field.type.type));
+        visitTypeScriptImportSources(graph, node, [&](const TypeNode& source) {
             if (!std::holds_alternative<TemplateInstanceType>(source.data)) typeName(source, field, imports);
-            return {FieldKind::scalar, name, "[]"};
-        }
-        return {FieldKind::scalar, name, "new " + name + "(0)"};
+        });
+        return {FieldKind::scalar, *node.typescriptName, typeScriptContainerInitializer(node)};
     }
     const auto name = typeName(node, field, imports);
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {

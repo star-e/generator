@@ -30,6 +30,13 @@ namespace cc::render {
         constructor(type);
     }
 
+    struct DescriptorBlock {
+        readonly descriptors: ccstd::map<ccstd::string, Descriptor>;
+        readonly uniformBlocks: ccstd::map<ccstd::string, gfx::UniformBlock>;
+        capacity: uint32_t = 0;
+        count: uint32_t = 0;
+    }
+
     struct DescriptorBlockFlattened {
         readonly descriptorNames: ccstd::vector<ccstd::string>;
         readonly uniformBlockNames: ccstd::vector<ccstd::string>;
@@ -86,5 +93,6 @@ binding typescript {
     DescriptorTypeOrder => const enum { names; };
     RenderPassType => const enum;
     Descriptor => class { reset constructor; };
+    DescriptorBlock => class { reset defaults; };
     DescriptorBlockFlattened => class { reset defaults; };
 }

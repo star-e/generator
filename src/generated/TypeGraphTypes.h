@@ -68,6 +68,7 @@ struct BuiltinType {};
 enum class ContainerKind : uint32_t {
     None,
     Array,
+    Map,
 };
 
 struct ExternalTypeNode {
@@ -190,7 +191,7 @@ struct TypeNode {
     std::string cppHeader;
     std::optional<std::string> typescriptName;
     std::string typescriptModule;
-    TypeId typescriptArrayElement;
+    ContainerKind typescriptContainer = ContainerKind::None;
     std::vector<TypeId> templateParameters;
 };
 

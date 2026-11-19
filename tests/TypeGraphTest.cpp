@@ -85,21 +85,27 @@ void checkTemplateBindings() {
             "exact binding also bound the template or a different argument list");
 }
 
-void checkArrayBindings() {
+void checkContainerBindings() {
     const auto module = parseModule("lists.spec", R"(
         extern module Lists;
         namespace sample {
             @container("array") template<Item> struct List;
+            @container("map") template<Key, Value> class Table;
             @string class Text;
+            @string class Label;
         }
         binding typescript {
             List<List<Text>> => Uint16Array;
+            List<Table<Label, List<Text>>> => Uint8Array;
             Text => Caption from "text";
+            Label => Tag from "labels";
         }
     )");
     auto graph = buildTypeGraph({{module, {}, true}}, {});
     const auto list = graph.findType("sample::List");
     const auto text = graph.findType("sample::Text");
+    const auto table = graph.findType("sample::Table");
+    const auto label = graph.findType("sample::Label");
     const auto parameter = graph.node(list).templateParameters.at(0);
     require(std::get<ExternalTypeNode>(graph.node(list).data).container == ContainerKind::Array &&
             graph.node(parameter).name == "Item" && std::get<TemplateParameterType>(graph.node(parameter).data).owner == list,
@@ -107,12 +113,18 @@ void checkArrayBindings() {
     const auto inner = graph.makeTemplateInstance(list, {text});
     const auto exact = graph.makeTemplateInstance(list, {inner});
     const auto outer = graph.makeTemplateInstance(list, {exact});
-    require(graph.node(inner).typescriptName == "Caption[]" && graph.node(inner).typescriptArrayElement == text,
+    require(graph.node(inner).typescriptName == "Caption[]" && graph.node(inner).typescriptContainer == ContainerKind::Array,
             "default array binding did not follow the explicit element binding");
-    require(graph.node(exact).typescriptName == "Uint16Array" && graph.node(exact).typescriptArrayElement == TypeId{},
+    require(graph.node(exact).typescriptName == "Uint16Array" && graph.node(exact).typescriptContainer == ContainerKind::None,
             "exact binding did not override the nested array default");
-    require(graph.node(outer).typescriptName == "Uint16Array[]" && graph.node(outer).typescriptArrayElement == exact,
+    require(graph.node(outer).typescriptName == "Uint16Array[]" && graph.node(outer).typescriptContainer == ContainerKind::Array,
             "new array instance did not use the resolved element type");
+    const auto mapped = graph.makeTemplateInstance(table, {label, inner});
+    require(graph.node(mapped).typescriptName == "Map<Tag, Caption[]>" && graph.node(mapped).typescriptContainer == ContainerKind::Map,
+            "map did not follow late key and value bindings");
+    const auto reversed = graph.makeTemplateInstance(table, {inner, label});
+    require(graph.node(graph.makeTemplateInstance(list, {reversed})).typescriptName == "Map<Caption[], Tag>[]",
+            "nested map did not preserve the order of its arguments");
 }
 
 void checkArchive(const std::filesystem::path& spec) {
@@ -341,7 +353,7 @@ int main(int argc, char** argv) {
         checkSourceLocation();
         checkScalarBindings();
         checkTemplateBindings();
-        checkArrayBindings();
+        checkContainerBindings();
         checkArchive(specs / "render/archive.spec");
         checkSettings(specs / "render/render-settings.spec");
         checkImports(specs);

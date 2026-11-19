@@ -7,13 +7,14 @@ file(WRITE "${work}/spec/text.spec" [[extern module Text;
 namespace sample { @string class Text; @string struct Label; }
 binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 ]])
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import Strings; import Containers; import Text; import ArchiveInterface;
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import Strings; import Containers; import GfxUniformBlock; import Text; import ArchiveInterface;
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
     struct NestedProbe {
         rows: ccstd::vector<ccstd::vector<render::Descriptor>>;
         byteArrays: ccstd::vector<ccstd::vector<uint8_t>>;
+        tables: ccstd::vector<ccstd::map<render::LayoutType, ccstd::vector<gfx::UniformBlock>>>;
     }
     @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
@@ -49,10 +50,13 @@ string(FIND "${script}" [[import type { Caption } from './caption';]] captionImp
 if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
     message(FATAL_ERROR "Explicit TS binding on an owning string was lost")
 endif()
-foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []" [[import type { Descriptor } from './layout-graph';]])
+foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []"
+                          "tables: Map<LayoutType, UniformBlock[]>[] = []"
+                          [[import type { Descriptor, LayoutType } from './layout-graph';]]
+                          [[import type { UniformBlock } from '../../gfx';]])
     string(FIND "${script}" "${expected}" pos)
     if(pos EQUAL -1)
-        message(FATAL_ERROR "Missing nested array binding: ${expected}")
+        message(FATAL_ERROR "Missing nested container binding: ${expected}")
     endif()
 endforeach()
 set(build "${work}/build")

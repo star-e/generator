@@ -41,7 +41,7 @@ namespace codegen {
     struct NamespaceType {}
     struct TagType {}
     struct BuiltinType {}
-    enum class ContainerKind : uint32_t { None, Array }
+    enum class ContainerKind : uint32_t { None, Array, Map }
     struct ExternalTypeNode {
         isStruct: bool = false;
         isString: bool = false;
@@ -98,7 +98,7 @@ namespace codegen {
         cppHeader: std::string;
         typescriptName: std::optional<std::string>;
         typescriptModule: std::string;
-        typescriptArrayElement: TypeId;
+        typescriptContainer: ContainerKind = ContainerKind::None;
         templateParameters: std::vector<TypeId>;
     }
     struct TypeModule {

@@ -33,7 +33,7 @@ endif()
 file(WRITE "${nativeTypes}" "${bindings}")
 string(REPLACE "threshold: float = 0.8" "cutoff: float = 0.25" changed "${original}")
 string(REPLACE "module RenderSettings;" "module RenderSettings; import Strings; import Containers;" changed "${changed}")
-string(REPLACE "struct MSAA {" "struct MSAA { label: ccstd::pmr::string; bytes: ccstd::vector<uint8_t>; labels: ccstd::vector<ccstd::string>;" changed "${changed}")
+string(REPLACE "struct MSAA {" "struct MSAA { label: ccstd::pmr::string; bytes: ccstd::vector<uint8_t>; labels: ccstd::vector<ccstd::string>; counts: ccstd::map<ccstd::string, uint32_t>;" changed "${changed}")
 string(REPLACE "MipmapFilter," "MipmapFilter, LegacyFilter = MipmapFilter," changed "${changed}")
 string(REPLACE "iterations: uint32_t = 3" "iterations: uint32_t = 0xA" changed "${changed}")
 file(WRITE "${spec}" "${changed}")
@@ -46,7 +46,8 @@ file(READ "${output}/${paths}" ts)
 foreach(fragment IN ITEMS "cutoff: number; /* 0.25 */" "cutoff: 0.25," "value.cutoff = 0.25;" "LegacyFilter = MipmapFilter,"
                           "iterations: 0xA," "value.iterations = 0xA;" "label: string;" "label: ''," "value.label = '';"
                           "bytes: Uint8Array;" "bytes: new Uint8Array(0)," "value.bytes = new Uint8Array(0);"
-                          "labels: string[];" "labels: []," "value.labels = [];")
+                          "labels: string[];" "labels: []," "value.labels = [];"
+                          "counts: Map<string, number>;" "counts: new Map<string, number>()," "value.counts = new Map<string, number>();")
     string(FIND "${ts}" "${fragment}" position)
     if(position EQUAL -1)
         message(FATAL_ERROR "Missing generated field: ${fragment}")

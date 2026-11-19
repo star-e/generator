@@ -1,5 +1,6 @@
 #pragma once
 
+#include "generated/TypeGraphFwd.h"
 #include "model/Binding.h"
 #include <map>
 #include <optional>
@@ -75,7 +76,7 @@ struct ExternalDeclaration {
     bool isStruct{};
     bool isString{};
     bool isPmr{};
-    bool isArray{};
+    ContainerKind container{};
     std::vector<std::string> templateParameters;
 };
 struct TagDeclaration {};

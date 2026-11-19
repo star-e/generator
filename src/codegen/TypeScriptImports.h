@@ -12,22 +12,35 @@ namespace cc::codegen {
 
 using TypeImports = std::map<std::string, std::set<std::string>>;
 
-inline const TypeNode& typeScriptImportSource(const TypeGraph& graph, TypeId id) {
-    while (graph.node(id).typescriptArrayElement != TypeId{}) id = graph.node(id).typescriptArrayElement;
-    return graph.node(id);
+template<class Visitor>
+void visitTypeScriptImportSources(const TypeGraph& graph, const TypeNode& node, const Visitor& visit) {
+    if (node.typescriptContainer == ContainerKind::None) {
+        visit(node);
+        return;
+    }
+    for (const auto& argument : std::get<TemplateInstanceType>(node.data).arguments)
+        visitTypeScriptImportSources(graph, graph.node(std::get<TypeId>(argument)), visit);
 }
 
 inline const std::string& boundTypeScriptName(const TypeGraph& graph, const TypeUse& use, ModuleId owner, TypeImports& imports) {
     const auto& node = graph.node(use.type);
     if (!node.typescriptName) throw std::runtime_error(use.location.describe() + ": no TS mapping for " + qualifiedTypeName(graph, use.type));
-    const auto& source = typeScriptImportSource(graph, use.type);
-    if (source.module != owner && !source.typescriptModule.empty()) imports[source.typescriptModule].insert(*source.typescriptName);
-    else if (node.typescriptArrayElement != TypeId{} && source.module != ModuleId{} && source.module != owner &&
-             (std::holds_alternative<RecordType>(source.data) || std::holds_alternative<EnumType>(source.data) ||
-              std::holds_alternative<InterfaceType>(source.data))) {
-        throw std::runtime_error(use.location.describe() + ": missing TypeScript import mapping for " + source.qualifiedName);
-    }
+    visitTypeScriptImportSources(graph, node, [&](const TypeNode& source) {
+        if (source.module == owner) return;
+        if (!source.typescriptModule.empty()) imports[source.typescriptModule].insert(*source.typescriptName);
+        else if (node.typescriptContainer != ContainerKind::None && source.module != ModuleId{} &&
+                 (std::holds_alternative<RecordType>(source.data) || std::holds_alternative<EnumType>(source.data) ||
+                  std::holds_alternative<InterfaceType>(source.data))) {
+            throw std::runtime_error(use.location.describe() + ": missing TypeScript import mapping for " + source.qualifiedName);
+        }
+    });
     return *node.typescriptName;
+}
+
+inline std::string typeScriptContainerInitializer(const TypeNode& node) {
+    if (node.typescriptContainer == ContainerKind::Array) return "[]";
+    if (node.typescriptContainer == ContainerKind::Map) return "new " + *node.typescriptName + "()";
+    return "new " + *node.typescriptName + "(0)";
 }
 
 inline std::string modulePath(const std::filesystem::path& target, const std::filesystem::path& from) {

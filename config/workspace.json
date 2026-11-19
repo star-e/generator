@@ -9,6 +9,7 @@
       "backend": "model",
       "spec": "../spec/extern/containers.spec",
       "types": {
+        "map": { "header": "cocos/base/std/container/map.h" },
         "string": { "header": "cocos/base/std/container/string.h" },
         "vector": { "header": "cocos/base/std/container/vector.h" }
       }

@@ -35,7 +35,7 @@ struct Member {
     bool move{};
     bool readonly{};
     bool usesAllocator{};
-    bool isArray{};
+    std::string_view tsClear;
 };
 
 std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
@@ -94,16 +94,17 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         return m;
     }
     const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
-    if (instance && (node.typescriptName || node.typescriptArrayElement != TypeId{})) {
-        if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed array field");
+    if (instance && (node.typescriptName || node.typescriptContainer != ContainerKind::None)) {
+        if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed container field");
         m.cpp = nativeType(graph, module, field.type.type, deps);
-        m.isArray = node.typescriptArrayElement != TypeId{};
-        if (!m.isArray) deps.headers.insert("utility");
+        if (node.typescriptContainer == ContainerKind::None) deps.headers.insert("utility");
         m.move = true;
         m.usesAllocator = std::get<ExternalTypeNode>(graph.node(instance->declaration).data).isPmr;
         if (emitTs) {
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.typeImports);
-            m.tsDefault = m.isArray ? "[]" : "new " + m.ts + "(0)";
+            m.tsDefault = typeScriptContainerInitializer(node);
+            if (node.typescriptContainer == ContainerKind::Array) m.tsClear = ".length = 0";
+            if (node.typescriptContainer == ContainerKind::Map) m.tsClear = ".clear()";
         }
         return m;
     }
@@ -465,7 +466,7 @@ Order resetParameters(const std::string& name, const std::vector<Member>& member
         const auto& m = members[i];
         if (m.name == "reset") throw std::runtime_error(name + ".reset: field conflicts with reset method");
         if (retained.erase(m.name)) continue;
-        if (m.readonly && !(m.isArray && std::ranges::find(order, i) == order.end()))
+        if (m.readonly && (m.tsClear.empty() || std::ranges::find(order, i) != order.end()))
             throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
     }
     if (!retained.empty()) throw std::runtime_error(name + ": unknown keepOnReset field " + *retained.begin());
@@ -496,8 +497,8 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members,
                 continue;
             }
             const bool parameter = std::ranges::find(order, i) != order.end();
-            if (m.isArray && !parameter) {
-                ts << "        this." << m.name << ".length = 0;\n";
+            if (!m.tsClear.empty() && !parameter) {
+                ts << "        this." << m.name << m.tsClear << ";\n";
                 continue;
             }
             const auto& value = parameter ? m.name : m.tsDefault;
@@ -516,8 +517,8 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>&
         ts << "    reset (): void {\n";
         for (const auto& m : members) {
             if (m.name == "reset") throw std::runtime_error(node.name + ".reset: field conflicts with reset method");
-            if (m.isArray) {
-                ts << "        this." << m.name << ".length = 0;\n";
+            if (!m.tsClear.empty()) {
+                ts << "        this." << m.name << m.tsClear << ";\n";
                 continue;
             }
             if (m.readonly) throw std::runtime_error(node.name + "." + m.name + ": reset requires a writable field");
