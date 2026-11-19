@@ -1,6 +1,8 @@
 import { DefaultVisitor, GraphColor, OutE, OutEI } from './graph';
 import type { edge_descriptor, IncidenceGraph, VertexListGraph } from './graph';
 import { depthFirstSearch, depthFirstVisit } from './graph-dfs';
+import type { InputArchive } from './archive';
+import { DescriptorDB, LayoutGraph, LayoutGraphValue, RenderPassType } from './layout-graph';
 import { HierarchyOnly } from './shift-probe';
 
 function check (ok: boolean, message: string): void {
@@ -53,37 +55,70 @@ class Trace extends DefaultVisitor {
         const actual = this.events.join(' ');
         check(actual === expected, 'Expected ' + expected + '\nReceived ' + actual);
     }
+    compareNative (samples: InputArchive): void {
+        const count = samples.n();
+        check(count === this.events.length, 'Native and TS DFS event counts differ');
+        for (let i = 0; i < count; ++i) {
+            const expected = samples.s();
+            check(this.events[i] === expected, 'DFS event ' + i + ': native ' + expected + ', TS ' + this.events[i]);
+        }
+    }
 }
 
-const graph = new Digraph([[1, 2], [0, 2], [], [2], []].map(row => row.map(v => new OutE(v))), [4, 3, 2, 1, 0]);
-const colors = new Colors(new Array(graph.nv()).fill(GraphColor.BLACK));
-const search = new Trace(colors);
-depthFirstSearch(graph, search, colors, 0);
-search.expect('init4 init3 init2 init1 init0 start0 open0 examine0>1 tree0>1 open1 examine1>0 back1>0 finish1>0 ' +
-    'examine1>2 tree1>2 open2 close2 finish1>2 close1 finish0>1 examine0>2 forward/cross0>2 finish0>2 close0 ' +
-    'start4 open4 close4 start3 open3 examine3>2 forward/cross3>2 finish3>2 close3');
+export function checkNativeDfs (samples: InputArchive): void {
+    const count = samples.n();
+    const rows = Array.from({ length: count }, () => Array.from({ length: samples.n() }, () => new OutE(samples.n())));
+    const order = Array.from({ length: count }, () => samples.n());
+    const graph = new Digraph(rows, order);
+    const colors = new Colors(new Array(count).fill(GraphColor.BLACK));
+    const search = new Trace(colors);
+    depthFirstSearch(graph, search, colors, 0);
+    search.expect('init4 init3 init2 init1 init0 start0 open0 examine0>1 tree0>1 open1 examine1>0 back1>0 finish1>0 ' +
+        'examine1>2 tree1>2 open2 close2 finish1>2 close1 finish0>1 examine0>2 forward/cross0>2 finish0>2 close0 ' +
+        'start4 open4 close4 start3 open3 examine3>2 forward/cross3>2 finish3>2 close3');
+    search.compareNative(samples);
 
-const visit = new Trace(colors);
-colors.values.fill(GraphColor.WHITE);
-colors.put(2, GraphColor.BLACK);
-depthFirstVisit(graph, 0, visit, colors, { terminate: v => v === 1 });
-visit.expect('start0 open0 examine0>1 tree0>1 open1 close1 finish0>1 examine0>2 forward/cross0>2 finish0>2 close0');
-check(colors.get(3) === GraphColor.WHITE && colors.get(4) === GraphColor.WHITE, 'Visit reached a disconnected vertex');
+    const visit = new Trace(colors);
+    colors.values.fill(GraphColor.WHITE);
+    colors.put(2, GraphColor.BLACK);
+    depthFirstVisit(graph, 0, visit, colors, { terminate: v => v === 1 });
+    visit.expect('start0 open0 examine0>1 tree0>1 open1 close1 finish0>1 examine0>2 forward/cross0>2 finish0>2 close0');
+    check(colors.get(3) === GraphColor.WHITE && colors.get(4) === GraphColor.WHITE, 'Visit reached a disconnected vertex');
+    visit.compareNative(samples);
 
-const empty = new Trace(new Colors([]));
-depthFirstSearch(new Digraph([], []), empty, empty.color, 0);
-empty.expect('');
+    const empty = new Trace(new Colors([]));
+    depthFirstSearch(new Digraph([], []), empty, empty.color, 0);
+    empty.expect('');
+    empty.compareNative(samples);
 
-const chain = new HierarchyOnly();
-const length = 25000;
-let parent: number = chain.N;
-for (let i = 0; i < length; ++i) parent = chain.addVertex(i, parent);
-class ChainVisitor extends DefaultVisitor {
-    opened = 0;
-    closed = 0;
-    discoverVertex (v: number): void { check(v === this.opened++, 'Long chain discovery order'); }
-    finishVertex (v: number): void { check(v === length - ++this.closed, 'Long chain finish order'); }
+    const hierarchy = new HierarchyOnly();
+    const top = hierarchy.addVertex(0);
+    const leaf = hierarchy.addVertex(1, top);
+    const hierarchyColors = new Colors([GraphColor.WHITE, GraphColor.WHITE]);
+    depthFirstVisit(hierarchy, top, new DefaultVisitor(), hierarchyColors);
+    check(hierarchyColors.get(leaf) === GraphColor.BLACK, 'Single-root visit without vertex enumeration');
+
+    const forest = new LayoutGraph();
+    const size = samples.n();
+    for (let v = 0; v < size; ++v) addStage(forest, samples.n());
+    const forestVisitor = new Trace(new Colors(new Array(size).fill(GraphColor.BLACK)));
+    depthFirstSearch(forest, forestVisitor, forestVisitor.color);
+    forestVisitor.compareNative(samples);
+
+    const chain = new LayoutGraph();
+    const length = samples.n();
+    check(length === 25000, 'Long chain size');
+    let parent: number = chain.N;
+    for (let i = 0; i < length; ++i) parent = addStage(chain, parent);
+    const chainVisitor = new Trace(new Colors(new Array(length).fill(GraphColor.WHITE)));
+    depthFirstVisit(chain, 0, chainVisitor, chainVisitor.color);
+    const opened = chainVisitor.events.filter(event => event.startsWith('open'));
+    const closed = chainVisitor.events.filter(event => event.startsWith('close'));
+    check(opened.length === length && opened.every((event, i) => event === 'open' + i), 'Long chain discovery order');
+    check(closed.length === length && closed.every((event, i) => event === 'close' + (length - 1 - i)), 'Long chain finish order');
+    chainVisitor.compareNative(samples);
 }
-const chainVisitor = new ChainVisitor();
-depthFirstVisit(chain, 0, chainVisitor, new Colors(new Array(length).fill(GraphColor.WHITE)));
-check(chainVisitor.opened === length && chainVisitor.closed === length, 'Incomplete long chain');
+
+function addStage (g: LayoutGraph, parent: number): number {
+    return g.addVertex(LayoutGraphValue.RenderStage, RenderPassType.SINGLE_RENDER_PASS, 'v', new DescriptorDB(), parent);
+}

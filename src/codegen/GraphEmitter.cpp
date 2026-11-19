@@ -75,7 +75,16 @@ void hierarchyInterface(std::ostream& out, const std::string& name, const std::s
     };
 )"
         << "    ChildLinkRange child_links(" << vertex << " v) const noexcept {\n"
-        << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n";
+        << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n"
+        << "\n    using Edge = Link;\n"
+        << "    " << vertex << " source(Edge e) const noexcept { return e.source; }\n"
+        << "    " << vertex << " target(Edge e) const noexcept { return e.target; }\n"
+        << "    ChildLinkRange out_edges(" << vertex << " v) const noexcept { return child_links(v); }\n"
+        << "    " << vertex << " out_degree(" << vertex << " v) const noexcept { return num_children(v); }\n"
+        << "    std::pair<Edge, bool> edge(" << vertex << " u, " << vertex << " v) const noexcept {\n"
+        << "        if (u != null_vertex() && static_cast<std::uintmax_t>(v) < this->" << rows
+        << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
+        << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
 }
 
 void parentLookup(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
@@ -389,7 +398,11 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles);
     }
     if (model.hierarchy) {
-        headers.insert({"cstddef", "cstdint", "iterator", "limits"});
+        for (const auto* symbol : {"Edge", "source", "target", "out_edges", "out_degree", "edge"}) {
+            if (members.contains(symbol))
+                throw std::runtime_error(node.qualifiedName + ": shared-edge graph member name collision: " + symbol);
+        }
+        headers.insert({"cstddef", "cstdint", "iterator", "limits", "utility"});
         hierarchyInterface(out, name, vertex, rows);
     }
     if (model.parentGraph) {

@@ -103,6 +103,8 @@ build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)
 set(pathCases "${work}/layout-paths.bin")
 run("${consumer}" path-cases "${pathCases}")
+set(dfsCases "${work}/dfs-cases.bin")
+run("${consumer}" dfs-cases "${dfsCases}")
 
 # Exercise the engine's actual pool implementation with the generated pool and record.
 foreach(path IN ITEMS cocos/core/memop/recycle-pool.ts cocos/core/memop/scalable-container.ts cocos/core/utils/array.ts)
@@ -217,9 +219,8 @@ configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
     "${enumConsumer}" "${graphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}")
-run("${node}" "${work}/js/rendering/custom/graph-dfs-consumer.js")
 run("${consumer}" write "${work}/native.bin")
-run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}")
+run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}" "${dfsCases}")
 run("${consumer}" read "${work}/web.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${work}/native.bin" "${work}/web.bin")
 finish_workspace("${work}")

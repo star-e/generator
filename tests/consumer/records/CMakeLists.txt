@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 project(RenderCommonConsumer LANGUAGES CXX)
 find_package(boost_container CONFIG REQUIRED)
 set(native "${ENGINE}/native")
-add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp "${native}/cocos/base/RefCounted.cpp"
+add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp GraphDFSConsumer.cpp "${native}/cocos/base/RefCounted.cpp"
     "${STAGING}/native/ShiftProbe.cpp"
     "${STAGING}/native/ShiftSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"

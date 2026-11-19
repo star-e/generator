@@ -64,6 +64,7 @@
       "header": "cocos/renderer/pipeline/custom/LayoutGraphTypes.h",
       "typescript": "cocos/rendering/custom/layout-graph.ts",
       "runtimeFiles": {
+        "native/cocos/base/GraphDFS.h": "../runtime/cpp/GraphDFS.h",
         "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts"
       }
     },

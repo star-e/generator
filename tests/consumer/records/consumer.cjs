@@ -1,7 +1,7 @@
 const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
-const [jsDir, stage, engine, nativeFile, webFile, pathCases] = process.argv.slice(2);
+const [jsDir, stage, engine, nativeFile, webFile, pathCases, dfsCases] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
@@ -342,6 +342,9 @@ function readArchive(file) {
 const paths = readArchive(pathCases);
 checkNativePaths(paths);
 assert.equal(paths.offset, paths.dataView.byteLength);
+const dfs = readArchive(dfsCases);
+require(path.join(jsDir, 'graph-dfs-consumer.js')).checkNativeDfs(dfs);
+assert.equal(dfs.offset, dfs.dataView.byteLength);
 const statistics = Object.assign(new types.PipelineStatistics(), {
     numRenderPasses: 21, numManagedTextures: 22, totalManagedTextures: 23, numUploadBuffers: 24,
     numUploadBufferViews: 25, numFreeUploadBuffers: 26, numFreeUploadBufferViews: 27, numDescriptorSets: 28,

@@ -366,8 +366,10 @@ bool checkRenderPhase() {
 }
 
 bool checkLayoutGraph(const char* pathSamples);
+bool writeDfsCases(const char* path);
 
 int main(int argc, char** argv) {
+    if (argc == 3 && std::string_view(argv[1]) == "dfs-cases") return writeDfsCases(argv[2]) ? 0 : 1;
     const bool writePathCases = argc == 3 && std::string_view(argv[1]) == "path-cases";
     if (argc == 3 && !writePathCases) return exchangeRecords(argv[1], argv[2]);
     if (argc != 1 && !writePathCases) return 2;

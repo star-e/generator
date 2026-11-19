@@ -32,14 +32,20 @@ bool usesResource(const DescriptorDB& db, const LayoutGraph& g) {
 }
 
 bool hasChildren(const LayoutGraph& g, Vertex parent, std::initializer_list<Vertex> expected) {
-    if (g.num_children(parent) != expected.size()) return false;
+    if (g.num_children(parent) != expected.size() || g.out_degree(parent) != expected.size()) return false;
+    const auto outgoing = g.out_edges(parent);
+    auto edge = outgoing.begin();
     auto next = expected.begin();
     for (const auto link : g.child_links(parent)) {
-        if (next == expected.end() || link.source != parent || g.child(link) != *next ||
+        if (next == expected.end() || edge == outgoing.end() || link.source != parent || g.child(link) != *next ||
+            g.source(*edge) != parent || g.target(*edge) != *next ||
             g.get_parent(*next) != parent) return false;
+        const auto [found, exists] = g.edge(parent, *next);
+        if (!exists || g.source(found) != parent || g.target(found) != *next || g.edge(*next, parent).second) return false;
+        ++edge;
         ++next;
     }
-    return next == expected.end();
+    return next == expected.end() && edge == outgoing.end();
 }
 
 bool checkHierarchy() {
@@ -56,6 +62,12 @@ bool checkHierarchy() {
     graph.value(RenderStage_{}, cascade) = RenderPassType::RENDER_SUBPASS;
     const auto overlay = graph.add_vertex(RenderPhase_{}, "overlay", ui);
     const auto color = graph.add_vertex(RenderStage_{}, "color", root);
+    const auto none = LayoutGraph::null_vertex();
+    for (const auto& endpoints : {std::pair{root, root}, std::pair{root, cascade}, std::pair{none, root},
+                                  std::pair{root, none}, std::pair{root, graph.num_vertices()}}) {
+        const auto [missing, exists] = graph.edge(endpoints.first, endpoints.second);
+        if (exists || graph.source(missing) != none || graph.target(missing) != none) return false;
+    }
     static_assert(std::is_same_v<decltype(graph.value(RenderPhase_{}, shadow)), RenderPhase&>);
     static_assert(std::is_same_v<decltype(std::as_const(graph).value(RenderStage_{}, root)), const RenderPassType&>);
     static_assert(noexcept(graph.holds<RenderStage_>(root)));
