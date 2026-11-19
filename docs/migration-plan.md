@@ -60,13 +60,15 @@ binding typescript {
 
 | 用途 | 模块内的实际规则 |
 | --- | --- |
-| 外部类型 | `uint32_t => "number";` 和 `Light => Light from "cocos/render-scene/scene";`。导入路径相对于工作区输出根目录，后端按消费文件的位置生成相对导入。 |
+| 外部类型 | `cc::gfx::SampleCount => "gfx.SampleCount";` 和 `Light => Light from "cocos/render-scene/scene";`。导入路径相对于工作区输出根目录，后端按消费文件的位置生成相对导入。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
 | 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`Descriptor => class { reset constructor; };` 按构造参数重置。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 
-原生头文件、输出路径继续在工作区配置中声明。通用标量与引擎外部类型的 TS 绑定可以集中在仅包含绑定的模块里。[通用类型绑定](../spec/extern/types.spec) · [外部 Gfx 类型](../spec/extern/gfx.spec) · [RenderCommon 绑定](../spec/render/render-common.spec)
+TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `void`，`bool` 映射到 `boolean`，`double`、`float`、`uint8_t` 和 `uint32_t` 映射到 `number`。需要覆盖默认值时，在 `binding typescript` 中声明显式规则。
+
+原生头文件、输出路径继续在工作区配置中声明。多个模块共用的外部类型绑定可以集中在仅包含绑定的模块里。[通用类型绑定](../spec/extern/types.spec) · [外部 Gfx 类型](../spec/extern/gfx.spec) · [RenderCommon 绑定](../spec/render/render-common.spec)
 
 | 层 | 建议实现 |
 | --- | --- |

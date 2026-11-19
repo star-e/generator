@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <bit>
 #include <limits>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -38,6 +39,14 @@ TypeId ensureNamespace(TypeGraph& graph, const std::string& scope) {
     return graph.appendNode(TypeNode{.name = name, .qualifiedName = scope, .data = NamespaceType{}}, parent);
 }
 
+std::optional<std::string> defaultScalarBinding(std::string_view qualifiedName) {
+    if (qualifiedName == "void") return "void";
+    if (qualifiedName == "bool") return "boolean";
+    if (qualifiedName == "double" || qualifiedName == "float" ||
+        qualifiedName == "uint8_t" || qualifiedName == "uint32_t") return "number";
+    return std::nullopt;
+}
+
 void registerExternalTypes(TypeGraph& graph, const TypeTable& types) {
     for (const auto& [qualified, type] : types) {
         const auto pos = qualified.rfind("::");
@@ -45,7 +54,8 @@ void registerExternalTypes(TypeGraph& graph, const TypeTable& types) {
         const auto name = pos == std::string::npos ? qualified : qualified.substr(pos + 2);
         graph.appendNode(TypeNode{.name = name, .qualifiedName = qualified,
                                   .data = type.builtin ? TypeData{BuiltinType{}} : TypeData{ExternalTypeNode{}},
-                                  .cppHeader = type.header, .typescriptName = type.typescript,
+                                  .cppHeader = type.header,
+                                  .typescriptName = type.typescript ? type.typescript : defaultScalarBinding(qualified),
                                   .typescriptModule = type.typescriptModule}, parent);
     }
 }

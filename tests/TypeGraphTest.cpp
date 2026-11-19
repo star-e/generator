@@ -39,9 +39,33 @@ Module readModule(const std::filesystem::path& spec) {
     return parseModule(spec, {std::istreambuf_iterator<char>(stream), {}});
 }
 
+void checkScalarBindings() {
+    const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}},
+                          {"double", {.builtin = true}}, {"float", {.builtin = true}},
+                          {"uint8_t", {.header = "cstdint"}}, {"uint32_t", {.header = "cstdint"}},
+                          {"cc::uint32_t", {}}};
+    const auto graph = buildTypeGraph({}, types);
+    require(graph.node(graph.findType("void")).typescriptName == "void", "wrong default void binding");
+    require(graph.node(graph.findType("bool")).typescriptName == "boolean", "wrong default bool binding");
+    for (const auto* name : {"double", "float", "uint8_t", "uint32_t"}) {
+        const auto& type = graph.node(graph.findType(name));
+        require(type.typescriptName == "number" && type.typescriptModule.empty(), "expected a TS number without import");
+    }
+    require(!graph.node(graph.findType("cc::uint32_t")).typescriptName, "scalar binding matched a namespace-local type");
+
+    const auto module = parseModule("bindings.spec", R"(
+        module Bindings;
+        binding typescript { uint32_t => Count from "types/count"; }
+    )");
+    const auto bound = buildTypeGraph({{module, {}}}, types);
+    const auto& count = bound.node(bound.findType("uint32_t"));
+    require(count.typescriptName == "Count" && count.typescriptModule == "types/count",
+            "explicit binding did not override the default scalar binding");
+}
+
 void checkArchive(const std::filesystem::path& spec) {
-    const TypeTable types{{"void", {"", "void", true}}, {"bool", {"", "boolean", true}},
-                          {"double", {"", "number", true}}, {"std::string_view", {"string_view", "string"}},
+    const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}},
+                          {"double", {.builtin = true}}, {"std::string_view", {"string_view", "string"}},
                           {"boost::container::pmr::memory_resource", {"boost/container/pmr/memory_resource.hpp", {}}}};
     const auto graph = buildTypeGraph({{readModule(spec), {}}}, types);
     const auto input = graph.findType("cc::render::InputArchive");
@@ -256,6 +280,7 @@ int main(int argc, char** argv) {
         if (argc != 2) throw std::runtime_error("expected spec directory");
         const std::filesystem::path specs = argv[1];
         checkSourceLocation();
+        checkScalarBindings();
         checkArchive(specs / "render/archive.spec");
         checkSettings(specs / "render/render-settings.spec");
         checkImports(specs);
