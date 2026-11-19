@@ -10,7 +10,6 @@
   "cc::Texture2D": {},
   "cc::IntrusivePtr": { "header": "cocos/base/Ptr.h" },
   "std::string_view": { "header": "string_view" },
-  "ccstd::pmr::string": { "header": "cocos/base/std/container/string.h" },
   "ccstd::vector": { "header": "cocos/base/std/container/vector.h" },
   "boost::container::pmr::memory_resource": { "header": "boost/container/pmr/memory_resource.hpp" }
 }

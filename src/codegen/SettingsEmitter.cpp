@@ -38,7 +38,8 @@ std::string typeName(const TypeNode& type, const FieldInfo& field, Imports& impo
         imports.modules[type.typescriptModule].insert(name);
         return name;
     }
-    if (type.module != ModuleId{} && type.module != imports.owner) {
+    const auto* external = std::get_if<ExternalTypeNode>(&type.data);
+    if (type.module != ModuleId{} && type.module != imports.owner && !(external && external->isString)) {
         invalid(field, "missing TypeScript import mapping for " + type.qualifiedName);
     }
     if (type.module == ModuleId{} && name != "boolean" && name != "number" && name != "string") {
@@ -60,6 +61,10 @@ BoundField bindField(const TypeGraph& graph, const FieldInfo& field, Imports& im
         return {FieldKind::resource, typeName(target, field, imports) + " | null", "null"};
     }
     const auto name = typeName(node, field, imports);
+    if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {
+        if (!field.initializer.empty()) invalid(field, "expected a default-constructed owning string");
+        return {FieldKind::scalar, name, "''"};
+    }
     if (std::holds_alternative<RecordType>(node.data)) {
         if (!field.initializer.empty()) invalid(field, "nested settings use their record defaults");
         return {FieldKind::record, name, "make" + name + "()"};

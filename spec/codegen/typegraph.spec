@@ -41,7 +41,11 @@ namespace codegen {
     struct NamespaceType {}
     struct TagType {}
     struct BuiltinType {}
-    struct ExternalTypeNode { isStruct: bool = false; }
+    struct ExternalTypeNode {
+        isStruct: bool = false;
+        isString: bool = false;
+        isPmr: bool = false;
+    }
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
     struct RecordType {
         moveOnly: bool = false;

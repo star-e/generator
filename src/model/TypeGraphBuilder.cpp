@@ -167,7 +167,9 @@ TypeData declare(const Declaration& decl) {
         return enumeration;
     }
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};
-    if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) return ExternalTypeNode{external->isStruct};
+    if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) {
+        return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString, .isPmr = external->isPmr};
+    }
     return InterfaceType{};
 }
 
@@ -508,7 +510,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             if (graph.findType(qualified) != TypeId{}) {
                 throw std::runtime_error(decl.location.describe() + ": duplicate type " + qualified);
             }
-            const bool external = std::holds_alternative<ExternalDeclaration>(decl.data);
+            const auto* external = std::get_if<ExternalDeclaration>(&decl.data);
             TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl)};
             if (const auto it = input.externalTypes.find(decl.name); it != input.externalTypes.end()) {
                 node.cppHeader = it->second.header;
@@ -517,6 +519,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             } else if (!external && !std::holds_alternative<TagType>(node.data)) {
                 node.typescriptName = decl.name;
             }
+            if (external && external->isString && !node.typescriptName) node.typescriptName = "string";
             auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
             if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {

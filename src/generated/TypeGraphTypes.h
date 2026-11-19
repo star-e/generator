@@ -67,6 +67,8 @@ struct BuiltinType {};
 
 struct ExternalTypeNode {
     bool isStruct = false;
+    bool isString = false;
+    bool isPmr = false;
 };
 
 struct EnumType {

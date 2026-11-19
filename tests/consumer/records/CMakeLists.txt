@@ -4,6 +4,7 @@ find_package(boost_container CONFIG REQUIRED)
 set(native "${ENGINE}/native")
 add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp "${native}/cocos/base/RefCounted.cpp"
     "${STAGING}/native/ShiftProbe.cpp"
+    "${STAGING}/native/ShiftSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp"

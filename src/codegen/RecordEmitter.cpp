@@ -95,17 +95,17 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
     const auto& module = graph.modules.at(owner.value);
     const auto& node = graph.node(field.type.type);
     Member m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly};
-    if (node.qualifiedName == "ccstd::pmr::string") {
-        if (field.isNullable || !field.initializer.empty()) invalid(field, "expected a default-constructed PMR string");
+    if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {
+        if (field.isNullable || !field.initializer.empty()) invalid(field, "expected a default-constructed owning string");
         if (node.cppHeader.empty()) invalid(field, "missing native header for " + node.qualifiedName);
         m.cpp = nativeType(graph, module, field.type.type, deps);
         if (emitTs) {
-            if (node.typescriptName != "string") invalid(field, "expected a TypeScript string mapping for " + node.qualifiedName);
-            m.ts = *node.typescriptName;
+            m.ts = node.typescriptName.value();
+            if (!node.typescriptModule.empty()) deps.typeImports[node.typescriptModule].insert(m.ts);
             m.tsDefault = "''";
         }
         m.move = true;
-        m.usesAllocator = true;
+        m.usesAllocator = external->isPmr;
         return m;
     }
     const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
@@ -225,7 +225,7 @@ void writeEnumNames(std::ostream& out, const std::string& name, const EnumType& 
 }
 
 void inlineConstructors(std::ostream& out, const std::string& name, const RecordType& record,
-                        const std::vector<Member>& members) {
+                        const std::vector<Member>& members, std::set<std::string>& headers) {
     if (!record.constructors.empty() || record.moveOnly) out << "    " << name << "() = default;\n";
     for (const auto& ctor : record.constructors) {
         if (ctor.empty()) continue;
@@ -241,7 +241,10 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
             if (std::ranges::find(ctor, i) == ctor.end()) continue;
             const auto& m = members[i];
             out << (first ? "    : " : ",\n      ") << m.name << "(";
-            if (m.move) out << "std::move(";
+            if (m.move) {
+                headers.insert("utility");
+                out << "std::move(";
+            }
             out << m.name << "In" << (m.move ? "))" : ")");
             first = false;
         }
@@ -413,7 +416,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     out << "struct " << node.name << " {\n";
     const auto allocator = std::ranges::find(members, true, &Member::usesAllocator);
     if (allocator == members.end()) {
-        inlineConstructors(out, node.name, record, members);
+        inlineConstructors(out, node.name, record, members, deps.headers);
     } else {
         pmrConstructors(out, source, node.name, record, members, *allocator);
     }
@@ -562,7 +565,8 @@ std::vector<ArchiveField> archiveFields(const TypeGraph& graph, const RecordType
             static constexpr std::string_view numbers[]{"int", "unsigned", "short", "char", "bool", "int8_t", "uint8_t",
                 "int16_t", "uint16_t", "int32_t", "uint32_t", "float", "double"};
             if (node.qualifiedName == "bool") entry.primitive = "Bool";
-            else if (node.qualifiedName == "ccstd::pmr::string") entry.primitive = "String";
+            else if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString)
+                entry.primitive = "String";
             else if (std::ranges::find(numbers, type) != std::end(numbers)) entry.primitive = "Number";
             else invalid(field, "unsupported archive field type " + node.qualifiedName);
         }

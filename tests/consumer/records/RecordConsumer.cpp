@@ -3,6 +3,7 @@
 #include "cocos/renderer/pipeline/custom/RenderCommonSerialization.h"
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "ShiftProbe.h"
+#include "ShiftSerialization.h"
 #include "cocos/base/std/container/map.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
@@ -109,6 +110,7 @@ static_assert(std::is_nothrow_move_constructible_v<UploadPair> && std::is_nothro
 static_assert(!std::is_copy_constructible_v<UploadPair> && !std::is_copy_assignable_v<UploadPair>);
 static_assert(!std::is_constructible_v<UploadPair, const UploadPair&, const UploadPair::allocator_type&>);
 static_assert(std::is_default_constructible_v<cc::MoveProbe> && std::is_move_constructible_v<cc::MoveProbe>);
+static_assert(std::is_copy_constructible_v<cc::TextProbe>);
 static_assert(!std::is_copy_constructible_v<cc::MoveProbe> && !std::is_copy_assignable_v<cc::MoveProbe>);
 
 namespace pmr = boost::container::pmr;
@@ -209,6 +211,7 @@ int exchangeRecords(std::string_view command, const char* path) {
         save(archive, CopyPair{"copy-src", "copy-dst", 1, 2, 3, 4, 5, 6, 7, 8, &memory});
         save(archive, MovePair{"move-src", "move-dst", 11, 12, 13, 14, 15, &memory});
         save(archive, PipelineStatistics{21, 22, 23, 24, 25, 26, 27, 28, 29, 30, UINT32_MAX});
+        save(archive, cc::TextProbe{"plain text", "caption"});
         file.close();
         return file.good() ? 0 : 1;
     }
@@ -229,6 +232,9 @@ int exchangeRecords(std::string_view command, const char* path) {
     load(archive, copy);
     load(archive, move);
     load(archive, statistics);
+    cc::TextProbe text;
+    load(archive, text);
+    if (text.text != "plain text" || text.label != "caption") return 8;
     if (light.level != 77 || !light.culledByLight || light.probe != probe) return 3;
     if (resolve.source != "color-msaa" || resolve.target != "color" || resolve.resolveFlags != depthStencil ||
         resolve.mode != ResolveMode::MIN || resolve.mode1 != ResolveMode::MAX) return 4;

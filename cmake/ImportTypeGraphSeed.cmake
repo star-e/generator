@@ -35,5 +35,7 @@ foreach(file IN LISTS files)
             continue()
         endif()
     endif()
-    file(WRITE "${path}" "${seed_${file}}")
+    # file(CONFIGURE supplies the final newline. Expand the source once to preserve its contents.
+    string(REGEX REPLACE "\n$" "" content "${seed_${file}}")
+    file(CONFIGURE OUTPUT "${path}" CONTENT "@content@" @ONLY NEWLINE_STYLE LF)
 endforeach()

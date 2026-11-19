@@ -5,6 +5,18 @@ set(workspace "${work}/config/workspace.json")
 set(generate "${TOOL}" generate --workspace "${workspace}" --output "${work}/stage")
 run(${generate})
 
+set(strings "${work}/spec/extern/strings.spec")
+file(READ "${strings}" originalStrings)
+foreach(annotation IN ITEMS string pmr)
+    string(REPLACE "@${annotation}" "@${annotation} @${annotation}" duplicate "${originalStrings}")
+    file(WRITE "${strings}" "${duplicate}")
+    expect_failure(2 "strings[.]spec:[0-9]+:[0-9]+: unknown or duplicate external type annotation @${annotation}" ${generate})
+    string(REPLACE "@${annotation}" "@${annotation}()" arguments "${originalStrings}")
+    file(WRITE "${strings}" "${arguments}")
+    expect_failure(2 "strings[.]spec:[0-9]+:[0-9]+: @${annotation} takes no arguments" ${generate})
+endforeach()
+file(WRITE "${strings}" "${originalStrings}")
+
 # Consumer-first and provider-first workspaces must plan the same files.
 file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)

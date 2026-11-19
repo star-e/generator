@@ -128,10 +128,12 @@ void checkImports(const std::filesystem::path& specs) {
                                     {readModule(specs / "extern/light.spec"), {}},
                                     {readModule(specs / "extern/reflection-probe.spec"), {}},
                                     {readModule(specs / "extern/gfx.spec"), {}, true},
+                                    {readModule(specs / "extern/strings.spec"), {}, true},
                                     {readModule(specs / "render/archive.spec"), {}}};
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
         import RenderCommon;
+        import Strings;
         namespace cc::render {
             struct PassInfo { light: LightInfo; }
             graph Passes {
@@ -154,7 +156,7 @@ void checkImports(const std::filesystem::path& specs) {
         }
     )"), {}});
     const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
-                          {"ccstd::pmr::string", {}}, {"ccstd::vector", {}}, {"void", {}}, {"double", {}},
+                          {"ccstd::vector", {}}, {"void", {}}, {"double", {}},
                           {"std::string_view", {}}, {"boost::container::pmr::memory_resource", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
@@ -188,7 +190,11 @@ void checkImports(const std::filesystem::path& specs) {
                 std::holds_alternative<ExternalTypeNode>(probeNode.data), "lost external declarations");
         const auto mode = graph.findType("cc::gfx::ResolveMode");
         const auto archive = graph.findType("cc::render::InputArchive");
-        require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module, graph.node(mode).module, graph.node(archive).module},
+        const auto& text = graph.node(graph.findType("ccstd::pmr::string"));
+        const auto& nativeString = std::get<ExternalTypeNode>(text.data);
+        require(nativeString.isString && nativeString.isPmr && text.typescriptName == "string", "lost PMR string traits");
+        require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module, graph.node(mode).module,
+                                                        graph.node(archive).module, text.module},
                 "wrong direct imports");
         const auto& pair = std::get<RecordType>(graph.node(graph.findType("cc::render::ResolvePair")).data);
         require(pair.fields.at(3).type.type == mode && pair.fields.at(4).type.type == mode, "wrong resolve mode type");

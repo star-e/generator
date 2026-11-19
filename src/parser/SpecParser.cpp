@@ -56,10 +56,18 @@ private:
         expect("{");
         while (!accept("}")) {
             if (external) {
-                const bool isStruct = accept("struct");
-                if (!isStruct) expect("class");
+                ExternalDeclaration decl;
+                while (accept("@")) {
+                    const auto annotation = identifier();
+                    if (annotation == "string" && !decl.isString) decl.isString = true;
+                    else if (annotation == "pmr" && !decl.isPmr) decl.isPmr = true;
+                    else fail("unknown or duplicate external type annotation @" + annotation);
+                    if (token == "(") fail("@" + annotation + " takes no arguments");
+                }
+                decl.isStruct = accept("struct");
+                if (!decl.isStruct) expect("class");
                 const auto start = location;
-                module.declarations.push_back({uniqueName(names), start, ExternalDeclaration{isStruct}});
+                module.declarations.push_back({uniqueName(names), start, decl});
                 expect(";");
             } else {
                 module.declarations.push_back(declaration(names));

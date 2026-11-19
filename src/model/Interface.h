@@ -78,7 +78,11 @@ struct Enum {
     bool isFlags{};
 };
 
-struct ExternalDeclaration { bool isStruct{}; };
+struct ExternalDeclaration {
+    bool isStruct{};
+    bool isString{};
+    bool isPmr{};
+};
 struct TagDeclaration {};
 
 struct GraphComponent {

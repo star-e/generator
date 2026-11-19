@@ -1,6 +1,7 @@
 module LayoutGraph;
 import Gfx;
 import RenderCommon;
+import Strings;
 
 namespace cc::render {
     enum class LayoutType : uint8_t {

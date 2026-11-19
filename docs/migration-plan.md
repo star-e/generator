@@ -68,6 +68,8 @@ binding typescript {
 
 TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `void`，`bool` 映射到 `boolean`，`double`、`float`、`uint8_t` 和 `uint32_t` 映射到 `number`。需要覆盖默认值时，在 `binding typescript` 中声明显式规则。
 
+在 `extern module` 的无定义 `class` 或 `struct` 上用 `@string` 声明拥有 UTF-8 文本的原生类型。字段默认绑定为 TS `string`，初值为 `''`，序列化使用字符串读写接口。显式 TS 绑定可以指定兼容的字符串别名及其导入路径。需要传递内存资源的字符串另加 `@pmr`。例如 `ccstd::pmr::string` 同时声明这两个注解，`std::string_view` 作为借用视图只声明 TS 绑定。[原生字符串声明](../spec/extern/strings.spec) · [借用视图绑定](../spec/extern/types.spec)
+
 原生头文件、输出路径继续在工作区配置中声明。多个模块共用的外部类型绑定可以集中在仅包含绑定的模块里。[通用类型绑定](../spec/extern/types.spec) · [外部 Gfx 类型](../spec/extern/gfx.spec) · [RenderCommon 绑定](../spec/render/render-common.spec)
 
 | 层 | 建议实现 |

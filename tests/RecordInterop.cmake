@@ -3,8 +3,14 @@ test_workspace(work)
 set(stage "${work}/engine")
 # Compile a uint32_t high bit alongside the production enums in both consumer languages.
 file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; namespace cc {
+file(WRITE "${work}/spec/text.spec" [[extern module Text;
+namespace sample { @string class Text; @string struct Label; }
+binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
+]])
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import Strings; import Text; import ArchiveInterface;
+namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
+    @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
     @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; minor: uint32_t = 0; }
     graph TinyNames {
@@ -20,10 +26,23 @@ file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)
 string(JSON config SET "${config}" modules ${count} [[{
     "backend": "records", "spec": "../spec/shift.spec",
-    "header": "native/ShiftProbe.h", "typescript": "cocos/rendering/custom/shift-probe.ts"
+    "nativeRoot": "native", "header": "ShiftProbe.h", "serializationHeader": "ShiftSerialization.h",
+    "typescript": "cocos/rendering/custom/shift-probe.ts"
+}]])
+math(EXPR count "${count} + 1")
+string(JSON config SET "${config}" modules ${count} [[{
+    "backend": "model", "spec": "../spec/text.spec",
+    "types": { "Text": { "header": "SampleText.h" }, "Label": { "header": "SampleText.h" } }
 }]])
 file(WRITE "${workspace}" "${config}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
+file(WRITE "${stage}/native/SampleText.h" "#pragma once\n#include <string>\nnamespace sample { using Text = std::string; using Label = std::string; }\n")
+file(WRITE "${stage}/cocos/rendering/custom/caption.ts" "export type Caption = string;\n")
+file(READ "${stage}/cocos/rendering/custom/shift-probe.ts" script)
+string(FIND "${script}" [[import type { Caption } from './caption';]] captionImport)
+if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
+    message(FATAL_ERROR "Explicit TS binding on an owning string was lost")
+endif()
 set(build "${work}/build")
 build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)

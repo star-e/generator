@@ -6,6 +6,11 @@
   "modules": [
     { "backend": "model", "spec": "../spec/extern/types.spec" },
     {
+      "backend": "model",
+      "spec": "../spec/extern/strings.spec",
+      "types": { "string": { "header": "cocos/base/std/container/string.h" } }
+    },
+    {
       "spec": "../spec/render/archive.spec",
       "nativeRoot": "native",
       "includeDir": "cocos/renderer/pipeline/custom",

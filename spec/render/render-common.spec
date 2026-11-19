@@ -3,6 +3,7 @@ import Light;
 import ReflectionProbe;
 import Gfx;
 import ArchiveInterface;
+import Strings;
 
 namespace cc::render {
     enum class UpdateFrequency : uint8_t {

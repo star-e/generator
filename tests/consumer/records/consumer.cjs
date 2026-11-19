@@ -273,6 +273,12 @@ for (const [name, expected] of fixtures) {
     }
     types['save' + name](output, expected);
 }
+const { TextProbe, loadTextProbe, saveTextProbe } = require(path.join(jsDir, 'shift-probe.js'));
+const textProbe = new TextProbe();
+assert.deepEqual([textProbe.text, textProbe.label], ['', '']);
+loadTextProbe(input, textProbe);
+assert.deepEqual([textProbe.text, textProbe.label], ['plain text', 'caption']);
+saveTextProbe(output, textProbe);
 assert.equal(input.offset, bytesFromCpp.byteLength);
 assert.equal(types.saveUploadPair, undefined);
 assert.equal(types.loadUploadPair, undefined);
