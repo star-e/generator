@@ -260,6 +260,11 @@ private:
                 graph.parentGraph = location;
                 advance();
                 expect(";");
+            } else if (token == "addressable_graph") {
+                if (graph.addressableGraph) fail("duplicate addressable_graph");
+                graph.addressableGraph = location;
+                advance();
+                expect(";");
             } else if (accept("component")) {
                 auto tag = type();
                 expect(":");

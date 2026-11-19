@@ -62,6 +62,7 @@ namespace codegen {
         hierarchy: bool = false;
         nameComponentIndex: std::optional<uint32_t>;
         parentGraph: bool = false;
+        addressableGraph: bool = false;
         components: std::vector<ComponentInfo>;
         fields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;

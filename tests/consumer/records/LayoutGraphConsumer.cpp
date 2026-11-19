@@ -135,6 +135,54 @@ bool checkChildLookup() {
            view.locate_child(other, newName) == none;
 }
 
+bool checkGraphPaths() {
+    FailingResource resource;
+    LayoutGraph graph{&resource};
+    const auto& view = std::as_const(graph);
+    const auto none = LayoutGraph::null_vertex();
+    static_assert(noexcept(view.locate("/main")) && noexcept(view.exists("/main")));
+    static_assert(std::is_same_v<decltype(view.path(none)), ccstd::pmr::string>);
+    if (view.exists("/main") || !view.path(none).empty() || view.path(none).get_allocator().resource() != &resource) return false;
+
+    const auto main = graph.add_vertex("main");
+    const auto shadow = graph.add_vertex("shadow", main);
+    const auto light = graph.add_vertex("lighting", main);
+    const auto leaf = graph.add_vertex("leaf", shadow);
+    const auto ui = graph.add_vertex("ui");
+    graph.add_vertex("shadow", main);
+    constexpr std::string_view binaryName{"x\0y", 3};
+    constexpr std::string_view binaryPath{"/ui/x\0y", 7};
+    const auto binary = graph.add_vertex(binaryName, ui);
+    const auto invalid = view.num_vertices();
+    if (view.path(main) != "/main" || view.path(leaf) != "/main/shadow/leaf" ||
+        std::string_view{view.path(binary)} != binaryPath) return false;
+    try {
+        view.path(invalid);
+        return false;
+    } catch (const std::out_of_range&) {}
+
+    struct Query { std::string_view text; Vertex start; Vertex expected; };
+    const Query queries[] = {
+        {"/main/shadow/leaf", ui, leaf}, {"shadow/leaf", main, leaf}, {"../lighting", shadow, light},
+        {"//main/./shadow//leaf/", none, leaf}, {"/ui", invalid, ui}, {"../../ui", shadow, ui},
+        {"../../../ui", shadow, none}, {".", shadow, shadow}, {"..", main, none}, {"..", invalid, none},
+        {"", shadow, none}, {"/", main, none}, {"./", none, none}, {"missing/../lighting", main, none},
+        {"lighting", ui, none}, {binaryPath, none, binary},
+    };
+    resource.allocationsBeforeFailure = 0;
+    for (const auto& query : queries) {
+        if (view.locate(query.text, query.start) != query.expected ||
+            view.exists(query.text, query.start) != (query.expected != none)) return false;
+    }
+    resource.allocationsBeforeFailure = -1;
+    const std::string renamed(160, 'p');
+    graph.getName(main).assign(renamed.data(), renamed.size());
+    const auto newPath = "/" + renamed + "/shadow/leaf";
+    const auto actual = view.path(leaf);
+    return actual.get_allocator().resource() == &resource && std::string_view{actual} == std::string_view{newPath} &&
+           view.locate(newPath) == leaf && view.exists(newPath) && !view.exists("/main/shadow/leaf");
+}
+
 bool checkFailedAssignment(bool move) {
     boost::container::pmr::monotonic_buffer_resource arena;
     FailingResource resource;
@@ -161,7 +209,7 @@ bool checkFailedAssignment(bool move) {
 } // namespace
 
 bool checkLayoutGraph() {
-    if (!checkChildLookup()) return false;
+    if (!checkChildLookup() || !checkGraphPaths()) return false;
     if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;

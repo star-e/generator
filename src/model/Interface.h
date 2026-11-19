@@ -92,6 +92,7 @@ struct GraphDeclaration {
     bool hierarchy{};
     std::optional<TypeRef> nameComponent;
     std::optional<SourceLocation> parentGraph;
+    std::optional<SourceLocation> addressableGraph;
     std::vector<GraphComponent> components;
 };
 

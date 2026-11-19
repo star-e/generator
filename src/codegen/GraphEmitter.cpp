@@ -78,12 +78,11 @@ void hierarchyInterface(std::ostream& out, const std::string& name, const std::s
 }
 
 void parentLookup(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
-                  const ComponentInfo& component, const TypeGraph& graph) {
-    const auto accessor = "get" + componentAccessorSuffix(graph.node(component.tag).name);
+                  const std::string& member, const std::string& accessor) {
     out << "    " << vertex << " locate_child(" << vertex << " parent, std::string_view name) const noexcept;\n";
     source << "\n" << name << "::" << vertex << " " << name << "::locate_child(" << vertex
            << " parent, std::string_view name) const noexcept {\n"
-           << "    const auto count = this->" << component.name << ".size();\n"
+           << "    const auto count = this->" << member << ".size();\n"
            << "    if (parent == null_vertex()) {\n"
            << "        for (std::size_t i = 0; i < count; ++i) {\n"
            << "            const auto v = static_cast<" << vertex << ">(i);\n"
@@ -95,6 +94,50 @@ void parentLookup(std::ostream& out, std::ostream& source, const std::string& na
            << "            if (std::string_view{this->" << accessor << "(v)} == name) return v;\n"
            << "        }\n"
            << "    }\n    return null_vertex();\n}\n";
+}
+
+void addressableGraph(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
+                      const std::string& member, const std::string& accessor) {
+    out << "\n    " << vertex << " locate(std::string_view refPath, " << vertex << " start = null_vertex()) const noexcept;\n"
+        << "    bool exists(std::string_view refPath, " << vertex << " start = null_vertex()) const noexcept {\n"
+        << "        return locate(refPath, start) != null_vertex();\n    }\n"
+        << "    ccstd::pmr::string path(" << vertex << " v) const;\n";
+    source << "\n" << name << "::" << vertex << " " << name << "::locate(std::string_view refPath, " << vertex << " start) const noexcept {\n"
+           << "    if (refPath.empty()) return null_vertex();\n"
+           << "    if (refPath.front() == '/') start = null_vertex();\n"
+           << "    else if (start != null_vertex() && static_cast<std::uintmax_t>(start) >= this->" << member << ".size()) return null_vertex();\n"
+           << R"(
+    while (!refPath.empty()) {
+        const auto slash = refPath.find('/');
+        const auto segment = refPath.substr(0, slash);
+        refPath.remove_prefix(slash == std::string_view::npos ? refPath.size() : slash + 1);
+        if (segment.empty() || segment == ".") continue;
+        if (segment == "..") {
+            if (start == null_vertex()) return null_vertex();
+            start = get_parent(start);
+        } else {
+            start = locate_child(start, segment);
+            if (start == null_vertex()) return null_vertex();
+        }
+    }
+    return start;
+}
+)";
+    source << "\nccstd::pmr::string " << name << "::path(" << vertex << " v) const {\n"
+           << "    if (v != null_vertex() && static_cast<std::uintmax_t>(v) >= this->" << member << ".size())\n"
+           << "        throw std::out_of_range(\"invalid " << name << " vertex\");\n"
+           << "    ccstd::pmr::string result(get_allocator());\n"
+           << "    std::size_t length = 0;\n"
+           << "    for (auto u = v; u != null_vertex(); u = get_parent(u)) {\n"
+           << "        const auto size = this->" << accessor << "(u).size();\n"
+           << "        if (size >= result.max_size() - length) throw std::length_error(\"graph path too long\");\n"
+           << "        length += size + 1;\n    }\n"
+           << "    result.resize(length);\n"
+           << "    for (auto u = v; u != null_vertex(); u = get_parent(u)) {\n"
+           << "        const auto& segment = this->" << accessor << "(u);\n"
+           << "        length -= segment.size();\n"
+           << "        segment.copy(result.data() + length, segment.size());\n"
+           << "        result[--length] = '/';\n    }\n    return result;\n}\n";
 }
 
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
@@ -235,7 +278,13 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     }
     if (model.parentGraph) {
         headers.insert("string_view");
-        parentLookup(out, source, name, vertex, model.components.at(model.nameComponentIndex.value()), graph);
+        const auto& selected = model.components.at(model.nameComponentIndex.value());
+        const auto nameAccessor = "get" + componentAccessorSuffix(graph.node(selected.tag).name);
+        parentLookup(out, source, name, vertex, selected.name, nameAccessor);
+        if (model.addressableGraph) {
+            headers.insert("stdexcept");
+            addressableGraph(out, source, name, vertex, selected.name, nameAccessor);
+        }
     }
     for (const auto qualifier : {std::string_view{}, std::string_view{" const"}}) {
         out << "\n    " << value.qualifiedName << qualifier << "& " << accessor << "(" << vertex << " v)" << qualifier

@@ -268,6 +268,10 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
         if (!result.nameComponentIndex) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires named_graph");
         result.parentGraph = true;
     }
+    if (syntax.addressableGraph) {
+        if (!result.parentGraph) throw std::runtime_error(syntax.addressableGraph->describe() + ": addressable_graph requires parent_graph");
+        result.addressableGraph = true;
+    }
     return result;
 }
 

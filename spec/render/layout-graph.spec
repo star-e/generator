@@ -42,5 +42,6 @@ namespace cc::render {
         component Name_: ccstd::pmr::string { member: names; }
         named_graph { component: Name_; }
         parent_graph;
+        addressable_graph;
     }
 }
