@@ -4,9 +4,9 @@
   "preamble": "preamble.txt",
   "types": "../spec/extern/types.json",
   "modules": [
+    { "backend": "model", "spec": "../spec/extern/types.spec" },
     {
       "spec": "../spec/render/archive.spec",
-      "projection": "../spec/render/archive.json",
       "nativeRoot": "native",
       "includeDir": "cocos/renderer/pipeline/custom",
       "prefix": "Archive",
@@ -15,13 +15,11 @@
     {
       "backend": "settings",
       "spec": "../spec/render/render-settings.spec",
-      "projection": "../spec/render/render-settings.json",
       "typescript": "editor/assets/default_renderpipeline/builtin-pipeline-types.ts"
     },
     {
       "spec": "../spec/render/render-common.spec",
       "backend": "records",
-      "projection": "../spec/render/render-common.json",
       "nativeRoot": "native",
       "header": "cocos/renderer/pipeline/custom/RenderCommonTypes.h",
       "forwardHeader": "cocos/renderer/pipeline/custom/RenderCommonFwd.h",
@@ -33,7 +31,6 @@
     {
       "spec": "../spec/render/layout-graph.spec",
       "backend": "records",
-      "projection": "../spec/render/layout-graph.json",
       "nativeRoot": "native",
       "header": "cocos/renderer/pipeline/custom/LayoutGraphTypes.h",
       "typescript": "cocos/rendering/custom/layout-graph.ts"
@@ -42,27 +39,27 @@
       "spec": "../spec/extern/gfx.spec",
       "backend": "model",
       "types": {
-        "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "Type", "tsModule": "cocos/gfx" },
-        "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ResolveMode", "tsModule": "cocos/gfx" },
-        "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ShaderStageFlagBit", "tsModule": "cocos/gfx" },
-        "MemoryAccessBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "MemoryAccessBit", "tsModule": "cocos/gfx" },
-        "ViewDimension": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "ViewDimension", "tsModule": "cocos/gfx" },
-        "SampleType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "SampleType", "tsModule": "cocos/gfx" },
-        "Format": { "header": "cocos/renderer/gfx-base/GFXDef-common.h", "ts": "Format", "tsModule": "cocos/gfx" }
+        "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "MemoryAccessBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "ViewDimension": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "SampleType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "Format": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" }
       }
     },
     {
       "spec": "../spec/extern/light.spec",
       "backend": "model",
       "types": {
-        "Light": { "header": "cocos/scene/Light.h", "ts": "Light", "tsModule": "cocos/render-scene/scene" }
+        "Light": { "header": "cocos/scene/Light.h" }
       }
     },
     {
       "spec": "../spec/extern/reflection-probe.spec",
       "backend": "model",
       "types": {
-        "ReflectionProbe": { "header": "cocos/scene/ReflectionProbe.h", "ts": "ReflectionProbe", "tsModule": "cocos/render-scene/scene/reflection-probe" }
+        "ReflectionProbe": { "header": "cocos/scene/ReflectionProbe.h" }
       }
     }
   ]

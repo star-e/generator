@@ -1,15 +1,11 @@
 #pragma once
 
 #include "codegen/InterfaceEmitter.h"
+#include "model/Binding.h"
 #include <optional>
 #include <set>
 
 namespace cc::codegen {
-
-struct PoolProjection {
-    std::string member;
-    std::set<std::string> keepOnReset;
-};
 
 struct RecordOutput {
     std::filesystem::path nativeRoot;
@@ -26,7 +22,7 @@ struct RecordOutput {
     std::set<std::string> resetToDefaults;
     std::set<std::string> resetFromConstructor;
     std::filesystem::path poolModule;
-    std::map<std::string, PoolProjection> pools;
+    std::map<std::string, PoolBinding> pools;
 };
 
 struct ArchiveOutput {

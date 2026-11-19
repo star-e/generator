@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model/SourceLocation.h"
+#include "model/Binding.h"
 #include <map>
 #include <optional>
 #include <set>
@@ -116,6 +116,7 @@ struct Module {
     std::vector<std::string> namespaces;
     std::vector<Declaration> declarations;
     std::vector<ModuleImport> imports;
+    ModuleBindings bindings;
 };
 
 struct ExternalType {
@@ -125,5 +126,4 @@ struct ExternalType {
     std::string typescriptModule;
 };
 using TypeTable = std::map<std::string, ExternalType>;
-using Projection = std::map<std::string, std::map<std::string, std::string>>;
 } // namespace cc::codegen

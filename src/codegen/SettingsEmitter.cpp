@@ -1,5 +1,6 @@
 #include "codegen/SettingsEmitter.h"
 #include "codegen/EnumEmitter.h"
+#include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
 #include "model/IntegerLiteral.h"
 
@@ -14,12 +15,13 @@ namespace {
 struct Imports {
     ModuleId owner;
     std::set<std::string> names;
+    TypeImports modules;
     std::map<std::string, std::string> aliases;
 };
 
 enum class FieldKind { scalar, resource, record };
 
-struct ProjectedField {
+struct BoundField {
     FieldKind kind;
     std::string type;
     std::string initial;
@@ -31,17 +33,21 @@ struct ProjectedField {
 
 std::string typeName(const TypeNode& type, const FieldInfo& field, Imports& imports) {
     if (!type.typescriptName) invalid(field, "missing TypeScript mapping for " + type.qualifiedName);
+    const auto& name = *type.typescriptName;
+    if (type.module != imports.owner && !type.typescriptModule.empty()) {
+        imports.modules[type.typescriptModule].insert(name);
+        return name;
+    }
     if (type.module != ModuleId{} && type.module != imports.owner) {
         invalid(field, "missing TypeScript import mapping for " + type.qualifiedName);
     }
-    const auto& name = *type.typescriptName;
     if (type.module == ModuleId{} && name != "boolean" && name != "number" && name != "string") {
         imports.names.insert(name.substr(0, name.find('.')));
     }
     return name;
 }
 
-ProjectedField project(const TypeGraph& graph, const FieldInfo& field, Imports& imports) {
+BoundField bindField(const TypeGraph& graph, const FieldInfo& field, Imports& imports) {
     const auto& node = graph.node(field.type.type);
     if (field.isNullable) {
         const auto* ptr = std::get_if<TemplateInstanceType>(&node.data);
@@ -84,7 +90,7 @@ ProjectedField project(const TypeGraph& graph, const FieldInfo& field, Imports& 
 
 using Renames = std::map<std::string, std::string>;
 
-void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node, const SettingsProjection& rules,
+void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node, const SettingsBinding& rules,
                 Imports& imports) {
     const auto& fields = std::get<RecordType>(node.data).fields;
     const bool helpers = !rules.interfaceOnly.contains(node.name);
@@ -103,7 +109,7 @@ void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node,
     std::ostringstream factory, fill;
     out << "export interface " << node.name << " {\n";
     for (const auto& field : fields) {
-        const auto p = project(graph, field, imports);
+        const auto p = bindField(graph, field, imports);
         out << "    ";
         if (p.kind == FieldKind::resource) out << "/* refcount */ ";
         if (field.isReadonly) out << "readonly ";
@@ -138,8 +144,8 @@ void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node,
 
 } // namespace
 
-std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsProjection& rules,
-                         const std::string& preamble) {
+std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsBinding& rules,
+                         const std::filesystem::path& typescript, const std::string& preamble) {
     const auto& module = graph.modules.at(owner.value);
     auto hasDeclaration = [&](const std::string& name, bool expectEnum) {
         return std::ranges::any_of(module.declarations, [&](TypeId id) {
@@ -180,6 +186,7 @@ std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsP
 
     std::ostringstream out;
     out << preamble << "/* eslint-disable max-len */\n";
+    writeImports(out, imports.modules, typescript, false);
     if (!imports.names.empty()) {
         out << "import { ";
         for (auto it = imports.names.begin(); it != imports.names.end(); ++it) {

@@ -1,5 +1,6 @@
 #include "parser/SpecParser.h"
 
+#include <algorithm>
 #include <cctype>
 #include <set>
 #include <stdexcept>
@@ -35,10 +36,24 @@ public:
             module.imports.push_back({location, identifier()});
             expect(";");
         }
-        expect("namespace");
-        module.namespaces = qualifiedName();
-        expect("{");
+        bool hasNamespace = false;
         std::set<std::string> names;
+        while (!token.empty()) {
+            if (accept("binding")) {
+                binding(module.bindings);
+                continue;
+            }
+            if (hasNamespace || !accept("namespace")) fail("expected namespace or binding block");
+            hasNamespace = true;
+            module.namespaces = qualifiedName();
+            parseDeclarations(module, external, names);
+        }
+        return module;
+    }
+
+private:
+    void parseDeclarations(Module& module, bool external, std::set<std::string>& names) {
+        expect("{");
         while (!accept("}")) {
             if (external) {
                 const bool isStruct = accept("struct");
@@ -50,13 +65,8 @@ public:
                 module.declarations.push_back(declaration(names));
             }
         }
-        if (!token.empty()) {
-            fail("unexpected token after namespace");
-        }
-        return module;
     }
 
-private:
     std::string_view remaining;
     SourceLocation position;
     SourceLocation location;
@@ -87,7 +97,7 @@ private:
         location = position;
         size_t length = 0;
         if (!remaining.empty()) {
-            length = remaining.starts_with("::") || remaining.starts_with("<<") ? 2 : 1;
+            length = remaining.starts_with("::") || remaining.starts_with("<<") || remaining.starts_with("=>") ? 2 : 1;
             if (remaining.starts_with("0x") || remaining.starts_with("0X")) {
                 length = 2;
                 while (length < remaining.size() && std::isalnum(static_cast<unsigned char>(remaining[length]))) ++length;
@@ -140,6 +150,110 @@ private:
         std::vector<std::string> parts{identifier()};
         while (accept("::")) parts.push_back(identifier());
         return parts;
+    }
+
+    std::string bindingName() {
+        std::string name = accept("::") ? "::" : "";
+        name += identifier();
+        while (accept("::")) name += "::" + identifier();
+        return name;
+    }
+
+    std::filesystem::path bindingPath() {
+        const auto text = quotedString("binding path");
+        const std::filesystem::path path(text);
+        if (text.find_first_of("'\"\\:") != std::string::npos || path.empty() || path.has_root_path() ||
+            path.filename().empty() || path.filename() == ".") fail("expected relative binding path");
+        for (const auto& part : path) if (part == "..") fail("binding path escapes its root");
+        return path.lexically_normal();
+    }
+
+    void bindingOptions(TypeScriptBinding& rule) {
+        std::set<std::string> options;
+        while (!accept("}")) {
+            const auto key = identifier();
+            if (key != "method" && key != "field" && !options.insert(key).second) fail("duplicate binding option " + key);
+            if (rule.kind == BindingTarget::interfaceType && key == "method") {
+                auto name = identifier();
+                expect("=>");
+                if (!rule.methods.emplace(name, identifier()).second) fail("duplicate method binding " + name);
+            } else if (rule.kind == BindingTarget::interfaceType && key == "helpers") {
+                rule.helpers = true;
+            } else if (rule.kind == BindingTarget::interfaceType && key == "field") {
+                auto name = identifier();
+                expect("renamedFrom");
+                if (!rule.renamedFrom.emplace(name, identifier()).second) fail("duplicate field binding " + name);
+            } else if (rule.kind == BindingTarget::classType && key == "reset") {
+                if (accept("constructor")) rule.reset = ResetBinding::constructor;
+                else { expect("defaults"); rule.reset = ResetBinding::defaults; }
+            } else if (rule.kind == BindingTarget::classType && key == "pool") {
+                auto& pool = rule.pool.emplace();
+                pool.member = identifier();
+                if (accept("keep")) {
+                    expect("(");
+                    do { uniqueName(pool.keepOnReset); } while (accept(","));
+                    expect(")");
+                }
+            } else if (rule.kind == BindingTarget::enumeration || rule.kind == BindingTarget::constEnum) {
+                if (key == "names") rule.names = true;
+                else if (key == "register") rule.registerEnum = true;
+                else fail("unknown enum binding option " + key);
+            } else fail("invalid binding option " + key);
+            expect(";");
+        }
+    }
+
+    TypeScriptBinding typeScriptBinding() {
+        TypeScriptBinding rule{.location = location, .source = bindingName()};
+        expect("=>");
+        if (accept("interface")) rule.kind = BindingTarget::interfaceType;
+        else if (accept("class")) rule.kind = BindingTarget::classType;
+        else if (accept("const")) { expect("enum"); rule.kind = BindingTarget::constEnum; }
+        else if (accept("enum")) rule.kind = BindingTarget::enumeration;
+        else {
+            if (accept("extern") && !accept("class") && !accept("interface") && !accept("enum"))
+                fail("expected an external class, interface or enum binding");
+            rule.target = token == "\"" ? quotedString("TypeScript type") : identifier();
+            if (rule.target.empty()) fail("empty TypeScript type binding");
+            if (accept("from")) {
+                if (!identifierStart(rule.target.front()) || !std::ranges::all_of(rule.target, [](char c) {
+                        return identifierStart(c) || std::isdigit(static_cast<unsigned char>(c));
+                    })) fail("expected a named TypeScript import");
+                rule.from = bindingPath();
+            }
+        }
+        if (rule.kind != BindingTarget::type && accept("{")) bindingOptions(rule);
+        expect(";");
+        return rule;
+    }
+
+    void binding(ModuleBindings& rules) {
+        if (accept("typescript")) {
+            expect("{");
+            while (!accept("}")) {
+                if (accept("poolModule")) {
+                    if (!rules.poolModule.empty()) fail("duplicate poolModule binding");
+                    rules.poolModule = bindingPath();
+                    expect(";");
+                } else rules.typescript.push_back(typeScriptBinding());
+            }
+        } else if (token == "jsb") {
+            rules.jsb = location;
+            advance();
+            expect("{");
+            while (!accept("}")) {
+                if (accept("include")) {
+                    if (!rules.jsbIncludes.insert(bindingPath()).second) fail("duplicate JSB include");
+                } else {
+                    expect("record");
+                    const auto start = location;
+                    const auto name = bindingName();
+                    if (!rules.jsbRecords.emplace(name, start).second) fail("duplicate JSB record " + name);
+                }
+                expect(";");
+            }
+        } else fail("expected binding target typescript or jsb");
+        accept(";");
     }
 
     void comparison(Record& record) {

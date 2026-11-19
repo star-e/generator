@@ -68,3 +68,10 @@ namespace cc::render {
         addressable_graph;
     }
 }
+
+binding typescript {
+    LayoutType => const enum;
+    DescriptorTypeOrder => const enum { names; };
+    RenderPassType => const enum;
+    Descriptor => class { reset constructor; };
+}

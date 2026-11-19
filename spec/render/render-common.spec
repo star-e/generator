@@ -219,3 +219,32 @@ namespace cc::render {
         numInstancingUniformBlocks: uint32_t = 0;
     }
 }
+
+binding typescript {
+    UpdateFrequency => enum { names; };
+    ParameterType => const enum;
+    TaskType => const enum;
+    LightingMode => const enum;
+    AttachmentType => const enum;
+    ClearValueType => const enum;
+    ResolveFlags => const enum;
+
+    poolModule "cocos/core/memop";
+    LightInfo => class { pool li; };
+    ResolvePair => class { pool rp; };
+    CopyPair => class { pool cp; };
+    UploadPair => class { pool up keep(source); };
+    MovePair => class { pool mp; };
+    PipelineStatistics => class { pool ps; reset defaults; };
+}
+
+binding jsb {
+    include "cocos/bindings/auto/jsb_gfx_auto.h";
+    include "cocos/bindings/auto/jsb_scene_auto.h";
+    include "cocos/renderer/pipeline/custom/details/JsbConversion.h";
+    record LightInfo;
+    record ResolvePair;
+    record CopyPair;
+    record UploadPair;
+    record MovePair;
+}

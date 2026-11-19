@@ -90,7 +90,7 @@ std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId 
     return cppName(graph, node, module);
 }
 
-Member projectMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field, Dependencies& deps,
+Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field, Dependencies& deps,
                      bool emitTs) {
     const auto& module = graph.modules.at(owner.value);
     const auto& node = graph.node(field.type.type);
@@ -583,7 +583,7 @@ const std::string& archiveMethod(const TypeNode& interfaceType, const std::strin
     const auto& methods = std::get<InterfaceType>(interfaceType.data).methods;
     const auto found = std::ranges::find(methods, method, &MethodInfo::name);
     if (found != methods.end() && found->typescriptName) return *found->typescriptName;
-    throw std::runtime_error("missing TypeScript projection for " + interfaceType.qualifiedName + "." + method);
+    throw std::runtime_error("missing TypeScript binding for " + interfaceType.qualifiedName + "." + method);
 }
 
 struct RecordArchives {
@@ -717,7 +717,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto* record = std::get_if<RecordType>(&node.data);
         if (!record) throw std::runtime_error("expected record or enum: " + node.qualifiedName);
         std::vector<Member> members;
-        for (const auto& field : record->fields) members.push_back(projectMember(graph, owner, field, deps, output.typescript.has_value()));
+        for (const auto& field : record->fields) members.push_back(bindMember(graph, owner, field, deps, output.typescript.has_value()));
         cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable) {
             if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
@@ -740,7 +740,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto entry = output.pools.find(node.name);
         const bool resetToDefaults = pendingReset.erase(node.name) != 0;
         const bool resetFromConstructor = pendingCtorReset.erase(node.name) != 0;
-        if (resetToDefaults && resetFromConstructor) throw std::runtime_error(node.qualifiedName + ": conflicting reset projections");
+        if (resetToDefaults && resetFromConstructor) throw std::runtime_error(node.qualifiedName + ": conflicting reset bindings");
         const auto& retained = entry == output.pools.end() ? keepNone : entry->second.keepOnReset;
         std::optional<Order> reset;
         if (entry != output.pools.end() || resetFromConstructor)

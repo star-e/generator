@@ -7,8 +7,8 @@ namespace cc::codegen {
 
 struct ModuleInput {
     Module syntax;
-    Projection projection;
     TypeTable externalTypes;
+    bool modelOnly{};
 };
 
 // Register declarations before binding direct imports and resolving type uses in dependency order.

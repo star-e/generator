@@ -72,3 +72,9 @@ namespace cc::render {
         readonly fxaa: FXAA;
     }
 }
+
+binding typescript {
+    ForwardPassConfigs => interface;
+    BloomType => enum { register; };
+    Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };
+}

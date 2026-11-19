@@ -319,25 +319,70 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
     }
 }
 
-std::optional<std::string> projectMethod(const Projection& rules, const std::string& decl, const Method& method) {
-    if (auto group = rules.find(decl); group != rules.end()) {
-        if (auto rule = group->second.find(method.name); rule != group->second.end()) {
-            if (method.cppOnly) throw std::runtime_error(method.result.location.describe() +
-                ": cannot assign a TS name to @cppOnly method " + decl + "." + method.name);
-            return rule->second;
+using MethodBindings = std::map<std::string, std::string>;
+using InterfaceBindings = std::map<uint32_t, MethodBindings>;
+
+InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inputs, const std::vector<std::string>& scopes) {
+    InterfaceBindings methods;
+    std::set<uint32_t> bound;
+    for (uint32_t i = 0; i < inputs.size(); ++i) {
+        const auto& input = inputs[i];
+        const ModuleId owner{i};
+        auto findSource = [&](const std::string& name, const SourceLocation& at) {
+            if (name.starts_with("::")) return resolveName(graph, name.substr(2), at, {}, owner);
+            return resolveName(graph, name, at, scopes[i], owner);
+        };
+        std::set<uint32_t> jsbRecords;
+        for (const auto& [name, at] : input.syntax.bindings.jsbRecords) {
+            const auto id = findSource(name, at);
+            const auto& node = graph.node(id);
+            if (node.module != owner || !std::holds_alternative<RecordType>(node.data))
+                throw std::runtime_error(at.describe() + ": expected a local JSB record " + name);
+            if (!jsbRecords.insert(id.value).second) throw std::runtime_error(at.describe() + ": duplicate JSB record " + name);
+        }
+        for (const auto& rule : input.syntax.bindings.typescript) {
+            const auto id = findSource(rule.source, rule.location);
+            auto& node = graph.getNode(id.value);
+            auto reject = [&](const std::string& reason) {
+                throw std::runtime_error(rule.location.describe() + ": " + reason + " for " + node.qualifiedName);
+            };
+            if (node.module != ModuleId{} && node.module != owner) reject("bind the type in its declaring module");
+            if (!bound.insert(id.value).second) reject("duplicate TypeScript binding");
+            const bool isEnum = std::holds_alternative<EnumType>(node.data);
+            const bool isRecord = std::holds_alternative<RecordType>(node.data);
+            if (rule.kind == BindingTarget::type) {
+                if (!std::holds_alternative<BuiltinType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data) &&
+                    !(isEnum && input.modelOnly)) reject("expected an external type");
+                node.typescriptName = rule.target;
+                node.typescriptModule = rule.from.generic_string();
+            } else if (rule.kind == BindingTarget::interfaceType && std::holds_alternative<InterfaceType>(node.data)) {
+                if (rule.helpers || !rule.renamedFrom.empty()) reject("editor settings options on an interface method binding");
+                const auto decl = std::ranges::find(input.syntax.declarations, node.name, &Declaration::name);
+                const auto& members = std::get<Interface>(decl->data).methods;
+                for (const auto& [name, target] : rule.methods) {
+                    const auto method = std::ranges::find(members, name, &Method::name);
+                    if (method == members.end()) reject("unknown method " + name);
+                    if (method->cppOnly) reject("cannot assign a TS name to @cppOnly method " + node.name + "." + name);
+                }
+                methods.emplace(id.value, rule.methods);
+            } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
+                if (!isRecord || !rule.methods.empty()) reject("expected a record binding");
+            } else if (!isEnum) reject("expected an enum binding");
         }
     }
-    if (method.cppOnly) return std::nullopt;
-    return method.name;
+    return methods;
 }
 
-InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const Projection& projection,
+InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const MethodBindings& names,
                                const std::string& scope, ModuleId module) {
     InterfaceType result;
     std::set<std::string> visibleNames;
     for (const auto& method : std::get<Interface>(decl.data).methods) {
         auto member = resolveMethod(graph, method, scope, module);
-        member.typescriptName = projectMethod(projection, decl.name, method);
+        if (!method.cppOnly) {
+            auto alias = names.find(method.name);
+            member.typescriptName = alias == names.end() ? method.name : alias->second;
+        }
         if (member.typescriptName && !visibleNames.insert(*member.typescriptName).second) {
             throw std::runtime_error(method.result.location.describe() + ": duplicate TS method " +
                                      decl.name + "." + *member.typescriptName);
@@ -478,7 +523,10 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         }
         scopes.push_back(std::move(scope));
     }
-    for (ModuleId owner : bindImports(graph.modules, inputs, moduleNames)) {
+    const auto order = bindImports(graph.modules, inputs, moduleNames);
+    const auto bindings = bindTypes(graph, inputs, scopes);
+    const MethodBindings noRenames;
+    for (ModuleId owner : order) {
         const auto i = owner.value;
         const auto& input = inputs[i];
         // Bind descriptor aliases before their uses, including references from a preceding graph.
@@ -502,7 +550,8 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             } else if (const auto* enumeration = std::get_if<Enum>(&decl.data)) {
                 resolveEnum(graph, id, *enumeration, scopes[i], owner);
             } else if (std::holds_alternative<Interface>(decl.data)) {
-                auto payload = resolveInterface(graph, decl, input.projection, scopes[i], owner);
+                const auto names = bindings.find(id.value);
+                auto payload = resolveInterface(graph, decl, names == bindings.end() ? noRenames : names->second, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);
             }
         }

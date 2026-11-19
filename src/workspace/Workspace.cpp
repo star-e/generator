@@ -61,51 +61,39 @@ TypeTable loadTypes(const Json& json) {
     for (const auto& [name, value] : json.items()) {
         ExternalType type{value.value("header", std::string{})};
         type.builtin = value.value("builtin", false);
-        if (value.contains("ts")) type.typescript = value.at("ts").get<std::string>();
-        if (value.contains("tsModule")) type.typescriptModule = outputPath(value.at("tsModule")).generic_string();
+        if (value.contains("ts") || value.contains("tsModule"))
+            throw std::runtime_error(name + ": move TypeScript mappings to a .spec binding typescript block");
         types.emplace(name, std::move(type));
     }
     return types;
 }
 
-Projection loadProjection(const fs::path& path, const Module& module) {
-    Projection projection;
-    const auto json = object(path);
-    for (const auto& [name, rules] : json.items()) {
-        const auto decl = std::ranges::find(module.declarations, name, &Declaration::name);
-        if (decl == module.declarations.end() || !std::holds_alternative<Interface>(decl->data) || !rules.is_object()) {
-            throw std::runtime_error(path.string() + ": invalid interface rule " + name);
-        }
-        const auto& methods = std::get<Interface>(decl->data).methods;
-        for (const auto& [method, value] : rules.items()) {
-            if (std::ranges::find(methods, method, &Method::name) == methods.end()) {
-                throw std::runtime_error(path.string() + ": unknown method " + name + "." + method);
-            }
-            if (value.is_null())
-                throw std::runtime_error(path.string() + ": replace null with @cppOnly on the .spec declaration of " + name + "." + method);
-            auto target = value.get<std::string>();
-            if (!identifier(target)) throw std::runtime_error(path.string() + ": invalid TS name " + target);
-            projection[name].emplace(method, std::move(target));
-        }
-    }
-    return projection;
-}
-
 struct SettingsOutput {
     fs::path typescript;
-    SettingsProjection projection;
+    SettingsBinding binding;
 };
 
-SettingsProjection loadSettingsProjection(const fs::path& path) {
-    const auto json = object(path);
-    SettingsProjection projection;
-    for (const auto& [key, value] : json.items()) {
-        if (key == "interfaceOnly") value.get_to(projection.interfaceOnly);
-        else if (key == "registerEnums") value.get_to(projection.registerEnums);
-        else if (key == "renamedFrom") value.get_to(projection.renamedFrom);
-        else throw std::runtime_error(path.string() + ": unknown settings projection " + key);
+std::string bindingName(const std::string& qualified) {
+    const auto pos = qualified.rfind("::");
+    return pos == std::string::npos ? qualified : qualified.substr(pos + 2);
+}
+
+[[noreturn]] void invalidBinding(const TypeScriptBinding& rule, std::string_view backend) {
+    throw std::runtime_error(rule.location.describe() + ": unsupported " + std::string(backend) + " binding for " + rule.source);
+}
+
+SettingsBinding settingsBinding(const Module& module) {
+    SettingsBinding result;
+    for (const auto& rule : module.bindings.typescript) {
+        const auto name = bindingName(rule.source);
+        if (rule.kind == BindingTarget::type) continue;
+        if (rule.kind == BindingTarget::constEnum || rule.kind == BindingTarget::classType || rule.names || !rule.methods.empty())
+            invalidBinding(rule, "settings");
+        if (rule.kind == BindingTarget::interfaceType && !rule.helpers) result.interfaceOnly.insert(name);
+        if (rule.registerEnum) result.registerEnums.insert(name);
+        if (!rule.renamedFrom.empty()) result.renamedFrom.emplace(name, rule.renamedFrom);
     }
-    return projection;
+    return result;
 }
 
 fs::path typescriptOutput(const Json& config) {
@@ -114,7 +102,7 @@ fs::path typescriptOutput(const Json& config) {
     return ts;
 }
 
-RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
+RecordOutput loadRecordOutput(const Json& config, const Module& module) {
     RecordOutput output{.header = outputPath(config.at("header"))};
     if (config.contains("nativeRoot")) output.nativeRoot = outputPath(config.at("nativeRoot"));
     if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
@@ -142,59 +130,27 @@ RecordOutput loadRecordOutput(const Json& config, const fs::path& base) {
         output.jsbHeader = path;
     }
     if (config.contains("typescript")) output.typescript = typescriptOutput(config);
-    if (!config.contains("projection")) {
-        if (output.jsbHeader) throw std::runtime_error("jsbHeader requires a record projection");
-        return output;
-    }
-    const auto projection = base / config.at("projection").get<std::string>();
-    const auto rules = object(projection);
-    if (output.jsbHeader.has_value() != rules.contains("jsb"))
-        throw std::runtime_error(projection.string() + ": configure jsbHeader and jsb projection together");
-    if (output.jsbHeader) {
-        const auto& jsb = rules.at("jsb");
-        jsb.at("records").get_to(output.jsbRecords);
-        if (jsb.contains("includes")) {
-            for (const auto& include : jsb.at("includes").get<std::vector<std::string>>())
-                output.jsbIncludes.insert(outputPath(include));
-        }
-    }
-    for (const auto& [key, annotation] : {std::pair{"comparable", "@comparison(\"==\")"},
-                                         std::pair{"orderable", "@comparison(\"<\")"}, std::pair{"hashable", "@hash"}}) {
-        if (rules.contains(key))
-            throw std::runtime_error(projection.string() + ": replace '" + key + "' with " + annotation + " on the .spec declaration");
-    }
-    if (rules.contains("resetToDefaults")) {
-        if (!output.typescript) throw std::runtime_error(projection.string() + ": resetToDefaults requires TypeScript output");
-        rules.at("resetToDefaults").get_to(output.resetToDefaults);
-    }
-    if (rules.contains("resetFromConstructor")) {
-        if (!output.typescript) throw std::runtime_error(projection.string() + ": resetFromConstructor requires TypeScript output");
-        rules.at("resetFromConstructor").get_to(output.resetFromConstructor);
-    }
-    if (rules.contains("namedEnums")) {
-        if (!output.typescript) throw std::runtime_error(projection.string() + ": namedEnums require TypeScript output");
-        rules.at("namedEnums").get_to(output.namedEnums);
-    }
-    if (rules.contains("constEnums")) {
-        if (!output.typescript) throw std::runtime_error(projection.string() + ": constEnums require TypeScript output");
-        rules.at("constEnums").get_to(output.constEnums);
-    }
-    if (rules.contains("pools")) {
-        if (!output.typescript) throw std::runtime_error(projection.string() + ": pools require TypeScript output");
-        output.poolModule = outputPath(rules.at("poolModule"));
-        std::set<std::string> members;
-        const auto& pools = rules.at("pools");
-        if (!pools.is_object()) throw std::runtime_error(projection.string() + ": expected pool declarations");
-        for (const auto& [name, value] : pools.items()) {
-            auto& pool = output.pools[name];
-            if (value.is_string()) value.get_to(pool.member);
-            else {
-                value.at("member").get_to(pool.member);
-                if (value.contains("keepOnReset")) value.at("keepOnReset").get_to(pool.keepOnReset);
-            }
-            if (!identifier(pool.member) || !members.insert(pool.member).second) {
-                throw std::runtime_error(projection.string() + ": invalid pool member " + pool.member);
-            }
+    const auto& bindings = module.bindings;
+    if (output.jsbHeader.has_value() != bindings.jsb.has_value())
+        throw std::runtime_error(module.name + ": configure jsbHeader and binding jsb together");
+    output.jsbIncludes = bindings.jsbIncludes;
+    for (const auto& [source, location] : bindings.jsbRecords) output.jsbRecords.insert(bindingName(source));
+    output.poolModule = bindings.poolModule;
+    std::set<std::string> poolMembers;
+    for (const auto& rule : bindings.typescript) {
+        const auto name = bindingName(rule.source);
+        if (rule.kind == BindingTarget::type) continue;
+        if (!output.typescript || rule.kind == BindingTarget::interfaceType || rule.registerEnum || !rule.renamedFrom.empty())
+            invalidBinding(rule, "records");
+        if (rule.names) output.namedEnums.insert(name);
+        if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
+        if (rule.reset == ResetBinding::defaults) output.resetToDefaults.insert(name);
+        if (rule.reset == ResetBinding::constructor) output.resetFromConstructor.insert(name);
+        if (rule.pool) {
+            if (output.poolModule.empty()) throw std::runtime_error(rule.location.describe() + ": pool binding requires poolModule");
+            if (!poolMembers.insert(rule.pool->member).second)
+                throw std::runtime_error(rule.location.describe() + ": duplicate pool member " + rule.pool->member);
+            output.pools.emplace(name, *rule.pool);
         }
     }
     return output;
@@ -223,13 +179,22 @@ Files plan(const Json& settings, const fs::path& base) {
         const auto spec = base / config.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
         const auto backend = config.value("backend", std::string{"interfaces"});
+        if (config.contains("projection"))
+            throw std::runtime_error(spec.string() + ": move JSON projection rules into .spec binding blocks");
+        if (backend != "records" && (module.bindings.jsb || !module.bindings.poolModule.empty()))
+            throw std::runtime_error(spec.string() + ": JSB and poolModule bindings require the records backend");
+        if (backend == "model" || backend == "interfaces") {
+            for (const auto& rule : module.bindings.typescript)
+                if (rule.kind != BindingTarget::type && !(backend == "interfaces" && rule.kind == BindingTarget::interfaceType))
+                    invalidBinding(rule, backend);
+        }
         if (backend == "model") {
             layouts.emplace_back(std::monostate{});
-            inputs.push_back({std::move(module), {}, loadTypes(config.value("types", Json::object()))});
+            inputs.push_back({std::move(module), loadTypes(config.value("types", Json::object())), true});
             continue;
         }
         if (backend == "records") {
-            auto output = loadRecordOutput(config, base);
+            auto output = loadRecordOutput(config, module);
             auto tsModule = output.typescript.value_or(fs::path{});
             tsModule.replace_extension();
             TypeTable mappings;
@@ -240,21 +205,19 @@ Files plan(const Json& settings, const fs::path& base) {
                 }
             }
             layouts.emplace_back(std::move(output));
-            inputs.push_back({std::move(module), {}, std::move(mappings)});
+            inputs.push_back({std::move(module), std::move(mappings)});
             continue;
         }
-        const auto projection = base / config.at("projection").get<std::string>();
         const auto ts = typescriptOutput(config);
         if (backend == "settings") {
-            layouts.emplace_back(SettingsOutput{ts, loadSettingsProjection(projection)});
+            layouts.emplace_back(SettingsOutput{ts, settingsBinding(module)});
             inputs.push_back({std::move(module), {}});
         } else if (backend == "interfaces") {
             OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),
                                 config.at("prefix").get<std::string>(), ts};
             if (!identifier(layout.prefix)) throw std::runtime_error("invalid file prefix " + layout.prefix);
-            auto methods = loadProjection(projection, module);
             layouts.emplace_back(std::move(layout));
-            inputs.push_back({std::move(module), std::move(methods)});
+            inputs.push_back({std::move(module), {}});
         } else {
             throw std::runtime_error("unknown backend " + backend);
         }
@@ -267,7 +230,7 @@ Files plan(const Json& settings, const fs::path& base) {
         const ModuleId owner{static_cast<uint32_t>(i)};
         Files emitted;
         if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {
-            emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->projection, preamble));
+            emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->binding, settingsOutput->typescript, preamble));
         } else if (const auto* records = std::get_if<RecordOutput>(&layouts[i])) {
             std::optional<ArchiveOutput> archive;
             if (records->serializationHeader) {

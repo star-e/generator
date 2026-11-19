@@ -13,3 +13,16 @@ namespace cc::render {
         @cppOnly boost::container::pmr::memory_resource* scratch() const noexcept;
     }
 }
+
+binding typescript {
+    OutputArchive => interface {
+        method writeBool => b;
+        method writeNumber => n;
+        method writeString => s;
+    };
+    InputArchive => interface {
+        method readBool => b;
+        method readNumber => n;
+        method readString => s;
+    };
+}

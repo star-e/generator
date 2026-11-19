@@ -233,3 +233,13 @@ namespace cc::gfx {
         COUNT,
     }
 }
+
+binding typescript {
+    Type => Type from "cocos/gfx";
+    ResolveMode => ResolveMode from "cocos/gfx";
+    ShaderStageFlagBit => ShaderStageFlagBit from "cocos/gfx";
+    MemoryAccessBit => MemoryAccessBit from "cocos/gfx";
+    ViewDimension => ViewDimension from "cocos/gfx";
+    SampleType => SampleType from "cocos/gfx";
+    Format => Format from "cocos/gfx";
+}

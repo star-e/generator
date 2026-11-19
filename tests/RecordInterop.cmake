@@ -77,16 +77,13 @@ run("${CMAKE_COMMAND}" -E compare_files "${stage}/${layoutNames}" "${ENGINE}/${l
 set(enumConsumer "${stage}/cocos/rendering/custom/enum-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsumer}" COPYONLY)
 
-# Compile both versions against the same engine imports to exercise the projected defaults at runtime.
+# Compile both versions against the same engine imports to exercise the bound defaults at runtime.
 set(commonSpec "${work}/spec/render/render-common.spec")
 file(READ "${commonSpec}" common)
 string(REPLACE "numRenderPasses: uint32_t = 0" "numRenderPasses: uint32_t = 7" common "${common}")
-file(WRITE "${commonSpec}" "${common}")
 # Also compile a default-reset pool for a record with explicit constructors.
-set(projection "${work}/spec/render/render-common.json")
-file(READ "${projection}" rules)
-string(JSON rules SET "${rules}" resetToDefaults 1 "\"LightInfo\"")
-file(WRITE "${projection}" "${rules}")
+string(REPLACE "pool li;" "pool li; reset defaults;" common "${common}")
+file(WRITE "${commonSpec}" "${common}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/variant")
 set(variant "${stage}/cocos/rendering/custom/types-variant.ts")
 configure_file("${work}/variant/cocos/rendering/custom/types.ts" "${variant}" COPYONLY)

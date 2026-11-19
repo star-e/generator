@@ -40,11 +40,10 @@ Module readModule(const std::filesystem::path& spec) {
 }
 
 void checkArchive(const std::filesystem::path& spec) {
-    const Projection projection{{"OutputArchive", {{"writeBool", "b"}}}};
     const TypeTable types{{"void", {"", "void", true}}, {"bool", {"", "boolean", true}},
                           {"double", {"", "number", true}}, {"std::string_view", {"string_view", "string"}},
                           {"boost::container::pmr::memory_resource", {"boost/container/pmr/memory_resource.hpp", {}}}};
-    const auto graph = buildTypeGraph({{readModule(spec), projection}}, types);
+    const auto graph = buildTypeGraph({{readModule(spec), {}}}, types);
     const auto input = graph.findType("cc::render::InputArchive");
     const auto output = graph.findType("cc::render::OutputArchive");
     const auto& first = scratch(graph, input);
@@ -104,7 +103,7 @@ void checkImports(const std::filesystem::path& specs) {
     std::vector<ModuleInput> inputs{{readModule(commonSpec), {}},
                                     {readModule(specs / "extern/light.spec"), {}},
                                     {readModule(specs / "extern/reflection-probe.spec"), {}},
-                                    {readModule(specs / "extern/gfx.spec"), {}},
+                                    {readModule(specs / "extern/gfx.spec"), {}, true},
                                     {readModule(specs / "render/archive.spec"), {}}};
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
@@ -141,7 +140,7 @@ void checkImports(const std::filesystem::path& specs) {
         const auto raster = graph.findType("cc::render::RasterPassTag");
         const auto& tag = graph.node(raster);
         require(std::holds_alternative<TagType>(tag.data) && tag.module == info.module && !tag.typescriptName,
-                "wrong tag ownership or TS projection");
+                "wrong tag ownership or TS binding");
         const auto& passes = std::get<GraphType>(graph.node(graph.findType("cc::render::Passes")).data);
         const auto& counts = std::get<GraphType>(graph.node(graph.findType("cc::render::PassCounts")).data);
         require(passes.hierarchy && !counts.hierarchy, "lost graph hierarchy capability");
