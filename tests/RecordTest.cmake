@@ -1,6 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
 test_workspace(work)
-file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
+file(COPY "${SOURCE}/spec" "${SOURCE}/config" "${SOURCE}/runtime" DESTINATION "${work}")
 set(spec "${work}/spec/render/render-common.spec")
 file(READ "${spec}" original)
 set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --output "${work}/stage")

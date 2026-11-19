@@ -2,7 +2,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
 test_workspace(work)
 set(stage "${work}/engine")
 # Compile a uint32_t high bit alongside the production enums in both consumer languages.
-file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
+file(COPY "${SOURCE}/spec" "${SOURCE}/config" "${SOURCE}/runtime" DESTINATION "${work}")
 file(WRITE "${work}/spec/text.spec" [[extern module Text;
 namespace sample { @string class Text; @string struct Label; }
 binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
@@ -173,6 +173,18 @@ configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsum
 
 # Compile the editor's lookup, traversal and descriptor propagation against the generated graph.
 file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-editor.ts" editor)
+foreach(symbol IN ITEMS "function indent" "function unindent" "function hasFlag" "function getVisibilityName"
+                        "function convertDescriptorBlock" "class LayoutGraphPrintVisitor" "class VectorGraphColorMap")
+    string(REGEX MATCH "${symbol} [^\n]+[{]\n([ \t][^\n]*\n|\n)*[}]" definition "${editor}")
+    if(NOT definition)
+        message(FATAL_ERROR "Missing layout editor definition ${symbol}")
+    endif()
+    string(APPEND editorPrintHelpers "${definition}\n")
+endforeach()
+string(REGEX MATCH "    public print [(][)]: string [{]\n(        [^\n]*\n|\n)*    [}]" editorPrint "${editor}")
+if(NOT editorPrint)
+    message(FATAL_ERROR "Missing layout editor print method")
+endif()
 foreach(method IN ITEMS getPassID getSubpassID getPhaseID getDescriptorBlock getDescriptorGroupBlock
                         buildDescriptorBlocks buildDescriptorGroupBlocks)
     string(REGEX MATCH "    private ${method} [(][^)]*[)]: [^\n]+[{]\n(        [^\n]*\n|\n)*    [}]" definition "${editor}")
@@ -187,6 +199,8 @@ if(NOT updatePasses)
 endif()
 set(graphConsumer "${stage}/cocos/rendering/custom/layout-graph-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/layout-graph-consumer.ts.in" "${graphConsumer}" @ONLY)
+set(dfsConsumer "${stage}/cocos/rendering/custom/graph-dfs-consumer.ts")
+configure_file("${SOURCE}/tests/consumer/records/graph-dfs-consumer.ts" "${dfsConsumer}" COPYONLY)
 
 # Compile both versions against the same engine imports to exercise the bound defaults at runtime.
 set(commonSpec "${work}/spec/render/render-common.spec")
@@ -202,7 +216,8 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${enumConsumer}" "${graphConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}")
+    "${enumConsumer}" "${graphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}")
+run("${node}" "${work}/js/rendering/custom/graph-dfs-consumer.js")
 run("${consumer}" write "${work}/native.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}")
 run("${consumer}" read "${work}/web.bin")

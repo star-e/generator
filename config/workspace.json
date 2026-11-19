@@ -62,7 +62,10 @@
       "backend": "records",
       "nativeRoot": "native",
       "header": "cocos/renderer/pipeline/custom/LayoutGraphTypes.h",
-      "typescript": "cocos/rendering/custom/layout-graph.ts"
+      "typescript": "cocos/rendering/custom/layout-graph.ts",
+      "runtimeFiles": {
+        "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts"
+      }
     },
     {
       "spec": "../spec/extern/gfx.spec",

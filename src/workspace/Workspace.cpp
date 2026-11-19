@@ -226,6 +226,13 @@ Files plan(const Json& settings, const fs::path& base) {
     const auto graph = buildTypeGraph(inputs, types);
     std::set<std::string> outputKeys;
     Files files;
+    const auto addFile = [&](const fs::path& path, const std::string& content) {
+        auto relative = path.lexically_normal();
+        auto key = relative.generic_string();
+        std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (!outputKeys.insert(key).second) throw std::runtime_error("duplicate output " + key);
+        files.emplace(relative, normalizeLines(content, eol == "crlf"));
+    };
     for (size_t i = 0; i < layouts.size(); ++i) {
         if (std::holds_alternative<std::monostate>(layouts[i])) continue;
         const ModuleId owner{static_cast<uint32_t>(i)};
@@ -249,12 +256,12 @@ Files plan(const Json& settings, const fs::path& base) {
         } else {
             emitted = emitInterfaces(graph, owner, std::get<OutputLayout>(layouts[i]), preamble);
         }
-        for (auto& [path, content] : emitted) {
-            auto relative = path.lexically_normal();
-            auto key = relative.generic_string();
-            std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            if (!outputKeys.insert(key).second) throw std::runtime_error("duplicate output " + key);
-            files.emplace(relative, normalizeLines(content, eol == "crlf"));
+        for (const auto& [path, content] : emitted) addFile(path, content);
+        if (modules[i].contains("runtimeFiles")) {
+            const auto& runtime = modules[i].at("runtimeFiles");
+            if (!runtime.is_object()) throw std::runtime_error("expected runtimeFiles output-to-source mapping");
+            for (const auto& [destination, source] : runtime.items())
+                addFile(outputPath(destination), read(base / source.get<std::string>()));
         }
     }
     return files;

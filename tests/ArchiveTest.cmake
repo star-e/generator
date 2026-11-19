@@ -1,6 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
 test_workspace(work)
-file(COPY "${SOURCE}/spec" "${SOURCE}/config" DESTINATION "${work}")
+file(COPY "${SOURCE}/spec" "${SOURCE}/config" "${SOURCE}/runtime" DESTINATION "${work}")
 set(output "${work}/staging")
 set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --output "${output}")
 
@@ -26,6 +26,7 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.h)
 set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/rendering/custom/layout-graph.ts
+    cocos/rendering/custom/graph-dfs.ts
     native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp
     native/cocos/renderer/pipeline/custom/RenderCommonTypes.h native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp)
 list(SORT expectedFiles)
@@ -53,6 +54,11 @@ if(NOT before STREQUAL after)
     message(FATAL_ERROR "Repeated generation changed timestamps")
 endif()
 
+file(APPEND "${work}/runtime/typescript/graph-dfs.ts" "// runtime source edit\n")
+expect_failure(1 "changed: cocos/rendering/custom/graph-dfs[.]ts" ${generate} --check --diff)
+run(${generate})
+run(${generate} --check --diff)
+
 set(ts "${output}/cocos/rendering/custom/archive.ts")
 file(APPEND "${ts}" "// edited\n")
 file(SHA256 "${ts}" beforeCheck)
@@ -69,6 +75,9 @@ set(spec "${work}/spec/render/archive.spec")
 file(READ "${spec}" original)
 set(workspace "${work}/config/workspace.json")
 file(READ "${workspace}" config)
+string(REPLACE "cocos/rendering/custom/graph-dfs.ts" "cocos/rendering/custom/Layout-Graph.ts" collision "${config}")
+file(WRITE "${workspace}" "${collision}")
+expect_failure(2 "duplicate output cocos/rendering/custom/layout-graph[.]ts" ${generate})
 string(JSON old SET "${config}" modules 0 projection [["unused.json"]])
 file(WRITE "${workspace}" "${old}")
 expect_failure(2 "move JSON projection rules into .spec binding blocks" ${generate})

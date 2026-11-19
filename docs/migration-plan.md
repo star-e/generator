@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区生成 19 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphTypes.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 20 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphTypes.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `graph-dfs.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -101,6 +101,7 @@ spec/extern/             引擎、标准库和 Boost 外部类型
 spec/render/             管线模块声明与语言绑定
 spec/codegen/            生成器自身的模型声明
 config/                  workspace、模块输出配置、文件归属和版本基线
+runtime/typescript/      随模块暂存的手写 TS 运行时
 src/cli/                 命令入口
 src/parser/              声明解析与源位置诊断
 src/model/               建图、名字解析和语义检查
@@ -153,7 +154,9 @@ TS 后端从同一声明生成 `LayoutGraphValue`、类别到载荷的类型映�
 | 深度优先遍历 | 在 `GraphDFS.h` 实现显式栈 DFS，调用方提供访问者、颜色表和临时存储。`depthFirstVisit` 从给定顶点出发并沿用颜色，`depthFirstSearch` 初始化颜色，按枚举顺序从剩余未访问顶点继续搜索。按出边顺序访问，遇到灰色终点时报告回边，子顶点完成后再完成对应的树边。 |
 | 依赖分析 | 模块边从导入方指向依赖方。按 DFS 的顶点完成顺序输出模块，例如 A 导入 B 时先输出 B，菱形依赖中的公共模块只输出一次。遇到回边时用当前访问路径和导入位置报告完整环。类型构建按需遍历继承和按值成员依赖，指针或引用允许指向自身。 |
 
-原生运行时按消费者切换。`NativeExecutor.cpp` 在过滤视图上利用发现和完成事件执行渲染命令，`FrameGraphDispatcher.cpp` 在启用 pass 重排时计算传递闭包。阶段 3 迁移图遍历、引用视图和过滤视图时，同批适配执行器等手写调用方。阶段 4 接管 `FGDispatcher` 时，再用 Cocos 的可达性实现验证重排约束。Web 的 `graph.ts` 也将现有 DFS 标注为源自 Boost.Graph，迁移时独立实现遍历，并用同一组图核对 C++ 和 TS 的访问事件序列。[原生执行器](../../cocos4/native/cocos/renderer/pipeline/custom/NativeExecutor.cpp) · [帧图调度](../../cocos4/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp) · [Web 图接口与遍历](../../cocos4/cocos/rendering/custom/graph.ts)
+原生运行时按消费者切换。`NativeExecutor.cpp` 在过滤视图上利用发现和完成事件执行渲染命令，`FrameGraphDispatcher.cpp` 在启用 pass 重排时计算传递闭包。阶段 3 迁移图遍历、引用视图和过滤视图时，同批适配执行器等手写调用方。阶段 4 接管 `FGDispatcher` 时，再用 Cocos 的可达性实现验证重排约束。[原生执行器](../../cocos4/native/cocos/renderer/pipeline/custom/NativeExecutor.cpp) · [帧图调度](../../cocos4/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp)
+
+TS 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`oe`、`od`、`edge`、`source` 和 `target` 共用父子关系的存储。编辑器迁入时从 `./graph-dfs` 导入 `depthFirstVisit` 和 `depthFirstSearch`，访问器、颜色和边类型继续从 `./graph` 导入。互操作测试用编辑器的 `print()` 对照完整布局文本，并验证 DFS 事件顺序和长链。[TS 遍历源码](../runtime/typescript/graph-dfs.ts) · [Web 图接口](../../cocos4/cocos/rendering/custom/graph.ts)
 
 ## 模块迁移顺序
 

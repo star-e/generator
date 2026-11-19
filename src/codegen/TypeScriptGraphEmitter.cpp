@@ -113,7 +113,12 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "    parent (e: cc$graph.ED): number { return e.source as number; }\n"
             << "    children (v: number): cc$graph.OutEI { return new cc$graph.OutEI(this.vertices[v].children.values(), v); }\n"
             << "    child (e: cc$graph.ED): number { return e.target as number; }\n"
-            << "    numChildren (v: number): number { return this.vertices[v].children.length; }\n";
+            << "    numChildren (v: number): number { return this.vertices[v].children.length; }\n"
+            << "\n    edge (u: number, v: number): boolean { return this.reference(u, v); }\n"
+            << "    source (e: cc$graph.ED): number { return this.parent(e); }\n"
+            << "    target (e: cc$graph.ED): number { return this.child(e); }\n"
+            << "    oe (v: number): cc$graph.OutEI { return this.children(v); }\n"
+            << "    od (v: number): number { return this.numChildren(v); }\n";
     if (model.parentGraph) {
         out << "\n    locateChild (parent: number, name: string): number {\n"
             << "        if (parent !== this.N && !this.vertices[parent]) return this.N;\n"

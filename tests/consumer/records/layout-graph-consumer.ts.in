@@ -1,10 +1,18 @@
-import { ED, OutEI } from './graph';
-import type { AddressableGraph, ReferenceGraph } from './graph';
+import { DefaultVisitor, depthFirstSearch as engineSearch, ED, GraphColor, OutEI } from './graph';
+import type { AddressableGraph, IncidenceGraph, MutableVertexPropertyMap, ReferenceGraph } from './graph';
+import { depthFirstSearch } from './graph-dfs';
 import type { InputArchive } from './archive';
-import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
+import { Descriptor, DescriptorBlock, DescriptorBlockFlattened, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
     LayoutGraph, LayoutGraphValue, RenderPassType, RenderPhase } from './layout-graph';
 import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
 import { UpdateFrequency } from './types';
+import { getUpdateFrequencyName } from './types-names';
+import { getDescriptorTypeOrderName } from './layout-graph-names';
+import { ShaderStageFlagBit, UniformBlock } from '../../gfx';
+
+// The engine visitor uses this annotation only on its unused finishVertex graph parameter.
+type LayoutGraphData = IncidenceGraph;
+@editorPrintHelpers@
 
 function assert (ok: boolean, message = 'Editor layout assertion failed'): void {
     if (!ok) throw new Error(message);
@@ -12,7 +20,7 @@ function assert (ok: boolean, message = 'Editor layout assertion failed'): void 
 
 function error (message: string): never { throw new Error(message); }
 
-function checkChildren (g: Pick<ReferenceGraph, 'children' | 'child' | 'numChildren' | 'parent' | 'reference'>, parent: number, expected: number[]): void {
+function checkChildren (g: IncidenceGraph & Pick<ReferenceGraph, 'children' | 'child' | 'numChildren' | 'parent' | 'reference'>, parent: number, expected: number[]): void {
     const iterator = g.children(parent);
     const edges = [...iterator];
     assert(iterator instanceof OutEI && edges.length === expected.length && g.numChildren(parent) === expected.length,
@@ -20,6 +28,10 @@ function checkChildren (g: Pick<ReferenceGraph, 'children' | 'child' | 'numChild
     assert(edges.every((edge, i) => edge instanceof ED && edge.source === parent && edge.target === expected[i] &&
         g.child(edge) === expected[i] && g.parent(edge) === parent && g.reference(parent, expected[i])),
         'Child edge endpoints and insertion order');
+    const outgoing = [...g.oe(parent)];
+    assert(g.od(parent) === expected.length && outgoing.length === expected.length &&
+        outgoing.every((edge, i) => g.source(edge) === parent && g.target(edge) === expected[i] &&
+            g.edge(parent, expected[i]) && !g.edge(expected[i], parent)), 'Shared out-edges');
 }
 
 export function checkNativePaths (samples: InputArchive): void {
@@ -57,6 +69,7 @@ export function checkNativePaths (samples: InputArchive): void {
 
 class EditorFixture {
     readonly lg = new LayoutGraph();
+@editorPrint@
 @editorMethods@
     private updatePasses (): number {
         const lg = this.lg;
@@ -68,10 +81,22 @@ class EditorFixture {
         const lg = this.lg;
         const stage = LayoutGraphValue.RenderStage;
         const phase = LayoutGraphValue.RenderPhase;
+        assert(this.print() === '', 'Empty editor output');
         const root = this.getPassID('main', RenderPassType.RENDER_PASS);
         const sub = this.getSubpassID('deferred', root);
         const shadow = this.getPhaseID('shadow', sub);
         const other = this.getPhaseID('shadow', root);
+        assert(this.print() === [
+            '"main": RenderStage {',
+            '    "deferred": RenderStage {',
+            '        "shadow": RenderPhase {',
+            '        }',
+            '    }',
+            '    "shadow": RenderPhase {',
+            '    }',
+            '}',
+            '',
+        ].join('\n'), 'Editor indentation, sibling order and closing braces');
         assert(root === this.getPassID('main', RenderPassType.RENDER_PASS) &&
             sub === this.getSubpassID('deferred', root) && shadow === this.getPhaseID('shadow', sub), 'Vertex reuse');
         assert(shadow !== other && [...lg.v()].length === 4 && lg.nv() === 4, 'Scoped phase names');
@@ -110,6 +135,11 @@ class EditorFixture {
             lg.getDescriptors(pass).groupBlocks.set(groupKey, block);
         }
         assert(this.updatePasses() === 0, 'Editor pass traversal');
+        const referencePrint = new LayoutGraphPrintVisitor();
+        engineSearch(lg, referencePrint, new VectorGraphColorMap(lg.nv()));
+        assert(referencePrint.oss.indexOf('descriptors: [deferred]') >= 0 &&
+            referencePrint.oss.indexOf('"forward": RenderStage') >= 0 &&
+            this.print() === referencePrint.oss, 'Full editor output with descriptors and multiple roots');
         for (const [pass, child] of [[sub, shadow], [sub, extra], [forward, forwardShadow]]) {
             const name = lg.getName(pass);
             const expected = lg.getDescriptors(pass).blocks.get(blockKey)!.descriptors.get(name)!;
@@ -140,6 +170,8 @@ function checkTypes (lg: LayoutGraph, db: DescriptorDB): void {
     new HierarchyOnly().locateChild(0, 'name');
     // @ts-expect-error Flat graphs have no child edges.
     new FlatComponents().children(0);
+    // @ts-expect-error Flat graphs have no shared out-edges.
+    new FlatComponents().oe(0);
 }
 
 new EditorFixture().run();
