@@ -41,6 +41,13 @@ namespace cc {
         component Count_: uint32_t { member: counts; }
         named_graph { component: cc::render::Name_; }
     }
+    graph HierarchyOnly {
+        vertex_descriptor Index = uint32_t;
+        vertex_storage: indexed;
+        mutable_graph;
+        hierarchy_graph { storage: shared_edges; }
+        component Count_: uint32_t { member: counts; }
+    }
     graph Toggles {
         vertex_descriptor Index = uint32_t;
         vertex_storage: indexed;
@@ -114,6 +121,12 @@ else()
     file(WRITE "${scene}/reflection-probe.d.ts" "export declare class ReflectionProbe { private probe: void; }\n")
 endif()
 find_program(node node REQUIRED)
+# The engine allows implicit any in MutableGraph.addVertex(...args). Compile its runtime
+# with that option, then check consumers against its declarations with full strictness.
+set(tsc "${ENGINE}/node_modules/typescript/bin/tsc")
+run("${node}" "${tsc}" --strict --noImplicitAny false --skipLibCheck --target es6 --module commonjs --declaration
+    --declarationDir "${stage}/cocos/rendering/custom" --outDir "${work}/js/rendering/custom"
+    "${ENGINE}/cocos/rendering/custom/graph.ts")
 # Isolate the engine's exported enums without loading its graphics device at runtime.
 file(READ "${ENGINE}/cocos/gfx/base/define.ts" gfx)
 file(MAKE_DIRECTORY "${stage}/cocos/gfx")
@@ -157,15 +170,20 @@ run("${CMAKE_COMMAND}" -E compare_files "${stage}/${layoutNames}" "${ENGINE}/${l
 set(enumConsumer "${stage}/cocos/rendering/custom/enum-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsumer}" COPYONLY)
 
-# Exercise the editor's three lookup-or-create methods directly against the generated graph.
+# Compile the editor's lookup, traversal and descriptor propagation against the generated graph.
 file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-editor.ts" editor)
-foreach(method IN ITEMS getPassID getSubpassID getPhaseID)
-    string(REGEX MATCH "    private ${method} [(][^\n]*\n(        [^\n]*\n|\n)*    [}]" definition "${editor}")
+foreach(method IN ITEMS getPassID getSubpassID getPhaseID getDescriptorBlock getDescriptorGroupBlock
+                        buildDescriptorBlocks buildDescriptorGroupBlocks)
+    string(REGEX MATCH "    private ${method} [(][^)]*[)]: [^\n]+[{]\n(        [^\n]*\n|\n)*    [}]" definition "${editor}")
     if(NOT definition)
         message(FATAL_ERROR "Missing layout editor method ${method}")
     endif()
     string(APPEND editorMethods "${definition}\n")
 endforeach()
+string(REGEX MATCH "        for [(]const passID of lg[.]v[(][)][)] [{]\n(            [^\n]*\n|\n)*        [}]" updatePasses "${editor}")
+if(NOT updatePasses)
+    message(FATAL_ERROR "Missing layout editor pass traversal")
+endif()
 set(graphConsumer "${stage}/cocos/rendering/custom/layout-graph-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/layout-graph-consumer.ts.in" "${graphConsumer}" @ONLY)
 
@@ -181,7 +199,7 @@ set(variant "${stage}/cocos/rendering/custom/types-variant.ts")
 configure_file("${work}/variant/cocos/rendering/custom/types.ts" "${variant}" COPYONLY)
 set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
-run("${node}" "${ENGINE}/node_modules/typescript/bin/tsc" --strict --skipLibCheck --target es6 --module commonjs
+run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
     "${enumConsumer}" "${graphConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}")
 run("${node}" "${work}/js/rendering/custom/layout-graph-consumer.js")

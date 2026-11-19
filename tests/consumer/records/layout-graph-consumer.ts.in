@@ -1,13 +1,34 @@
-import { DescriptorDB, LayoutGraph, LayoutGraphValue, RenderPassType, RenderPhase } from './layout-graph';
-import { FlatComponents, TinyNames, Toggles, TogglesValue } from './shift-probe';
+import { ED, OutEI } from './graph';
+import type { ReferenceGraph } from './graph';
+import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
+    LayoutGraph, LayoutGraphValue, RenderPassType, RenderPhase } from './layout-graph';
+import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
+import { UpdateFrequency } from './types';
 
 function assert (ok: boolean, message = 'Editor layout assertion failed'): void {
     if (!ok) throw new Error(message);
 }
 
+function error (message: string): never { throw new Error(message); }
+
+function checkChildren (g: Pick<ReferenceGraph, 'children' | 'child' | 'numChildren'>, parent: number, expected: number[]): void {
+    const iterator = g.children(parent);
+    const edges = [...iterator];
+    assert(iterator instanceof OutEI && edges.length === expected.length && g.numChildren(parent) === expected.length,
+        'Direct child count');
+    assert(edges.every((edge, i) => edge instanceof ED && edge.source === parent && edge.target === expected[i] &&
+        g.child(edge) === expected[i]), 'Child edge endpoints and insertion order');
+}
+
 class EditorFixture {
     readonly lg = new LayoutGraph();
 @editorMethods@
+    private updatePasses (): number {
+        const lg = this.lg;
+@updatePasses@
+        return 0;
+    }
+
     run (): void {
         const lg = this.lg;
         const stage = LayoutGraphValue.RenderStage;
@@ -34,6 +55,32 @@ class EditorFixture {
         const extra = lg.addVertex(phase, payload, 'shadow', db, sub);
         assert(lg.getDescriptors(extra) === db && lg.value(phase, extra) === payload, 'Supplied objects');
         assert(lg.locateChild(sub, 'shadow') === shadow, 'First matching child');
+        const forward = this.getPassID('forward', RenderPassType.SINGLE_RENDER_PASS);
+        const forwardShadow = this.getPhaseID('shadow', forward);
+        checkChildren(lg, root, [sub, other]);
+        checkChildren(lg, sub, [shadow, extra]);
+        checkChildren(lg, forward, [forwardShadow]);
+        checkChildren(lg, shadow, []);
+        assert(lg.j<RenderPhase>(extra) === payload, 'Phase payload identity');
+
+        const blockKey = JSON.stringify(new DescriptorBlockIndex(UpdateFrequency.PER_PASS));
+        const groupKey = JSON.stringify(new DescriptorGroupBlockIndex(UpdateFrequency.PER_PASS));
+        for (const pass of [sub, forward]) {
+            const block = new DescriptorBlock();
+            block.capacity = block.count = 1;
+            block.descriptors.set(lg.getName(pass), new Descriptor());
+            lg.getDescriptors(pass).blocks.set(blockKey, block);
+            lg.getDescriptors(pass).groupBlocks.set(groupKey, block);
+        }
+        assert(this.updatePasses() === 0, 'Editor pass traversal');
+        for (const [pass, child] of [[sub, shadow], [sub, extra], [forward, forwardShadow]]) {
+            const name = lg.getName(pass);
+            const expected = lg.getDescriptors(pass).blocks.get(blockKey)!.descriptors.get(name)!;
+            const childDB = lg.getDescriptors(child);
+            assert(childDB.blocks.get(blockKey)!.descriptors.get(name) === expected &&
+                childDB.groupBlocks.get(groupKey)!.descriptors.get(name) === expected, 'Descriptors from the direct parent');
+        }
+        assert(lg.getDescriptors(other).blocks.size === 0, 'Render pass must be skipped');
         let mismatched = false;
         try { lg.value(phase, root); } catch { mismatched = true; }
         assert(mismatched, 'Wrong payload kind');
@@ -50,9 +97,26 @@ function checkTypes (lg: LayoutGraph, db: DescriptorDB): void {
     lg.addVertex(LayoutGraphValue.RenderStage, new RenderPhase(), 'bad', db);
     // @ts-expect-error The value returned for a stage has no shaders.
     lg.value(LayoutGraphValue.RenderStage, 0).shaders;
+    // @ts-expect-error DescriptorDB is a component, not a polymorphic payload.
+    lg.j<DescriptorDB>(0);
+    // @ts-expect-error Named lookup requires parent_graph.
+    new HierarchyOnly().locateChild(0, 'name');
+    // @ts-expect-error Flat graphs have no child edges.
+    new FlatComponents().children(0);
 }
 
 new EditorFixture().run();
+
+const tree = new HierarchyOnly();
+const root = tree.addVertex(10);
+const independent = tree.addVertex(20);
+const first = tree.addVertex(30, root);
+const leaf = tree.addVertex(40, first);
+const last = tree.addVertex(50, root);
+checkChildren(tree, root, [first, last]);
+checkChildren(tree, first, [leaf]);
+checkChildren(tree, leaf, []);
+checkChildren(tree, independent, []);
 
 const flat = new FlatComponents();
 const db = new DescriptorDB();

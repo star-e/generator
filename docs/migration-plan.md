@@ -141,6 +141,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 TS 后端从同一声明生成 `LayoutGraphValue`、类别到载荷的类型映射和 `LayoutGraph`。编辑器通过 `addVertex(id, object, name, descriptors, parent)` 创建顶点，省略父节点时创建根。传入的相位与描述符对象保留原引用。`locateChild(parent, name)` 按插入顺序返回该父节点下第一个同名顶点，未找到时返回 `g.N`。消费测试直接编译并运行引擎编辑器的 `getPassID`、`getSubpassID` 和 `getPhaseID`。[TS 图后端](../src/codegen/TypeScriptGraphEmitter.cpp) · [编辑器建图用例](../tests/consumer/records/layout-graph-consumer.ts.in)
 
+声明 `hierarchy_graph` 后，TS 的 `g.children(v)` 通过引擎的 `OutEI` 按插入顺序遍历直接子边，`g.child(e)` 和 `g.numChildren(v)` 分别返回子顶点和直接子节点数。`parent_graph` 另行提供按名字查找子节点的能力。多态图的 `j<T>(v)` 直接返回载荷，调用方负责先用 `w(v)` 确认类别。消费测试运行编辑器的阶段遍历循环和描述符构建方法，核对同名相位从各自的父阶段取得描述符。[编辑器阶段遍历](../../cocos4/cocos/rendering/custom/layout-graph-editor.ts) · [生成代码消费测试](../tests/RecordInterop.cmake)
+
 成员声明、模板定义和短小的内联实现放在 `*Types.h`，较大的非模板实现放在配套的 `*Types.cpp`。通用遍历仍是手写算法，例如 `depthFirstSearch(g, …)` 调用图的成员接口。旧工具为 `LayoutGraph`、`RenderGraph`、`FGDispatcher` 和 `NativePipeline` 各生成一个 `*Graphs.h`，其中 `NativePipelineGraphs.h` 只有包含指令和头文件保护。这四个旧路径按模块退役。[旧文件规划](../../cocos-engine-generator/Cocos/AST/BuilderImpl.cpp) · [旧 NativePipeline 图头](../../cocos4/native/cocos/renderer/pipeline/custom/NativePipelineGraphs.h)
 
 图算法由 Cocos 独立实现。生成器和后续迁移的图运行时从构建依赖中排除 `boost-graph`，算法直接使用 Cocos 的顶点、边和访问接口。现有 `boost::container::pmr` 分配器属于引擎的容器契约，按原生签名保留。旧生成器的 `CppBuilder.cpp` 在输出类型声明和定义时都调用了 `boost::depth_first_visit`，这两处遍历随生成器一起替换。[旧声明输出](../../cocos-engine-generator/Cocos/AST/CppBuilder.cpp) · [旧依赖清单](../../cocos-engine-generator/vcpkg.json)

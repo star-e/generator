@@ -47,12 +47,13 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     out << "        this.vertices.push({\n";
     if (polymorphic) out << "            id, object,\n";
     for (const auto& component : components) out << "            component" << component.tagName << ",\n";
-    if (model.hierarchy) out << "            parent,\n";
-    if (model.parentGraph) out << "            children: [],\n";
+    if (model.hierarchy) out << "            parent,\n            children: [],\n";
     out << "        });\n";
     if (model.parentGraph)
         out << "        const siblings = parent === this.N ? this.roots : this.vertices[parent].children;\n"
-            << "        siblings.push(v);\n";
+            << "        siblings.push(new cc$graph.OutE(v));\n";
+    else if (model.hierarchy)
+        out << "        if (parent !== this.N) this.vertices[parent].children.push(new cc$graph.OutE(v));\n";
     out << "        return v;\n    }\n";
 }
 
@@ -67,7 +68,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         throw std::runtime_error(node.qualifiedName + ": component accessor collides with TypeScript getParent");
     const std::string kinds = node.name + "Value";
     if (!alternatives.empty()) {
-        for (const auto suffix : {"Value", "ValueType"}) {
+        for (const auto suffix : {"Value", "ValueType", "Object"}) {
             if (graph.findType(node.qualifiedName + suffix) != TypeId{})
                 throw std::runtime_error(node.qualifiedName + ": TypeScript graph export collides with " + node.name + suffix);
         }
@@ -76,7 +77,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "}\n\nexport interface " << kinds << "Type {\n";
         for (const auto& alt : alternatives)
             out << "    [" << kinds << "." << alt.tagName << "]: " << alt.type << ";\n";
-        out << "}\n";
+        out << "}\n\nexport type " << node.name << "Object = " << kinds << "Type[" << kinds << "];\n";
     }
 
     // Array indices stop at 2^32 - 2. Reserve the null descriptor for narrower index types too.
@@ -84,13 +85,12 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     out << "\nexport class " << node.name << " {\n    readonly N = " << limit << ";\n"
         << "    private readonly vertices: {\n";
     if (!alternatives.empty())
-        out << "        readonly id: " << kinds << ";\n        readonly object: " << kinds << "Type[" << kinds << "];\n";
+        out << "        readonly id: " << kinds << ";\n        readonly object: " << node.name << "Object;\n";
     for (const auto& component : components)
         out << "        readonly component" << component.tagName << ": " << component.type << ";\n";
-    if (model.hierarchy) out << "        readonly parent: number;\n";
-    if (model.parentGraph) out << "        readonly children: number[];\n";
+    if (model.hierarchy) out << "        readonly parent: number;\n        readonly children: cc$graph.OutE[];\n";
     out << "    }[] = [];\n";
-    if (model.parentGraph) out << "    private readonly roots: number[] = [];\n";
+    if (model.parentGraph) out << "    private readonly roots: cc$graph.OutE[] = [];\n";
     if (model.vertexList)
         out << "\n    v (): IterableIterator<number> { return this.vertices.keys(); }\n"
             << "    nv (): number { return this.vertices.length; }\n";
@@ -103,15 +103,20 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
             << "        const vertex = this.vertices[v];\n"
             << "        if (vertex.id !== id) throw new Error('Vertex kind does not match');\n"
-            << "        return vertex.object as " << kinds << "Type[T];\n    }\n";
+            << "        return vertex.object as " << kinds << "Type[T];\n    }\n"
+            << "    j<T extends " << node.name << "Object> (v: number): T { return this.vertices[v].object as T; }\n";
     if (model.hierarchy)
-        out << "\n    getParent (v: number): number { return v === this.N ? this.N : this.vertices[v].parent; }\n";
+        out << "\n    getParent (v: number): number { return v === this.N ? this.N : this.vertices[v].parent; }\n"
+            << "    children (v: number): cc$graph.OutEI { return new cc$graph.OutEI(this.vertices[v].children.values(), v); }\n"
+            << "    child (e: cc$graph.ED): number { return e.target as number; }\n"
+            << "    numChildren (v: number): number { return this.vertices[v].children.length; }\n";
     if (model.parentGraph) {
         const auto& name = components.at(model.nameComponentIndex.value());
         out << "\n    locateChild (parent: number, name: string): number {\n"
             << "        if (parent !== this.N && !this.vertices[parent]) return this.N;\n"
             << "        const children = parent === this.N ? this.roots : this.vertices[parent].children;\n"
-            << "        for (const v of children) {\n"
+            << "        for (const edge of children) {\n"
+            << "            const v = edge.target as number;\n"
             << "            if (this.get" << name.tagName << "(v) === name) return v;\n"
             << "        }\n        return this.N;\n    }\n";
     }

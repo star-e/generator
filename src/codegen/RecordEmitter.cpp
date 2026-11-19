@@ -713,6 +713,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     std::string enumImports;
     size_t poolCount{};
     bool previousTag = false;
+    bool usesGraphRuntime = false;
     const std::set<std::string> keepNone;
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
@@ -723,9 +724,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             continue;
         }
         previousTag = false;
-        if (std::holds_alternative<GraphType>(node.data)) {
+        if (const auto* model = std::get_if<GraphType>(&node.data)) {
             emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations);
-            if (output.typescript) emitTypeScriptGraph(graph, id, ts, deps.typeImports);
+            if (output.typescript) {
+                emitTypeScriptGraph(graph, id, ts, deps.typeImports);
+                if (model->hierarchy) usesGraphRuntime = true;
+            }
             continue;
         }
         cpp << '\n';
@@ -831,6 +835,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
     if (!output.typescript) return files;
     script << preamble << "/* eslint-disable max-len */\n";
+    // '$' cannot occur in a spec identifier, including declarations named ED, OutE or OutEI.
+    if (usesGraphRuntime) script << "import * as cc$graph from '" << modulePath("cocos/rendering/custom/graph", *output.typescript) << "';\n";
     writeImports(script, deps.valueImports, *output.typescript, false);
     for (const auto& [modulePath, names] : deps.valueImports) {
         auto it = deps.typeImports.find(modulePath);
