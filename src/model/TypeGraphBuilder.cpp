@@ -101,6 +101,15 @@ TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, 
     return {use.pointer ? graph.makePointer(id) : id, use.location};
 }
 
+TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
+    std::set<uint32_t> visited;
+    while (const auto* alias = std::get_if<AliasType>(&graph.node(use.type).data)) {
+        if (!visited.insert(use.type.value).second) throw std::runtime_error(use.location.describe() + ": cyclic type alias");
+        use.type = alias->target;
+    }
+    return use.type;
+}
+
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly};
@@ -120,7 +129,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         std::string_view magnitude = field.initializer;
         if (magnitude.starts_with('-')) magnitude.remove_prefix(1);
         if (hasHexPrefix(magnitude)) {
-            const auto& type = graph.node(use.type).qualifiedName;
+            const auto& type = graph.node(canonicalType(graph, use)).qualifiedName;
             if (!validUnsignedFieldDefault(type, field.initializer)) {
                 throw std::runtime_error(use.location.describe() + ": " + field.name + ": invalid " + type +
                                          " default " + field.initializer);
@@ -150,7 +159,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
                 throw std::runtime_error(ctor.location.describe() + ": repeated constructor field " + name);
             }
             members.push_back(index);
-            signature.push_back(field->type.type.value);
+            signature.push_back(canonicalType(graph, field->type).value);
         }
         if (!signatures.insert(std::move(signature)).second) {
             throw std::runtime_error(ctor.location.describe() + ": duplicate constructor signature");
@@ -162,6 +171,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
 }
 
 TypeData declare(const Declaration& decl) {
+    if (std::holds_alternative<AliasDeclaration>(decl.data)) return AliasType{};
     if (std::holds_alternative<TagDeclaration>(decl.data)) return TagType{};
     if (std::holds_alternative<GraphDeclaration>(decl.data)) return GraphType{};
     if (const auto* syntax = std::get_if<Enum>(&decl.data)) {
@@ -240,15 +250,6 @@ const std::map<std::string, IntegerRange>& integerRanges() {
     return ranges;
 }
 
-TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
-    std::set<uint32_t> visited;
-    while (const auto* alias = std::get_if<AliasType>(&graph.node(use.type).data)) {
-        if (!visited.insert(use.type.value).second) throw std::runtime_error(use.location.describe() + ": cyclic type alias");
-        use.type = alias->target;
-    }
-    return use.type;
-}
-
 GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const std::string& scope, ModuleId owner) {
     GraphType result;
     result.serializable = syntax.serializable;
@@ -309,7 +310,7 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
     std::string base = "int";
     if (syntax.underlying) {
         const auto use = resolve(graph, *syntax.underlying, scope, owner);
-        underlying = use.type;
+        underlying = canonicalType(graph, use);
         base = graph.node(underlying).qualifiedName;
         if (!ranges.contains(base)) throw std::runtime_error(use.location.describe() + ": expected integral enum base");
     }
@@ -403,6 +404,23 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 if (!isRecord || !rule.methods.empty()) reject("expected a record binding");
                 node.typescriptJsonMapKey = rule.jsonMapKey;
             } else if (!isEnum) reject("expected an enum binding");
+        }
+    }
+    // Emit scalar aliases from the canonical target, inheriting its final TS binding.
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        const auto& declarations = inputs[i].syntax.declarations;
+        for (size_t j = 0; j < declarations.size(); ++j) {
+            const auto* alias = std::get_if<AliasDeclaration>(&declarations[j].data);
+            if (!alias) continue;
+            const auto id = graph.modules[i].declarations[j];
+            const auto targetId = canonicalType(graph, {id, alias->target.location});
+            const auto& target = graph.node(targetId);
+            if (!integerRanges().contains(target.qualifiedName) && target.qualifiedName != "float" && target.qualifiedName != "double")
+                throw std::runtime_error(alias->target.location.describe() + ": expected a numeric or boolean alias target");
+            auto& node = graph.getNode(id.value);
+            node.data = AliasType{targetId};
+            node.typescriptName = target.typescriptName;
+            node.typescriptModule = target.typescriptModule;
         }
     }
     // Binding sources can instantiate containers before their arguments receive explicit bindings.
@@ -575,26 +593,34 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
             if (it != module.declarations.end()) {
                 if (std::holds_alternative<ExternalDeclaration>(it->data) || std::holds_alternative<Enum>(it->data)) continue;
-                if (!input.modelOnly && (std::holds_alternative<Record>(it->data) || std::holds_alternative<GraphDeclaration>(it->data))) continue;
+                if (!input.modelOnly && (std::holds_alternative<Record>(it->data) || std::holds_alternative<GraphDeclaration>(it->data) ||
+                                         std::holds_alternative<AliasDeclaration>(it->data))) continue;
             }
             throw std::runtime_error(module.name + ": mapping for unknown external type " + name);
         }
         scopes.push_back(std::move(scope));
     }
     const auto order = bindImports(graph.modules, inputs, moduleNames);
-    const auto bindings = bindTypes(graph, inputs, scopes);
-    const MethodBindings noRenames;
+    // Link all alias targets before resolving uses, including forward references in the same module.
     for (ModuleId owner : order) {
         const auto i = owner.value;
-        const auto& input = inputs[i];
-        // Bind descriptor aliases before their uses, including references from a preceding graph.
-        for (const auto& decl : input.syntax.declarations) {
-            if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
+        for (const auto& decl : inputs[i].syntax.declarations) {
+            if (const auto* alias = std::get_if<AliasDeclaration>(&decl.data)) {
+                const auto target = resolve(graph, alias->target, scopes[i], owner);
+                const auto id = graph.findType(qualify(scopes[i], decl.name));
+                graph.getNode(id.value).data = AliasType{target.type};
+            } else if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
                 const auto target = resolve(graph, *g->vertexType, scopes[i], owner);
                 const auto alias = graph.findType(qualify(qualify(scopes[i], decl.name), g->vertexAlias));
                 graph.getNode(alias.value).data = AliasType{target.type};
             }
         }
+    }
+    const auto bindings = bindTypes(graph, inputs, scopes);
+    const MethodBindings noRenames;
+    for (ModuleId owner : order) {
+        const auto i = owner.value;
+        const auto& input = inputs[i];
         for (size_t j = 0; j < input.syntax.declarations.size(); ++j) {
             const auto& decl = input.syntax.declarations[j];
             const auto id = graph.modules[i].declarations[j];

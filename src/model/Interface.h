@@ -81,6 +81,7 @@ struct ExternalDeclaration {
     std::vector<std::string> templateParameters;
 };
 struct TagDeclaration {};
+struct AliasDeclaration { TypeRef target; };
 
 struct GraphComponent {
     TypeRef tag;
@@ -106,7 +107,7 @@ struct GraphDeclaration {
 struct Declaration {
     std::string name;
     SourceLocation location;
-    std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration> data;
+    std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration> data;
 };
 
 struct ModuleImport {

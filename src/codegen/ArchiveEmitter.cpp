@@ -21,6 +21,7 @@ const std::string& archiveMethod(const TypeNode& api, const std::string& method)
 
 std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
     const auto& node = graph.node(id);
+    if (const auto* alias = std::get_if<AliasType>(&node.data)) return archivePrimitive(graph, alias->target);
     if (node.qualifiedName == "bool") return "Bool";
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) return "String";
     std::string_view type = node.qualifiedName;
@@ -38,7 +39,7 @@ void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, Type
     if (node.typescriptContainer != ContainerKind::None) {
         needsReadSize = true;
         const auto& args = std::get<TemplateInstanceType>(node.data).arguments;
-        if (node.typescriptContainer == ContainerKind::Array && graph.node(std::get<TypeId>(args.front())).qualifiedName == "bool")
+        if (node.typescriptContainer == ContainerKind::Array && archivePrimitive(graph, std::get<TypeId>(args.front())) == "Bool")
             needsBoolVectorLoad = true;
         for (const auto& arg : args) checkType(graph, owner, std::get<TypeId>(arg), context);
         return;

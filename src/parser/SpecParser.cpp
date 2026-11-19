@@ -309,6 +309,14 @@ private:
 
     Declaration declaration(std::set<std::string>& names) {
         Declaration result;
+        if (accept("using")) {
+            result.location = location;
+            result.name = uniqueName(names);
+            expect("=");
+            result.data = AliasDeclaration{type()};
+            expect(";");
+            return result;
+        }
         if (accept("@")) {
             if (accept("tag")) {
                 expect("struct");

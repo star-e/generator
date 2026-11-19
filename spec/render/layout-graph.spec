@@ -106,6 +106,22 @@ namespace cc::render {
         parent_graph;
         addressable_graph;
     }
+
+    using UniformID = uint32_t;
+
+    @serialize struct UniformData {
+        uniformID: UniformID = 0xFFFFFFFF;
+        uniformType: gfx::Type = gfx::Type::UNKNOWN;
+        offset: uint32_t = 0;
+        size: uint32_t = 0;
+
+        constructor(uniformID, uniformType, offset);
+    }
+
+    @serialize @requireAllocator struct UniformBlockData {
+        bufferSize: uint32_t = 0;
+        readonly uniforms: ccstd::pmr::vector<UniformData>;
+    }
 }
 
 binding typescript {
@@ -119,4 +135,6 @@ binding typescript {
     DescriptorGroupBlockIndex => class { mapKey json; };
     DescriptorDB => class { reset defaults; };
     RenderPhase => class { reset defaults; };
+    UniformData => class { reset constructor; };
+    UniformBlockData => class { reset defaults; };
 }

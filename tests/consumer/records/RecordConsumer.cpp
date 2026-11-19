@@ -374,15 +374,15 @@ bool checkRenderPhase() {
 bool checkLayoutGraph(const char* pathSamples);
 bool writeDfsCases(const char* path);
 bool exchangeLayoutArchive(std::string_view mode, const char* path);
-bool exchangeFlattenedArchive(bool writing, const char* path);
+bool exchangeBlockArchives(bool writing, const char* path);
 
 int main(int argc, char** argv) {
     if (argc == 3) {
         const std::string_view mode(argv[1]);
         if (mode == "layout-write" || mode == "layout-read" || mode == "layout-invalid")
             return exchangeLayoutArchive(mode, argv[2]) ? 0 : 1;
-        if (mode == "flat-write" || mode == "flat-read")
-            return exchangeFlattenedArchive(mode == "flat-write", argv[2]) ? 0 : 1;
+        if (mode == "blocks-write" || mode == "blocks-read")
+            return exchangeBlockArchives(mode == "blocks-write", argv[2]) ? 0 : 1;
     }
     if (argc == 3 && std::string_view(argv[1]) == "dfs-cases") return writeDfsCases(argv[2]) ? 0 : 1;
     const bool writePathCases = argc == 3 && std::string_view(argv[1]) == "path-cases";

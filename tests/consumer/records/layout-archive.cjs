@@ -1,7 +1,7 @@
 const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
-const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture, flatNativeFile, flatWebFile] = process.argv.slice(2);
+const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture, blocksNativeFile, blocksWebFile] = process.argv.slice(2);
 const current = require(path.join(jsDir, 'layout-graph.js'));
 const legacy = require(path.join(jsDir, 'legacy-layout.js'));
 const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
@@ -110,31 +110,60 @@ function flattened(api, size) {
     return value;
 }
 
+function uniformBlock(api, size) {
+    const block = new api.UniformBlockData();
+    block.bufferSize = size * 64;
+    if (size === 2) block.uniforms.push(new api.UniformData());
+    if (size) {
+        const member = new api.UniformData(0x80000009, Type.FLOAT4, 32);
+        member.size = 16;
+        block.uniforms.push(member);
+    }
+    return block;
+}
+
 const sizes = [0, 2, 1, 0];
-function encodeFlattened(api) {
+function encodeBlocks(api) {
     const output = new BinaryOutputArchive();
-    for (const size of sizes) api.saveDescriptorBlockFlattened(output, flattened(api, size));
+    for (const size of sizes) {
+        api.saveDescriptorBlockFlattened(output, flattened(api, size));
+        api.saveUniformBlockData(output, uniformBlock(api, size));
+    }
     return Buffer.from(output.data);
 }
 
-function verifyFlattened(api, bytes) {
+function verifyBlocks(api, bytes) {
     const archive = input(bytes);
     const value = flattened(api, 2);
     const fields = ['descriptorNames', 'uniformBlockNames', 'descriptors', 'uniformBlocks'];
     const refs = fields.map(field => value[field]);
+    const block = uniformBlock(api, 2);
+    const uniforms = block.uniforms;
     for (const size of sizes) {
         api.loadDescriptorBlockFlattened(archive, value);
         fields.forEach((field, i) => assert.strictEqual(value[field], refs[i], field));
         assert.deepEqual(value, flattened(api, size));
+        api.loadUniformBlockData(archive, block);
+        assert.strictEqual(block.uniforms, uniforms);
+        assert.deepEqual(block, uniformBlock(api, size));
     }
     assert.equal(archive.offset, bytes.length);
 }
 
-const flatLegacy = encodeFlattened(legacy);
-const flatWeb = encodeFlattened(current);
-const flatNative = fs.readFileSync(flatNativeFile);
-assert.deepEqual(flatWeb, flatLegacy);
-assert.deepEqual(flatNative, flatLegacy);
-verifyFlattened(current, flatNative);
-verifyFlattened(legacy, flatWeb);
-fs.writeFileSync(flatWebFile, flatWeb);
+const blocksLegacy = encodeBlocks(legacy);
+const blocksWeb = encodeBlocks(current);
+const blocksNative = fs.readFileSync(blocksNativeFile);
+assert.deepEqual(blocksWeb, blocksLegacy);
+assert.deepEqual(blocksNative, blocksLegacy);
+verifyBlocks(current, blocksNative);
+verifyBlocks(legacy, blocksWeb);
+fs.writeFileSync(blocksWebFile, blocksWeb);
+
+const resetBlock = uniformBlock(current, 2);
+const uniforms = resetBlock.uniforms;
+const member = uniforms[1];
+member.reset(7, Type.SAMPLER2D, 12);
+assert.deepEqual(member, new current.UniformData(7, Type.SAMPLER2D, 12));
+resetBlock.reset();
+assert.strictEqual(resetBlock.uniforms, uniforms);
+assert.deepEqual(resetBlock, new current.UniformBlockData());

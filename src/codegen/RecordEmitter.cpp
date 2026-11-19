@@ -205,7 +205,8 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         return m;
     }
     if (m.ts == "boolean" && (m.tsDefault == "false" || m.tsDefault == "true")) return m;
-    if (m.ts == "number" && numericDefault(node.qualifiedName, m.tsDefault)) return m;
+    const auto* alias = std::get_if<AliasType>(&node.data);
+    if (m.ts == "number" && numericDefault(alias ? graph.node(alias->target).qualifiedName : node.qualifiedName, m.tsDefault)) return m;
     invalid(field, "unsupported scalar default " + field.initializer);
 }
 
@@ -382,13 +383,26 @@ void writeNamespace(std::ostream& out, const TypeModule& module, const std::ostr
     for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) out << "\n} // namespace " << *it << "\n";
 }
 
+void writeScalarAliases(std::ostream& out, const TypeGraph& graph, const TypeModule& module, std::set<std::string>& includes) {
+    for (auto id : module.declarations) {
+        const auto& node = graph.node(id);
+        const auto* alias = std::get_if<AliasType>(&node.data);
+        if (!alias) continue;
+        const auto& target = graph.node(alias->target);
+        if (!target.cppHeader.empty()) includes.insert(target.cppHeader);
+        out << "\nusing " << node.name << " = " << cppName(graph, target, module) << ";\n";
+    }
+}
+
 std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, const std::ostringstream& hashes,
                           const std::string& preamble) {
     std::set<std::string> includes;
     std::ostringstream header, body;
     std::optional<bool> previousEnum;
+    writeScalarAliases(body, graph, module, includes);
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
+        if (std::holds_alternative<AliasType>(node.data)) continue;
         const auto* enumeration = std::get_if<EnumType>(&node.data);
         const bool isEnum = enumeration != nullptr;
         if (previousEnum != isEnum) body << '\n';
@@ -420,6 +434,7 @@ std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const 
     body << '\n';
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
+        if (std::holds_alternative<AliasType>(node.data)) continue;
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             if (!enumeration->isFlags) writeEnumNames(body, node.name, *enumeration, EnumTarget::cpp);
             continue;
@@ -705,8 +720,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     bool previousTag = false;
     bool usesGraphRuntime = false;
     const std::set<std::string> keepNone;
+    if (!output.forwardHeader) writeScalarAliases(cpp, graph, module, deps.headers);
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
+        if (std::holds_alternative<AliasType>(node.data)) continue;
         if (std::holds_alternative<TagType>(node.data)) {
             if (!previousTag) cpp << '\n';
             cpp << "struct " << node.name << " {};\n";
@@ -803,6 +820,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     header << preamble << "#pragma once\n";
     if (!output.forwardHeader && !hashDefinitions.view().empty()) deps.headers.insert("cocos/base/std/hash/hash.h");
     deps.headers.erase(output.header.generic_string());
+    if (output.forwardHeader) deps.headers.erase(output.forwardHeader->generic_string());
     cppIncludes(header, deps.headers);
     if (output.forwardHeader) {
         const auto include = output.forwardHeader->lexically_relative(output.header.parent_path());

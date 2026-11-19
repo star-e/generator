@@ -23,6 +23,9 @@ namespace cc {
     }
     @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
     @serialize struct ArrayArchiveProbe { readonly rows: ccstd::vector<ccstd::vector<bool>>; }
+    struct UniformIDProbe { id: render::UniformID = 0xFFFFFFFF; local: LocalUniformID = 0; }
+    using LocalUniformID = UniformWord;
+    using UniformWord = render::UniformID;
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
     @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; minor: uint32_t = 0; }
     graph TinyNames {
@@ -69,7 +72,7 @@ file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)
 string(JSON config SET "${config}" modules ${count} [[{
     "backend": "records", "spec": "../spec/shift.spec",
-    "nativeRoot": "native", "header": "ShiftProbe.h", "serializationHeader": "ShiftSerialization.h",
+    "nativeRoot": "native", "header": "ShiftProbe.h", "forwardHeader": "ShiftProbeFwd.h", "serializationHeader": "ShiftSerialization.h",
     "typescript": "cocos/rendering/custom/shift-probe.ts"
 }]])
 math(EXPR count "${count} + 1")
@@ -172,8 +175,8 @@ file(READ "${ENGINE}/cocos/rendering/custom/serialization.ts" codec)
 source_between(codec "export function saveUniform (" "export function saveDescriptorSetLayoutBinding (" uniformCodec)
 file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n${uniformCodec}")
-source_between(layout "export const enum DescriptorTypeOrder" "export class UniformData " legacyGraph)
-source_between(layout "export function saveDescriptor (" "export function saveUniformData (" legacyArchive)
+source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorData " legacyGraph)
+source_between(layout "export function saveDescriptor (" "export function saveDescriptorData (" legacyArchive)
 string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
 file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency } from './types';\n"
     "import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"
@@ -248,12 +251,12 @@ run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/render
 run("${consumer}" read "${work}/web.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${work}/native.bin" "${work}/web.bin")
 run("${consumer}" layout-write "${work}/layout-native.bin")
-run("${consumer}" flat-write "${work}/flat-native.bin")
+run("${consumer}" blocks-write "${work}/blocks-native.bin")
 set(legacyFixture "${SOURCE}/tests/consumer/records/fixtures/layout-graph.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/layout-archive.cjs" "${work}/js/rendering/custom"
     "${work}/layout-native.bin" "${work}/layout-web.bin" "${work}/layout-legacy.bin" "${work}/layout-invalid.bin" "${legacyFixture}"
-    "${work}/flat-native.bin" "${work}/flat-web.bin")
-run("${consumer}" flat-read "${work}/flat-web.bin")
+    "${work}/blocks-native.bin" "${work}/blocks-web.bin")
+run("${consumer}" blocks-read "${work}/blocks-web.bin")
 run("${consumer}" layout-read "${work}/layout-web.bin")
 run("${consumer}" layout-read "${work}/layout-legacy.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy.bin")

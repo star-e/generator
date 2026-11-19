@@ -215,6 +215,8 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 `DescriptorBlockFlattened` 按声明顺序写入四个数组，再写 `capacity` 和 `count`。每个数组先写长度，再依次写元素。TS 加载时保留原数组引用，并按本次读到的长度覆盖或截短数组。互操作测试用旧引擎的 TS 写入器核对字节，并让 C++ 和 TS 依次读入空数组、两个元素、一个元素和空数组。[布局声明](../spec/render/layout-graph.spec) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
+`UniformData` 在 C++ 中用 `using UniformID = uint32_t` 表示编号，在 TS 中沿用底层类型的 `number` 绑定。默认编号是 `0xFFFFFFFF`，归档依次写入编号、类型、偏移和大小。`UniformBlockData` 先写 `bufferSize`，再写 `uniforms`。C++ 加载到调用方提供内存资源的 PMR vector，TS 重用目标对象的 `uniforms` 数组。[布局声明](../spec/render/layout-graph.spec) · [原生互读测试](../tests/consumer/records/LayoutArchiveConsumer.cpp)
+
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 
 记录模块可以用 `namesHeader` 指定 C++ 名称查询头，原生头文件路径相对于 `nativeRoot`。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)

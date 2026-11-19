@@ -3,9 +3,12 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <fstream>
 #include <string_view>
+#include <type_traits>
 
 namespace {
 using namespace cc::render;
+static_assert(std::is_same_v<UniformID, uint32_t>);
+static_assert(!std::is_default_constructible_v<UniformBlockData>);
 
 void populate(LayoutGraph& g) {
     const auto pass = g.add_vertex("main");
@@ -73,6 +76,14 @@ DescriptorBlockFlattened flattened(uint32_t size) {
     value.count = size * 2;
     return value;
 }
+
+UniformBlockData uniformBlock(uint32_t size, const UniformBlockData::allocator_type& alloc) {
+    UniformBlockData block(alloc);
+    block.bufferSize = size * 64;
+    if (size == 2) block.uniforms.emplace_back();
+    if (size) block.uniforms.emplace_back(0x80000009U, cc::gfx::Type::FLOAT4, 32).size = 16;
+    return block;
+}
 } // namespace
 
 bool exchangeLayoutArchive(std::string_view mode, const char* path) {
@@ -102,13 +113,16 @@ bool exchangeLayoutArchive(std::string_view mode, const char* path) {
     return matches(g) && file.peek() == std::char_traits<char>::eof();
 }
 
-bool exchangeFlattenedArchive(bool writing, const char* path) {
+bool exchangeBlockArchives(bool writing, const char* path) {
     boost::container::pmr::monotonic_buffer_resource arena;
     constexpr uint32_t sizes[] = {0, 2, 1, 0};
     if (writing) {
         std::ofstream file(path, std::ios::binary);
         BinaryOutputArchive archive(file, &arena);
-        for (auto size : sizes) save(archive, flattened(size));
+        for (auto size : sizes) {
+            save(archive, flattened(size));
+            save(archive, uniformBlock(size, &arena));
+        }
         file.close();
         return !file.fail();
     }
@@ -116,6 +130,8 @@ bool exchangeFlattenedArchive(bool writing, const char* path) {
     file.exceptions(std::ios::badbit | std::ios::failbit);
     BinaryInputArchive archive(file, &arena);
     auto value = flattened(2);
+    boost::container::pmr::monotonic_buffer_resource destination;
+    UniformBlockData block(&destination);
     for (auto size : sizes) {
         load(archive, value);
         const auto expected = flattened(size);
@@ -130,6 +146,17 @@ bool exchangeFlattenedArchive(bool writing, const char* path) {
                 uniform.count != want.count || uniform.members.size() != want.members.size()) return false;
             if (!want.members.empty() && (uniform.members[0].name != "tint" || uniform.members[0].type != cc::gfx::Type::FLOAT4 ||
                                           uniform.members[0].count != 2)) return false;
+        }
+        load(archive, block);
+        if (block.bufferSize != size * 64 || block.uniforms.size() != size ||
+            block.get_allocator().resource() != &destination || block.uniforms.get_allocator().resource() != &destination) return false;
+        if (size == 2) {
+            const auto& first = block.uniforms.front();
+            if (first.uniformID != UINT32_MAX || first.uniformType != cc::gfx::Type::UNKNOWN || first.offset || first.size) return false;
+        }
+        if (size) {
+            const auto& last = block.uniforms.back();
+            if (last.uniformID != 0x80000009U || last.uniformType != cc::gfx::Type::FLOAT4 || last.offset != 32 || last.size != 16) return false;
         }
     }
     return file.peek() == std::char_traits<char>::eof();
