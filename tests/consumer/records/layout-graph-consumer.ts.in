@@ -1,5 +1,6 @@
 import { ED, OutEI } from './graph';
-import type { ReferenceGraph } from './graph';
+import type { AddressableGraph, ReferenceGraph } from './graph';
+import type { InputArchive } from './archive';
 import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
     LayoutGraph, LayoutGraphValue, RenderPassType, RenderPhase } from './layout-graph';
 import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
@@ -11,13 +12,47 @@ function assert (ok: boolean, message = 'Editor layout assertion failed'): void 
 
 function error (message: string): never { throw new Error(message); }
 
-function checkChildren (g: Pick<ReferenceGraph, 'children' | 'child' | 'numChildren'>, parent: number, expected: number[]): void {
+function checkChildren (g: Pick<ReferenceGraph, 'children' | 'child' | 'numChildren' | 'parent' | 'reference'>, parent: number, expected: number[]): void {
     const iterator = g.children(parent);
     const edges = [...iterator];
     assert(iterator instanceof OutEI && edges.length === expected.length && g.numChildren(parent) === expected.length,
         'Direct child count');
     assert(edges.every((edge, i) => edge instanceof ED && edge.source === parent && edge.target === expected[i] &&
-        g.child(edge) === expected[i]), 'Child edge endpoints and insertion order');
+        g.child(edge) === expected[i] && g.parent(edge) === parent && g.reference(parent, expected[i])),
+        'Child edge endpoints and insertion order');
+}
+
+export function checkNativePaths (samples: InputArchive): void {
+    const g = new LayoutGraph();
+    const view: AddressableGraph = g;
+    const count = samples.n();
+    const paths: [string, number][] = [];
+    for (let i = 0; i < count; ++i) {
+        const parent = samples.n();
+        const name = samples.s();
+        const v = samples.b()
+            ? g.addVertex(LayoutGraphValue.RenderPhase, new RenderPhase(), name, new DescriptorDB(), parent)
+            : g.addVertex(LayoutGraphValue.RenderStage, samples.n() as RenderPassType, name, new DescriptorDB(), parent);
+        assert(v === i, 'Native vertex order');
+        paths.push([samples.s(), samples.n()]);
+    }
+    paths.forEach(([path, first], v) => {
+        assert(view.path(v) === path && view.locate(path) === first, 'Native absolute path ' + path);
+    });
+    const queries = samples.n();
+    for (let i = 0; i < queries; ++i) {
+        const start = samples.n();
+        const path = samples.s();
+        const expected = samples.n();
+        assert(view.locateRelative(path, start) === expected, 'Native relative path ' + path + ' from ' + start);
+        if (start === g.N) assert(view.locateRelative(path) === expected && view.locate(path) === expected, 'Root lookup');
+    }
+    assert(view.path(g.N) === '', 'Pseudo-root path');
+    for (const v of [count, -1, 0.5, NaN]) {
+        let rejected = false;
+        try { view.path(v); } catch (e) { rejected = e instanceof RangeError; }
+        assert(rejected && view.locateRelative('.', v) === g.N, 'Invalid vertex ' + v);
+    }
 }
 
 class EditorFixture {
@@ -57,6 +92,8 @@ class EditorFixture {
         assert(lg.locateChild(sub, 'shadow') === shadow, 'First matching child');
         const forward = this.getPassID('forward', RenderPassType.SINGLE_RENDER_PASS);
         const forwardShadow = this.getPhaseID('shadow', forward);
+        assert(lg.locate(lg.path(shadow)) === shadow && lg.locate(lg.path(forwardShadow)) === forwardShadow &&
+            lg.locateRelative('../shadow', forwardShadow) === forwardShadow, 'Scoped phase paths');
         checkChildren(lg, root, [sub, other]);
         checkChildren(lg, sub, [shadow, extra]);
         checkChildren(lg, forward, [forwardShadow]);

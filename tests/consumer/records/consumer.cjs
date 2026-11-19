@@ -1,7 +1,7 @@
 const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
-const [jsDir, stage, engine, nativeFile, webFile] = process.argv.slice(2);
+const [jsDir, stage, engine, nativeFile, webFile, pathCases] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
@@ -334,6 +334,14 @@ assert.equal(pooledUpload.source, pooledBytes);
 assert.deepEqual(uploadFields(pooledUpload), uploadDefaults);
 
 const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
+const { checkNativePaths } = require(path.join(jsDir, 'layout-graph-consumer.js'));
+function readArchive(file) {
+    const bytes = fs.readFileSync(file);
+    return new BinaryInputArchive(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+}
+const paths = readArchive(pathCases);
+checkNativePaths(paths);
+assert.equal(paths.offset, paths.dataView.byteLength);
 const statistics = Object.assign(new types.PipelineStatistics(), {
     numRenderPasses: 21, numManagedTextures: 22, totalManagedTextures: 23, numUploadBuffers: 24,
     numUploadBufferViews: 25, numFreeUploadBuffers: 26, numFreeUploadBufferViews: 27, numDescriptorSets: 28,
@@ -346,8 +354,7 @@ const fixtures = [
     ['MovePair', new types.MovePair('move-src', 'move-dst', 11, 12, 13, 14, 15)],
     ['PipelineStatistics', statistics],
 ];
-const bytesFromCpp = fs.readFileSync(nativeFile);
-const input = new BinaryInputArchive(bytesFromCpp.buffer.slice(bytesFromCpp.byteOffset, bytesFromCpp.byteOffset + bytesFromCpp.byteLength));
+const input = readArchive(nativeFile);
 const output = new BinaryOutputArchive();
 for (const [name, expected] of fixtures) {
     compareDeclaration(ts, 'export function save' + name + ' (a: OutputArchive, v: ' + name + '): void {', '}');
@@ -374,7 +381,7 @@ assert.deepEqual([textProbe.text, textProbe.label], ['', '']);
 loadTextProbe(input, textProbe);
 assert.deepEqual([textProbe.text, textProbe.label], ['plain text', 'caption']);
 saveTextProbe(output, textProbe);
-assert.equal(input.offset, bytesFromCpp.byteLength);
+assert.equal(input.offset, input.dataView.byteLength);
 assert.equal(types.saveUploadPair, undefined);
 assert.equal(types.loadUploadPair, undefined);
 fs.writeFileSync(webFile, new Uint8Array(output.data));

@@ -1,8 +1,10 @@
 #include "ShiftProbe.h"
+#include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 #include <boost/container/pmr/global_resource.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
+#include <fstream>
 #include <initializer_list>
 #include <iterator>
 #include <limits>
@@ -197,7 +199,7 @@ bool checkChildLookup() {
            view.locate_child(other, newName) == none;
 }
 
-bool checkGraphPaths() {
+bool checkGraphPaths(const char* sampleFile) {
     FailingResource resource;
     LayoutGraph graph{&resource};
     const auto& view = std::as_const(graph);
@@ -208,13 +210,16 @@ bool checkGraphPaths() {
 
     const auto main = graph.add_vertex("main");
     const auto shadow = graph.add_vertex("shadow", main);
-    const auto light = graph.add_vertex("lighting", main);
-    const auto leaf = graph.add_vertex("leaf", shadow);
+    graph.value(RenderStage_{}, main) = RenderPassType::RENDER_PASS;
+    graph.value(RenderStage_{}, shadow) = RenderPassType::RENDER_SUBPASS;
+    const auto light = graph.add_vertex(RenderPhase_{}, "lighting", main);
+    const auto leaf = graph.add_vertex(RenderPhase_{}, "leaf", shadow);
     const auto ui = graph.add_vertex("ui");
     graph.add_vertex("shadow", main);
     constexpr std::string_view binaryName{"x\0y", 3};
     constexpr std::string_view binaryPath{"/ui/x\0y", 7};
-    const auto binary = graph.add_vertex(binaryName, ui);
+    const auto binary = graph.add_vertex(RenderPhase_{}, binaryName, ui);
+    const auto uiLeaf = graph.add_vertex(RenderPhase_{}, "leaf", ui);
     const auto invalid = view.num_vertices();
     if (view.path(main) != "/main" || view.path(leaf) != "/main/shadow/leaf" ||
         std::string_view{view.path(binary)} != binaryPath) return false;
@@ -229,7 +234,8 @@ bool checkGraphPaths() {
         {"//main/./shadow//leaf/", none, leaf}, {"/ui", invalid, ui}, {"../../ui", shadow, ui},
         {"../../../ui", shadow, none}, {".", shadow, shadow}, {"..", main, none}, {"..", invalid, none},
         {"", shadow, none}, {"/", main, none}, {"./", none, none}, {"missing/../lighting", main, none},
-        {"lighting", ui, none}, {binaryPath, none, binary},
+        {"lighting", ui, none}, {binaryPath, none, binary}, {"main/shadow/leaf", none, leaf},
+        {"/ui/leaf", shadow, uiLeaf}, {"../leaf", binary, uiLeaf},
     };
     resource.allocationsBeforeFailure = 0;
     for (const auto& query : queries) {
@@ -237,6 +243,30 @@ bool checkGraphPaths() {
             view.exists(query.text, query.start) != (query.expected != none)) return false;
     }
     resource.allocationsBeforeFailure = -1;
+    if (sampleFile) {
+        // Replay this tree and the native query results in the TypeScript consumer.
+        std::ofstream file(sampleFile, std::ios::binary);
+        cc::render::BinaryOutputArchive samples(file, &resource);
+        samples.writeNumber(view.num_vertices());
+        for (const auto v : view.vertices()) {
+            samples.writeNumber(view.get_parent(v));
+            samples.writeString(view.getName(v));
+            const bool isPhase = view.holds<RenderPhase_>(v);
+            samples.writeBool(isPhase);
+            if (!isPhase) samples.writeNumber(static_cast<unsigned>(view.value(RenderStage_{}, v)));
+            const auto path = view.path(v);
+            samples.writeString(path);
+            samples.writeNumber(view.locate(path));
+        }
+        samples.writeNumber(std::size(queries));
+        for (const auto& query : queries) {
+            samples.writeNumber(query.start);
+            samples.writeString(query.text);
+            samples.writeNumber(view.locate(query.text, query.start));
+        }
+        file.close();
+        if (!file) return false;
+    }
     const std::string renamed(160, 'p');
     graph.getName(main).assign(renamed.data(), renamed.size());
     const auto newPath = "/" + renamed + "/shadow/leaf";
@@ -301,8 +331,8 @@ bool checkFlatComponents() {
 }
 } // namespace
 
-bool checkLayoutGraph() {
-    if (!checkChildLookup() || !checkGraphPaths() || !checkFlatComponents()) return false;
+bool checkLayoutGraph(const char* pathSamples) {
+    if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents()) return false;
     if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;

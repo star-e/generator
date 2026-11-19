@@ -98,6 +98,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     for (const auto& component : components)
         out << "\n    get" << component.tagName << " (v: number): " << component.type << " {\n"
             << "        return this.vertices[v].component" << component.tagName << ";\n    }\n";
+    if (model.nameComponentIndex)
+        out << "\n    vertexName (v: number): string { return this.get" << components.at(*model.nameComponentIndex).tagName << "(v); }\n";
     if (!alternatives.empty())
         out << "\n    w (v: number): " << kinds << " { return this.vertices[v].id; }\n"
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
@@ -107,19 +109,35 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "    j<T extends " << node.name << "Object> (v: number): T { return this.vertices[v].object as T; }\n";
     if (model.hierarchy)
         out << "\n    getParent (v: number): number { return v === this.N ? this.N : this.vertices[v].parent; }\n"
+            << "    reference (u: number, v: number): boolean { return u !== this.N && !!this.vertices[v] && this.getParent(v) === u; }\n"
+            << "    parent (e: cc$graph.ED): number { return e.source as number; }\n"
             << "    children (v: number): cc$graph.OutEI { return new cc$graph.OutEI(this.vertices[v].children.values(), v); }\n"
             << "    child (e: cc$graph.ED): number { return e.target as number; }\n"
             << "    numChildren (v: number): number { return this.vertices[v].children.length; }\n";
     if (model.parentGraph) {
-        const auto& name = components.at(model.nameComponentIndex.value());
         out << "\n    locateChild (parent: number, name: string): number {\n"
             << "        if (parent !== this.N && !this.vertices[parent]) return this.N;\n"
             << "        const children = parent === this.N ? this.roots : this.vertices[parent].children;\n"
             << "        for (const edge of children) {\n"
             << "            const v = edge.target as number;\n"
-            << "            if (this.get" << name.tagName << "(v) === name) return v;\n"
+            << "            if (this.vertexName(v) === name) return v;\n"
             << "        }\n        return this.N;\n    }\n";
     }
+    if (model.addressableGraph)
+        out << R"(
+    locate (absPath: string): number { return this.locateRelative(absPath); }
+
+    locateRelative (path: string, start: number = this.N): number {
+        if (path.length === 0) return this.N;
+        if (path[0] !== '/' && start !== this.N && !this.vertices[start]) return this.N;
+        return cc$graph.findRelative(this, start, path) as number;
+    }
+
+    path (v: number): string {
+        if (v !== this.N && !this.vertices[v]) throw new RangeError('Invalid vertex');
+        return cc$graph.getPath(this, v);
+    }
+)";
     out << "}\n";
 }
 

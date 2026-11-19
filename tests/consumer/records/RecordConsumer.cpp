@@ -365,12 +365,13 @@ bool checkRenderPhase() {
     return matches(moved, first);
 }
 
-bool checkLayoutGraph();
+bool checkLayoutGraph(const char* pathSamples);
 
 int main(int argc, char** argv) {
-    if (argc == 3) return exchangeRecords(argv[1], argv[2]);
-    if (argc != 1) return 2;
-    if (!checkLayoutGraph()) return 9;
+    const bool writePathCases = argc == 3 && std::string_view(argv[1]) == "path-cases";
+    if (argc == 3 && !writePathCases) return exchangeRecords(argv[1], argv[2]);
+    if (argc != 1 && !writePathCases) return 2;
+    if (!checkLayoutGraph(writePathCases ? argv[2] : nullptr)) return 9;
     if (!checkDescriptorBlockIndex()) return 10;
     if (!checkDescriptorGroupBlockIndex()) return 12;
     if (!checkDescriptorDB()) return 15;
