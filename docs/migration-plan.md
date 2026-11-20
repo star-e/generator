@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 29 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 31 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -240,6 +240,8 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 同一份转换结果也用于核对 TS 调用方。`printLayoutGraphData()` 与构建器的 `print()` 通过 `getName(v)` 读取顶点名，测试逐字比较两种图的打印文本。`createGfxDescriptorSetsAndPipelines()` 用 `v()` 遍历顶点，再用 `getLayout(v)` 获取布局。测试分别在普通集合和 WebGPU 描述符组上检查绑定编号、类型、数量、可见性和图像属性，并用测试设备核对布局句柄如何传给描述符集合。[调用方对照测试](../tests/consumer/records/layout-bindings.cjs)
 
 原生 `printLayoutGraphData()` 只输出根顶点及其描述符集合。暂存版使用图的成员接口和命名空间标签。两个 C++17 消费程序分别链接引擎原有的打印函数和暂存实现，读取同一份归档并逐字节比较输出。带数组描述符、空预留块和子节点的样本还对照固定文本，检查标签、可见性、缩进与换行。[暂存实现](../runtime/cpp/LayoutGraphPrint.cpp) · [预期文本](../tests/consumer/records/fixtures/layout-print.txt)
+
+原生 `initializeDescriptorSetLayoutInfo()` 向现有绑定列表追加条目。每个块从自己的 `offset` 开始，按描述符的 `count` 推进绑定编号，类型转换沿用引擎的 `getGfxDescriptorType()`。`getOrCreatePerPassDescriptorSet()` 用 `getLayout(vertex)` 查找普通集合的 `PER_PASS` 项，按需创建并缓存布局和集合。新旧消费程序读取同一份转换归档，对照绑定字段，再通过 `gfx::Device` 的创建入口检查缓存命中时的调用次数与对象身份。[暂存实现](../runtime/cpp/LayoutGraphDescriptorSet.cpp) · [原生对照测试](../tests/consumer/records/LayoutDescriptorConsumer.cpp)
 
 `LayoutGraphObjectPool` 的 24 个工厂由 TS 绑定生成。`poolDependency renderCommon: RenderCommon;` 将已导入模块的对象池作为构造参数和只读属性。`reset()` 只重置本地子池的取用位置。下次取出时，普通记录调用自己的 `reset(...)`，两个描述符索引用 `pool … assign;` 按构造参数逐字段赋值，可修改的图调用 `clear()`，外部实现的空记录 `Layout` 直接复用。消费测试用同一套用例对照旧引擎和新生成的池。[布局绑定](../spec/render/layout-graph.spec) · [对象池测试](../tests/consumer/records/layout-pool.cjs)
 

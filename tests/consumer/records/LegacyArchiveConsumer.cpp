@@ -15,8 +15,11 @@ void transcode(BinaryInputArchive& input, BinaryOutputArchive& output, boost::co
 }
 
 bool printLayoutArchive(const char* inputPath, const char* outputPath);
+bool checkLayoutDescriptors(const char* inputPath, const char* outputPath);
 
 int main(int argc, char** argv) {
+    if (argc == 4 && std::string_view(argv[1]) == "layout-descriptors")
+        return checkLayoutDescriptors(argv[2], argv[3]) ? 0 : 1;
     if (argc == 4 && std::string_view(argv[1]) == "layout-print")
         return printLayoutArchive(argv[2], argv[3]) ? 0 : 1;
     if (argc != 3) return 1;

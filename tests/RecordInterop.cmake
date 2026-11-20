@@ -113,12 +113,15 @@ foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] 
 endforeach()
 function(source_between source start stop result)
     string(FIND "${${source}}" "${start}" first)
-    string(FIND "${${source}}" "${stop}" last)
-    if(first LESS 0 OR last LESS_EQUAL first)
+    if(first LESS 0)
+        message(FATAL_ERROR "Missing engine source starting at ${start}")
+    endif()
+    string(SUBSTRING "${${source}}" ${first} -1 tail)
+    string(FIND "${tail}" "${stop}" length)
+    if(length LESS_EQUAL 0)
         message(FATAL_ERROR "Missing engine source between ${start} and ${stop}")
     endif()
-    math(EXPR length "${last} - ${first}")
-    string(SUBSTRING "${${source}}" ${first} ${length} body)
+    string(SUBSTRING "${tail}" 0 ${length} body)
     set(${result} "${body}" PARENT_SCOPE)
 endfunction()
 # Compile the engine's original printer and visibility formatter against its own graph types.
@@ -132,6 +135,21 @@ file(WRITE "${stage}/LegacyLayoutGraphPrint.cpp" [[
 namespace cc::render {
 namespace {
 ]] "${legacyPrint}\n} // namespace cc::render\n")
+# The descriptor type mapping is still provided by the engine for both consumers.
+source_between(nativeLayoutUtils "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" descriptorTypeMapping)
+file(WRITE "${stage}/DescriptorTypeMapping.cpp" [[
+#include "cocos/base/Log.h"
+#include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
+namespace cc::render {
+]] "${descriptorTypeMapping}\n}\n")
+source_between(nativeLayoutUtils "void initializeDescriptorSetLayoutInfo(" "\nnamespace {" legacyBindings)
+source_between(nativeLayoutUtils "gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(" "void generateConstantMacros(" legacyPerPass)
+file(WRITE "${stage}/LegacyLayoutDescriptorSet.cpp" [[
+#include "gfx-base/GFXDevice.h"
+#include "cocos/renderer/pipeline/custom/LayoutGraphGraphs.h"
+namespace cc::render {
+gfx::DescriptorType getGfxDescriptorType(DescriptorTypeOrder type);
+]] "${legacyBindings}\n${legacyPerPass}\n}\n")
 set(build "${work}/build")
 build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)
@@ -345,6 +363,9 @@ run("${node}" "${SOURCE}/tests/consumer/records/layout-bindings.cjs" "${work}/js
 run("${consumer}" pipeline-read "${work}/pipeline-web.bin")
 run("${consumer}" pipeline-read "${work}/pipeline-legacy.bin")
 file(READ "${build}/legacy-${CONFIG}.txt" legacyConsumer)
+run("${legacyConsumer}" layout-descriptors "${work}/converted-layout.bin" "${work}/native-descriptors-legacy.txt")
+run("${consumer}" layout-descriptors "${work}/converted-layout.bin" "${work}/native-descriptors-current.txt")
+run("${CMAKE_COMMAND}" -E compare_files "${work}/native-descriptors-legacy.txt" "${work}/native-descriptors-current.txt")
 foreach(sample IN ITEMS print-layout converted-layout)
     run("${legacyConsumer}" layout-print "${work}/${sample}.bin" "${work}/${sample}-legacy.txt")
     run("${consumer}" layout-print "${work}/${sample}.bin" "${work}/${sample}-current.txt")

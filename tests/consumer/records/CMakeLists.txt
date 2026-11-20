@@ -2,28 +2,40 @@ cmake_minimum_required(VERSION 3.24)
 project(RenderCommonConsumer LANGUAGES CXX)
 find_package(boost_container CONFIG REQUIRED)
 set(native "${ENGINE}/native")
-add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp LayoutNamesConsumer.cpp GraphDFSConsumer.cpp LayoutArchiveConsumer.cpp PipelineArchiveConsumer.cpp
+add_library(DescriptorTestGfx STATIC
     "${native}/cocos/base/RefCounted.cpp"
+    "${native}/cocos/base/Log.cpp"
+    "${native}/cocos/renderer/gfx-base/GFXBuffer.cpp"
+    "${native}/cocos/renderer/gfx-base/GFXDef.cpp"
+    "${native}/cocos/renderer/gfx-base/GFXDevice.cpp"
+    "${native}/cocos/renderer/gfx-base/GFXTexture.cpp"
+    "${native}/cocos/renderer/gfx-base/states/GFXBufferBarrier.cpp"
+    "${native}/cocos/renderer/gfx-base/states/GFXGeneralBarrier.cpp"
+    "${native}/cocos/renderer/gfx-base/states/GFXSampler.cpp"
+    "${native}/cocos/renderer/gfx-base/states/GFXTextureBarrier.cpp"
     "${native}/cocos/renderer/gfx-base/GFXObject.cpp"
     "${native}/cocos/renderer/gfx-base/GFXDescriptorSet.cpp"
     "${native}/cocos/renderer/gfx-base/GFXDescriptorSetLayout.cpp"
-    "${native}/cocos/renderer/gfx-base/GFXPipelineLayout.cpp"
     "${native}/cocos/renderer/gfx-empty/EmptyDescriptorSet.cpp"
-    "${native}/cocos/renderer/gfx-empty/EmptyDescriptorSetLayout.cpp"
+    "${native}/cocos/renderer/gfx-empty/EmptyDescriptorSetLayout.cpp")
+add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp LayoutNamesConsumer.cpp GraphDFSConsumer.cpp LayoutArchiveConsumer.cpp PipelineArchiveConsumer.cpp
+    "${native}/cocos/renderer/gfx-base/GFXPipelineLayout.cpp"
     "${native}/cocos/renderer/gfx-empty/EmptyPipelineLayout.cpp"
     "${STAGING}/native/ShiftProbe.cpp"
     "${STAGING}/native/ShiftSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp")
 set(custom "${native}/cocos/renderer/pipeline/custom")
-add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${native}/cocos/base/RefCounted.cpp"
+add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${STAGING}/LegacyLayoutDescriptorSet.cpp"
     "${STAGING}/LegacyLayoutGraphPrint.cpp"
     "${custom}/ArchiveTypes.cpp" "${custom}/RenderCommonTypes.cpp" "${custom}/LayoutGraphTypes.cpp"
     "${custom}/LayoutGraphSerialization.cpp")
+target_compile_definitions(LegacyArchiveConsumer PRIVATE CC_TEST_LEGACY_LAYOUT=1)
 target_include_directories(RecordConsumer PRIVATE "${STAGING}/native")
 get_target_property(containerType Boost::container TYPE)
 if(WIN32 AND containerType STREQUAL "SHARED_LIBRARY")
@@ -33,7 +45,10 @@ endif()
 # Both readers use the same printer declaration but resolve their graph and archive types separately.
 set_property(SOURCE LayoutPrintConsumer.cpp PROPERTY INCLUDE_DIRECTORIES "${STAGING}/native/cocos/renderer/pipeline/custom")
 foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer)
-    target_sources(${target} PRIVATE LayoutPrintConsumer.cpp)
+    target_sources(${target} PRIVATE LayoutPrintConsumer.cpp LayoutDescriptorConsumer.cpp "${STAGING}/DescriptorTypeMapping.cpp")
+    target_link_libraries(${target} PRIVATE DescriptorTestGfx)
+endforeach()
+foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer DescriptorTestGfx)
     target_link_libraries(${target} PRIVATE Boost::container)
     set_target_properties(${target} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
     target_include_directories(${target} PRIVATE "${native}" "${native}/cocos"
