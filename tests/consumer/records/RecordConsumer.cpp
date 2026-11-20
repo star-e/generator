@@ -393,6 +393,7 @@ bool printLayoutArchive(const char* inputPath, const char* outputPath);
 bool checkLayoutDescriptors(const char* inputPath, const char* outputPath);
 bool checkResourceGraph();
 bool checkSubpassGraph();
+bool checkRasterPassCache();
 
 int main(int argc, char** argv) {
     if (argc == 4 && std::string_view(argv[1]) == "layout-descriptors")
@@ -419,6 +420,7 @@ int main(int argc, char** argv) {
     if (!checkLayoutNames()) return 17;
     if (!checkResourceGraph()) return 18;
     if (!checkSubpassGraph()) return 19;
+    if (!checkRasterPassCache()) return 20;
     if (!checkDescriptorBlockIndex()) return 10;
     if (!checkDescriptorGroupBlockIndex()) return 12;
     if (!checkDescriptorDB()) return 15;

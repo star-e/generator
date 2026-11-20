@@ -19,6 +19,7 @@
       "spec": "../spec/extern/pmr-containers.spec",
       "types": {
         "map": { "header": "cocos/base/std/container/map.h" },
+        "unordered_map": { "header": "cocos/base/std/container/unordered_map.h" },
         "vector": { "header": "cocos/base/std/container/vector.h" }
       }
     },
@@ -112,6 +113,7 @@
       "backend": "model",
       "types": {
         "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "Viewport": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "Color": { "header": "cocos/renderer/gfx-base/GFXDef.h" },
         "RenderPass": { "header": "cocos/renderer/gfx-base/GFXRenderPass.h" },
         "Buffer": { "header": "cocos/renderer/gfx-base/GFXBuffer.h" },

@@ -83,15 +83,27 @@ std::string methodType(const TypeGraph& graph, const TypeModule& module, TypeId 
     return nativeType(graph, module, id, deps);
 }
 
-bool hasPmrStorage(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
+struct RecordStorage {
+    bool usesAllocator{};
+    bool containsGraph{};
+};
+
+RecordStorage recordStorage(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
     const auto& data = graph.node(id).data;
-    if (const auto* external = std::get_if<ExternalTypeNode>(&data)) return external->isPmr;
+    if (std::holds_alternative<GraphType>(data)) return {true, true};
+    if (const auto* external = std::get_if<ExternalTypeNode>(&data)) return {external->isPmr};
     if (const auto* instance = std::get_if<TemplateInstanceType>(&data))
-        return std::get<ExternalTypeNode>(graph.node(instance->declaration).data).isPmr;
+        return {std::get<ExternalTypeNode>(graph.node(instance->declaration).data).isPmr};
     const auto* record = std::get_if<RecordType>(&data);
-    return record && visited.insert(id.value).second && std::ranges::any_of(record->fields, [&](const FieldInfo& field) {
-        return hasPmrStorage(graph, field.type.type, visited);
-    });
+    RecordStorage result;
+    if (record && visited.insert(id.value).second) {
+        for (const auto& field : record->fields) {
+            const auto child = recordStorage(graph, field.type.type, visited);
+            result.usesAllocator |= child.usesAllocator;
+            result.containsGraph |= child.containsGraph;
+        }
+    }
+    return result;
 }
 
 BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field, Dependencies& deps,
@@ -146,20 +158,25 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         }
         return m;
     }
-    if (const auto* record = std::get_if<RecordType>(&node.data); record && !field.isNullable && field.initializer.empty()) {
+    const auto* record = std::get_if<RecordType>(&node.data);
+    const auto* nestedGraph = std::get_if<GraphType>(&node.data);
+    if ((record || nestedGraph) && !field.isNullable && field.initializer.empty()) {
+        if (nestedGraph && nestedGraph->immovable) invalid(field, "cannot use an @immovable graph as a value field");
         m.cpp = nativeType(graph, module, field.type.type, deps);
         std::set<uint32_t> visited;
-        m.usesAllocator = hasPmrStorage(graph, field.type.type, visited);
+        const auto storage = recordStorage(graph, field.type.type, visited);
+        m.usesAllocator = storage.usesAllocator;
+        m.containsGraph = storage.containsGraph;
         m.checkDefaultConstruction = true;
         // Pass copyable, single-scalar value records by reference in native constructors.
-        if (!record->moveOnly && record->fields.size() == 1) {
+        if (record && !record->moveOnly && record->fields.size() == 1) {
             const auto inner = record->fields.front().type.type;
             const auto primitive = archivePrimitive(graph, inner);
             m.byConstReference = !std::holds_alternative<RecordType>(graph.node(inner).data) && (primitive == "Number" || primitive == "Bool");
         }
         m.move = !m.byConstReference;
         if (emitTs) {
-            if (node.typescriptNumber) {
+            if (record && node.typescriptNumber) {
                 m.ts = "number";
                 m.tsDefault = record->fields.front().initializer;
                 return m;
@@ -167,6 +184,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
             if (node.module != owner && node.typescriptModule.empty()) invalid(field, "missing external record mapping");
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.valueImports);
             m.tsDefault = "new " + m.ts + "()";
+            if (nestedGraph && nestedGraph->mutableGraph) m.tsReset = "this." + m.name + ".clear()";
         }
         return m;
     }
@@ -578,6 +596,11 @@ std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const 
 void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, const TypeModule& module,
                const TypeNode& node, const std::vector<BoundField>& members, Dependencies& deps) {
     const auto& record = std::get<RecordType>(node.data);
+    for (size_t i = 0; i < members.size(); ++i) {
+        const auto& field = record.fields[i];
+        if (!record.moveOnly && members[i].containsGraph && hasMoveOnlyValue(graph, field.type.type))
+            invalid(field, "a record containing a move-only graph must declare @moveOnly");
+    }
     out << "struct " << node.name << " {\n";
     const auto allocator = std::ranges::find(members, true, &BoundField::usesAllocator);
     if (allocator == members.end()) {
@@ -588,7 +611,8 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     }
     if (allocator != members.end() || record.moveOnly) {
         const auto& name = node.name;
-        const auto moveSpec = allocator != members.end() ? " noexcept" : "";
+        // Moving an embedded graph can allocate storage for its columns.
+        const auto moveSpec = allocator != members.end() && !std::ranges::any_of(members, &BoundField::containsGraph) ? " noexcept" : "";
         out << "    " << name << "(" << name << "&& rhs)" << moveSpec << " = default;\n"
             << "    " << name << "(" << name << " const& rhs) = delete;\n"
             << "    " << name << "& operator=(" << name << "&& rhs)" << moveSpec << " = default;\n"

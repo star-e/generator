@@ -439,11 +439,11 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 methods.emplace(id.value, rule.methods);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {
                 if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.constructor || rule.reset || rule.base ||
-                    !rule.from.empty() || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() || rule.jsonMapKey)
+                    !rule.from.empty() || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() || rule.mapKey != MapKeyKind::Native)
                     reject("expected a graph pool binding");
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
                 if (!isRecord || !rule.methods.empty()) reject("expected a record binding");
-                node.typescriptJsonMapKey = rule.jsonMapKey;
+                node.typescriptMapKey = rule.mapKey;
             } else if (!isEnum) reject("expected an enum binding");
         }
     }

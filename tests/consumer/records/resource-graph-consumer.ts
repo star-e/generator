@@ -1,4 +1,4 @@
-import { ClearValue, ComputeView, FormatView, ManagedResource, RasterView, RenderGraphObjectPool, ResourceDesc, ResourceGraph, ResourceGraphValue,
+import { ClearValue, ComputeView, FormatView, ManagedResource, PersistentRenderPassAndFramebuffer, RasterView, RenderGraphObjectPool, ResourceDesc, ResourceGraph, ResourceGraphValue,
     ResourceStates, ResourceTraits, getResourceGraphValueName } from './render-graph';
 import type { ResourceGraphValueType, ResourceGraphVisitor } from './render-graph';
 import type { Buffer, Texture, Framebuffer, RenderPass, Swapchain } from '../../gfx';
@@ -33,9 +33,12 @@ raster.slotID = 9;
 compute.plane = 3;
 assert(pooledValue.w === 4 && raster.shaderStageFlags === ShaderStageFlagBit.FRAGMENT && compute.accessType === AccessType.WRITE);
 const resources: ResourceGraph = resourcePool.createResourceGraph();
+const cache: Map<string, PersistentRenderPassAndFramebuffer> = resources.renderPasses;
+cache.set('first', new PersistentRenderPassAndFramebuffer());
 resources.nextFenceValue = 11;
 resources.version = 3;
 resources.clear();
+assert(resources.renderPasses === cache && cache.size === 0);
 assert(resources.nextFenceValue === 0 && resources.version === 0);
 const desc: ResourceDesc = resourcePool.createResourceDesc();
 const traits: ResourceTraits = resourcePool.createResourceTraits(ResourceResidency.EXTERNAL);
@@ -60,6 +63,21 @@ const texture = {} as Texture;
 const framebuffer = {} as Framebuffer;
 const pass = {} as RenderPass;
 const cached = resourcePool.createPersistentRenderPassAndFramebuffer(pass, framebuffer);
+cache.set('framebuffer/main', cached);
+assert(cache.get('framebuffer/main') === cached && !cache.has('framebuffer/shadow'));
+const rasterPass = resourcePool.createRasterPass();
+const { rasterViews, computeViews, textures, attachmentIndexMap, subpassGraph, viewport } = rasterPass;
+rasterViews.set('color', raster);
+computeViews.set('compute', [compute]);
+textures.set('input', ShaderStageFlagBit.FRAGMENT);
+attachmentIndexMap.set('color', 3);
+const v = subpassGraph.addVertex('resolve', resourcePool.createSubpass());
+subpassGraph.addEdge(v, v);
+viewport.left = viewport.top = viewport.width = viewport.height = 12;
+viewport.minDepth = viewport.maxDepth = 0.5;
+rasterPass.width = rasterPass.height = rasterPass.count = rasterPass.quality = 4;
+rasterPass.versionName = 'primary';
+rasterPass.showStatistics = true;
 assert(cached.renderPass === pass && cached.framebuffer === framebuffer && cached.clearDepth === 0 && cached.clearStencil === 0);
 const clearColors = cached.clearColors;
 assert(clearColors.length === 0);
@@ -125,6 +143,8 @@ function checkUint64<K extends string>(value: Record<K, number>, field: K): void
 for (const value of [mb, mt, pb, pt]) checkUint64(value, 'fenceValue');
 checkUint64(resources, 'nextFenceValue');
 checkUint64(resources, 'version');
+checkUint64(rasterPass, 'version');
+checkUint64(rasterPass, 'hashValue');
 sc.renderWindow = {} as RenderWindow;
 sc.currentID = sc.numBackBuffers = sc.generation = 2;
 sub.textureView = texture;
@@ -157,6 +177,14 @@ assert(children.length === 2 && children.indexOf(depth) >= 0 && children.indexOf
     resources.od(base) === 2 && resources.id(depth) === 1 && resources.edge(base, depth) && resources.reference(depth, mip));
 assert(resources.vertex('texture') === base && resources.vertex('depth') === depth && resources.vertex('depth-mip') === mip);
 resourcePool.reset();
+assert(resourcePool.createRasterPass() === rasterPass && rasterPass.rasterViews === rasterViews && rasterViews.size === 0 &&
+    rasterPass.computeViews === computeViews && computeViews.size === 0 && rasterPass.textures === textures && textures.size === 0 &&
+    rasterPass.attachmentIndexMap === attachmentIndexMap && attachmentIndexMap.size === 0);
+assert(rasterPass.subpassGraph === subpassGraph && subpassGraph.nv() === 0 && subpassGraph.ne() === 0 &&
+    rasterPass.viewport === viewport && viewport.left === 0 && viewport.top === 0 && viewport.width === 0 &&
+    viewport.height === 0 && viewport.minDepth === 0 && viewport.maxDepth === 1);
+assert(rasterPass.width === 0 && rasterPass.height === 0 && rasterPass.count === 1 && rasterPass.quality === 0 &&
+    rasterPass.versionName === '' && rasterPass.version === 0 && rasterPass.hashValue === 0 && !rasterPass.showStatistics);
 assert(resourcePool.createRasterView() === raster && raster.slotName === '' && raster.slotName1 === '' && raster.slotID === 0 &&
     raster.accessType === AccessType.WRITE && raster.attachmentType === AttachmentType.RENDER_TARGET &&
     raster.loadOp === LoadOp.LOAD && raster.storeOp === StoreOp.STORE && raster.clearFlags === ClearFlagBit.ALL &&
@@ -170,6 +198,7 @@ assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 
     resourcePool.createResourceDesc().width === 0 && resourcePool.createFormatView().format === Format.UNKNOWN);
 assert(resources.nextFenceValue === 0 && resources.version === 0);
 const recycled = resourcePool.createPersistentRenderPassAndFramebuffer();
+assert(resources.renderPasses === cache && cache.size === 0);
 assert(recycled === cached && recycled.renderPass === null && recycled.framebuffer === null &&
     recycled.clearColors === clearColors && clearColors.length === 0 && recycled.clearDepth === 0 && recycled.clearStencil === 0);
 assert(!resources.contains('SubresourceView') && resources.find('') === resources.N &&

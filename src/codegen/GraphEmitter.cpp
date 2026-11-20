@@ -510,6 +510,11 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
 
 } // namespace
 
+bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id) {
+    std::set<uint32_t> visited;
+    return hasMoveOnlyValue(graph, id, visited);
+}
+
 void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
                   std::set<std::string>& headers, std::set<std::string>& forwards,
                   const std::vector<BoundField>& fields, const std::string& inputArchive) {
@@ -533,8 +538,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     std::set<std::string> dequeColumns;
     std::map<std::string, std::string> defaultArgs;
     const auto columnType = [&](const ComponentInfo& component) {
-        std::set<uint32_t> visited;
-        if (hasMoveOnlyValue(graph, component.valueType, visited)) moveOnlyColumns.insert(component.name);
+        if (hasMoveOnlyValue(graph, component.valueType)) moveOnlyColumns.insert(component.name);
         const auto& valueNode = graph.node(component.valueType);
         const auto& value = valueNode.data;
         auto& args = defaultArgs[component.name];
@@ -623,8 +627,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         api.insert("get" + componentAccessorSuffix(graph.node(c.tag).name));
     }
     for (const auto& f : model.fields) {
-        std::set<uint32_t> visited;
-        if (hasMoveOnlyValue(graph, f.type.type, visited)) moveOnlyColumns.insert(f.name);
+        if (hasMoveOnlyValue(graph, f.type.type)) moveOnlyColumns.insert(f.name);
         if (api.contains(f.name) || !members.insert(f.name).second)
             throw std::runtime_error(node.qualifiedName + ": graph field collides with C++ member " + f.name);
     }

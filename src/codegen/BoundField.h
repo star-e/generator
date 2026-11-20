@@ -16,6 +16,7 @@ struct BoundField {
     bool readonly{};
     bool transient{};
     bool usesAllocator{};
+    bool containsGraph{};
     bool scalar{};
     bool safeUnsignedInteger{};
     bool checkDefaultConstruction{};

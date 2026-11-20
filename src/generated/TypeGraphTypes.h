@@ -78,6 +78,12 @@ enum class ContainerKind : uint32_t {
     Set,
 };
 
+enum class MapKeyKind : uint32_t {
+    Native,
+    String,
+    Json,
+};
+
 struct ExternalTypeNode {
     bool isStruct = false;
     bool isString = false;
@@ -210,7 +216,7 @@ struct TypeNode {
     std::string typescriptModule;
     std::string typescriptArchiveModule;
     ContainerKind typescriptContainer = ContainerKind::None;
-    bool typescriptJsonMapKey = false;
+    MapKeyKind typescriptMapKey = MapKeyKind::Native;
     bool typescriptNumber = false;
     std::vector<TypeId> templateParameters;
 };

@@ -8,8 +8,8 @@ inline bool isAssociativeContainer(ContainerKind kind) {
     return kind == ContainerKind::Map || kind == ContainerKind::Set;
 }
 
-inline bool usesJsonMapKey(const TypeNode& container, size_t position, const TypeNode& argument) {
-    return container.typescriptContainer == ContainerKind::Map && position == 0 && argument.typescriptJsonMapKey;
+inline bool usesStringMapKey(const TypeNode& container, size_t position, const TypeNode& argument) {
+    return container.typescriptContainer == ContainerKind::Map && position == 0 && argument.typescriptMapKey != MapKeyKind::Native;
 }
 
 inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph, const TypeNode& container) {
@@ -21,7 +21,7 @@ inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph
     if (container.typescriptContainer == ContainerKind::Map) {
         const auto& value = graph.node(std::get<TypeId>(arguments.at(1)));
         if (!value.typescriptName) return std::nullopt;
-        return "Map<" + (usesJsonMapKey(container, 0, first) ? "string" : name) + ", " + *value.typescriptName + ">";
+        return "Map<" + (usesStringMapKey(container, 0, first) ? "string" : name) + ", " + *value.typescriptName + ">";
     }
     if (first.typescriptContainer != ContainerKind::None ||
         name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$.") == std::string::npos) {

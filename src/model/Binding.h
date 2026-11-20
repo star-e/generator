@@ -1,6 +1,7 @@
 #pragma once
 
 #include "model/TypeRef.h"
+#include "generated/TypeGraphFwd.h"
 #include <algorithm>
 #include <filesystem>
 #include <map>
@@ -50,7 +51,7 @@ struct TypeScriptBinding {
     std::optional<PoolBinding> pool;
     std::optional<std::vector<std::string>> constructor;
     std::optional<ResetBinding> reset;
-    bool jsonMapKey{};
+    MapKeyKind mapKey{};
     bool names{};
     bool registerEnum{};
     bool helpers{};

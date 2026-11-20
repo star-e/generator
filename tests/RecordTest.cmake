@@ -12,6 +12,10 @@ function(check_resource_error before after diagnostic)
     file(WRITE "${resourceSpec}" "${invalid}")
     expect_failure(2 "${diagnostic}" ${generate})
 endfunction()
+check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
+    "subpassGraph: a record containing a move-only graph must declare @moveOnly")
+check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
+    "subpassGraph: cannot use an @immovable graph as a value field")
 check_resource_error("getColorTexture(renderWindow: scene::RenderWindow*)" "getColorTexture(other: gfx::Swapchain*)"
     "duplicate method signature getColorTexture")
 check_resource_error("member: names;" "member: contains;" "name index collides with C[+][+] member contains")
@@ -124,6 +128,9 @@ expect_failure(2 "layout-graph[.]spec:[0-9]+:[0-9]+: duplicate binding option ma
 string(REPLACE "mapKey json;" "mapKey number;" invalid "${layout}")
 file(WRITE "${layoutSpec}" "${invalid}")
 expect_failure(2 "layout-graph[.]spec:[0-9]+:[0-9]+: expected .*json" ${generate})
+string(REPLACE "mapKey json;" "mapKey string;" opaque "${layout}")
+file(WRITE "${layoutSpec}" "${opaque}")
+expect_failure(2 "blocks: mapKey string has no archive encoding for the native key" ${generate})
 string(REPLACE "struct Descriptor {" "@requireAllocator struct Descriptor {" invalid "${layout}")
 file(WRITE "${layoutSpec}" "${invalid}")
 expect_failure(2 "cc::render::Descriptor: @requireAllocator requires a PMR field" ${generate})

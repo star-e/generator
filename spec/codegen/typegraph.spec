@@ -48,6 +48,7 @@ namespace codegen {
     struct TagType {}
     struct BuiltinType {}
     enum class ContainerKind : uint32_t { None, Array, Map, Set }
+    enum class MapKeyKind : uint32_t { Native, String, Json }
     struct ExternalTypeNode {
         isStruct: bool = false;
         isString: bool = false;
@@ -116,7 +117,7 @@ namespace codegen {
         typescriptModule: std::string;
         typescriptArchiveModule: std::string;
         typescriptContainer: ContainerKind = ContainerKind::None;
-        typescriptJsonMapKey: bool = false;
+        typescriptMapKey: MapKeyKind = MapKeyKind::Native;
         typescriptNumber: bool = false;
         templateParameters: std::vector<TypeId>;
     }

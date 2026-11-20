@@ -295,13 +295,15 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。
 
-`ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。下一步迁移 `RasterPass` 的依赖及其比较、哈希规则，再接入 `renderPasses` 缓存表。[渲染图声明](../spec/render/render-graph.spec)
+`ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。[渲染图声明](../spec/render/render-graph.spec)
 
 `ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。[外部 GFX 类型](../spec/extern/gfx-resource.spec)
 
 `binding typescript` 可用 `constructor(...)` 按参数名和顺序选择一个构造重载。两个视图的池化工厂复用嵌套对象，分别调用 `Color.reset()` 和 `ClearValue.reset(0, 0, 0, 0)`。[渲染图声明与绑定](../spec/render/render-graph.spec)
 
 `Subpass` 用三个容器保存光栅视图、计算视图和解析对。TS 对象池在复用时原地清空这三个容器。`SubpassGraph` 用 `incidence_graph` 存储出边，用 `bidirectional_graph` 存储入边，两端都保留插入顺序，允许多个前驱、平行边和自环。按描述符删除一条匹配边，按端点删除该方向的全部匹配边。C++ 的图比较和哈希按顶点顺序使用名称与 `Subpass` 两列，连边不同的图可以命中同一个缓存键。[渲染图规格](../spec/render/render-graph.spec) · [原生用例](../tests/consumer/records/SubpassGraphConsumer.cpp) · [TS 用例](../tests/consumer/records/subpass-graph-consumer.ts)
+
+`ResourceGraph.renderPasses` 在 C++ 中用 `RasterPass` 作键。比较与哈希依次使用 `rasterViews`、`computeViews`、`textures`、`subpassGraph`、`width`、`height`、`count` 和 `quality`。插入缓存时，键中的子通道图和值中的清除颜色都使用资源图的分配器。TS 绑定通过 `mapKey string` 接受调用方提供的字符串，`ResourceGraph.clear()` 原地清空缓存。池中复用的 `RasterPass` 保留四张 Map、子通道图和视口的对象引用，恢复默认值。[规格](../spec/render/render-graph.spec) · [C++ 缓存用例](../tests/consumer/records/RasterPassConsumer.cpp) · [TS 复用用例](../tests/consumer/records/resource-graph-consumer.ts)
 
 ## 第一次合并及后续验收
 

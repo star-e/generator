@@ -40,6 +40,8 @@ void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, Type
     if (node.typescriptContainer != ContainerKind::None) {
         needsReadSize = true;
         const auto& args = std::get<TemplateInstanceType>(node.data).arguments;
+        if (node.typescriptContainer == ContainerKind::Map && graph.node(std::get<TypeId>(args.front())).typescriptMapKey == MapKeyKind::String)
+            throw std::runtime_error(context + ": mapKey string has no archive encoding for the native key");
         if (node.typescriptContainer == ContainerKind::Array && archivePrimitive(graph, std::get<TypeId>(args.front())) == "Bool")
             needsBoolVectorLoad = true;
         for (const auto& arg : args) checkType(graph, owner, std::get<TypeId>(arg), context);
@@ -77,7 +79,7 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
     const bool map = node.typescriptContainer == ContainerKind::Map;
     const auto keyType = std::get<TypeId>(args.front());
     const auto element = std::get<TypeId>(args.back());
-    const bool json = map && usesJsonMapKey(node, 0, graph.node(keyType));
+    const bool json = map && graph.node(keyType).typescriptMapKey == MapKeyKind::Json;
     const auto key = "key" + std::to_string(depth);
     const auto item = "item" + std::to_string(depth);
     const auto inner = indent + "    ";

@@ -17,6 +17,7 @@ struct NamespaceType;
 struct TagType;
 struct BuiltinType;
 enum class ContainerKind : uint32_t;
+enum class MapKeyKind : uint32_t;
 struct ExternalTypeNode;
 struct EnumType;
 struct RecordType;

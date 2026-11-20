@@ -65,6 +65,23 @@ namespace cc::render {
         named_graph { component: Name_; }
     }
 
+    @requireAllocator @comparison("==") @hash struct RasterPass {
+        readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
+        readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
+        @notElement readonly attachmentIndexMap: PmrTransparentMap<ccstd::pmr::string, uint32_t>;
+        readonly textures: PmrTransparentMap<ccstd::pmr::string, gfx::ShaderStageFlagBit>;
+        readonly subpassGraph: SubpassGraph;
+        width: uint32_t = 0;
+        height: uint32_t = 0;
+        count: uint32_t = 1;
+        quality: uint32_t = 0;
+        @notElement readonly viewport: gfx::Viewport;
+        @notElement versionName: ccstd::pmr::string;
+        @notElement version: uint64_t = 0;
+        @notElement hashValue: uint64_t = 0;
+        @notElement showStatistics: bool = false;
+    }
+
     struct ResourceDesc {
         dimension: ResourceDimension = ResourceDimension::BUFFER;
         alignment: uint32_t = 0;
@@ -194,6 +211,7 @@ namespace cc::render {
             FormatView_: FormatView { member: formatViews; }
             SubresourceView_: SubresourceView { member: subresourceViews; }
         }
+        readonly renderPasses: ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>;
         nextFenceValue: uint64_t = 0;
         version: uint64_t = 0;
     }
@@ -217,6 +235,7 @@ binding typescript {
     ResourceDesc => class { pool rd; reset defaults; };
     Subpass => class { pool s; reset defaults; };
     SubpassGraph => class { pool sg; };
+    RasterPass => class { pool rp; reset defaults; mapKey string; field viewport reset with reset(); };
     ResourceTraits => class { pool rt; reset constructor; };
     ResourceStates => class { pool rs1; reset defaults; };
     ManagedResource => class { pool mr; reset defaults; };

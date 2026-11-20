@@ -256,8 +256,9 @@ private:
             } else if (rule.kind == BindingTarget::classType && key == "extends") {
                 rule.base = bindingImport();
             } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
-                expect("json");
-                rule.jsonMapKey = true;
+                if (accept("json")) rule.mapKey = MapKeyKind::Json;
+                else if (accept("string")) rule.mapKey = MapKeyKind::String;
+                else fail("expected 'json' or 'string'");
             } else if (rule.kind == BindingTarget::classType && key == "constructor") {
                 rule.constructor = bindingFields();
             } else if (rule.kind == BindingTarget::classType && key == "reset") {
