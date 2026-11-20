@@ -365,6 +365,9 @@ private:
             if (accept("tag")) {
                 expect("struct");
                 result.data = TagDeclaration{};
+            } else if (accept("immovable")) {
+                expect("graph");
+                result.data = GraphDeclaration{.immovable = true};
             } else {
                 Record record;
                 do {
@@ -650,6 +653,10 @@ private:
         expect("-");
         expect(">");
         result.result = type();
+        if (accept("=>")) {
+            result.cppExpression = quotedString("C++ return expression");
+            if (result.cppExpression.empty()) fail("expected a non-empty C++ return expression");
+        }
         expect(";");
         return result;
     }

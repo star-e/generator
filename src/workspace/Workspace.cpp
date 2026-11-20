@@ -223,6 +223,8 @@ Files plan(const Json& settings, const fs::path& base) {
             for (const auto& decl : module.declarations) {
                 if (std::holds_alternative<AliasDeclaration>(decl.data)) {
                     mappings.emplace(decl.name, ExternalType{.header = output.forwardHeader.value_or(output.header).generic_string()});
+                } else if (std::holds_alternative<TagDeclaration>(decl.data)) {
+                    mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string()});
                 } else if (std::holds_alternative<Enum>(decl.data) || std::holds_alternative<Record>(decl.data) ||
                     std::holds_alternative<GraphDeclaration>(decl.data)) {
                     mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string(),

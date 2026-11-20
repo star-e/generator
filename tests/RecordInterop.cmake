@@ -7,7 +7,7 @@ file(WRITE "${work}/spec/text.spec" [[extern module Text;
 namespace sample { @string class Text; @string struct Label; }
 binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 ]])
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import GfxUniformBlock; import Text; import ArchiveInterface;
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import GraphTags; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import GfxUniformBlock; import Text; import ArchiveInterface;
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
@@ -202,7 +202,8 @@ run("${node}" "${tsc}" --strict --noImplicitAny false --skipLibCheck --target es
 # Isolate the engine's exported enums without loading its graphics device at runtime.
 file(READ "${ENGINE}/cocos/gfx/base/define.ts" gfx)
 file(MAKE_DIRECTORY "${stage}/cocos/gfx")
-foreach(name IN ITEMS ResolveMode Type ShaderStageFlagBit MemoryAccessBit ViewDimension SampleType Format DescriptorType)
+foreach(name IN ITEMS ResolveMode Type ShaderStageFlagBit MemoryAccessBit ViewDimension SampleType Format DescriptorType
+        AccessFlagBit SampleCount TextureType TextureFlagBit Filter Address ComparisonFunc)
     string(REGEX MATCH "export enum ${name} \\{[^}]+\\}" definition "${gfx}")
     if(NOT definition)
         message(FATAL_ERROR "Missing ${name} in engine gfx definitions")
@@ -215,7 +216,7 @@ if(NOT copyHelper)
     message(FATAL_ERROR "Missing UniformBlock copy helper in engine gfx definitions")
 endif()
 set(gfxClasses "type Constructor<T> = new () => T;\n${copyHelper}\n")
-foreach(name IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding DescriptorSetLayoutInfo DescriptorSetInfo)
+foreach(name IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding DescriptorSetLayoutInfo DescriptorSetInfo SamplerInfo)
     string(REGEX MATCH "export class ${name} [{]\n([ \t][^\n]*\n|\n)*[}]" definition "${gfx}")
     if(NOT definition)
         message(FATAL_ERROR "Missing ${name} class in engine gfx definitions")
@@ -326,6 +327,8 @@ set(graphConsumer "${stage}/cocos/rendering/custom/layout-graph-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/layout-graph-consumer.ts.in" "${graphConsumer}" @ONLY)
 set(dfsConsumer "${stage}/cocos/rendering/custom/graph-dfs-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/graph-dfs-consumer.ts" "${dfsConsumer}" COPYONLY)
+set(resourceConsumer "${custom}/resource-graph-consumer.ts")
+configure_file("${SOURCE}/tests/consumer/records/resource-graph-consumer.ts" "${resourceConsumer}" COPYONLY)
 
 # Compile both versions against the same engine imports to exercise the bound defaults at runtime.
 set(commonSpec "${work}/spec/render/render-common.spec")
@@ -341,7 +344,8 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${enumConsumer}" "${graphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
+    "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
+run("${node}" "${work}/js/rendering/custom/resource-graph-consumer.js")
 run("${consumer}" write "${work}/native.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}" "${dfsCases}")
 run("${node}" "${SOURCE}/tests/consumer/records/layout-pool.cjs" "${work}/js/rendering/custom")

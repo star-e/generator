@@ -43,6 +43,7 @@ struct MethodInfo {
     bool isNoexcept = false;
     bool cppOnly = false;
     std::optional<std::string> typescriptName;
+    std::string cppExpression;
 };
 
 struct FieldInfo {
@@ -112,6 +113,7 @@ struct ComponentInfo {
 };
 
 struct GraphType {
+    bool immovable = false;
     bool serializable = false;
     TypeId vertexType;
     bool indexedVertices = false;

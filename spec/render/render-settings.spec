@@ -1,4 +1,5 @@
 module RenderSettings;
+import Gfx;
 namespace cc::render {
     struct MSAA {
         enabled: bool = false;

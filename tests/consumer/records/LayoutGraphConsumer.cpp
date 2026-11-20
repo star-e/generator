@@ -4,6 +4,7 @@
 #include <boost/container/pmr/global_resource.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
+#include <algorithm>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
@@ -463,7 +464,39 @@ int checkStageAllocation(unsigned count, int failAfter) {
     return static_cast<int>(insertWithFailure(count, failAfter));
 }
 
+static bool checkLayoutEdges() {
+    boost::container::pmr::monotonic_buffer_resource arena;
+    LayoutGraph g{&arena};
+    const auto root = g.add_vertex("root");
+    const auto first = g.add_vertex("same");
+    const auto last = g.add_vertex("same", root);
+    const auto nested = g.add_vertex("nested", first);
+    const auto [link, added] = g.add_edge(root, first);
+    if (!added || g.parent(link) != root || g.child(link) != first || !hasChildren(g, root, {first, last})) return false;
+    if (g.add_edge(root, first).second || g.add_edge(last, first).second || g.add_edge(nested, root).second ||
+        g.add_edge(root, root).second || g.add_edge(root, g.null_vertex()).second) return false;
+    const auto incoming = g.in_edges(first);
+    if (std::distance(incoming.begin(), incoming.end()) != 1 || g.source(*incoming.begin()) != root ||
+        g.target(*incoming.begin()) != first || g.in_degree(root) || g.degree(first) != 2 || g.num_edges() != 3) return false;
+    const auto adjacent = g.adjacent_vertices(root);
+    const std::initializer_list<Vertex> expected{first, last};
+    if (!std::equal(adjacent.begin(), adjacent.end(), expected.begin(), expected.end())) return false;
+    const std::initializer_list<Vertex> targets{first, last, nested};
+    auto next = targets.begin();
+    for (const auto e : g.edges()) {
+        if (next == targets.end() || g.target(e) != *next++ || !g.has_link(e.source, e.target)) return false;
+    }
+    if (next != targets.end()) return false;
+    g.remove_edge(link);
+    if (g.get_parent(first) != g.null_vertex() || g.in_degree(first) || g.num_edges() != 2 ||
+        g.path(nested) != "/same/nested" || g.locate("/root/same") != last) return false;
+    g.remove_edge({root, last});
+    g.remove_edge({root, last});
+    return hasChildren(g, root, {}) && g.add_edge(root, last).second && hasChildren(g, root, {last});
+}
+
 bool checkLayoutGraph(const char* pathSamples) {
+    if (!checkLayoutEdges()) return false;
     if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkMoveOnlyGrowth()) return false;
     if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;

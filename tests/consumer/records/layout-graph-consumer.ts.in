@@ -1,10 +1,10 @@
 import { DefaultVisitor, depthFirstSearch as engineSearch, ED, OutEI } from './graph';
-import type { AddressableGraph, IncidenceGraph, PolymorphicGraph, ReferenceGraph } from './graph';
+import type { AddressableGraph, AdjacencyGraph, BidirectionalGraph, EdgeListGraph, PolymorphicGraph, ReferenceGraph } from './graph';
 import { depthFirstSearch } from './graph-dfs';
 import type { InputArchive } from './archive';
 import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
     EffectData, LayoutGraph, LayoutGraphData, LayoutGraphDataValue, LayoutGraphValue, RenderPassType,
-    RenderPhase, RenderPhaseData, RenderStageData } from './layout-graph';
+    RenderPhase, RenderPhaseData, RenderStageData, getLayoutGraphValueName, getLayoutGraphDataValueName } from './layout-graph';
 import { convertDescriptorBlock, getVisibilityName, indent, LayoutGraphBuilder2, unindent, VectorGraphColorMap } from './layout-graph-conversion';
 import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
 import { UpdateFrequency } from './types';
@@ -36,6 +36,11 @@ function checkLayoutGraphData (): void {
     const programs = new ProgramLibraryFixture(g);
     assert(programs.phases.size === 1 && programs.phases.get(phase) instanceof ProgramGroup, 'Web program phase selection');
     assert(g.getUpdate(root) === UpdateFrequency.PER_PASS && g.getUpdate(phase) === UpdateFrequency.PER_PHASE);
+    g.setUpdate(phase, UpdateFrequency.PER_BATCH);
+    assert(g.getUpdate(phase) === UpdateFrequency.PER_BATCH && g.getUpdate(root) === UpdateFrequency.PER_PASS);
+    g.setUpdate(phase, UpdateFrequency.PER_PHASE);
+    assert(getLayoutGraphValueName(LayoutGraphValue.RenderStage) === 'RenderStage' &&
+        getLayoutGraphDataValueName(g.w(phase)) === 'RenderPhase');
     const phaseData = g.value(LayoutGraphDataValue.RenderPhase, phase);
     assert(g.locate('/main/shadow') === phase && phaseData.shaderIndex.get('caster') === 0 && phaseData.shaderPrograms.length === 1);
     const poly: PolymorphicGraph = g;
@@ -64,7 +69,7 @@ function checkLayoutGraphData (): void {
     assert(builder.addRenderStage('next', g.N) === 0 && g.locate('/main') === g.N && g.locate('/next') === 0);
 }
 
-function checkChildren (g: IncidenceGraph & Pick<ReferenceGraph, 'children' | 'child' | 'numChildren' | 'parent' | 'reference'>, parent: number, expected: number[]): void {
+function checkChildren (g: BidirectionalGraph & AdjacencyGraph & EdgeListGraph & ReferenceGraph, parent: number, expected: number[]): void {
     const iterator = g.children(parent);
     const edges = [...iterator];
     assert(iterator instanceof OutEI && edges.length === expected.length && g.numChildren(parent) === expected.length,
@@ -73,6 +78,12 @@ function checkChildren (g: IncidenceGraph & Pick<ReferenceGraph, 'children' | 'c
         g.child(edge) === expected[i] && g.parent(edge) === parent && g.reference(parent, expected[i])),
         'Child edge endpoints and insertion order');
     const outgoing = [...g.oe(parent)];
+    const adjacent = [...g.adj(parent)];
+    assert(adjacent.length === expected.length && adjacent.every((v, i) => v === expected[i]), 'Adjacent vertex order');
+    const incoming = [...g.ie(parent)];
+    assert(incoming.length === g.id(parent) && g.d(parent) === expected.length + incoming.length &&
+        (g.getParent(parent) === g.N ? incoming.length === 0 : incoming.length === 1 &&
+            g.source(incoming[0]) === g.getParent(parent) && g.target(incoming[0]) === parent), 'Incoming edges');
     assert(g.od(parent) === expected.length && outgoing.length === expected.length &&
         outgoing.every((edge, i) => g.source(edge) === parent && g.target(edge) === expected[i] &&
             g.edge(parent, expected[i]) && !g.edge(expected[i], parent)), 'Shared out-edges');
@@ -239,6 +250,9 @@ checkChildren(tree, independent, []);
 const flat = new FlatComponents();
 const db = new DescriptorDB();
 const index = flat.addVertex(db, 'flat', 42);
+flat.setCount(index, 43);
+assert(flat.getCount(index) === 43);
+flat.setCount(index, 42);
 assert(flat.getDescriptors(index) === db && flat.getCount(index) === 42 && flat.getName(index) === 'flat', 'Component order');
 flat.version = 9;
 flat.clear();

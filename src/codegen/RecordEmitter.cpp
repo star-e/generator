@@ -544,7 +544,8 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         out << ")";
         if (method.isConst) out << " const";
         if (method.isNoexcept) out << " noexcept";
-        out << ";\n";
+        if (method.cppExpression.empty()) out << ";\n";
+        else out << " { return " << method.cppExpression << "; }\n";
     }
     out << "};\n";
 }

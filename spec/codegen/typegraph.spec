@@ -22,6 +22,7 @@ namespace codegen {
         isNoexcept: bool = false;
         cppOnly: bool = false;
         typescriptName: std::optional<std::string>;
+        cppExpression: std::string;
     }
     struct FieldInfo {
         type: TypeUse;
@@ -66,6 +67,7 @@ namespace codegen {
     struct InterfaceType { bases: std::vector<TypeId>; methods: std::vector<MethodInfo>; }
     struct ComponentInfo { tag: TypeId; valueType: TypeId; name: std::string; }
     struct GraphType {
+        immovable: bool = false;
         serializable: bool = false;
         vertexType: TypeId;
         indexedVertices: bool = false;

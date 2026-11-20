@@ -44,7 +44,7 @@ std::optional<std::string> defaultScalarBinding(std::string_view qualifiedName) 
     if (qualifiedName == "void") return "void";
     if (qualifiedName == "bool") return "boolean";
     if (qualifiedName == "double" || qualifiedName == "float" ||
-        qualifiedName == "uint8_t" || qualifiedName == "uint32_t") return "number";
+        qualifiedName == "uint8_t" || qualifiedName == "uint16_t" || qualifiedName == "uint32_t") return "number";
     return std::nullopt;
 }
 
@@ -112,7 +112,8 @@ TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
 
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
-                      .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly};
+                      .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
+                      .cppExpression = method.cppExpression};
     for (const auto& parameter : method.parameters) {
         member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name});
     }
@@ -258,6 +259,7 @@ const std::map<std::string, IntegerRange>& integerRanges() {
 
 GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const std::string& scope, ModuleId owner) {
     GraphType result;
+    result.immovable = syntax.immovable;
     result.serializable = syntax.serializable;
     const auto descriptor = graph.findType(qualify(scope, syntax.vertexAlias));
     result.vertexType = canonicalType(graph, {descriptor, syntax.vertexType->location});
@@ -608,7 +610,8 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         for (const auto& [name, mapping] : input.externalTypes) {
             const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
             if (it != module.declarations.end()) {
-                if (std::holds_alternative<ExternalDeclaration>(it->data) || std::holds_alternative<Enum>(it->data)) continue;
+                if (std::holds_alternative<ExternalDeclaration>(it->data) || std::holds_alternative<Enum>(it->data) ||
+                    (!input.modelOnly && std::holds_alternative<TagDeclaration>(it->data))) continue;
                 if (!input.modelOnly && (std::holds_alternative<Record>(it->data) || std::holds_alternative<GraphDeclaration>(it->data) ||
                                          std::holds_alternative<AliasDeclaration>(it->data))) continue;
             }

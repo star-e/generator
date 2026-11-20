@@ -164,9 +164,10 @@ void checkArchive(const std::filesystem::path& spec) {
 
 void checkSettings(const std::filesystem::path& spec) {
     TypeTable externals;
-    for (const auto* name : {"bool", "uint32_t", "float", "cc::gfx::SampleCount", "cc::Material",
+    for (const auto* name : {"bool", "uint32_t", "float", "cc::Material",
                              "cc::Texture2D", "cc::IntrusivePtr"}) externals.emplace(name, ExternalType{});
-    const auto graph = buildTypeGraph({{readModule(spec), {}}}, externals);
+    const auto gfx = spec.parent_path().parent_path() / "extern/gfx.spec";
+    const auto graph = buildTypeGraph({{readModule(gfx), {}, true}, {readModule(spec), {}}}, externals);
     const auto bloom = graph.findType("cc::render::Bloom");
     const auto bloomType = graph.findType("cc::render::BloomType");
     auto field = [&](TypeId record, const std::string& name) -> const FieldInfo& {

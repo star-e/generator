@@ -23,6 +23,7 @@ struct Method {
     bool isConst{};
     bool isNoexcept{};
     bool cppOnly{};
+    std::string cppExpression;
 };
 
 struct Interface {
@@ -90,6 +91,7 @@ struct GraphComponent {
 };
 
 struct GraphDeclaration {
+    bool immovable{};
     bool serializable{};
     std::string vertexAlias;
     std::optional<TypeRef> vertexType;

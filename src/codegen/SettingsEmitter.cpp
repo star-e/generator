@@ -36,6 +36,11 @@ std::string typeName(const TypeNode& type, const FieldInfo& field, Imports& impo
     if (!type.typescriptName) invalid(field, "missing TypeScript mapping for " + type.qualifiedName);
     const auto& name = *type.typescriptName;
     if (type.module != imports.owner && !type.typescriptModule.empty()) {
+        // Editor pipeline assets access engine graphics types through the public cc namespace.
+        if (type.typescriptModule == "cocos/gfx") {
+            imports.names.insert("gfx");
+            return "gfx." + name;
+        }
         imports.modules[type.typescriptModule].insert(name);
         return name;
     }

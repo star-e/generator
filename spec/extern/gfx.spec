@@ -1,5 +1,67 @@
 module Gfx;
 namespace cc::gfx {
+    enum class TextureType : uint32_t {
+        TEX1D,
+        TEX2D,
+        TEX3D,
+        CUBE,
+        TEX1D_ARRAY,
+        TEX2D_ARRAY,
+    }
+
+    flags TextureFlagBit : uint32_t {
+        NONE = 0,
+        GEN_MIPMAP = 0x1,
+        GENERAL_LAYOUT = 0x2,
+        EXTERNAL_OES = 0x4,
+        EXTERNAL_NORMAL = 0x8,
+        LAZILY_ALLOCATED = 0x10,
+        MUTABLE_VIEW_FORMAT = 0x40,
+        MUTABLE_STORAGE = 0x80,
+    }
+
+    enum class SampleCount : uint32_t {
+        X1 = 0x01,
+        X2 = 0x02,
+        X4 = 0x04,
+        X8 = 0x08,
+        X16 = 0x10,
+        X32 = 0x20,
+        X64 = 0x40
+    }
+
+    flags AccessFlagBit : uint32_t {
+        NONE = 0,
+        INDIRECT_BUFFER = 1 << 0,
+        INDEX_BUFFER = 1 << 1,
+        VERTEX_BUFFER = 1 << 2,
+        VERTEX_SHADER_READ_UNIFORM_BUFFER = 1 << 3,
+        VERTEX_SHADER_READ_TEXTURE = 1 << 4,
+        VERTEX_SHADER_READ_OTHER = 1 << 5,
+        FRAGMENT_SHADER_READ_UNIFORM_BUFFER = 1 << 6,
+        FRAGMENT_SHADER_READ_TEXTURE = 1 << 7,
+        FRAGMENT_SHADER_READ_COLOR_INPUT_ATTACHMENT = 1 << 8,
+        FRAGMENT_SHADER_READ_DEPTH_STENCIL_INPUT_ATTACHMENT = 1 << 9,
+        FRAGMENT_SHADER_READ_OTHER = 1 << 10,
+        COLOR_ATTACHMENT_READ = 1 << 11,
+        DEPTH_STENCIL_ATTACHMENT_READ = 1 << 12,
+        COMPUTE_SHADER_READ_UNIFORM_BUFFER = 1 << 13,
+        COMPUTE_SHADER_READ_TEXTURE = 1 << 14,
+        COMPUTE_SHADER_READ_OTHER = 1 << 15,
+        TRANSFER_READ = 1 << 16,
+        HOST_READ = 1 << 17,
+        PRESENT = 1 << 18,
+        VERTEX_SHADER_WRITE = 1 << 19,
+        FRAGMENT_SHADER_WRITE = 1 << 20,
+        COLOR_ATTACHMENT_WRITE = 1 << 21,
+        DEPTH_STENCIL_ATTACHMENT_WRITE = 1 << 22,
+        COMPUTE_SHADER_WRITE = 1 << 23,
+        TRANSFER_WRITE = 1 << 24,
+        HOST_PREINITIALIZED = 1 << 25,
+        HOST_WRITE = 1 << 26,
+        SHADING_RATE = 1 << 27,
+    }
+
     enum class Type : uint32_t {
         UNKNOWN,
         BOOL,
@@ -235,6 +297,10 @@ namespace cc::gfx {
 }
 
 binding typescript {
+    TextureType => TextureType from "cocos/gfx";
+    TextureFlagBit => TextureFlagBit from "cocos/gfx";
+    SampleCount => SampleCount from "cocos/gfx";
+    AccessFlagBit => AccessFlagBit from "cocos/gfx";
     Type => Type from "cocos/gfx";
     ResolveMode => ResolveMode from "cocos/gfx";
     ShaderStageFlagBit => ShaderStageFlagBit from "cocos/gfx";

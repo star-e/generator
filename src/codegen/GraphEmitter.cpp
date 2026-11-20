@@ -50,30 +50,34 @@ void hierarchyInterface(std::ostream& out, const std::string& name, const std::s
         << "    " << vertex << " get_parent(" << vertex << " v) const noexcept { return v == null_vertex() ? v : this->"
         << rows << "[v].parent; }\n"
         << "    " << vertex << " num_children(" << vertex << " v) const noexcept { return this->" << rows << "[v].childCount; }\n"
-        << "\n    class ChildLinkIterator {\n    public:\n"
-        << R"(        using value_type = Link;
-        using difference_type = std::ptrdiff_t;
+        << "\n    template<bool Adjacent>\n    class ChildIterator {\n    public:\n"
+        << "        using value_type = std::conditional_t<Adjacent, " << vertex << ", Link>;\n"
+        << R"(        using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
         using pointer = void;
-        using reference = Link;
+        using reference = value_type;
 
-        ChildLinkIterator() = default;
+        ChildIterator() = default;
 )"
-        << "        ChildLinkIterator(const " << name << "* graph, " << vertex << " v) noexcept : owner(graph), current(v) {}\n"
-        << "        Link operator*() const noexcept { return {owner->get_parent(current), current}; }\n"
-        << "        ChildLinkIterator& operator++() noexcept { current = owner->" << rows << "[current].nextSibling; return *this; }\n"
-        << R"(        ChildLinkIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
-        bool operator==(ChildLinkIterator rhs) const noexcept { return owner == rhs.owner && current == rhs.current; }
-        bool operator!=(ChildLinkIterator rhs) const noexcept { return !(*this == rhs); }
+        << "        ChildIterator(const " << name << "* graph, " << vertex << " v) noexcept : owner(graph), current(v) {}\n"
+        << "        value_type operator*() const noexcept {\n            if constexpr (Adjacent) return current;\n"
+        << "            else return {owner->get_parent(current), current};\n        }\n"
+        << "        ChildIterator& operator++() noexcept { current = owner->" << rows << "[current].nextSibling; return *this; }\n"
+        << R"(        ChildIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
+        bool operator==(ChildIterator rhs) const noexcept { return owner == rhs.owner && current == rhs.current; }
+        bool operator!=(ChildIterator rhs) const noexcept { return !(*this == rhs); }
     private:
 )"
         << "        const " << name << "* owner{};\n        " << vertex << " current{null_vertex()};\n    };\n"
         << R"(
-    struct ChildLinkRange {
-        ChildLinkIterator first, last;
-        ChildLinkIterator begin() const noexcept { return first; }
-        ChildLinkIterator end() const noexcept { return last; }
+    using ChildLinkIterator = ChildIterator<false>;
+    template<class Iterator>
+    struct IteratorRange {
+        Iterator first, last;
+        Iterator begin() const noexcept { return first; }
+        Iterator end() const noexcept { return last; }
     };
+    using ChildLinkRange = IteratorRange<ChildLinkIterator>;
 )"
         << "    ChildLinkRange child_links(" << vertex << " v) const noexcept {\n"
         << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n"
@@ -82,10 +86,59 @@ void hierarchyInterface(std::ostream& out, const std::string& name, const std::s
         << "    " << vertex << " target(Edge e) const noexcept { return e.target; }\n"
         << "    ChildLinkRange out_edges(" << vertex << " v) const noexcept { return child_links(v); }\n"
         << "    " << vertex << " out_degree(" << vertex << " v) const noexcept { return num_children(v); }\n"
+        << "    " << vertex << " parent(Link e) const noexcept { return e.source; }\n"
+        << "    " << vertex << " num_parents(" << vertex << " v) const noexcept { return get_parent(v) != null_vertex(); }\n"
+        << R"(    struct ParentLinkIterator {
+        using value_type = Link;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::input_iterator_tag;
+        using pointer = void;
+        using reference = Link;
+        Link link{null_vertex(), null_vertex()};
+        Link operator*() const noexcept { return link; }
+        ParentLinkIterator& operator++() noexcept { link.source = null_vertex(); return *this; }
+        ParentLinkIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
+        bool operator==(ParentLinkIterator rhs) const noexcept { return link.source == rhs.link.source && link.target == rhs.link.target; }
+        bool operator!=(ParentLinkIterator rhs) const noexcept { return !(*this == rhs); }
+    };
+    using ParentLinkRange = IteratorRange<ParentLinkIterator>;
+)"
+        << "    ParentLinkRange parent_links(" << vertex << " v) const noexcept { return {{{get_parent(v), v}}, {{null_vertex(), v}}}; }\n"
+        << "    ParentLinkRange in_edges(" << vertex << " v) const noexcept { return parent_links(v); }\n"
+        << "    " << vertex << " in_degree(" << vertex << " v) const noexcept { return num_parents(v); }\n"
+        << "    " << vertex << " degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n"
+        << "    IteratorRange<ChildIterator<true>> adjacent_vertices(" << vertex << " v) const noexcept {\n"
+        << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n"
+        << "    " << vertex << " num_edges() const noexcept {\n        " << vertex << " count{};\n"
+        << "        for (const auto& row : this->" << rows << ") count += row.childCount;\n        return count;\n    }\n"
         << "    std::pair<Edge, bool> edge(" << vertex << " u, " << vertex << " v) const noexcept {\n"
         << "        if (u != null_vertex() && static_cast<std::uintmax_t>(v) < this->" << rows
         << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
         << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
+    out << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return edge(u, v).second; }\n";
+    out << "\n    class EdgeIterator {\n    public:\n"
+        << R"(        using value_type = Edge;
+        using difference_type = std::ptrdiff_t;
+        using iterator_category = std::input_iterator_tag;
+        using pointer = void;
+        using reference = Edge;
+        EdgeIterator() = default;
+)"
+        << "        EdgeIterator(const " << name << "* graph, " << vertex << " first) noexcept : owner(graph), u(first) { seek(); }\n"
+        << "        Edge operator*() const noexcept { return {u, v}; }\n"
+        << "        EdgeIterator& operator++() noexcept {\n            v = owner->" << rows << "[v].nextSibling;\n"
+        << "            if (v == null_vertex()) { ++u; seek(); }\n            return *this;\n        }\n"
+        << R"(        EdgeIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
+        bool operator==(EdgeIterator rhs) const noexcept { return owner == rhs.owner && u == rhs.u && v == rhs.v; }
+        bool operator!=(EdgeIterator rhs) const noexcept { return !(*this == rhs); }
+    private:
+        void seek() noexcept {
+)"
+        << "            while (u < owner->" << rows << ".size()) {\n                v = owner->" << rows << "[u].firstChild;\n"
+        << "                if (v != null_vertex()) break;\n                ++u;\n            }\n        }\n"
+        << "        const " << name << "* owner{};\n        " << vertex << " u{}, v{null_vertex()};\n    };\n"
+        << "    IteratorRange<EdgeIterator> edges() const noexcept {\n"
+        << "        return {{this, 0}, {this, static_cast<" << vertex << ">(this->" << rows << ".size())}};\n    }\n";
 }
 
 void parentLookup(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
@@ -105,6 +158,47 @@ void parentLookup(std::ostream& out, std::ostream& source, const std::string& na
            << "            if (std::string_view{this->" << accessor << "(v)} == name) return v;\n"
            << "        }\n"
            << "    }\n    return null_vertex();\n}\n";
+}
+
+void hierarchyMutation(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
+                       const std::string& rows, bool serializable) {
+    out << "    std::pair<Edge, bool> add_edge(" << vertex << " u, " << vertex << " v) noexcept;\n"
+        << "    void remove_edge(Edge e) noexcept;\n";
+    source << "\nstd::pair<" << name << "::Edge, bool> " << name << "::add_edge(" << vertex << " u, " << vertex << " v) noexcept {\n"
+           << "    auto& links = this->" << rows << ";\n"
+           << "    if (static_cast<std::uintmax_t>(u) >= links.size() || static_cast<std::uintmax_t>(v) >= links.size() ||\n"
+           << "        links[v].parent != null_vertex()" << (serializable ? " || u >= v" : "") << ") return {{null_vertex(), null_vertex()}, false};\n";
+    if (!serializable)
+        source << "    for (auto p = u; p != null_vertex(); p = links[p].parent)\n"
+               << "        if (p == v) return {{null_vertex(), null_vertex()}, false};\n";
+    source << R"(    auto& parent = links[u];
+    auto* slot = &parent.firstChild;
+    while (*slot != null_vertex() && *slot < v) slot = &links[*slot].nextSibling;
+    links[v].nextSibling = *slot;
+    if (*slot == null_vertex()) parent.lastChild = v;
+    *slot = v;
+    links[v].parent = u;
+    ++parent.childCount;
+    return {{u, v}, true};
+}
+)";
+    source << "\nvoid " << name << "::remove_edge(Edge e) noexcept {\n"
+           << "    if (!edge(e.source, e.target).second) return;\n"
+           << "    auto& links = this->" << rows << ";\n"
+           << R"(    auto& parent = links[e.source];
+    auto& child = links[e.target];
+    auto previous = null_vertex();
+    auto* slot = &parent.firstChild;
+    while (*slot != e.target) {
+        previous = *slot;
+        slot = &links[previous].nextSibling;
+    }
+    *slot = child.nextSibling;
+    if (parent.lastChild == e.target) parent.lastChild = previous;
+    child.parent = child.nextSibling = null_vertex();
+    --parent.childCount;
+}
+)";
 }
 
 void addressableGraph(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
@@ -153,7 +247,7 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
 
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
                        const std::vector<std::string>& storage, const std::set<std::string>& moveOnlyColumns,
-                       const std::set<std::string>& dequeColumns, const std::vector<BoundField>& fields) {
+                       const std::set<std::string>& dequeColumns, const std::vector<BoundField>& fields, bool immovable) {
     const auto& member = storage.front();
     const bool copyable = moveOnlyColumns.empty();
     out << "    explicit " << name << "(const allocator_type& alloc)";
@@ -161,8 +255,16 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
         out << (field == member ? " : " : ", ") << field << (dequeColumns.contains(field) ? "(alloc)" : "(0, alloc)");
     for (const auto& f : fields)
         if (f.usesAllocator) out << ", " << f.name << "(" << f.allocatorArguments() << ")";
-    out << " {}\n"
-        << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc)" << (copyable ? ";\n" : " = delete;\n")
+    out << " {}\n";
+    if (immovable) {
+        out << "    " << name << "(const " << name << "&) = delete;\n"
+            << "    " << name << "(" << name << "&&) = delete;\n"
+            << "    " << name << "& operator=(const " << name << "&) = delete;\n"
+            << "    " << name << "& operator=(" << name << "&&) = delete;\n"
+            << "    allocator_type get_allocator() const noexcept { return {this->" << member << ".get_allocator().resource()}; }\n";
+        return;
+    }
+    out << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc)" << (copyable ? ";\n" : " = delete;\n")
         << "    " << name << "(" << name << "&& rhs, const allocator_type& alloc);\n"
         << "    " << name << "(" << name << "&& rhs) : "
         << name << "(std::move(rhs), rhs.get_allocator()) {}\n"
@@ -386,7 +488,9 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             headers.insert("cocos/base/std/container/deque.h");
         }
         const auto& tag = graph.node(component.tag);
-        if (component.tag.value > id.value || tag.module != node.module) {
+        if (tag.module != node.module && !tag.cppHeader.empty()) {
+            headers.insert(tag.cppHeader);
+        } else if (component.tag.value > id.value || tag.module != node.module) {
             const auto ns = tag.qualifiedName.rfind("::");
             const auto declaration = "struct " + tag.name + ";";
             forwards.insert(ns == std::string::npos ? declaration : "namespace " + tag.qualifiedName.substr(0, ns) + " { " + declaration + " }");
@@ -421,9 +525,14 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     }
     std::set<std::string> api{"allocator_type", "get_allocator", "swapStorage"};
     if (model.vertexList) api.insert({"vertices", "num_vertices", "VertexIterator", "VertexRange"});
-    if (model.mutableGraph) api.insert("add_vertex");
-    if (model.hierarchy) api.insert({"null_vertex", "VertexLinks", "Link", "ChildLinkIterator", "ChildLinkRange",
-        "get_parent", "num_children", "child_links", "child", "Edge", "source", "target", "out_edges", "out_degree", "edge"});
+    if (model.mutableGraph) {
+        api.insert("add_vertex");
+        if (model.hierarchy) api.insert({"add_edge", "remove_edge"});
+    }
+    if (model.hierarchy) api.insert({"null_vertex", "VertexLinks", "Link", "ChildIterator", "IteratorRange", "ChildLinkIterator",
+        "ChildLinkRange", "ParentLinkRange", "ParentLinkIterator", "get_parent", "num_children", "child_links", "child", "parent", "parent_links",
+        "num_parents", "Edge", "source", "target", "out_edges", "out_degree", "in_edges", "in_degree", "degree",
+        "adjacent_vertices", "num_edges", "edge", "has_link", "EdgeIterator", "edges"});
     if (model.parentGraph) api.insert("locate_child");
     if (model.addressableGraph) api.insert({"locate", "path", "exists"});
     if (!alternatives.empty()) api.insert({"Kind", "kind", "holds", "value", "kindOf", "VertexHandle", "addVertexImpl"});
@@ -451,7 +560,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     out << "\nstruct " << name << " {\n"
         << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    graphConstructors(out, source, name, allStorage, moveOnlyColumns, dequeColumns, fields);
+    graphConstructors(out, source, name, allStorage, moveOnlyColumns, dequeColumns, fields, model.immovable);
     if (model.vertexList) {
         headers.insert("cstddef");
         headers.insert("iterator");
@@ -468,12 +577,19 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles, defaultArgs);
     }
     if (model.hierarchy) {
-        for (const auto* symbol : {"Edge", "source", "target", "out_edges", "out_degree", "edge"}) {
+        for (const auto* symbol : {"Edge", "source", "target", "out_edges", "out_degree", "edge", "ChildIterator", "IteratorRange",
+                                   "ParentLinkRange", "ParentLinkIterator", "parent", "parent_links", "num_parents", "in_edges", "in_degree", "degree",
+                                   "adjacent_vertices", "num_edges", "has_link", "EdgeIterator", "edges"}) {
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": shared-edge graph member name collision: " + symbol);
         }
-        headers.insert({"cstddef", "cstdint", "iterator", "limits", "utility"});
+        headers.insert({"cstddef", "cstdint", "iterator", "limits", "type_traits", "utility"});
         hierarchyInterface(out, name, vertex, rows);
+        if (model.mutableGraph) {
+            if (members.contains("add_edge") || members.contains("remove_edge"))
+                throw std::runtime_error(node.qualifiedName + ": mutable graph member name collision");
+            hierarchyMutation(out, source, name, vertex, rows, model.serializable);
+        }
     }
     if (model.parentGraph) {
         headers.insert("string_view");
@@ -532,7 +648,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             out << ");\n";
         }
     }
-    if (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty())
+    if (!model.immovable && (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty()))
         out << "    void swapStorage(" << name << "& other"
             << (std::ranges::any_of(fields, &BoundField::transient) ? ", bool includeTransient = true" : "")
             << ")" << (fields.empty() ? " noexcept" : "") << ";\n";

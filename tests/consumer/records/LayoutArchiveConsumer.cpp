@@ -1,6 +1,7 @@
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphSerialization.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
+#include <stdexcept>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <fstream>
 #include <string_view>
@@ -44,9 +45,10 @@ void populate(LayoutGraph& g) {
     const auto pass = g.add_vertex("main");
     g.value(RenderStage_{}, pass) = RenderPassType::RENDER_PASS;
     g.add_vertex("other");
-    const auto phase = g.add_vertex(RenderPhase_{}, "shadow", pass);
+    const auto phase = g.add_vertex(RenderPhase_{}, "shadow");
     g.add_vertex(RenderPhase_{}, "shadow", 1);
     g.add_vertex("sub", pass);
+    if (!g.add_edge(pass, phase).second) throw std::runtime_error("Cannot attach layout phase");
     auto& shaders = g.value(RenderPhase_{}, phase).shaders;
     shaders.emplace("alpha");
     shaders.emplace("zeta");

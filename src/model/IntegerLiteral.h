@@ -22,7 +22,8 @@ inline std::errc parseMagnitude(std::string_view digits, uint64_t& magnitude) {
 inline bool validUnsignedFieldDefault(std::string_view type, std::string_view literal) {
     uint64_t value{};
     if (parseMagnitude(literal, value) != std::errc{}) return false;
-    return (type == "uint8_t" && value <= UINT8_MAX) || (type == "uint32_t" && value <= UINT32_MAX);
+    return (type == "uint8_t" && value <= UINT8_MAX) || (type == "uint16_t" && value <= UINT16_MAX) ||
+           (type == "uint32_t" && value <= UINT32_MAX);
 }
 
 } // namespace cc::codegen

@@ -83,6 +83,12 @@
       }
     },
     {
+      "spec": "../spec/render/graph-tags.spec",
+      "backend": "records",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/GraphTags.h"
+    },
+    {
       "spec": "../spec/render/layout-graph.spec",
       "backend": "records",
       "nativeRoot": "native",
@@ -102,10 +108,27 @@
       }
     },
     {
+      "spec": "../spec/extern/gfx-resource.spec",
+      "backend": "model",
+      "types": { "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
+    },
+    {
+      "spec": "../spec/render/render-graph.spec",
+      "backend": "records",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/RenderGraphTypes.h",
+      "forwardHeader": "cocos/renderer/pipeline/custom/RenderGraphFwd.h",
+      "typescript": "cocos/rendering/custom/render-graph.ts"
+    },
+    {
       "spec": "../spec/extern/gfx.spec",
       "backend": "model",
       "types": {
         "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "AccessFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "SampleCount": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "TextureType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "TextureFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "MemoryAccessBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },

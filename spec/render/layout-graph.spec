@@ -1,6 +1,7 @@
 module LayoutGraph;
 import ArchiveInterface;
 import Gfx;
+import GraphTags;
 import RenderCommon;
 import Strings;
 import Containers;
@@ -90,7 +91,6 @@ namespace cc::render {
         RENDER_SUBPASS,
     }
 
-    @tag struct Name_ {}
     @tag struct Descriptors_ {}
     @tag struct Update_ {}
     @tag struct Layout_ {}

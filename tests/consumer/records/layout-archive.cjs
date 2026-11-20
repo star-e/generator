@@ -69,6 +69,33 @@ function verify(api, bytes) {
 }
 
 const previousBytes = encode(legacy);
+// The legacy writer reads its private vertex array for payloads. Its reader consumes the public graph API.
+const oldEmpty = new BinaryOutputArchive();
+legacy.saveLayoutGraph(oldEmpty, new current.LayoutGraph());
+const currentEmpty = new BinaryOutputArchive();
+current.saveLayoutGraph(currentEmpty, new current.LayoutGraph());
+assert.deepEqual(Buffer.from(oldEmpty.data), Buffer.from(currentEmpty.data));
+const publicGraph = new current.LayoutGraph();
+const root = publicGraph.addVertex(stage, 1, 'root', new current.DescriptorDB());
+const attached = publicGraph.addVertex(phase, new current.RenderPhase(), 'same', new current.DescriptorDB());
+const last = publicGraph.addVertex(stage, 0, 'same', new current.DescriptorDB(), root);
+const nested = publicGraph.addVertex(stage, 0, 'nested', new current.DescriptorDB(), attached);
+assert.equal(publicGraph.ne(), 2);
+assert.deepEqual([publicGraph.addReference(root, attached).source, publicGraph.getParent(attached)], [root, root]);
+for (const [u, v] of [[root, attached], [last, attached], [nested, root], [root, root], [publicGraph.N, root], [root, 90]]) {
+    assert.equal(publicGraph.addEdge(u, v), null);
+}
+assert.deepEqual([...publicGraph.adj(root)], [attached, last]);
+assert.equal(publicGraph.locate('/root/same'), attached);
+assert.equal(publicGraph.path(nested), '/root/same/nested');
+assert.equal(publicGraph.ne(), 3);
+const attachedBytes = new BinaryOutputArchive();
+current.saveLayoutGraph(attachedBytes, publicGraph);
+const decoded = new current.LayoutGraph();
+legacy.loadLayoutGraph(input(Buffer.from(attachedBytes.data)), decoded);
+assert.deepEqual([...decoded.adj(root)], [attached, last]);
+assert.equal(decoded.path(nested), publicGraph.path(nested));
+assert.equal(decoded.ne(), publicGraph.ne());
 const webBytes = encode(current);
 const nativeBytes = fs.readFileSync(nativeFile);
 assert.deepEqual(webBytes, previousBytes);

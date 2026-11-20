@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 31 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 36 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供布局图和资源图共用的名称组件标签。`RenderGraph` 首批输出为 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -282,6 +282,14 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 5 | NativePipeline | 4 | 3 | `NativePipelineFwd.h`、`NativePipelineTypes.h/.cpp`。编译并链接手写 `NativePipeline.cpp` 与执行器，运行一次最小原生管线。 |
 
 `CocosCommon` 提供外部类型登记，`RenderInterfaceDocument` 提供注释。`RenderSceneInterface` 在旧入口参与登记，其输出调用已注释。`RenderCompiler`、`ExecutorExample`、`RenderExample` 的构建和输出受关闭的分支控制。这些状态纳入基线，已有的同名引擎文件按其实际来源登记。[模块入口](../../cocos-engine-generator/Cocos/CocosBuilder/CocosBuilder.cpp) · [旧外部类型登记](../../cocos-engine-generator/Cocos/CocosBuilder/CocosCommon.cpp)
+
+## 当前图接口覆盖
+
+对照旧清单，`LayoutGraph` 的九个文件对应八个生成产物。原 `LayoutGraphGraphs.h` 的图操作迁入类型成员。C++ 可遍历入边、出边、邻接顶点和全图边，TS 提供 `ie/id/d/adj/ne`、多态类别名称和 `setUpdate`。顶点和组件存储由图持有，调用方用 `object(v)` 或 `value(tag, v)` 读取载荷。旧 TS 写入器访问内部数组 `x[v].j`，跨版本测试分别运行对应写入器，并用旧读取器读回新图。[生成接口测试](../tests/consumer/records/LayoutGraphConsumer.cpp) · [归档对照](../tests/consumer/records/layout-archive.cjs)
+
+两张布局图的归档为每个顶点保存一个父编号。C++ `add_edge(u, v)` 和 TS `addEdge(u, v)`、`addReference(u, v)` 可将已有根节点挂到编号更小的父节点。第二个父节点、重复边、自环、前向父引用和无效编号都会被拒绝。C++ 返回的成功标志为 `false`，TS 返回 `null`。新挂接的节点按编号插入兄弟序列，保证同名节点的查找结果在归档往返后稳定。C++ `remove_edge(e)` 可将整棵子树拆为独立的树。
+
+`ResourceGraph` 首批支持按编号遍历顶点、访问 Name、Desc、Traits、States、Sampler 五个组件和 Managed 载荷。C++ 的 `@immovable graph` 声明保留了资源图的所有权约束。`ResourceTraits.hasSideEffects()` 的原生返回表达式随记录生成。TS 的资源记录和图使用 `RenderGraphObjectPool`。后续要迁移其余八类载荷、名称索引、共享引用边和图级缓存，再接入引擎的完整资源图调用方。[资源图声明](../spec/render/render-graph.spec)
 
 ## 第一次合并及后续验收
 

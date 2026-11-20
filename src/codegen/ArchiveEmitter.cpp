@@ -179,9 +179,9 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     const auto number = "a." + archiveMethod(writer.api, "writeNumber");
     const auto kinds = name + "Value.";
     *ts << "\nexport function save" << name << " (a: OutputArchive, g: " << name << "): void {\n"
-        << "    let edges = 0;\n    const counts = new Array<number>(" << count << ").fill(0);\n"
-        << "    for (const v of g.v()) { edges += g.od(v); ++counts[g.w(v)]; }\n"
-        << "    " << number << "(g.nv());\n    " << number << "(edges);\n    for (const n of counts) " << number << "(n);\n"
+        << "    const counts = new Array<number>(" << count << ").fill(0);\n"
+        << "    for (const v of g.v()) ++counts[g.w(v)];\n"
+        << "    " << number << "(g.nv());\n    " << number << "(g.ne());\n    for (const n of counts) " << number << "(n);\n"
         << "    for (const v of g.v()) {\n        " << number << "(g.w(v));\n        " << number << "(g.getParent(v));\n";
     for (const auto& c : model.components) writer.value(*ts, c.valueType, "g.get" + suffix(c) + "(v)", "        ");
     *ts << "        switch (g.w(v)) {\n";
