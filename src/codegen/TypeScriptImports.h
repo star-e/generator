@@ -46,6 +46,7 @@ inline const std::string& boundTypeScriptName(const TypeGraph& graph, const Type
 }
 
 inline std::string typeScriptContainerInitializer(const TypeNode& node) {
+    if (node.typescriptName && node.typescriptName->starts_with("Record<string, ")) return "{}";
     if (node.typescriptContainer == ContainerKind::Array) return "[]";
     if (isAssociativeContainer(node.typescriptContainer)) return "new " + *node.typescriptName + "()";
     return "new " + *node.typescriptName + "(0)";

@@ -36,6 +36,13 @@ struct TypeScriptImport {
     std::filesystem::path from;
 };
 
+struct InterfaceMethodBinding {
+    bool getter{};
+    bool nullable{};
+    std::vector<std::string> optional;
+};
+using InterfaceBindings = std::map<std::pair<std::string, std::string>, InterfaceMethodBinding>;
+
 struct TypeScriptBinding {
     TypeRef source;
     BindingTarget kind{};
@@ -43,6 +50,7 @@ struct TypeScriptBinding {
     std::filesystem::path from;
     std::filesystem::path archiveFrom;
     std::map<std::string, std::string> methods;
+    std::map<std::string, InterfaceMethodBinding> methodOptions;
     std::map<std::string, std::string> renamedFrom;
     std::string numberField;
     std::map<std::string, std::string> fieldDefaults;
@@ -50,6 +58,7 @@ struct TypeScriptBinding {
     std::optional<TypeScriptImport> base;
     std::optional<PoolBinding> pool;
     std::optional<std::vector<std::string>> constructor;
+    bool requiredConstructor{};
     std::optional<ResetBinding> reset;
     MapKeyKind mapKey{};
     bool names{};

@@ -31,6 +31,10 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/ShiftSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
+    MigrationConsumer.cpp
+    "${STAGING}/native/cocos/renderer/pipeline/custom/NativeTypes.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/FGDispatcherRecords.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/NativePipelineRecords.cpp"
     ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
     "${STAGING}/ResourceGraphTextureView.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"
@@ -46,6 +50,7 @@ add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${STAGING}/Legac
     "${custom}/LayoutGraphSerialization.cpp")
 target_compile_definitions(LegacyArchiveConsumer PRIVATE CC_TEST_LEGACY_LAYOUT=1)
 # Material and Model transitively include the engine's native typed array headers.
+target_compile_definitions(RecordConsumer PRIVATE "$<$<PLATFORM_ID:Windows>:_USE_MATH_DEFINES>")
 target_include_directories(RecordConsumer PRIVATE "${STAGING}/native"
     "$<$<PLATFORM_ID:Windows>:${native}/external/win64/include/v8>"
     "$<$<PLATFORM_ID:Darwin>:${native}/external/mac/include/v8>"

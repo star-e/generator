@@ -16,6 +16,9 @@ set(baselineFiles
     cocos/rendering/custom/layout-graph-names.ts
     cocos/rendering/custom/types-names.ts
     editor/assets/default_renderpipeline/builtin-pipeline-types.ts
+    native/cocos/renderer/pipeline/custom/CustomTypes.cpp
+    native/cocos/renderer/pipeline/custom/PrivateTypes.cpp
+    native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.cpp
     native/cocos/renderer/pipeline/custom/ArchiveFwd.h
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
     native/cocos/renderer/pipeline/custom/ArchiveTypes.h
@@ -27,6 +30,25 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.h)
 set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/rendering/custom/layout-graph.ts
     cocos/rendering/custom/render-graph.ts
+    cocos/rendering/custom/private.ts
+    cocos/rendering/custom/pipeline-capabilities.ts
+    cocos/rendering/custom/web-types.ts
+    native/cocos/renderer/pipeline/custom/PipelineCapabilities.h
+    native/cocos/renderer/pipeline/custom/Array4.h
+    native/cocos/renderer/pipeline/custom/CustomFwd.h
+    native/cocos/renderer/pipeline/custom/CustomTypes.h
+    native/cocos/renderer/pipeline/custom/FGDispatcherRecords.cpp
+    native/cocos/renderer/pipeline/custom/FGDispatcherRecords.h
+    native/cocos/renderer/pipeline/custom/NativeFwd.h
+    native/cocos/renderer/pipeline/custom/NativePipelineRecords.cpp
+    native/cocos/renderer/pipeline/custom/NativePipelineRecords.h
+    native/cocos/renderer/pipeline/custom/NativePipelineRecordsFwd.h
+    native/cocos/renderer/pipeline/custom/NativeTypes.cpp
+    native/cocos/renderer/pipeline/custom/NativeTypes.h
+    native/cocos/renderer/pipeline/custom/PrivateFwd.h
+    native/cocos/renderer/pipeline/custom/PrivateTypes.h
+    native/cocos/renderer/pipeline/custom/RenderInterfaceFwd.h
+    native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.h
     native/cocos/renderer/pipeline/custom/GraphTags.h
     native/cocos/renderer/pipeline/custom/GraphTagNames.h
     native/cocos/renderer/pipeline/custom/RenderGraphFwd.h

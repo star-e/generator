@@ -2,6 +2,7 @@ module EngineTypes;
 import Containers;
 
 binding typescript {
+    ccstd::unordered_map<ccstd::string, uint32_t> => "Record<string, number>";
     cc::Material => Material from "cocos/asset/assets";
     cc::Texture2D => "Texture2D";
     std::string_view => "string";

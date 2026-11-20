@@ -103,14 +103,32 @@ fs::path typescriptOutput(const Json& config) {
     return ts;
 }
 
+InterfaceBindings interfaceBindings(const Module& module) {
+    InterfaceBindings result;
+    for (const auto& rule : module.bindings.typescript) {
+        for (const auto& [method, binding] : rule.methodOptions)
+            result.emplace(std::make_pair(bindingName(rule.source.name), method), binding);
+    }
+    return result;
+}
+
 RecordOutput loadRecordOutput(const Json& config, const Module& module) {
-    RecordOutput output{.header = outputPath(config.at("header"))};
+    RecordOutput output{.header = outputPath(config.at("header")), .emitEmptySource = config.value("emitEmptySource", false)};
     if (config.contains("nativeRoot")) output.nativeRoot = outputPath(config.at("nativeRoot"));
     if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
     if (config.contains("forwardHeader")) {
         output.forwardHeader = outputPath(config.at("forwardHeader"));
         if (output.forwardHeader->extension() != ".h" || *output.forwardHeader == output.header)
             throw std::runtime_error("expected a distinct .h forwardHeader");
+    }
+    if (config.contains("forwardIncludes")) {
+        if (!output.forwardHeader) throw std::runtime_error("forwardIncludes requires forwardHeader");
+        for (const auto& include : config.at("forwardIncludes")) {
+            const auto path = outputPath(include);
+            if (path.extension() != ".h" || path == output.header || path == output.forwardHeader)
+                throw std::runtime_error("expected a distinct .h forward include");
+            output.forwardIncludes.insert(path.generic_string());
+        }
     }
     if (config.contains("namesHeader")) {
         output.namesHeader = outputPath(config.at("namesHeader"));
@@ -137,15 +155,17 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
     output.jsbIncludes = bindings.jsbIncludes;
     for (const auto& [source, location] : bindings.jsbRecords) output.jsbRecords.insert(bindingName(source));
     output.poolModule = bindings.poolModule;
+    output.interfaceBindings = interfaceBindings(module);
     std::set<std::string> poolMembers;
     for (const auto& rule : bindings.typescript) {
         if (rule.kind == BindingTarget::type) continue;
         const auto name = bindingName(rule.source.name);
-        if (!output.typescript || rule.kind == BindingTarget::interfaceType || rule.registerEnum || !rule.renamedFrom.empty())
+        if (!output.typescript || rule.registerEnum || rule.helpers || !rule.renamedFrom.empty())
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
         if (rule.constructor) output.constructors.emplace(name, *rule.constructor);
+        if (rule.requiredConstructor) output.requiredConstructors.insert(name);
         if (rule.reset) output.resets.emplace(name, *rule.reset);
         if (!rule.fieldResets.empty()) {
             if (!rule.reset && !rule.pool)
@@ -226,7 +246,7 @@ Files plan(const Json& settings, const fs::path& base) {
                     mappings.emplace(decl.name, ExternalType{.header = output.forwardHeader.value_or(output.header).generic_string()});
                 } else if (std::holds_alternative<TagDeclaration>(decl.data)) {
                     mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string()});
-                } else if (std::holds_alternative<Enum>(decl.data) || std::holds_alternative<Record>(decl.data) ||
+                } else if (std::holds_alternative<Enum>(decl.data) || std::holds_alternative<Interface>(decl.data) || std::holds_alternative<Record>(decl.data) ||
                     std::holds_alternative<GraphDeclaration>(decl.data)) {
                     mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string(),
                         .typescript = decl.name, .typescriptModule = tsModule.generic_string()});
@@ -242,10 +262,16 @@ Files plan(const Json& settings, const fs::path& base) {
             inputs.push_back({std::move(module), {}});
         } else if (backend == "interfaces") {
             OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),
-                                config.at("prefix").get<std::string>(), ts};
+                                config.at("prefix").get<std::string>(), ts, interfaceBindings(module)};
             if (!identifier(layout.prefix)) throw std::runtime_error("invalid file prefix " + layout.prefix);
+            const auto header = (layout.includeDir / (layout.prefix + "Types.h")).generic_string();
+            auto tsModule = ts;
+            tsModule.replace_extension();
+            TypeTable mappings;
+            for (const auto& decl : module.declarations)
+                mappings.emplace(decl.name, ExternalType{.header = header, .typescript = decl.name, .typescriptModule = tsModule.generic_string()});
             layouts.emplace_back(std::move(layout));
-            inputs.push_back({std::move(module), {}});
+            inputs.push_back({std::move(module), std::move(mappings)});
         } else {
             throw std::runtime_error("unknown backend " + backend);
         }

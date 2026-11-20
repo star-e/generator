@@ -44,7 +44,8 @@ std::optional<std::string> defaultScalarBinding(std::string_view qualifiedName) 
     if (qualifiedName == "void") return "void";
     if (qualifiedName == "bool") return "boolean";
     if (qualifiedName == "double" || qualifiedName == "float" || qualifiedName == "char" ||
-        qualifiedName == "uint8_t" || qualifiedName == "uint16_t" || qualifiedName == "uint32_t" || qualifiedName == "uint64_t") return "number";
+        qualifiedName == "int" || qualifiedName == "int32_t" || qualifiedName == "uint8_t" || qualifiedName == "uint16_t" ||
+        qualifiedName == "uint32_t" || qualifiedName == "uint64_t") return "number";
     return std::nullopt;
 }
 
@@ -99,7 +100,9 @@ TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, 
         id = graph.makeTemplateInstance(id, std::move(arguments));
     }
     if (use.constPointee) id = graph.makeQualified(id, true, false);
-    return {use.pointer ? graph.makePointer(id) : id, use.location};
+    if (use.pointer) id = graph.makePointer(id);
+    if (use.reference) id = graph.makeReference(id, false);
+    return {id, use.location};
 }
 
 TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
@@ -422,9 +425,19 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
             }
             const bool isEnum = std::holds_alternative<EnumType>(node.data);
             const bool isRecord = std::holds_alternative<RecordType>(node.data);
-            if (std::holds_alternative<TemplateInstanceType>(node.data)) {
-                if (rule.kind != BindingTarget::type || !isTypedArrayName(rule.target) || !rule.from.empty())
-                    reject("expected a built-in ES2015 TypedArray target without an import");
+            if (const auto* instance = std::get_if<TemplateInstanceType>(&node.data)) {
+                const auto& container = std::get<ExternalTypeNode>(graph.node(instance->declaration).data);
+                bool dictionary = false;
+                if (container.container == ContainerKind::Map && instance->arguments.size() == 2) {
+                    const auto& key = graph.node(std::get<TypeId>(instance->arguments[0]));
+                    const auto& value = graph.node(std::get<TypeId>(instance->arguments[1]));
+                    const auto& ts = value.typescriptName;
+                    const bool primitive = ts == "number" || ts == "string" || ts == "boolean";
+                    dictionary = key.typescriptName == "string" && primitive && rule.target == "Record<string, " + *ts + ">";
+                }
+                if (rule.kind != BindingTarget::type || (!dictionary && !isTypedArrayName(rule.target)) || !rule.from.empty())
+                    reject(container.container == ContainerKind::Map ? "expected a matching string-keyed Record target without an import" :
+                           "expected a built-in ES2015 TypedArray target without an import");
                 node.typescriptContainer = ContainerKind::None;
                 node.typescriptName = rule.target;
             } else if (rule.kind == BindingTarget::numberField) {
@@ -490,18 +503,25 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
 InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const MethodBindings& names,
                                const std::string& scope, ModuleId module) {
     InterfaceType result;
-    std::set<std::string> visibleNames;
-    for (const auto& method : std::get<Interface>(decl.data).methods) {
-        auto member = resolveMethod(graph, method, scope, module);
-        if (!method.cppOnly) {
-            auto alias = names.find(method.name);
-            member.typescriptName = alias == names.end() ? method.name : alias->second;
+    for (const auto& base : std::get<Interface>(decl.data).bases) {
+        const auto id = resolve(graph, base, scope, module).type;
+        const auto& node = graph.node(id);
+        if ((!std::holds_alternative<InterfaceType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data)) ||
+            (node.module == module && id.value >= graph.findType(qualify(scope, decl.name)).value))
+            throw std::runtime_error(base.location.describe() + ": expected an earlier interface or imported base class");
+        result.bases.push_back(id);
+    }
+    std::map<std::string, std::string> visibleNames;
+    result.methods = resolveMemberFunctions(graph, std::get<Interface>(decl.data).methods, scope, module);
+    for (auto& member : result.methods) {
+        if (!member.cppOnly) {
+            auto alias = names.find(member.name);
+            member.typescriptName = alias == names.end() ? member.name : alias->second;
         }
-        if (member.typescriptName && !visibleNames.insert(*member.typescriptName).second) {
-            throw std::runtime_error(method.result.location.describe() + ": duplicate TS method " +
+        if (member.typescriptName && visibleNames.emplace(*member.typescriptName, member.name).first->second != member.name) {
+            throw std::runtime_error(member.result.location.describe() + ": duplicate TS method " +
                                      decl.name + "." + *member.typescriptName);
         }
-        result.methods.push_back(std::move(member));
     }
     return result;
 }
@@ -640,7 +660,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             }
             if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
                 graph.appendNode(TypeNode{.name = g->vertexAlias, .qualifiedName = qualify(graph.node(id).qualifiedName, g->vertexAlias),
-                                          .module = owner, .data = AliasType{}}, id);
+                                          .module = owner, .data = AliasType{}, .cppHeader = graph.node(id).cppHeader}, id);
             }
         }
         for (const auto& [name, mapping] : input.externalTypes) {
@@ -648,7 +668,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             if (it != module.declarations.end()) {
                 if (std::holds_alternative<ExternalDeclaration>(it->data) || std::holds_alternative<Enum>(it->data) ||
                     (!input.modelOnly && std::holds_alternative<TagDeclaration>(it->data))) continue;
-                if (!input.modelOnly && (std::holds_alternative<Record>(it->data) || std::holds_alternative<GraphDeclaration>(it->data) ||
+                if (!input.modelOnly && (std::holds_alternative<Interface>(it->data) || std::holds_alternative<Record>(it->data) || std::holds_alternative<GraphDeclaration>(it->data) ||
                                          std::holds_alternative<AliasDeclaration>(it->data))) continue;
             }
             throw std::runtime_error(module.name + ": mapping for unknown external type " + name);

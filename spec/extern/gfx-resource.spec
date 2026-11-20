@@ -1,5 +1,17 @@
 extern module GfxResource;
 namespace cc::gfx {
+    struct ResourceRange;
+    struct RenderPassInfo;
+    struct FramebufferInfo;
+    struct BufferInfo;
+    struct TextureInfo;
+    struct ShaderInfo;
+    struct Attribute;
+    class CommandBuffer;
+    class Shader;
+    class PipelineState;
+    class GFXObject;
+    class InputAssembler;
     struct SamplerInfo;
     struct Viewport;
     @constRef struct Color;
@@ -13,6 +25,10 @@ namespace cc::gfx {
 }
 
 binding typescript {
+    ShaderInfo => ShaderInfo from "cocos/gfx";
+    Device => Device from "cocos/gfx";
+    Shader => Shader from "cocos/gfx";
+    Attribute => Attribute from "cocos/gfx";
     SamplerInfo => SamplerInfo from "cocos/gfx";
     Viewport => Viewport from "cocos/gfx";
     Color => Color from "cocos/gfx";

@@ -1,5 +1,6 @@
 module Gfx;
 namespace cc::gfx {
+    flags BarrierType : uint32_t { FULL, SPLIT_BEGIN, SPLIT_END }
     enum class LoadOp : uint32_t { LOAD, CLEAR, DISCARD }
     enum class StoreOp : uint32_t { STORE, DISCARD }
     flags ClearFlagBit : uint32_t {

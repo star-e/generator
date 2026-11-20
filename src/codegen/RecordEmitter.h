@@ -13,7 +13,9 @@ namespace cc::codegen {
 struct RecordOutput {
     std::filesystem::path nativeRoot;
     std::filesystem::path header;
+    bool emitEmptySource{};
     std::optional<std::filesystem::path> forwardHeader;
+    std::set<std::string> forwardIncludes;
     std::optional<std::filesystem::path> namesHeader;
     std::vector<std::filesystem::path> importedNamesHeaders;
     std::optional<std::filesystem::path> serializationHeader;
@@ -24,6 +26,8 @@ struct RecordOutput {
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
     std::map<std::string, std::vector<std::string>> constructors;
+    std::set<std::string> requiredConstructors;
+    InterfaceBindings interfaceBindings;
     std::map<std::string, ResetBinding> resets;
     std::map<std::string, std::map<std::string, TypeScriptImport>> fieldResets;
     std::map<std::string, TypeScriptImport> bases;

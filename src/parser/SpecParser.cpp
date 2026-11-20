@@ -223,11 +223,15 @@ private:
         std::set<std::string> options;
         while (!accept("}")) {
             const auto key = identifier();
-            if (key != "method" && key != "field" && !options.insert(key).second) fail("duplicate binding option " + key);
-            if (rule.kind == BindingTarget::interfaceType && key == "method") {
-                auto name = identifier();
-                expect("=>");
-                if (!rule.methods.emplace(name, identifier()).second) fail("duplicate method binding " + name);
+            if (key != "method" && key != "getter" && key != "field" && !options.insert(key).second) fail("duplicate binding option " + key);
+            if (rule.kind == BindingTarget::interfaceType && (key == "method" || key == "getter")) {
+                const auto name = identifier();
+                const auto target = accept("=>") ? identifier() : name;
+                if (!rule.methods.emplace(name, target).second) fail("duplicate method binding " + name);
+                InterfaceMethodBinding options{.getter = key == "getter"};
+                if (accept("optional")) options.optional = bindingFields();
+                options.nullable = accept("nullable");
+                if (options.getter || options.nullable || !options.optional.empty()) rule.methodOptions.emplace(name, std::move(options));
             } else if (rule.kind == BindingTarget::interfaceType && key == "helpers") {
                 rule.helpers = true;
             } else if (rule.kind == BindingTarget::interfaceType && key == "field") {
@@ -262,6 +266,7 @@ private:
                 else fail("expected 'json' or 'string'");
             } else if (rule.kind == BindingTarget::classType && key == "constructor") {
                 rule.constructor = bindingFields();
+                rule.requiredConstructor = accept("required");
             } else if (rule.kind == BindingTarget::classType && key == "reset") {
                 auto& reset = rule.reset.emplace();
                 if (token == "(") {
@@ -424,6 +429,8 @@ private:
         result.name = uniqueName(names);
         if (auto* enumeration = std::get_if<Enum>(&result.data); enumeration && accept(":")) {
             enumeration->underlying = type();
+        } else if (auto* iface = std::get_if<Interface>(&result.data); iface && accept(":")) {
+            iface->bases.push_back(type());
         }
         expect("{");
         std::set<std::string> members;
@@ -460,7 +467,15 @@ private:
             }
         } else {
             auto& methods = std::get<Interface>(result.data).methods;
-            while (!accept("}")) methods.push_back(method(members));
+            while (!accept("}")) {
+                if (atMemberFunction()) {
+                    auto member = memberFunction(members, methods);
+                    if (member.cppExpression.empty()) fail("interface helper requires an inline expression");
+                    methods.push_back(std::move(member));
+                } else {
+                    methods.push_back(method(members));
+                }
+            }
         }
         return result;
     }
@@ -678,7 +693,7 @@ private:
         return result;
     }
 
-    TypeRef type(bool* byConstReference = nullptr) {
+    TypeRef type(bool* byConstReference = nullptr, bool methodSignature = false) {
         const auto at = location;
         const bool isConst = accept("const");
         TypeRef result{at, qualifiedTypeName()};
@@ -689,10 +704,12 @@ private:
             expect(">");
         }
         result.pointer = accept("*");
-        if (isConst && byConstReference && accept("&")) {
+        result.reference = methodSignature && accept("&");
+        if (isConst && !result.pointer && byConstReference && result.reference) {
             *byConstReference = true;
+            result.reference = false;
         } else if (isConst) {
-            if (!result.pointer) fail("expected '*' after const pointee type");
+            if (!result.pointer && !result.reference) fail("expected '*' after const pointee type");
             result.constPointee = true;
         }
         return result;
@@ -715,7 +732,7 @@ private:
                 auto name = uniqueName(parameters);
                 expect(":");
                 bool byConstReference = false;
-                auto parameter = type(&byConstReference);
+                auto parameter = type(&byConstReference, true);
                 result.parameters.push_back({std::move(parameter), std::move(name), byConstReference});
             } while (accept(","));
             expect(")");
@@ -725,7 +742,7 @@ private:
         result.isNoexcept = accept("noexcept");
         expect("-");
         expect(">");
-        result.result = type();
+        result.result = type(nullptr, true);
         if (accept("=>")) {
             result.cppExpression = quotedString("C++ return expression");
             if (result.cppExpression.empty()) fail("expected a non-empty C++ return expression");
@@ -737,13 +754,16 @@ private:
     Method method(std::set<std::string>& names) {
         const bool cppOnly = accept("@");
         if (cppOnly) expect("cppOnly");
-        Method result{type(), uniqueName(names)};
+        Method result{type(nullptr, true), identifier()};
+        names.insert(result.name);
         result.cppOnly = cppOnly;
         expect("(");
         std::set<std::string> parameters;
         if (!accept(")")) {
             do {
-                result.parameters.push_back({type(), uniqueName(parameters)});
+                bool byConstReference = false;
+                auto parameter = type(&byConstReference, true);
+                result.parameters.push_back({std::move(parameter), uniqueName(parameters), byConstReference});
             } while (accept(","));
             expect(")");
         }

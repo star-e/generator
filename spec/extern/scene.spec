@@ -3,6 +3,12 @@ namespace cc::scene {
     class Camera;
     class RenderScene;
     class Model;
+    class DirectionalLight;
+    class SphereLight;
+    class SpotLight;
+    class PointLight;
+    class RangedDirectionalLight;
+    class SubModel;
 }
 
 binding typescript {

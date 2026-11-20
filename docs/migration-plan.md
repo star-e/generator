@@ -22,9 +22,9 @@
 
 **手写文件和生成文件在同一目录。** 旧入口把 38 个手写路径加入 CMake 源列表，其中包括 `NativePipeline.cpp`、`NativeResourceGraph.cpp` 和 `BinaryArchive.h`。引擎里的 `NativePipeline.cpp` 目前包含 `RenderGraphGraphs.h` 并调用自由函数 `addVertex` 和 `get(ResourceGraph::DescTag{}, resg, v)`。它在 `RenderGraph` 迁移时改用成员接口，在 `NativePipeline` 迁移时继续用作原生消费者。[旧类型描述](../../cocos-engine-generator/Cocos/CocosBuilder/NativePipeline.cpp) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativePipeline.cpp)
 
-## 运行第一批实现
+## 运行生成器
 
-默认工作区暂存 39 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 61 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -40,9 +40,22 @@ ctest --test-dir build/host --output-on-failure
 
 独立构建运行 `cocos.typegraph`、`cocos.modules.imports`、`cocos.archive.generate`、`cocos.settings.generate`、`cocos.records.generate` 和 `cocos.selfhost`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线、归档互读、编辑器设置和 RenderCommon 消费测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake) · [编辑器消费测试](../tests/SettingsInterop.cmake)
 
+## 剩余六个旧模块的生成范围
+
+| 旧模块 | 当前可生成的内容 | 后续接管条件 |
+| --- | --- | --- |
+| RenderInterface | 19 个原生接口及其继承关系、转发重载、`Factory`、`PipelineCapabilities` 和两个枚举。Web 的四个完整导出位于 `pipeline-capabilities.ts`，其中包括 `RenderingModule`。 | 完整的 `pipeline.ts` 还含可写属性、可选回调及仅 Web 端存在的签名；切换公开入口时也要保留 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
+| PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
+| Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
+| PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
+| FGDispatcher | `FGDispatcherRecords.h/.cpp` 覆盖 14 个记录，含资源访问、屏障、附件和渲染通道信息。 | 两张图分别依赖整数键索引 `passIndex`、`vertexMap`。关系图还需要支持删点后更新顶点编号、边及索引，才能接管 `FrameGraphDispatcher`。 |
+| NativePipeline | `NativePipelineRecords.h/.cpp` 及前置声明覆盖 16 个记录，含资源池、绘制实例、裁剪结果、自定义管线注册表及级联阴影数据。 | 剩余记录和实现类需要显式转换运算符、带默认参数的方法、禁止默认构造或移动的记录、自定义析构、多重继承或私有状态。 |
+
+两个 `*Records.h` 只供暂存消费验证。引擎中的同名类型仍定义在旧模块内；切换这些模块时需要一起移走旧定义。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
+
 ## 生成流程
 
-`cocos-codegen` 的构建、自举、代码生成和 `--check` 均独立于 V8、Node.js 和 .NET。引擎工作区生成 C++17、Web 和编辑器所用的 TypeScript，以及 Cocos JSB 所需的 `se::Value` 转换和 `render.i`。引擎的 SWIG 步骤处理 `render.i`。Node.js/npm 用于 `cocos4` 侧的 Web 打包、TypeScript 检查和测试。生成器自身的工作区复用同一套 `.spec` 语法、解析器和 C++ 后端，产物编入 C++20 宿主工具，只使用 `generator` 声明的依赖。[引擎绑定入口](../../cocos4/native/tools/swig-config/render.i) · [引擎构建与测试脚本](../../cocos4/package.json)
+`cocos-codegen` 的构建、自举、代码生成和 `--check` 均独立于 V8、Node.js 和 .NET。引擎工作区生成 C++17、Web 和编辑器所用的 TypeScript，以及 Cocos JSB 的 `se::Value` 转换。SWIG 输入 `render.i` 仍由旧入口提供。引擎的 SWIG 步骤处理 `render.i`。Node.js/npm 用于 `cocos4` 侧的 Web 打包、TypeScript 检查和测试。生成器自身的工作区复用同一套 `.spec` 语法、解析器和 C++ 后端，产物编入 C++20 宿主工具，只使用 `generator` 声明的依赖。[引擎绑定入口](../../cocos4/native/tools/swig-config/render.i) · [引擎构建与测试脚本](../../cocos4/package.json)
 
 以 `ArchiveInterface` 为例，一份声明描述 `OutputArchive` 和 `InputArchive` 的八个 C++ 方法。类型图记录签名，语言绑定把布尔值、数值、字符串的读写方法分别映射成 TS 接口上的 `b`、`n`、`s`，两个 `scratch()` 在接口声明中标注 `@cppOnly`，由 TypeGraph 记录其原生可见性。文件计划为这个模块列出三个原生文件和一个 TS 文件。后端分别按引擎的 C++17 和 `target: es6` 配置生成。[旧模块声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [原生接口](../../cocos4/native/cocos/renderer/pipeline/custom/ArchiveTypes.h) · [TS 接口](../../cocos4/cocos/rendering/custom/archive.ts) · [引擎 C++ 配置](../../cocos4/native/cmake/predefine.cmake) · [引擎 TS 配置](../../cocos4/tsconfig.json)
 

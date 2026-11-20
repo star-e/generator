@@ -391,6 +391,7 @@ bool exchangePipelineArchives(bool writing, const char* path);
 bool readConvertedLayout(const char* path);
 bool printLayoutArchive(const char* inputPath, const char* outputPath);
 bool checkLayoutDescriptors(const char* inputPath, const char* outputPath);
+bool checkMigratedModules();
 bool checkResourceGraph();
 bool checkSubpassGraph();
 bool checkRasterPassCache();
@@ -420,6 +421,7 @@ int main(int argc, char** argv) {
     if (argc == 3 && !writePathCases) return exchangeRecords(argv[1], argv[2]);
     if (argc != 1 && !writePathCases) return 2;
     if (!checkLayoutGraph(writePathCases ? argv[2] : nullptr)) return 9;
+    if (!checkMigratedModules()) return 48;
     if (!checkLayoutNames()) return 17;
     if (!checkResourceGraph()) return 18;
     if (!checkSubpassGraph()) return 19;

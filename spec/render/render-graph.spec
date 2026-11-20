@@ -3,6 +3,7 @@ import Gfx;
 import RenderCommon;
 import GraphTags;
 import Strings;
+import Containers;
 import PmrContainers;
 import Maps;
 import GfxResource;
@@ -366,6 +367,8 @@ namespace cc::render {
         readonly index: PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>;
         readonly sortedVertices: ccstd::pmr::vector<uint32_t>;
         readonly globalRenderData: RenderData;
+        fn getPassID(nodeID: Vertex) const -> Vertex;
+        fn print(scratch: boost::container::pmr::memory_resource*) const -> ccstd::string;
     }
 }
 

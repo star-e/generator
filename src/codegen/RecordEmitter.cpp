@@ -108,7 +108,7 @@ RecordStorage recordStorage(const TypeGraph& graph, TypeId id, std::set<uint32_t
 }
 
 BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field, Dependencies& deps,
-                     bool emitTs) {
+                     bool emitTs, bool typeOnly) {
     const auto& module = graph.modules.at(owner.value);
     const auto& node = graph.node(field.type.type);
     BoundField m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly, .transient = field.transient};
@@ -138,7 +138,8 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         return m;
     }
     const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
-    if (instance && (node.typescriptName || node.typescriptContainer != ContainerKind::None)) {
+    if (instance && (node.typescriptName || node.typescriptContainer != ContainerKind::None ||
+                     (!emitTs && std::get<ExternalTypeNode>(graph.node(instance->declaration).data).container != ContainerKind::None))) {
         if (field.isNullable || (emitTs && !field.initializer.empty())) invalid(field, "expected a default-constructed container field");
         m.cpp = nativeType(graph, module, field.type.type, deps);
         if (node.typescriptContainer == ContainerKind::None) deps.headers.insert("utility");
@@ -163,7 +164,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     const auto* nestedGraph = std::get_if<GraphType>(&node.data);
     const auto bindObject = [&] {
         const bool nullable = field.typescriptInitializer == "null";
-        m.ts = boundTypeScriptName(graph, field.type, owner, nullable ? deps.typeImports : deps.valueImports);
+        m.ts = boundTypeScriptName(graph, field.type, owner, nullable || typeOnly ? deps.typeImports : deps.valueImports);
         m.tsDefault = nullable ? "null" : "new " + m.ts + "()";
         if (nullable) m.ts += " | null";
     };
@@ -207,6 +208,8 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     }
     if (!emitTs && !field.isNullable) {
         m.cpp = nativeType(graph, module, field.type.type, deps);
+        m.move = !m.scalar;
+        m.checkDefaultConstruction = !m.scalar;
         return m;
     }
     const auto* ptr = std::get_if<PointerType>(&node.data);
@@ -283,10 +286,12 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
 }
 
 std::vector<BoundField> bindFields(const TypeGraph& graph, ModuleId owner, const std::vector<FieldInfo>& fields,
-                                   Dependencies& deps, bool emitTs, const NestedResets& nestedResets) {
+                                   Dependencies& deps, bool emitTs, const NestedResets& nestedResets,
+                                   const std::vector<std::string>& requiredFields = {}) {
     std::vector<BoundField> result;
     for (const auto& field : fields) {
-        auto member = bindMember(graph, owner, field, deps, emitTs && !field.cppOnly);
+        auto member = bindMember(graph, owner, field, deps, emitTs && !field.cppOnly,
+                                 std::ranges::find(requiredFields, field.name) != requiredFields.end());
         if (emitTs && !field.cppOnly && field.isReadonly) {
             const auto childReset = nestedResets.find(field.type.type.value);
             if (childReset != nestedResets.end()) {
@@ -344,6 +349,7 @@ Order bindTypeScriptConstructor(const TypeNode& node, const RecordType& record, 
         constructors.push_back(std::move(order));
     }
     if (const auto selected = output.constructors.find(node.name); selected != output.constructors.end()) {
+        if (selected->second.empty() && record.constructors.empty()) return {};
         for (const auto& candidate : constructors) {
             if (std::ranges::equal(candidate, selected->second, {}, [&](auto i) -> std::string_view { return fields[i].name; }))
                 return candidate;
@@ -555,8 +561,7 @@ void writeScalarAliases(std::ostream& out, const TypeGraph& graph, const TypeMod
 }
 
 std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, const std::ostringstream& hashes,
-                          const std::string& preamble) {
-    std::set<std::string> includes;
+                          const std::string& preamble, std::set<std::string> includes) {
     std::ostringstream header, body;
     std::optional<bool> previousEnum;
     writeScalarAliases(body, graph, module, includes);
@@ -567,7 +572,7 @@ std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, cons
         const bool isEnum = enumeration != nullptr;
         if (previousEnum != isEnum) body << '\n';
         previousEnum = isEnum;
-        body << (isEnum ? "enum class " : "struct ") << node.name;
+        body << (isEnum ? "enum class " : std::holds_alternative<InterfaceType>(node.data) ? "class " : "struct ") << node.name;
         if (enumeration && enumeration->underlying != TypeId{}) {
             const auto& base = graph.node(enumeration->underlying);
             if (!base.cppHeader.empty()) includes.insert(base.cppHeader);
@@ -712,14 +717,14 @@ Order resetParameters(const std::string& name, const std::vector<BoundField>& me
 }
 
 void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& members, const Order& order,
-                           const Order* reset, const std::set<std::string>& keepOnReset, bool hasBase) {
-    const auto params = tsParams(members, order, true, ", ");
+                           const Order* reset, const std::set<std::string>& keepOnReset, bool hasBase, bool required = false) {
+    const auto params = tsParams(members, order, !required, ", ");
     const bool multiline = params.size() + std::string_view("    constructor () {").size() > 120;
     auto signature = [&](const Order& fields, bool defaults) {
         if (multiline && !fields.empty()) return "\n        " + tsParams(members, fields, defaults, ",\n        ") + ",\n    ";
         return defaults ? params : tsParams(members, fields, false, ", ");
     };
-    ts << "    constructor (" << signature(order, true) << ") {\n";
+    ts << "    constructor (" << signature(order, !required) << ") {\n";
     if (hasBase) ts << "        super();\n";
     for (uint32_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
@@ -752,12 +757,12 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& memb
 }
 
 void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<BoundField>& members, const Order& order,
-              const Order* reset, bool resetToDefaults, const std::set<std::string>& keepOnReset, const std::string& base) {
+              const Order* reset, bool resetToDefaults, const std::set<std::string>& keepOnReset, const std::string& base, bool required) {
     const bool initializeFields = resetToDefaults && std::get<RecordType>(node.data).constructors.empty();
     ts << "export class " << node.name;
     if (!base.empty()) ts << " extends " << base;
     ts << " {\n";
-    if (!initializeFields) tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset, !base.empty());
+    if (!initializeFields) tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset, !base.empty(), required);
     else if (std::ranges::any_of(members, &BoundField::safeUnsignedInteger))
         tsConstructorAndReset(ts, members, {}, nullptr, keepOnReset, !base.empty());
     if (resetToDefaults) {
@@ -944,6 +949,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         previousTag = false;
         const auto entry = output.pools.find(node.name);
+        if (std::holds_alternative<InterfaceType>(node.data)) {
+            emitInterface(graph, node, cpp, deps.headers, output.typescript ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
+            continue;
+        }
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
             const auto fields = bindFields(graph, owner, model->fields, deps, output.typescript.has_value(), nestedResets);
             std::string inputArchive;
@@ -1011,7 +1020,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         const auto* record = std::get_if<RecordType>(&node.data);
         if (!record) throw std::runtime_error("expected record or enum: " + node.qualifiedName);
-        auto members = bindFields(graph, owner, record->fields, deps, output.typescript.has_value(), nestedResets);
+        const bool requiredConstructor = output.requiredConstructors.contains(node.name);
+        const std::vector<std::string> noFields;
+        const auto& requiredFields = requiredConstructor && !output.pools.contains(node.name) && !output.resets.contains(node.name)
+            ? output.constructors.at(node.name) : noFields;
+        auto members = bindFields(graph, owner, record->fields, deps, output.typescript.has_value(), nestedResets, requiredFields);
         cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable) {
             if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
@@ -1084,7 +1097,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
         usesUint64Field |= std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
         tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained,
-                 base == output.bases.end() ? "" : base->second.name);
+                 base == output.bases.end() ? "" : base->second.name, requiredConstructor);
     }
     if (pool.count != output.pools.size()) throw std::runtime_error("unknown pool type in " + module.name);
     if (!pendingResets.empty()) throw std::runtime_error("unknown reset record " + pendingResets.begin()->first + " in " + module.name);
@@ -1112,7 +1125,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     Files files{{output.nativeRoot / output.header, header.str()}};
     if (output.jsbHeader) emitRecordJsb(files, graph, module, output, preamble);
     if (archive) archives.emitNative(files, module, output, *archive, preamble);
-    if (output.forwardHeader) files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble));
+    if (output.forwardHeader) files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble, output.forwardIncludes));
     if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output, preamble));
     if (!definitions.view().empty()) {
         auto path = output.header;
@@ -1121,6 +1134,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         source << preamble << "#include \"" << output.header.filename().generic_string() << "\"\n#include <utility>\n";
         writeNamespace(source, module, definitions);
         files.emplace(output.nativeRoot / path, source.str());
+    } else if (output.emitEmptySource) {
+        auto path = output.header;
+        path.replace_extension(".cpp");
+        files.emplace(output.nativeRoot / path, emitHeaderSource(module, output.header, preamble));
     }
     if (!output.typescript) return files;
     script << preamble << "/* eslint-disable max-len */\n";

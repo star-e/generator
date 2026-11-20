@@ -9,6 +9,7 @@
       "backend": "model",
       "spec": "../spec/extern/containers.spec",
       "types": {
+        "unordered_map": { "header": "cocos/base/std/container/unordered_map.h" },
         "map": { "header": "cocos/base/std/container/map.h" },
         "string": { "header": "cocos/base/std/container/string.h" },
         "vector": { "header": "cocos/base/std/container/vector.h" }
@@ -115,6 +116,18 @@
       "spec": "../spec/extern/gfx-resource.spec",
       "backend": "model",
       "types": {
+        "ResourceRange": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "RenderPassInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "FramebufferInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "BufferInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "TextureInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "ShaderInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "Attribute": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "CommandBuffer": { "header": "cocos/renderer/gfx-base/GFXCommandBuffer.h" },
+        "Shader": { "header": "cocos/renderer/gfx-base/GFXShader.h" },
+        "PipelineState": { "header": "cocos/renderer/gfx-base/GFXPipelineState.h" },
+        "GFXObject": { "header": "cocos/renderer/gfx-base/GFXObject.h" },
+        "InputAssembler": { "header": "cocos/renderer/gfx-base/GFXInputAssembler.h" },
         "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "Sampler": { "header": "cocos/renderer/gfx-base/states/GFXSampler.h" },
         "Viewport": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
@@ -131,6 +144,12 @@
       "spec": "../spec/extern/scene.spec",
       "backend": "model",
       "types": {
+        "DirectionalLight": { "header": "cocos/scene/DirectionalLight.h" },
+        "SphereLight": { "header": "cocos/scene/SphereLight.h" },
+        "SpotLight": { "header": "cocos/scene/SpotLight.h" },
+        "PointLight": { "header": "cocos/scene/PointLight.h" },
+        "RangedDirectionalLight": { "header": "cocos/scene/RangedDirectionalLight.h" },
+        "SubModel": { "header": "cocos/scene/SubModel.h" },
         "Camera": { "header": "cocos/scene/Camera.h" },
         "RenderScene": { "header": "cocos/scene/RenderScene.h" },
         "Model": { "header": "cocos/scene/Model.h" }
@@ -157,6 +176,7 @@
       "backend": "model",
       "types": {
         "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "BarrierType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "AccessFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "SampleCount": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "TextureType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
@@ -185,6 +205,79 @@
       "types": {
         "ReflectionProbe": { "header": "cocos/scene/ReflectionProbe.h" }
       }
+    },
+    {
+      "backend": "model",
+      "spec": "../spec/extern/pipeline-externals.spec",
+      "types": {
+        "MacroRecord": { "header": "cocos/renderer/core/PassUtils.h" },
+        "RefCounted": { "header": "cocos/base/RefCounted.h" },
+        "EffectAsset": { "header": "cocos/core/assets/EffectAsset.h" },
+        "IProgramInfo": { "header": "cocos/renderer/core/ProgramLib.h" },
+        "ArrayBuffer": { "header": "cocos/core/ArrayBuffer.h" },
+        "Mat4": { "header": "cocos/math/Mat4.h" },
+        "Quaternion": { "header": "cocos/math/Quaternion.h" },
+        "Vec2": { "header": "cocos/math/Vec2.h" },
+        "Vec4": { "header": "cocos/math/Vec4.h" }
+      }
+    },
+    {
+      "backend": "records",
+      "spec": "../spec/render/pipeline-capabilities.spec",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/PipelineCapabilities.h",
+      "typescript": "cocos/rendering/custom/pipeline-capabilities.ts"
+    },
+    {
+      "backend": "records",
+      "spec": "../spec/render/render-interface.spec",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/RenderInterfaceTypes.h",
+      "emitEmptySource": true,
+      "forwardHeader": "cocos/renderer/pipeline/custom/RenderInterfaceFwd.h",
+      "forwardIncludes": ["cocos/renderer/pipeline/custom/RenderCommonFwd.h", "cocos/renderer/pipeline/custom/PipelineCapabilities.h"]
+    },
+    {
+      "backend": "records",
+      "spec": "../spec/render/private-interface.spec",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/PrivateTypes.h",
+      "emitEmptySource": true,
+      "typescript": "cocos/rendering/custom/private.ts",
+      "forwardHeader": "cocos/renderer/pipeline/custom/PrivateFwd.h",
+      "forwardIncludes": ["cocos/renderer/pipeline/custom/RenderInterfaceFwd.h"]
+    },
+    {
+      "backend": "records",
+      "spec": "../spec/render/customization.spec",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/CustomTypes.h",
+      "emitEmptySource": true,
+      "forwardHeader": "cocos/renderer/pipeline/custom/CustomFwd.h",
+      "forwardIncludes": ["cocos/renderer/pipeline/custom/RenderGraphFwd.h"]
+    },
+    {
+      "backend": "records",
+      "spec": "../spec/render/fg-dispatcher.spec",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/FGDispatcherRecords.h"
+    },
+    {
+      "backend": "records",
+      "spec": "../spec/render/private-types.spec",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/NativeTypes.h",
+      "forwardHeader": "cocos/renderer/pipeline/custom/NativeFwd.h",
+      "forwardIncludes": ["cocos/renderer/pipeline/custom/LayoutGraphFwd.h", "cocos/renderer/pipeline/custom/PrivateFwd.h"],
+      "typescript": "cocos/rendering/custom/web-types.ts"
+    },
+    {
+      "backend": "records",
+      "spec": "../spec/render/native-pipeline.spec",
+      "nativeRoot": "native",
+      "header": "cocos/renderer/pipeline/custom/NativePipelineRecords.h",
+      "forwardHeader": "cocos/renderer/pipeline/custom/NativePipelineRecordsFwd.h",
+      "runtimeFiles": { "native/cocos/renderer/pipeline/custom/Array4.h": "../runtime/cpp/Array4.h" }
     }
   ]
 }

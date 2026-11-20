@@ -30,6 +30,7 @@ struct Method {
 
 struct Interface {
     std::vector<Method> methods;
+    std::vector<TypeRef> bases;
 };
 
 struct Field {

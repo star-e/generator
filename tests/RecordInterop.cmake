@@ -261,6 +261,8 @@ foreach(name IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding Descriptor
 endforeach()
 file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}"
     "export type ShaderStageFlags = ShaderStageFlagBit; export type MemoryAccess = MemoryAccessBit;\n"
+    "export interface Attribute { name: string; } export interface ShaderInfo { name: string; }\n"
+    "export interface Shader { readonly name: string; } export interface Device { readonly id: number; } export interface PipelineState {}\n"
     "export interface Sampler {}\n"
     "export declare class Buffer { private buffer: void; }\n"
     "export declare class Texture { private texture: void; }\n"
@@ -283,6 +285,12 @@ function(ts_definition source symbol result)
     set(${result} "${body}" PARENT_SCOPE)
 endfunction()
 set(custom "${stage}/cocos/rendering/custom")
+file(WRITE "${stage}/cocos/render-scene/core/program-lib.d.ts" "export interface IProgramInfo { name: string; }\n")
+file(APPEND "${material}" "export interface EffectAsset { readonly name: string; }\n")
+file(WRITE "${stage}/cocos/render-scene/core/pass-utils.d.ts" "export type MacroRecord = Record<string, string | number | boolean>;\n")
+configure_file("${ENGINE}/cocos/rendering/custom/private.ts" "${custom}/legacy-private.ts" COPYONLY)
+configure_file("${ENGINE}/cocos/rendering/custom/web-types.ts" "${custom}/legacy-web-types.ts" COPYONLY)
+configure_file("${SOURCE}/tests/consumer/records/program-consumer.ts" "${custom}/program-consumer.ts" COPYONLY)
 file(READ "${ENGINE}/cocos/rendering/custom/serialization.ts" codec)
 foreach(type IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding DescriptorSetLayoutInfo)
     foreach(op IN ITEMS save load)
@@ -393,7 +401,8 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${subpassConsumer}" "${passConsumer}" "${nodeConsumer}" "${renderGraphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
+    "${custom}/program-consumer.ts" "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${subpassConsumer}" "${passConsumer}" "${nodeConsumer}" "${renderGraphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
+run("${node}" "${work}/js/rendering/custom/program-consumer.js")
 run("${node}" "${work}/js/rendering/custom/resource-graph-consumer.js")
 run("${node}" "${work}/js/rendering/custom/subpass-graph-consumer.js")
 run("${node}" "${work}/js/rendering/custom/pass-consumer.js")
