@@ -389,8 +389,11 @@ bool exchangeLayoutArchive(std::string_view mode, const char* path);
 bool exchangeBlockArchives(bool writing, const char* path);
 bool exchangePipelineArchives(bool writing, const char* path);
 bool readConvertedLayout(const char* path);
+bool printLayoutArchive(const char* inputPath, const char* outputPath);
 
 int main(int argc, char** argv) {
+    if (argc == 4 && std::string_view(argv[1]) == "layout-print")
+        return printLayoutArchive(argv[2], argv[3]) ? 0 : 1;
     if (argc == 4 && std::string_view(argv[1]) == "stage-allocation")
         return checkStageAllocation(std::stoul(argv[2]), std::stoi(argv[3]));
     if (argc == 3) {

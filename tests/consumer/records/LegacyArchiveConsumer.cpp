@@ -3,6 +3,7 @@
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <fstream>
+#include <string_view>
 
 using namespace cc::render;
 
@@ -13,7 +14,11 @@ void transcode(BinaryInputArchive& input, BinaryOutputArchive& output, boost::co
     save(output, value);
 }
 
+bool printLayoutArchive(const char* inputPath, const char* outputPath);
+
 int main(int argc, char** argv) {
+    if (argc == 4 && std::string_view(argv[1]) == "layout-print")
+        return printLayoutArchive(argv[2], argv[3]) ? 0 : 1;
     if (argc != 3) return 1;
     std::ifstream source(argv[1], std::ios::binary);
     std::ofstream target(argv[2], std::ios::binary);

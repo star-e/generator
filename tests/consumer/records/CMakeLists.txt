@@ -15,11 +15,13 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/ShiftSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp")
 set(custom "${native}/cocos/renderer/pipeline/custom")
 add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${native}/cocos/base/RefCounted.cpp"
+    "${STAGING}/LegacyLayoutGraphPrint.cpp"
     "${custom}/ArchiveTypes.cpp" "${custom}/RenderCommonTypes.cpp" "${custom}/LayoutGraphTypes.cpp"
     "${custom}/LayoutGraphSerialization.cpp")
 target_include_directories(RecordConsumer PRIVATE "${STAGING}/native")
@@ -28,7 +30,10 @@ if(WIN32 AND containerType STREQUAL "SHARED_LIBRARY")
     add_custom_command(TARGET RecordConsumer POST_BUILD COMMAND "${CMAKE_COMMAND}" -E
         copy_if_different "$<TARGET_FILE:Boost::container>" "$<TARGET_FILE_DIR:RecordConsumer>")
 endif()
+# Both readers use the same printer declaration but resolve their graph and archive types separately.
+set_property(SOURCE LayoutPrintConsumer.cpp PROPERTY INCLUDE_DIRECTORIES "${STAGING}/native/cocos/renderer/pipeline/custom")
 foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer)
+    target_sources(${target} PRIVATE LayoutPrintConsumer.cpp)
     target_link_libraries(${target} PRIVATE Boost::container)
     set_target_properties(${target} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
     target_include_directories(${target} PRIVATE "${native}" "${native}/cocos"

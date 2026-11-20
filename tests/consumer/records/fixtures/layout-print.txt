@@ -1,0 +1,22 @@
+
+"main": RenderStage {
+    Set<PER_PASS> {
+        Block<SAMPLER_TEXTURE, Vertex | Fragment> {
+            capacity: 8,
+            count: 2,
+            Descriptors{ "albedo", "shadows[3]" }
+        }
+        Block<STORAGE_BUFFER, > {
+            capacity: 4,
+            count: 0,
+        }
+    }
+}
+"async": RenderPhase {
+    Set<PER_PHASE> {
+        Block<UNIFORM_BUFFER, Vertex | Control | Evaluation | Geometry | Fragment | Compute | All> {
+            capacity: 2,
+            count: 0,
+        }
+    }
+}

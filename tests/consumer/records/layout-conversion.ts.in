@@ -93,3 +93,32 @@ export function convert (bytes: ArrayBuffer): ArrayBuffer {
     saveLayoutGraphData(output, graph);
     return output.data;
 }
+
+export function makePrintSample (): ArrayBuffer {
+    const graph = new LayoutGraphData();
+    graph.valueNames.push('albedo', 'shadows');
+    const layout = new PipelineLayoutData();
+    const set = new DescriptorSetData();
+    layout.descriptorSets.set(UpdateFrequency.PER_PASS, set);
+    const samplers = new DescriptorBlockData(DescriptorTypeOrder.SAMPLER_TEXTURE,
+        ShaderStageFlagBit.VERTEX | ShaderStageFlagBit.FRAGMENT, 8);
+    samplers.descriptors.push(new DescriptorData(0, Type.SAMPLER2D, 1), new DescriptorData(1, Type.SAMPLER2D, 3));
+    const reserved = new DescriptorBlockData(DescriptorTypeOrder.STORAGE_BUFFER, ShaderStageFlagBit.NONE, 4);
+    reserved.offset = samplers.capacity;
+    set.descriptorSetLayoutData.descriptorBlocks.push(samplers, reserved);
+    set.descriptorSetLayoutData.capacity = samplers.capacity + reserved.capacity;
+    set.descriptorSetLayoutData.samplerTextureCapacity = samplers.capacity;
+    const root = graph.addVertex(LayoutGraphDataValue.RenderStage, new RenderStageData(), 'main', UpdateFrequency.PER_PASS, layout);
+    graph.addVertex(LayoutGraphDataValue.RenderPhase, new RenderPhaseData(), 'child', UpdateFrequency.PER_PHASE, new PipelineLayoutData(), root);
+
+    const phaseLayout = new PipelineLayoutData();
+    const phaseSet = new DescriptorSetData();
+    phaseLayout.descriptorSets.set(UpdateFrequency.PER_PHASE, phaseSet);
+    phaseSet.descriptorSetLayoutData.descriptorBlocks.push(new DescriptorBlockData(DescriptorTypeOrder.UNIFORM_BUFFER, ShaderStageFlagBit.ALL, 2));
+    phaseSet.descriptorSetLayoutData.capacity = 2;
+    phaseSet.descriptorSetLayoutData.uniformBlockCapacity = 2;
+    graph.addVertex(LayoutGraphDataValue.RenderPhase, new RenderPhaseData(), 'async', UpdateFrequency.PER_PHASE, phaseLayout);
+    const output = new BinaryOutputArchive();
+    saveLayoutGraphData(output, graph);
+    return output.data;
+}
