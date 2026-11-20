@@ -16,6 +16,8 @@ export const descriptorBlockArgs = [UpdateFrequency.PER_PASS, ParameterType.UAV,
     ShaderStageFlagBit.VERTEX | ShaderStageFlagBit.FRAGMENT];
 export const descriptorGroupBlockArgs = [...descriptorBlockArgs, MemoryAccessBit.READ_WRITE, ViewDimension.TEX2D_ARRAY,
     SampleType.UINT, Format.ASTC_SRGBA_12X12];
+export const descriptorBlockDataArgs = [DescriptorTypeOrder.STORAGE_IMAGE, ShaderStageFlagBit.COMPUTE, 31,
+    MemoryAccessBit.WRITE_ONLY, ViewDimension.TEX2D_ARRAY, SampleType.UINT, Format.RGBA8] as const;
 
 export const resolveFlags = [ResolveFlags.NONE, ResolveFlags.COLOR, ResolveFlags.DEPTH, ResolveFlags.STENCIL];
 export const depthStencil = ResolveFlags.DEPTH | ResolveFlags.STENCIL;

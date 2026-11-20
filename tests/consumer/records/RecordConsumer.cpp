@@ -105,6 +105,14 @@ static_assert(static_cast<uint32_t>(cc::ShiftProbe::HIGH) == 0x80000000U);
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
 static_assert(std::is_nothrow_move_constructible_v<ResolvePair> && !std::is_copy_constructible_v<ResolvePair>);
+static_assert(!std::is_nothrow_constructible_v<ResolvePair, decltype(ResolvePair::source), decltype(ResolvePair::target),
+                                               ResolveFlags, cc::gfx::ResolveMode, cc::gfx::ResolveMode, const ResolvePair::allocator_type&>);
+using CtorProbe = cc::AllocatorCtorProbe;
+using ProbeString = decltype(CtorProbe::countIn);
+using ProbeAlloc = const CtorProbe::allocator_type&;
+static_assert(std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeAlloc> == std::is_nothrow_constructible_v<ProbeString, ProbeAlloc>);
+static_assert(std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeString, ProbeAlloc> ==
+              std::is_nothrow_constructible_v<ProbeString, ProbeString&&, ProbeAlloc>);
 static_assert(std::is_nothrow_move_assignable_v<ResolvePair> && std::is_copy_assignable_v<ResolvePair>);
 static_assert(std::is_nothrow_move_constructible_v<UploadPair> && std::is_nothrow_move_assignable_v<UploadPair>);
 static_assert(!std::is_copy_constructible_v<UploadPair> && !std::is_copy_assignable_v<UploadPair>);

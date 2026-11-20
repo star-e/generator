@@ -63,6 +63,9 @@ assert.equal(block.capacity, 0);
 assert.equal(block.count, 0);
 compareDeclaration(layoutCpp, 'struct DescriptorBlockFlattened {', '};');
 compareDeclaration(layoutTs, 'export class DescriptorBlockFlattened {', '}');
+compareDeclaration(layoutTs, 'export class DescriptorBlockData {', '}');
+compareDeclaration(layoutCpp, 'struct DescriptorBlockData {', '};', line => line.replace(
+    'noexcept(noexcept(decltype(DescriptorBlockData::descriptors)(alloc)))', 'noexcept'));
 const flat = new layout.DescriptorBlockFlattened();
 const otherFlat = new layout.DescriptorBlockFlattened();
 const elements = { descriptorNames: 'buffer', uniformBlockNames: 'camera', descriptors: new layout.Descriptor(), uniformBlocks: new UniformBlock() };
@@ -97,7 +100,7 @@ assert.ok(new NestedProbe().index instanceof layout.DescriptorBlockIndex);
 assert.equal(new NestedProbe(ordinaryIndex).index, ordinaryIndex);
 // Map construction can allocate its sentinel. The C++ consumer checks the platform's exception specification.
 compareDeclaration(layoutCpp, 'struct DescriptorDB {', '};', line => line.replace(
-    'noexcept(noexcept(decltype(blocks)(alloc)) && noexcept(decltype(groupBlocks)(alloc)))', 'noexcept'));
+    'noexcept(noexcept(decltype(DescriptorDB::blocks)(alloc)) && noexcept(decltype(DescriptorDB::groupBlocks)(alloc)))', 'noexcept'));
 compareDeclaration(layoutTs, 'export class DescriptorDB {', '}');
 const db = new layout.DescriptorDB();
 const otherDB = new layout.DescriptorDB();
@@ -127,7 +130,7 @@ assert.equal(db.groupBlocks, groupBlocks);
 assert.equal(blocks.size, 0);
 assert.equal(groupBlocks.size, 0);
 compareDeclaration(layoutCpp, 'struct RenderPhase {', '};', line => line.replace(
-    'noexcept(noexcept(decltype(shaders)(alloc)))', 'noexcept'));
+    'noexcept(noexcept(decltype(RenderPhase::shaders)(alloc)))', 'noexcept'));
 compareDeclaration(layoutTs, 'export class RenderPhase {', '}');
 const phase = new layout.RenderPhase();
 const otherPhase = new layout.RenderPhase();
@@ -239,11 +242,15 @@ function constructors(root, name) {
         .filter((block) => block.startsWith(`${name}::${name}(`));
 }
 for (const name of ['ResolvePair', 'CopyPair', 'UploadPair', 'MovePair']) {
-    compareDeclaration(cpp, `struct ${name} {`, '};');
+    // Moving the target string into a different PMR allocator can allocate.
+    const sourceArgs = name === 'UploadPair' ? 'std::move(sourceIn)' : 'std::move(sourceIn), alloc';
+    const exceptionSpec = ` noexcept(noexcept(decltype(${name}::source)(${sourceArgs})) && noexcept(decltype(${name}::target)(std::move(targetIn), alloc)))`;
+    const normalizeSpec = text => text.replace(exceptionSpec, '');
+    compareDeclaration(cpp, `struct ${name} {`, '};', normalizeSpec);
     compareDeclaration(ts, `export class ${name} {`, '}');
     const definitions = constructors(stage, name);
     assert.equal(definitions.length, name === 'UploadPair' ? 3 : 4, name);
-    assert.deepEqual(definitions, constructors(engine, name), name);
+    assert.deepEqual(definitions.map(normalizeSpec), constructors(engine, name), name);
 }
 
 for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS', 'COUNT'].entries()) {

@@ -219,6 +219,8 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 `NameLocalID => number(value)` 将 C++ 结构体的唯一数值字段绑定为 TS 的 `number`。用作字段、Map 键或 Map 值时均可直接传数值。默认值继承自 `value`。`DescriptorData` 在类绑定中用 `field descriptorID default 0;` 保留 TS 构造默认值，C++ 默认构造仍使用 `0xFFFFFFFF`。两端按编号、类型、数量的顺序归档。[布局声明](../spec/render/layout-graph.spec) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
+`DescriptorBlockData` 在 C++ 中提供 3 个和 7 个业务参数的构造重载，末尾均接收分配器。生成器根据各成员的实际初始化表达式推导带参 PMR 构造的 `noexcept`。该记录先写入类型、可见性、偏移、容量、访问方式、视图维度、采样类型和格式，再写 `descriptors` 数组。TS 的 `reset()` 更新构造参数、将 `offset` 归零，并原地清空数组。[布局声明](../spec/render/layout-graph.spec) · [互读测试](../tests/consumer/records/layout-archive.cjs)
+
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 
 记录模块可以用 `namesHeader` 指定 C++ 名称查询头，原生头文件路径相对于 `nativeRoot`。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)

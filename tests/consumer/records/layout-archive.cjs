@@ -6,6 +6,7 @@ const current = require(path.join(jsDir, 'layout-graph.js'));
 const legacy = require(path.join(jsDir, 'legacy-layout.js'));
 const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
 const { UpdateFrequency } = require(path.join(jsDir, 'types.js'));
+const { descriptorBlockDataArgs } = require(path.join(jsDir, 'enum-consumer.js'));
 const { Format, Type, Uniform, UniformBlock } = require(path.resolve(jsDir, '../../gfx'));
 const stage = 0, phase = 1;
 
@@ -124,11 +125,22 @@ function uniformBlock(api, size) {
 
 const sizes = [0, 2, 1, 0];
 const ids = [0, 23, 0xFFFFFFFF];
+function descriptorBlock(api, size) {
+    if (size === 0) return new api.DescriptorBlockData();
+    const args = size === 1 ? descriptorBlockDataArgs.slice(0, 3) : descriptorBlockDataArgs;
+    const block = new api.DescriptorBlockData(...args);
+    block.offset = size + 5;
+    if (size === 2) block.descriptors.push(new api.DescriptorData(0xFFFFFFFF, Type.FLOAT4, 3));
+    block.descriptors.push(new api.DescriptorData(0, Type.SAMPLER2D, 2));
+    return block;
+}
+
 function encodeBlocks(api) {
     const output = new BinaryOutputArchive();
     for (const size of sizes) {
         api.saveDescriptorBlockFlattened(output, flattened(api, size));
         api.saveUniformBlockData(output, uniformBlock(api, size));
+        api.saveDescriptorBlockData(output, descriptorBlock(api, size));
     }
     for (const id of ids) {
         output.n(id);
@@ -144,6 +156,8 @@ function verifyBlocks(api, bytes) {
     const refs = fields.map(field => value[field]);
     const block = uniformBlock(api, 2);
     const uniforms = block.uniforms;
+    const descriptorData = descriptorBlock(api, 2);
+    const descriptors = descriptorData.descriptors;
     for (const size of sizes) {
         api.loadDescriptorBlockFlattened(archive, value);
         fields.forEach((field, i) => assert.strictEqual(value[field], refs[i], field));
@@ -151,6 +165,9 @@ function verifyBlocks(api, bytes) {
         api.loadUniformBlockData(archive, block);
         assert.strictEqual(block.uniforms, uniforms);
         assert.deepEqual(block, uniformBlock(api, size));
+        api.loadDescriptorBlockData(archive, descriptorData);
+        assert.strictEqual(descriptorData.descriptors, descriptors);
+        assert.deepEqual(descriptorData, descriptorBlock(api, size));
     }
     const descriptor = new api.DescriptorData();
     for (const id of ids) {
@@ -178,6 +195,14 @@ assert.deepEqual(member, new current.UniformData(7, Type.SAMPLER2D, 12));
 resetBlock.reset();
 assert.strictEqual(resetBlock.uniforms, uniforms);
 assert.deepEqual(resetBlock, new current.UniformBlockData());
+
+const data = new current.DescriptorBlockData();
+const descriptors = data.descriptors;
+data.offset = 9;
+descriptors.push(new current.DescriptorData(23, Type.SAMPLER2D, 2));
+data.reset(...descriptorBlockDataArgs);
+assert.deepEqual(data, new current.DescriptorBlockData(...descriptorBlockDataArgs));
+assert.strictEqual(data.descriptors, descriptors);
 
 assert.equal(current.NameLocalID, undefined);
 assert.equal(current.saveNameLocalID, undefined);

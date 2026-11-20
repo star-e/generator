@@ -37,6 +37,7 @@ struct Member {
     bool byConstReference{};
     bool readonly{};
     bool usesAllocator{};
+    bool scalar{};
     bool checkDefaultConstruction{};
     std::string_view tsClear;
 
@@ -96,6 +97,9 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
     const auto& module = graph.modules.at(owner.value);
     const auto& node = graph.node(field.type.type);
     Member m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly};
+    m.scalar = std::holds_alternative<BuiltinType>(node.data) || std::holds_alternative<EnumType>(node.data) ||
+               std::holds_alternative<AliasType>(node.data) || std::holds_alternative<PointerType>(node.data) ||
+               (std::holds_alternative<ExternalTypeNode>(node.data) && archivePrimitive(graph, field.type.type) == "Number");
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {
         if (field.isNullable || !field.initializer.empty()) invalid(field, "expected a default-constructed owning string");
         if (node.cppHeader.empty()) invalid(field, "missing native header for " + node.qualifiedName);
@@ -289,6 +293,12 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
 
 enum class CtorArgs { defaults, fields, move, copy };
 
+std::string pmrArguments(const Member& m, std::string value, bool move) {
+    if (!value.empty() && m.move && move) value = "std::move(" + value + ")";
+    if (m.usesAllocator) value += value.empty() ? "alloc" : ", alloc";
+    return value;
+}
+
 void pmrInitializers(std::ostream& source, const std::vector<Member>& members, CtorArgs args, const Order& fields = {}) {
     bool first = true;
     for (uint32_t i = 0; i < members.size(); ++i) {
@@ -296,33 +306,35 @@ void pmrInitializers(std::ostream& source, const std::vector<Member>& members, C
         const bool hasArg = args == CtorArgs::move || args == CtorArgs::copy ||
                             (args == CtorArgs::fields && std::ranges::find(fields, i) != fields.end());
         if (!m.usesAllocator && !hasArg) continue;
-        source << (first ? "\n: " : ",\n  ") << m.name << "(";
-        if (hasArg) {
-            const bool move = m.move && args != CtorArgs::copy;
-            if (move) source << "std::move(";
-            source << (args == CtorArgs::fields ? m.name + "In" : "rhs." + m.name);
-            if (move) source << ")";
-            if (m.usesAllocator) source << ", ";
-        }
-        if (m.usesAllocator) source << "alloc";
-        source << ")";
+        std::string value;
+        if (hasArg) value = args == CtorArgs::fields ? m.name + "In" : "rhs." + m.name;
+        source << (first ? "\n: " : ",\n  ") << m.name << "(" << pmrArguments(m, value, args != CtorArgs::copy) << ")";
         first = false;
     }
     source << " {}\n";
 }
 
+std::string pmrExceptionSpec(const std::string& recordName, const std::vector<Member>& members, const Order& fields) {
+    std::string checks;
+    for (size_t i = 0; i < members.size(); ++i) {
+        const auto& m = members[i];
+        if (fields.empty() ? !m.checkDefaultConstruction : m.scalar) continue;
+        const bool supplied = std::ranges::find(fields, i) != fields.end();
+        const auto args = pmrArguments(m, supplied ? m.name + "In" : "", true);
+        const auto init = args.empty() && !m.cppDefault.empty() ? "{" + m.cppDefault + "}" : "(" + args + ")";
+        if (!checks.empty()) checks += " && ";
+        checks += "noexcept(decltype(" + recordName + "::" + m.name + ")" + init + ")";
+    }
+    return checks.empty() ? " noexcept" : " noexcept(" + checks + ")";
+}
+
 void pmrConstructors(std::ostream& header, std::ostream& source, const std::string& name,
-                     const RecordType& record, const std::vector<Member>& members, const Member& allocatorMember) {
+                     const RecordType& record, const std::vector<Member>& members, const Member& allocatorMember,
+                     std::set<std::string>& headers) {
     const std::string alloc = "const allocator_type& alloc";
     const auto allocParameter = record.requireAllocator ? alloc : alloc + " = boost::container::pmr::get_default_resource()";
     const auto constructor = "\n" + name + "::" + name + "(";
-    std::string checks;
-    for (const auto& member : members) {
-        if (!member.checkDefaultConstruction) continue;
-        if (!checks.empty()) checks += " && ";
-        checks += "noexcept(decltype(" + member.name + ")(" + (member.usesAllocator ? "alloc" : "") + "))";
-    }
-    const auto exceptionSpec = checks.empty() ? " noexcept" : " noexcept(" + checks + ")";
+    const auto exceptionSpec = pmrExceptionSpec(name, members, {});
     header << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
            << "    allocator_type get_allocator() const noexcept { // NOLINT\n"
            << "        return {" << allocatorMember.name << ".get_allocator().resource()};\n    }\n\n"
@@ -334,10 +346,12 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
         std::string params;
         for (auto index : order) {
             const auto& m = members.at(index);
+            if (m.move) headers.insert("utility");
             params += m.parameterType() + " " + m.name + "In, ";
         }
-        header << "    " << name << "(" << params << allocParameter << ");\n";
-        source << constructor << params << alloc << ") // NOLINT";
+        const auto fieldSpec = pmrExceptionSpec(name, members, order);
+        header << "    " << name << "(" << params << allocParameter << ")" << fieldSpec << ";\n";
+        source << constructor << params << alloc << ")" << fieldSpec << " // NOLINT";
         pmrInitializers(source, members, CtorArgs::fields, order);
     }
     for (auto args : {CtorArgs::move, CtorArgs::copy}) {
@@ -474,7 +488,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         if (record.requireAllocator) throw std::runtime_error(node.qualifiedName + ": @requireAllocator requires a PMR field");
         inlineConstructors(out, node.name, record, members, deps.headers);
     } else {
-        pmrConstructors(out, source, node.name, record, members, *allocator);
+        pmrConstructors(out, source, node.name, record, members, *allocator, deps.headers);
     }
     if (allocator != members.end() || record.moveOnly) {
         const auto& name = node.name;

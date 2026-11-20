@@ -136,6 +136,21 @@ namespace cc::render {
         constructor(descriptorID, type);
         constructor(descriptorID);
     }
+
+    @serialize @requireAllocator struct DescriptorBlockData {
+        type: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;
+        visibility: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
+        offset: uint32_t = 0;
+        capacity: uint32_t = 0;
+        accessType: gfx::MemoryAccessBit = gfx::MemoryAccessBit::READ_ONLY;
+        viewDimension: gfx::ViewDimension = gfx::ViewDimension::UNKNOWN;
+        sampleType: gfx::SampleType = gfx::SampleType::FLOAT;
+        format: gfx::Format = gfx::Format::UNKNOWN;
+        readonly descriptors: ccstd::pmr::vector<DescriptorData>;
+
+        constructor(type, visibility, capacity, accessType, viewDimension, sampleType, format);
+        constructor(type, visibility, capacity);
+    }
 }
 
 binding typescript {
@@ -153,4 +168,5 @@ binding typescript {
     UniformBlockData => class { reset defaults; };
     NameLocalID => number(value);
     DescriptorData => class { field descriptorID default 0; reset constructor; };
+    DescriptorBlockData => class { reset constructor; };
 }

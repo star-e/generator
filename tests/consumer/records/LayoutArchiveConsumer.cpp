@@ -12,6 +12,13 @@ static_assert(std::is_same_v<UniformID, uint32_t>);
 static_assert(!std::is_default_constructible_v<UniformBlockData>);
 static_assert(std::is_aggregate_v<NameLocalID> && !std::is_convertible_v<uint32_t, NameLocalID>);
 static_assert(std::is_convertible_v<NameLocalID, DescriptorData>);
+using BlockAlloc = DescriptorBlockData::allocator_type;
+static_assert(!std::is_default_constructible_v<DescriptorBlockData>);
+static_assert(std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
+                                            uint32_t, const BlockAlloc&>);
+static_assert(std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
+                                            uint32_t, cc::gfx::MemoryAccessBit, cc::gfx::ViewDimension,
+                                            cc::gfx::SampleType, cc::gfx::Format, const BlockAlloc&>);
 
 bool checkDescriptorData() {
     using cc::gfx::Type;
@@ -102,6 +109,32 @@ UniformBlockData uniformBlock(uint32_t size, const UniformBlockData::allocator_t
     if (size) block.uniforms.emplace_back(0x80000009U, cc::gfx::Type::FLOAT4, 32).size = 16;
     return block;
 }
+
+DescriptorBlockData descriptorBlock(uint32_t size, const BlockAlloc& alloc) {
+    using namespace cc::gfx;
+    if (size == 0) return DescriptorBlockData(alloc);
+    const auto type = DescriptorTypeOrder::STORAGE_IMAGE;
+    const auto visibility = ShaderStageFlagBit::COMPUTE;
+    auto block = size == 1 ? DescriptorBlockData(type, visibility, 31, alloc)
+                           : DescriptorBlockData(type, visibility, 31, MemoryAccessBit::WRITE_ONLY, ViewDimension::TEX2D_ARRAY,
+                                                 SampleType::UINT, Format::RGBA8, alloc);
+    block.offset = size + 5;
+    if (size == 2) block.descriptors.emplace_back(NameLocalID{UINT32_MAX}, Type::FLOAT4, 3);
+    block.descriptors.emplace_back(NameLocalID{0}, Type::SAMPLER2D, 2);
+    return block;
+}
+
+bool matches(const DescriptorBlockData& block, const DescriptorBlockData& expected) {
+    if (block.type != expected.type || block.visibility != expected.visibility || block.offset != expected.offset ||
+        block.capacity != expected.capacity || block.accessType != expected.accessType || block.viewDimension != expected.viewDimension ||
+        block.sampleType != expected.sampleType || block.format != expected.format || block.descriptors.size() != expected.descriptors.size()) return false;
+    for (size_t i = 0; i < block.descriptors.size(); ++i) {
+        const auto& value = block.descriptors[i];
+        const auto& want = expected.descriptors[i];
+        if (value.descriptorID != want.descriptorID || value.type != want.type || value.count != want.count) return false;
+    }
+    return true;
+}
 } // namespace
 
 bool exchangeLayoutArchive(std::string_view mode, const char* path) {
@@ -142,6 +175,7 @@ bool exchangeBlockArchives(bool writing, const char* path) {
         for (auto size : sizes) {
             save(archive, flattened(size));
             save(archive, uniformBlock(size, &arena));
+            save(archive, descriptorBlock(size, &arena));
         }
         for (auto id : ids) {
             save(archive, NameLocalID{id});
@@ -156,6 +190,7 @@ bool exchangeBlockArchives(bool writing, const char* path) {
     auto value = flattened(2);
     boost::container::pmr::monotonic_buffer_resource destination;
     UniformBlockData block(&destination);
+    DescriptorBlockData descriptors(&destination);
     for (auto size : sizes) {
         load(archive, value);
         const auto expected = flattened(size);
@@ -182,6 +217,9 @@ bool exchangeBlockArchives(bool writing, const char* path) {
             const auto& last = block.uniforms.back();
             if (last.uniformID != 0x80000009U || last.uniformType != cc::gfx::Type::FLOAT4 || last.offset != 32 || last.size != 16) return false;
         }
+        load(archive, descriptors);
+        if (!matches(descriptors, descriptorBlock(size, &arena)) ||
+            descriptors.get_allocator().resource() != &destination || descriptors.descriptors.get_allocator().resource() != &destination) return false;
     }
     DescriptorData descriptor;
     NameLocalID name;

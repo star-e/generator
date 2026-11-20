@@ -11,6 +11,12 @@ file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; imp
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
+    struct AllocatorCtorProbe {
+        count: uint32_t = 0;
+        countIn: ccstd::pmr::string;
+        constructor(count);
+        constructor(count, countIn);
+    }
     struct NestedProbe {
         rows: ccstd::vector<ccstd::vector<render::Descriptor>>;
         byteArrays: ccstd::vector<ccstd::vector<uint8_t>>;
@@ -177,8 +183,8 @@ file(READ "${ENGINE}/cocos/rendering/custom/serialization.ts" codec)
 source_between(codec "export function saveUniform (" "export function saveDescriptorSetLayoutBinding (" uniformCodec)
 file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n${uniformCodec}")
-source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorBlockData " legacyGraph)
-source_between(layout "export function saveDescriptor (" "export function saveDescriptorBlockData (" legacyArchive)
+source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorSetLayoutData " legacyGraph)
+source_between(layout "export function saveDescriptor (" "export function saveDescriptorSetLayoutData (" legacyArchive)
 string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
 file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency } from './types';\n"
     "import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"
