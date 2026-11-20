@@ -142,8 +142,14 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     out << "    }[] = [];\n";
     if (model.nameIndex) out << "    " << storage << "nameIndex = new Map<string, number>();\n";
     if (model.parentGraph) out << "    " << storage << "roots: cc$graph.OutE[] = [];\n";
-    for (const auto& f : fields)
-        out << "    " << (f.readonly ? "readonly " : "") << f.name << ": " << f.ts << " = " << f.tsDefault << ";\n";
+    std::string initializers;
+    for (const auto& f : fields) {
+        out << "    " << (f.safeUnsignedInteger ? "declare " : "") << (f.readonly ? "readonly " : "") << f.name << ": " << f.ts;
+        if (f.safeUnsignedInteger) initializers += "        " + f.tsUint64Initializer(f.tsDefault) + ";\n";
+        else out << " = " << f.tsDefault;
+        out << ";\n";
+    }
+    if (!initializers.empty()) out << "\n    constructor () {\n" << initializers << "    }\n";
     if (model.serializable) {
         out << "\n    [cc$adopt" << node.name << "] (decoded: " << node.name << "): void {\n"
             << "        this.vertices = decoded.vertices;\n";

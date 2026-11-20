@@ -1,6 +1,8 @@
 extern module GfxResource;
 namespace cc::gfx {
     struct SamplerInfo;
+    struct Color;
+    class RenderPass;
     class Buffer;
     class Texture;
     class Framebuffer;
@@ -9,6 +11,8 @@ namespace cc::gfx {
 
 binding typescript {
     SamplerInfo => SamplerInfo from "cocos/gfx";
+    Color => Color from "cocos/gfx";
+    RenderPass => RenderPass from "cocos/gfx";
     Buffer => Buffer from "cocos/gfx";
     Texture => Texture from "cocos/gfx";
     Framebuffer => Framebuffer from "cocos/gfx";

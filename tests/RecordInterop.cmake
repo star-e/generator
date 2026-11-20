@@ -50,7 +50,7 @@ namespace cc {
         component cc::render::Descriptors_: render::DescriptorDB { member: data; }
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
         component Count_: uint32_t { member: counts; }
-        version: uint32_t = 1;
+        version: uint64_t = 1;
         named_graph { component: cc::render::Name_; }
     }
     @serialize graph IndexedNames {
@@ -232,7 +232,7 @@ if(NOT copyHelper)
     message(FATAL_ERROR "Missing UniformBlock copy helper in engine gfx definitions")
 endif()
 set(gfxClasses "type Constructor<T> = new () => T;\n${copyHelper}\n")
-foreach(name IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding DescriptorSetLayoutInfo DescriptorSetInfo SamplerInfo)
+foreach(name IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding DescriptorSetLayoutInfo DescriptorSetInfo SamplerInfo Color)
     string(REGEX MATCH "export class ${name} [{]\n([ \t][^\n]*\n|\n)*[}]" definition "${gfx}")
     if(NOT definition)
         message(FATAL_ERROR "Missing ${name} class in engine gfx definitions")
@@ -245,6 +245,7 @@ file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}"
     "export declare class Buffer { private buffer: void; }\n"
     "export declare class Texture { private texture: void; }\n"
     "export declare class Framebuffer { private framebuffer: void; }\n"
+    "export declare class RenderPass { private renderPass: void; }\n"
     "export declare class Swapchain { private swapchain: void; }\n"
     "export declare class DescriptorSet { private set: void; }\n"
     "export declare class DescriptorSetLayout { private layout: void; }\n"

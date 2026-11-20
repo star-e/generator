@@ -293,7 +293,9 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `name_index;` 为 `named_graph` 选定的名称组件建立全图唯一索引。`ResourceGraph` 在两端都提供 `contains(name)`、`find(name)`、`vertex(name)`。名称缺失时分别返回 `false`、无效顶点编号或抛出异常。空字符串也是合法键。添加顶点或通过 `setName(v, name)` 改名遇到重名时，操作失败，原顶点和索引保持一致。C++ 使用支持 `std::string_view` 查询的 PMR 有序映射，TS 使用随图清空的 `Map`。
 
-`ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。下一步迁移图级缓存与版本字段。
+`ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。
+
+`ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。下一步迁移 `RasterPass` 的依赖及其比较、哈希规则，再接入 `renderPasses` 缓存表。[渲染图声明](../spec/render/render-graph.spec)
 
 ## 第一次合并及后续验收
 

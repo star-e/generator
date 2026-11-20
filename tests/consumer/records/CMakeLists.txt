@@ -21,6 +21,8 @@ add_library(DescriptorTestGfx STATIC
 add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp LayoutNamesConsumer.cpp GraphDFSConsumer.cpp LayoutArchiveConsumer.cpp PipelineArchiveConsumer.cpp
     "${native}/cocos/renderer/gfx-base/GFXFramebuffer.cpp"
     "${native}/cocos/renderer/gfx-empty/EmptyFramebuffer.cpp"
+    "${native}/cocos/renderer/gfx-base/GFXRenderPass.cpp"
+    "${native}/cocos/renderer/gfx-empty/EmptyRenderPass.cpp"
     "${native}/cocos/renderer/gfx-base/GFXPipelineLayout.cpp"
     "${native}/cocos/renderer/gfx-empty/EmptyPipelineLayout.cpp"
     "${STAGING}/native/ShiftProbe.cpp"

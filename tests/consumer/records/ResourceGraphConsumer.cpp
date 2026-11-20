@@ -1,10 +1,41 @@
 #include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
 #include "cocos/renderer/gfx-empty/EmptyFramebuffer.h"
+#include "cocos/renderer/gfx-empty/EmptyRenderPass.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <type_traits>
 #include <utility>
 
 namespace {
+bool checkPersistentRenderPassAndFramebuffer() {
+    using cc::render::PersistentRenderPassAndFramebuffer;
+    static_assert(!std::is_default_constructible_v<PersistentRenderPassAndFramebuffer>);
+    boost::container::pmr::monotonic_buffer_resource arena, other;
+    PersistentRenderPassAndFramebuffer empty{&arena};
+    if (empty.get_allocator().resource() != &arena || empty.renderPass.get() || empty.framebuffer.get() ||
+        !empty.clearColors.empty() || empty.clearDepth != 0.F || empty.clearStencil != 0) return false;
+
+    cc::IntrusivePtr<cc::gfx::RenderPass> pass{new cc::gfx::EmptyRenderPass};
+    cc::IntrusivePtr<cc::gfx::Framebuffer> framebuffer{new cc::gfx::EmptyFramebuffer};
+    const auto passRefs = pass->getRefCount();
+    const auto framebufferRefs = framebuffer->getRefCount();
+    {
+        PersistentRenderPassAndFramebuffer cached{pass, framebuffer, &arena};
+        if (cached.clearColors.get_allocator().resource() != &arena ||
+            pass->getRefCount() != passRefs + 1 || framebuffer->getRefCount() != framebufferRefs + 1) return false;
+        cached.clearColors.push_back({0.25F, 0.5F, 0.75F, 1.F});
+        cached.clearDepth = 0.5F;
+        cached.clearStencil = 7;
+        PersistentRenderPassAndFramebuffer copy{cached, &other};
+        if (copy.clearColors.get_allocator().resource() != &other || copy.clearColors.size() != 1) return false;
+        cached.clearColors.front().x = 1.F;
+        PersistentRenderPassAndFramebuffer moved{std::move(copy), &arena};
+        if (moved.clearColors.get_allocator().resource() != &arena || moved.clearColors.size() != 1 ||
+            moved.clearColors.front().x != 0.25F || moved.renderPass.get() != pass.get() ||
+            moved.framebuffer.get() != framebuffer.get() || moved.clearDepth != 0.5F || moved.clearStencil != 7) return false;
+    }
+    return pass->getRefCount() == passRefs && framebuffer->getRefCount() == framebufferRefs;
+}
+
 bool checkViewHierarchy() {
     using namespace cc::render;
     boost::container::pmr::monotonic_buffer_resource arena;
@@ -45,7 +76,7 @@ bool checkViewHierarchy() {
 
 bool checkResourceGraph() {
     using namespace cc::render;
-    if (!checkViewHierarchy()) return false;
+    if (!checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer()) return false;
     static_assert(!std::is_move_constructible_v<ResourceGraph> && !std::is_copy_constructible_v<ResourceGraph>);
     static_assert(std::is_same_v<decltype(ResourceDesc::mipLevels), uint16_t>);
     static_assert(std::is_same_v<decltype(ManagedBuffer::fenceValue), uint64_t>);
@@ -58,6 +89,11 @@ bool checkResourceGraph() {
     static_assert(std::is_same_v<decltype(&RenderSwapchain::getDepthStencilTexture), SwapchainTexture>);
     boost::container::pmr::monotonic_buffer_resource arena;
     ResourceGraph g{&arena};
+    static_assert(std::is_same_v<decltype(g.nextFenceValue), uint64_t> && std::is_same_v<decltype(g.version), uint64_t>);
+    if (g.nextFenceValue != 0 || g.version != 0) return false;
+    g.nextFenceValue = UINT64_MAX - 1;
+    ++g.nextFenceValue;
+    g.version = UINT64_MAX;
     static_assert(std::is_same_v<decltype(g.getName(0)), const ccstd::pmr::string&>);
     static_assert(std::is_same_v<decltype(g.get(Name_{}, 0)), const ccstd::pmr::string&>);
     const auto none = ResourceGraph::null_vertex();
@@ -67,6 +103,7 @@ bool checkResourceGraph() {
         return false;
     } catch (const std::out_of_range&) {}
     const auto v = g.add_vertex(Managed_{}, "color");
+    if (g.nextFenceValue != UINT64_MAX || g.version != UINT64_MAX) return false;
     if (v != 0 || !g.contains("color") || g.find("color") != v || g.vertex("color") != v) return false;
     try {
         (void)g.add_vertex(Framebuffer_{}, "color");

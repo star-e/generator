@@ -664,7 +664,7 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& memb
         const auto& m = members[i];
         const bool parameter = std::ranges::find(order, i) != order.end();
         if (m.safeUnsignedInteger) {
-            ts << "        cc$defineUint64(this, '" << m.name << "', " << (parameter ? m.name : m.tsDefault) << ");\n";
+            ts << "        " << m.tsUint64Initializer(parameter ? m.name : m.tsDefault) << ";\n";
         } else if (parameter) {
             ts << "        this." << m.name << " = " << m.name << ";\n";
         }
@@ -894,6 +894,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, inputArchive);
             if (output.typescript) {
                 emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields);
+                usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
                     if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");
                     pool.add(node.name, entry->second.member, Pool::Reuse::clear);

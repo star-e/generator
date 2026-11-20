@@ -1,10 +1,10 @@
 import { FormatView, ManagedResource, RenderGraphObjectPool, ResourceDesc, ResourceGraph, ResourceGraphValue,
     ResourceStates, ResourceTraits, getResourceGraphValueName } from './render-graph';
 import type { ResourceGraphValueType, ResourceGraphVisitor } from './render-graph';
-import type { Buffer, Texture, Framebuffer, Swapchain } from '../../gfx';
+import type { Buffer, Texture, Framebuffer, RenderPass, Swapchain } from '../../gfx';
 import type { RenderWindow } from '../../render-scene/core/render-window';
 import { RenderCommonObjectPool, ResourceResidency } from './types';
-import { AccessFlagBit, Format, SamplerInfo, SampleCount, TextureType } from '../../gfx';
+import { AccessFlagBit, Color, Format, SamplerInfo, SampleCount, TextureType } from '../../gfx';
 
 function assert(ok: boolean): void {
     if (!ok) throw new Error('ResourceGraph assertion failed');
@@ -12,6 +12,10 @@ function assert(ok: boolean): void {
 
 const resourcePool = new RenderGraphObjectPool(new RenderCommonObjectPool());
 const resources: ResourceGraph = resourcePool.createResourceGraph();
+resources.nextFenceValue = 11;
+resources.version = 3;
+resources.clear();
+assert(resources.nextFenceValue === 0 && resources.version === 0);
 const desc: ResourceDesc = resourcePool.createResourceDesc();
 const traits: ResourceTraits = resourcePool.createResourceTraits(ResourceResidency.EXTERNAL);
 const states: ResourceStates = resourcePool.createResourceStates();
@@ -33,6 +37,14 @@ const view: FormatView = resourcePool.createFormatView();
 const buffer = {} as Buffer;
 const texture = {} as Texture;
 const framebuffer = {} as Framebuffer;
+const pass = {} as RenderPass;
+const cached = resourcePool.createPersistentRenderPassAndFramebuffer(pass, framebuffer);
+assert(cached.renderPass === pass && cached.framebuffer === framebuffer && cached.clearDepth === 0 && cached.clearStencil === 0);
+const clearColors = cached.clearColors;
+assert(clearColors.length === 0);
+clearColors.push(new Color(0.25, 0.5, 0.75, 1));
+cached.clearDepth = 0.5;
+cached.clearStencil = 7;
 const swapchain = {} as Swapchain;
 const mb = resourcePool.createManagedBuffer(buffer);
 const mt = resourcePool.createManagedTexture(texture);
@@ -80,15 +92,18 @@ if (false) {
     // @ts-expect-error This cached native pointer has no TypeScript binding.
     sc.texture = texture;
 }
-for (const value of [mb, mt, pb, pt]) {
-    value.fenceValue = Number.MAX_SAFE_INTEGER;
-    assert(Object.keys(value).indexOf('fenceValue') !== -1);
+function checkUint64<K extends string>(value: Record<K, number>, field: K): void {
+    assert(value[field] === 0 && Object.keys(value).indexOf(field) !== -1);
+    value[field] = Number.MAX_SAFE_INTEGER;
     for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
         let rangeError = false;
-        try { value.fenceValue = invalid; } catch (error) { rangeError = error instanceof RangeError; }
-        assert(rangeError && value.fenceValue === Number.MAX_SAFE_INTEGER);
+        try { value[field] = invalid; } catch (error) { rangeError = error instanceof RangeError; }
+        assert(rangeError && value[field] === Number.MAX_SAFE_INTEGER);
     }
 }
+for (const value of [mb, mt, pb, pt]) checkUint64(value, 'fenceValue');
+checkUint64(resources, 'nextFenceValue');
+checkUint64(resources, 'version');
 sc.renderWindow = {} as RenderWindow;
 sc.currentID = sc.numBackBuffers = sc.generation = 2;
 sub.textureView = texture;
@@ -123,6 +138,10 @@ assert(resources.vertex('texture') === base && resources.vertex('depth') === dep
 resourcePool.reset();
 assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 && resources.ne() === 0 && !resources.contains('depth') &&
     resourcePool.createResourceDesc().width === 0 && resourcePool.createFormatView().format === Format.UNKNOWN);
+assert(resources.nextFenceValue === 0 && resources.version === 0);
+const recycled = resourcePool.createPersistentRenderPassAndFramebuffer();
+assert(recycled === cached && recycled.renderPass === null && recycled.framebuffer === null &&
+    recycled.clearColors === clearColors && clearColors.length === 0 && recycled.clearDepth === 0 && recycled.clearStencil === 0);
 assert(!resources.contains('SubresourceView') && resources.find('') === resources.N &&
     resources.addVertex(ResourceGraphValue.Managed, managed, '', desc, traits, states, sampler) === 0 && resources.vertex('') === 0);
 assert(resources.getParent(0) === resources.N && resources.numChildren(0) === 0);

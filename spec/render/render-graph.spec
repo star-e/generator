@@ -3,6 +3,7 @@ import Gfx;
 import RenderCommon;
 import GraphTags;
 import Strings;
+import PmrContainers;
 import GfxResource;
 import RenderWindow;
 
@@ -75,6 +76,15 @@ namespace cc::render {
         static fn getDepthStencilTexture(swapchain: gfx::Swapchain*) noexcept -> gfx::Texture*;
     }
 
+    @requireAllocator struct PersistentRenderPassAndFramebuffer {
+        nullable renderPass: IntrusivePtr<gfx::RenderPass>;
+        nullable framebuffer: IntrusivePtr<gfx::Framebuffer>;
+        readonly clearColors: ccstd::pmr::vector<gfx::Color>;
+        clearDepth: float = 0;
+        clearStencil: uint8_t = 0;
+        constructor(renderPass, framebuffer);
+    }
+
     struct FormatView {
         format: gfx::Format = gfx::Format::UNKNOWN;
     }
@@ -127,6 +137,8 @@ namespace cc::render {
             FormatView_: FormatView { member: formatViews; }
             SubresourceView_: SubresourceView { member: subresourceViews; }
         }
+        nextFenceValue: uint64_t = 0;
+        version: uint64_t = 0;
     }
 }
 
@@ -142,6 +154,7 @@ binding typescript {
     PersistentBuffer => class { pool pb; reset constructor; };
     PersistentTexture => class { pool pt; reset constructor; };
     RenderSwapchain => class { pool rs; reset constructor; };
+    PersistentRenderPassAndFramebuffer => class { pool prpaf; reset constructor; };
     FormatView => class { pool fv; reset defaults; };
     SubresourceView => class { pool sv; reset defaults; };
     ResourceGraph => class { pool rg; };

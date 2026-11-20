@@ -112,6 +112,8 @@
       "backend": "model",
       "types": {
         "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "Color": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "RenderPass": { "header": "cocos/renderer/gfx-base/GFXRenderPass.h" },
         "Buffer": { "header": "cocos/renderer/gfx-base/GFXBuffer.h" },
         "Texture": { "header": "cocos/renderer/gfx-base/GFXTexture.h" },
         "Framebuffer": { "header": "cocos/renderer/gfx-base/GFXFramebuffer.h" },
