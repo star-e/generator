@@ -275,16 +275,17 @@ Files plan(const Json& settings, const fs::path& base) {
                 records->poolDependencies.emplace_back(member, TypeScriptImport{name + "ObjectPool", from.replace_extension()});
             }
             std::optional<ArchiveOutput> archive;
-            if (records->serializationHeader) {
-                for (auto imported : module.imports) {
-                    const auto& dependency = graph.modules.at(imported.value);
-                    if (dependency.name == "ArchiveInterface") {
-                        if (const auto* layout = std::get_if<OutputLayout>(&layouts.at(imported.value)))
-                            archive.emplace(*layout, dependency);
-                    }
+            for (auto imported : module.imports) {
+                const auto& layout = layouts.at(imported.value);
+                if (const auto* dependency = std::get_if<RecordOutput>(&layout); records->namesHeader && dependency && dependency->namesHeader)
+                    records->importedNamesHeaders.push_back(*dependency->namesHeader);
+                if (records->serializationHeader && graph.modules.at(imported.value).name == "ArchiveInterface") {
+                    if (const auto* interfaces = std::get_if<OutputLayout>(&layout))
+                        archive.emplace(*interfaces, graph.modules.at(imported.value));
                 }
-                if (!archive) throw std::runtime_error(module.name + ": serialization requires import ArchiveInterface with interface output");
             }
+            if (records->serializationHeader && !archive)
+                throw std::runtime_error(module.name + ": serialization requires import ArchiveInterface with interface output");
             emitted = emitRecords(graph, owner, *records, archive, preamble);
         } else {
             emitted = emitInterfaces(graph, owner, std::get<OutputLayout>(layouts[i]), preamble);

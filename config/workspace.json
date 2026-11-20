@@ -88,6 +88,7 @@
       "nativeRoot": "native",
       "header": "cocos/renderer/pipeline/custom/LayoutGraphTypes.h",
       "forwardHeader": "cocos/renderer/pipeline/custom/LayoutGraphFwd.h",
+      "namesHeader": "cocos/renderer/pipeline/custom/LayoutGraphNames.h",
       "serializationHeader": "cocos/renderer/pipeline/custom/LayoutGraphSerialization.h",
       "typescript": "cocos/rendering/custom/layout-graph.ts",
       "runtimeFiles": {

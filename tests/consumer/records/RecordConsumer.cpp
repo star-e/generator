@@ -382,6 +382,7 @@ bool checkRenderPhase() {
 }
 
 bool checkLayoutGraph(const char* pathSamples);
+bool checkLayoutNames();
 int checkStageAllocation(unsigned count, int failAfter);
 bool writeDfsCases(const char* path);
 bool exchangeLayoutArchive(std::string_view mode, const char* path);
@@ -407,6 +408,7 @@ int main(int argc, char** argv) {
     if (argc == 3 && !writePathCases) return exchangeRecords(argv[1], argv[2]);
     if (argc != 1 && !writePathCases) return 2;
     if (!checkLayoutGraph(writePathCases ? argv[2] : nullptr)) return 9;
+    if (!checkLayoutNames()) return 17;
     if (!checkDescriptorBlockIndex()) return 10;
     if (!checkDescriptorGroupBlockIndex()) return 12;
     if (!checkDescriptorDB()) return 15;

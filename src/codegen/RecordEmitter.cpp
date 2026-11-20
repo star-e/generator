@@ -485,10 +485,11 @@ std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, cons
     return header.str();
 }
 
-std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const std::filesystem::path& typesHeader,
+std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
                         const std::string& preamble) {
     std::ostringstream header, body;
-    header << preamble << "// clang-format off\n#pragma once\n#include \"" << typesHeader.generic_string() << "\"\n";
+    header << preamble << "// clang-format off\n#pragma once\n#include \"" << output.header.generic_string() << "\"\n";
+    for (const auto& path : output.importedNamesHeaders) header << "#include \"" << path.generic_string() << "\"\n";
     body << '\n';
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
@@ -965,7 +966,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (output.jsbHeader) emitRecordJsb(files, graph, module, output, preamble);
     if (archive) archives.emitNative(files, module, output, *archive, preamble);
     if (output.forwardHeader) files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble));
-    if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output.header, preamble));
+    if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output, preamble));
     if (!definitions.view().empty()) {
         auto path = output.header;
         path.replace_extension(".cpp");

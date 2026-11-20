@@ -14,6 +14,7 @@ struct RecordOutput {
     std::filesystem::path header;
     std::optional<std::filesystem::path> forwardHeader;
     std::optional<std::filesystem::path> namesHeader;
+    std::vector<std::filesystem::path> importedNamesHeaders;
     std::optional<std::filesystem::path> serializationHeader;
     std::optional<std::filesystem::path> jsbHeader;
     std::set<std::string> jsbRecords;

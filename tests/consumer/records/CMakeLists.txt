@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 project(RenderCommonConsumer LANGUAGES CXX)
 find_package(boost_container CONFIG REQUIRED)
 set(native "${ENGINE}/native")
-add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp GraphDFSConsumer.cpp LayoutArchiveConsumer.cpp PipelineArchiveConsumer.cpp
+add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraphConsumer.cpp LayoutNamesConsumer.cpp GraphDFSConsumer.cpp LayoutArchiveConsumer.cpp PipelineArchiveConsumer.cpp
     "${native}/cocos/base/RefCounted.cpp"
     "${native}/cocos/renderer/gfx-base/GFXObject.cpp"
     "${native}/cocos/renderer/gfx-base/GFXDescriptorSet.cpp"

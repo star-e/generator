@@ -247,6 +247,8 @@ MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中�
 
 记录模块可以用 `namesHeader` 指定 C++ 名称查询头，原生头文件路径相对于 `nativeRoot`。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)
 
+`LayoutGraphNames.h` 包含布局类型头，以及直接导入模块所生成的名称查询头。C++17 调用方只需包含它，就能查询布局枚举、`RenderStage_`、`RenderPhase_`、两种布局图以及来自 `RenderCommon` 的 `UpdateFrequency`。导入头的路径随依赖模块的 `namesHeader` 配置变化。[单头消费测试](../tests/consumer/records/LayoutNamesConsumer.cpp) · [导入路径测试](../tests/ModuleImports.cmake)
+
 记录用 `@serialize` 参与归档，用 `@transient` 标记加载时应保留原值的字段。记录模块直接导入 `ArchiveInterface`，用 `serializationHeader` 指定 C++ 头路径。C++ 的 `save/load` 和 TS 的 `save类型名/load类型名` 共用 TypeGraph 中的字段顺序。`RenderCommon` 包含五组归档函数，其中 `LightInfo` 只读写 `level` 和 `culledByLight`。消费测试用引擎的 `BinaryArchive` 在两种语言间双向读写五种记录并逐字节比较。[声明](../spec/render/render-common.spec) · [互读测试](../tests/RecordInterop.cmake)
 
 JSB 绑定的 `record` 单独选择 `LightInfo`、`ResolvePair`、`CopyPair`、`UploadPair` 和 `MovePair`。`RenderCommonJsb.h/.cpp` 按声明顺序转换所选记录的所有字段，包括 `LightInfo.light` 和 `probe`。JS 写入 C++ 时，缺失、`null` 或 `undefined` 的属性保留 C++ 原值。独立的引擎消费测试还验证 `UploadPair.source` 从 `Uint8Array` 子视图读入字节并转回 JS。[模块绑定](../spec/render/render-common.spec) · [JSB 消费测试](../tests/consumer/jsb/JsbConsumer.cpp)
