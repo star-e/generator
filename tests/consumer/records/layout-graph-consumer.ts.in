@@ -2,9 +2,10 @@ import { DefaultVisitor, depthFirstSearch as engineSearch, ED, GraphColor, OutEI
 import type { AddressableGraph, IncidenceGraph, MutableVertexPropertyMap, PolymorphicGraph, ReferenceGraph } from './graph';
 import { depthFirstSearch } from './graph-dfs';
 import type { InputArchive } from './archive';
-import { Descriptor, DescriptorBlock, DescriptorBlockFlattened, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
-    EffectData, LayoutGraph, LayoutGraphData, LayoutGraphDataValue, LayoutGraphValue, PipelineLayoutData, RenderPassType,
-    RenderPhase, RenderPhaseData, RenderStageData, ShaderProgramData } from './layout-graph';
+import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
+    EffectData, LayoutGraph, LayoutGraphData, LayoutGraphDataValue, LayoutGraphValue, RenderPassType,
+    RenderPhase, RenderPhaseData, RenderStageData } from './layout-graph';
+import { convertDescriptorBlock, LayoutGraphBuilder2 } from './layout-graph-conversion';
 import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
 import { UpdateFrequency } from './types';
 import { getUpdateFrequencyName } from './types-names';
@@ -18,10 +19,6 @@ function assert (ok: boolean, message = 'Editor layout assertion failed'): void 
 }
 
 function error (message: string): never { throw new Error(message); }
-
-@layoutDataBuilder@
-    readonly lg: LayoutGraphData;
-}
 
 class ProgramGroup {}
 class ProgramLibraryFixture {

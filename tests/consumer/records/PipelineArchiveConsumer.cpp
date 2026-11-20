@@ -6,6 +6,8 @@
 #include "gfx-empty/EmptyPipelineLayout.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <fstream>
+#include <iostream>
+#include <iterator>
 #include <sstream>
 #include <type_traits>
 
@@ -135,7 +137,102 @@ bool checkTruncatedGraph(const LayoutGraphData& graph) {
     }
     return false;
 }
+
+bool checkConvertedVertices(const LayoutGraphData& graph) {
+    if (graph.num_vertices() != 4 || graph.locate("/scene") != 0 || graph.locate("/scene/light") != 1 ||
+        graph.locate("/scene/light/opaque") != 2 || graph.locate("/scene/light/transparent") != 3 ||
+        graph.get_parent(0) != graph.null_vertex() || graph.get_parent(1) != 0 ||
+        graph.get_parent(2) != 1 || graph.get_parent(3) != 1 ||
+        !graph.holds<RenderStage_>(0) || !graph.holds<RenderStage_>(1) ||
+        !graph.holds<RenderPhase_>(2) || !graph.holds<RenderPhase_>(3)) return false;
+    const auto& opaque = graph.value(RenderPhase_{}, 2);
+    const auto& transparent = graph.value(RenderPhase_{}, 3);
+    return graph.getUpdate(0) == pass && graph.getUpdate(1) == pass && graph.getUpdate(2) == phase && graph.getUpdate(3) == phase &&
+           graph.getLayout(0).descriptorSets.empty() && graph.getLayout(0).descriptorGroups.empty() &&
+           graph.getLayout(3).descriptorSets.empty() && graph.getLayout(3).descriptorGroups.empty() &&
+           graph.shaderLayoutIndex.size() == 3 && graph.shaderLayoutIndex.at("depth") == 2 &&
+           graph.shaderLayoutIndex.at("lit") == 2 && graph.shaderLayoutIndex.at("glass") == 3 &&
+           opaque.shaderPrograms.size() == 2 && opaque.shaderIndex.size() == 2 &&
+           opaque.shaderIndex.at("depth") == 0 && opaque.shaderIndex.at("lit") == 1 &&
+           transparent.shaderPrograms.size() == 1 && transparent.shaderIndex.size() == 1 && transparent.shaderIndex.at("glass") == 0;
+}
+
+bool checkConvertedNames(const LayoutGraphData& graph) {
+    constexpr const char* names[]{"camera", "exposure", "shadowA", "shadowB", "history", "phaseColor"};
+    if (graph.valueNames.size() != std::size(names) || graph.attributeIndex.size() != 5 || graph.constantIndex.size() != 1) return false;
+    for (size_t i = 0; i < std::size(names); ++i) {
+        const auto& index = i == 1 ? graph.constantIndex : graph.attributeIndex;
+        if (graph.valueNames[i] != names[i] || index.at(names[i]).value != i) return false;
+    }
+    return true;
+}
+
+bool matchesBlock(const DescriptorBlockData& block, DescriptorTypeOrder type, uint32_t offset, uint32_t capacity) {
+    return block.type == type && block.visibility == ShaderStageFlagBit::FRAGMENT && block.offset == offset && block.capacity == capacity;
+}
+
+bool matchesImageGroup(const DescriptorBlockData& block, uint32_t offset, uint32_t capacity) {
+    return matchesBlock(block, DescriptorTypeOrder::STORAGE_IMAGE, offset, capacity) &&
+           block.accessType == MemoryAccessBit::READ_WRITE && block.viewDimension == ViewDimension::TEX2D_ARRAY &&
+           block.sampleType == SampleType::UINT && block.format == Format::RGBA8UI;
+}
+
+bool matchesDescriptor(const DescriptorData& descriptor, uint32_t nameID, Type type, uint32_t count) {
+    return descriptor.descriptorID.value == nameID && descriptor.type == type && descriptor.count == count;
+}
+
+bool checkConvertedPass(const PipelineLayoutData& passLayout) {
+    if (passLayout.descriptorSets.size() != 1 || passLayout.descriptorGroups.size() != 1) return false;
+    const auto& set = passLayout.descriptorSets.at(pass).descriptorSetLayoutData;
+    const auto& group = passLayout.descriptorGroups.at(pass).descriptorSetLayoutData;
+    for (const auto* layout : {&set, &group}) {
+        if (layout->descriptorBlocks.size() != 2 || layout->uniformBlocks.size() != 1 || layout->uniformBlockCapacity != 3) return false;
+        const auto& block = layout->descriptorBlocks[0];
+        const auto& camera = layout->uniformBlocks.at(NameLocalID{0});
+        if (!matchesBlock(block, DescriptorTypeOrder::UNIFORM_BUFFER, 0, 3) || block.descriptors.size() != 1 ||
+            !matchesDescriptor(block.descriptors[0], 0, Type::UNKNOWN, 1) || camera.name != "camera" ||
+            camera.set != 2 || camera.binding != 5 || camera.count != 1 || camera.members.size() != 1 ||
+            camera.members[0].name != "exposure" || camera.members[0].type != Type::FLOAT4 || camera.members[0].count != 2) return false;
+    }
+    const auto& samplers = set.descriptorBlocks[1];
+    const auto& image = group.descriptorBlocks[1];
+    return set.capacity == 7 && set.samplerTextureCapacity == 4 && group.capacity == 8 && group.samplerTextureCapacity == 0 &&
+           matchesBlock(samplers, DescriptorTypeOrder::SAMPLER_TEXTURE, 3, 4) && samplers.descriptors.size() == 2 &&
+           matchesDescriptor(samplers.descriptors[0], 2, Type::SAMPLER2D, 1) && matchesDescriptor(samplers.descriptors[1], 3, Type::SAMPLER2D, 2) &&
+           matchesImageGroup(image, 3, 5) && image.descriptors.size() == 1 && matchesDescriptor(image.descriptors[0], 4, Type::IMAGE2D, 1);
+}
+
+bool checkConvertedPhase(const PipelineLayoutData& phaseLayout) {
+    if (phaseLayout.descriptorSets.size() != 2 || phaseLayout.descriptorGroups.size() != 1) return false;
+    const auto& instance = phaseLayout.descriptorSets.at(UpdateFrequency::PER_INSTANCE).descriptorSetLayoutData;
+    const auto& batch = phaseLayout.descriptorGroups.at(UpdateFrequency::PER_BATCH).descriptorSetLayoutData;
+    const auto& color = phaseLayout.descriptorSets.at(phase).descriptorSetLayoutData;
+    if (instance.descriptorBlocks.size() != 1 || batch.descriptorBlocks.size() != 1 || color.descriptorBlocks.size() != 1) return false;
+    const auto& texture = color.descriptorBlocks[0];
+    return instance.capacity == 6 && instance.uniformBlockCapacity == 6 && instance.uniformBlocks.empty() &&
+           matchesBlock(instance.descriptorBlocks[0], DescriptorTypeOrder::DYNAMIC_UNIFORM_BUFFER, 0, 6) &&
+           instance.descriptorBlocks[0].descriptors.empty() && batch.capacity == 8 && batch.uniformBlocks.empty() &&
+           matchesImageGroup(batch.descriptorBlocks[0], 0, 8) && batch.descriptorBlocks[0].descriptors.empty() &&
+           color.capacity == 1 && matchesBlock(texture, DescriptorTypeOrder::TEXTURE, 0, 1) &&
+           texture.descriptors.size() == 1 && matchesDescriptor(texture.descriptors[0], 5, Type::TEXTURE2D, 1);
+}
 } // namespace
+
+bool readConvertedLayout(const char* path) {
+    boost::container::pmr::monotonic_buffer_resource arena;
+    std::ifstream file(path, std::ios::binary);
+    file.exceptions(std::ios::badbit | std::ios::failbit);
+    BinaryInputArchive archive(file, &arena);
+    LayoutGraphData graph{&arena};
+    load(archive, graph);
+    if (file.peek() != std::char_traits<char>::eof()) std::cerr << "Trailing bytes in converted layout\n";
+    else if (!checkConvertedVertices(graph)) std::cerr << "Converted vertex or shader index mismatch\n";
+    else if (!checkConvertedNames(graph)) std::cerr << "Converted descriptor or constant name mismatch\n";
+    else if (!checkConvertedPass(graph.getLayout(1))) std::cerr << "Converted subpass descriptor layout mismatch\n";
+    else if (!checkConvertedPhase(graph.getLayout(2))) std::cerr << "Converted phase descriptor layout mismatch\n";
+    else return true;
+    return false;
+}
 
 bool exchangePipelineArchives(bool writing, const char* path) {
     boost::container::pmr::monotonic_buffer_resource arena, destination;

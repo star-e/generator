@@ -235,6 +235,8 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 `LayoutGraphData` 在同一个 `.spec` 中声明三个顶点组件、两种载荷和六个图级字段。归档先写顶点，再按声明顺序写 `valueNames`、`attributeIndex`、`constantIndex`、`shaderLayoutIndex` 和 `effects`。`@transient constantMacros` 保留目标图的运行时值。加载完整归档后才替换目标图，TS 保留只读数组和 Map 的对象身份。互读样本包含空图和带描述符、着色器及效果数据的父子图。测试编译旧引擎 C++ 读写器，逐字节核对新旧 C++ 和 TS 的输出。[图声明](../spec/render/layout-graph.spec) · [旧引擎读写器测试](../tests/consumer/records/LegacyArchiveConsumer.cpp)
 
+编辑器转换测试把同一份 `LayoutGraph` 归档分别读入旧引擎和新生成的 TS 类型，调用引擎的 `buildLayoutGraphData()`，逐字节比较两份输出。C++ 再加载转换结果，核对顶点与父节点编号、着色器索引、描述符排序和偏移、预留容量，以及普通集合和描述符组中共用的 uniform 名称编号。[转换样本](../tests/consumer/records/layout-conversion.ts.in) · [原生读回](../tests/consumer/records/PipelineArchiveConsumer.cpp)
+
 MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中为 `std::unordered_map` 分配代理。`RenderStageData::descriptorVisibility` 沿用这个引擎容器，若该笔分配抛错，标准库会终止进程。Windows Debug 和 Release 都对两种载荷逐笔注入分配失败。stage 用例在独立进程中执行每一次注入，单独记录 Debug 代理的终止，并验证其他分配点的回滚和原图重试。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)

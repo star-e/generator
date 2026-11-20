@@ -2,7 +2,7 @@ const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
 const flags = require('./platform.cjs');
-const [jsDir, nativeFile, webFile, legacyFile] = process.argv.slice(2);
+const [jsDir, nativeFile, webFile, legacyFile, convertedFile] = process.argv.slice(2);
 const current = require(path.join(jsDir, 'layout-graph.js'));
 const legacy = require(path.join(jsDir, 'legacy-layout.js'));
 const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
@@ -125,6 +125,14 @@ for (const bytes of [native, web, old]) {
 }
 fs.writeFileSync(webFile, web);
 fs.writeFileSync(legacyFile, old);
+
+const editor = require(path.join(jsDir, 'layout-graph-conversion.js'));
+const oldEditor = require(path.join(jsDir, 'legacy-layout-conversion.js'));
+const input = oldEditor.makeInput();
+assert.deepEqual(Buffer.from(editor.makeInput()), Buffer.from(input), 'Editor input archives differ');
+const converted = Buffer.from(editor.convert(input));
+assert.deepEqual(converted, Buffer.from(oldEditor.convert(input)), 'Converted LayoutGraphData archives differ');
+fs.writeFileSync(convertedFile, converted);
 
 const [set, shader, effect, stage, renderPhase] = records(current);
 const { descriptorSetLayoutData, descriptorSetLayoutInfo } = set;

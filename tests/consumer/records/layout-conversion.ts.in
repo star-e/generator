@@ -1,0 +1,81 @@
+import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, Uniform, UniformBlock, ViewDimension } from '../../gfx';
+import { BinaryInputArchive, BinaryOutputArchive } from './binary-archive';
+import { ParameterType, UpdateFrequency } from './types';
+import { Descriptor, DescriptorBlock, DescriptorBlockData, DescriptorBlockFlattened, DescriptorBlockIndex, DescriptorData,
+    DescriptorDB, DescriptorGroupBlockIndex, DescriptorSetData, DescriptorTypeOrder, LayoutGraph, LayoutGraphData,
+    LayoutGraphDataValue, LayoutGraphValue, PipelineLayoutData, RenderPassType, RenderPhase, RenderPhaseData,
+    RenderStageData, ShaderProgramData, loadLayoutGraph, saveLayoutGraph, saveLayoutGraphData } from './@layoutModule@';
+
+function assert (ok: boolean): void { if (!ok) throw new Error('Invalid editor layout'); }
+function error (message: string): never { throw new Error(message); }
+
+@layoutConversionUtils@
+@flattenBlock@
+@layoutConversion@
+export { convertDescriptorBlock, LayoutGraphBuilder2 };
+
+function block (capacity: number, descriptors: [string, Type, number][]): DescriptorBlock {
+    const result = new DescriptorBlock();
+    result.capacity = capacity;
+    for (const [name, type, count] of descriptors) {
+        const descriptor = new Descriptor(type);
+        descriptor.count = count;
+        result.descriptors.set(name, descriptor);
+        result.count += count;
+    }
+    return result;
+}
+
+export function makeInput (): ArrayBuffer {
+    const g = new LayoutGraph();
+    const root = g.addVertex(LayoutGraphValue.RenderStage, RenderPassType.RENDER_PASS, 'scene', new DescriptorDB());
+    const passDB = new DescriptorDB();
+    const subpass = g.addVertex(LayoutGraphValue.RenderStage, RenderPassType.RENDER_SUBPASS, 'light', passDB, root);
+    const phaseDB = new DescriptorDB();
+    const opaque = new RenderPhase();
+    opaque.shaders.add('depth').add('lit');
+    g.addVertex(LayoutGraphValue.RenderPhase, opaque, 'opaque', phaseDB, subpass);
+    const transparent = new RenderPhase();
+    transparent.shaders.add('glass');
+    g.addVertex(LayoutGraphValue.RenderPhase, transparent, 'transparent', new DescriptorDB(), subpass);
+
+    const { PER_PASS, PER_PHASE, PER_BATCH, PER_INSTANCE } = UpdateFrequency;
+    const table = ParameterType.TABLE;
+    const frag = ShaderStageFlagBit.FRAGMENT;
+    const camera = block(3, [['camera', Type.UNKNOWN, 1]]);
+    camera.uniformBlocks.set('camera', new UniformBlock(2, 5, 'camera', [new Uniform('exposure', Type.FLOAT4, 2)], 1));
+    // The editor must sort the two blocks and sort the names inside the sampler block.
+    passDB.blocks.set(JSON.stringify(new DescriptorBlockIndex(PER_PASS, table, DescriptorTypeOrder.SAMPLER_TEXTURE, frag)),
+        block(4, [['shadowB', Type.SAMPLER2D, 2], ['shadowA', Type.SAMPLER2D, 1]]));
+    passDB.blocks.set(JSON.stringify(new DescriptorBlockIndex(PER_PASS, table, DescriptorTypeOrder.UNIFORM_BUFFER, frag)), camera);
+
+    const imageGroup = (rate: UpdateFrequency): string => JSON.stringify(new DescriptorGroupBlockIndex(
+        rate, table, DescriptorTypeOrder.STORAGE_IMAGE, frag, MemoryAccessBit.READ_WRITE,
+        ViewDimension.TEX2D_ARRAY, SampleType.UINT, Format.RGBA8UI));
+    passDB.groupBlocks.set(imageGroup(PER_PASS), block(5, [['history', Type.IMAGE2D, 1]]));
+    passDB.groupBlocks.set(JSON.stringify(new DescriptorGroupBlockIndex(PER_PASS, table, DescriptorTypeOrder.UNIFORM_BUFFER, frag)), camera);
+
+    phaseDB.blocks.set(JSON.stringify(new DescriptorBlockIndex(PER_INSTANCE, table, DescriptorTypeOrder.DYNAMIC_UNIFORM_BUFFER, frag)),
+        block(6, [['instanceOnly', Type.UNKNOWN, 1]]));
+    phaseDB.groupBlocks.set(imageGroup(PER_BATCH), block(8, [['batchOnly', Type.IMAGE2D, 1]]));
+    phaseDB.blocks.set(JSON.stringify(new DescriptorBlockIndex(PER_PHASE, table, DescriptorTypeOrder.TEXTURE, frag)),
+        block(1, [['phaseColor', Type.TEXTURE2D, 1]]));
+    // A pass-frequency block on a phase must be filtered before registering any names.
+    phaseDB.blocks.set(JSON.stringify(new DescriptorBlockIndex(PER_PASS, table, DescriptorTypeOrder.TEXTURE, frag)),
+        block(9, [['wrongRate', Type.TEXTURE2D, 1]]));
+    const output = new BinaryOutputArchive();
+    saveLayoutGraph(output, g);
+    return output.data;
+}
+
+export function convert (bytes: ArrayBuffer): ArrayBuffer {
+    const input = new LayoutGraph();
+    const archive = new BinaryInputArchive(bytes);
+    loadLayoutGraph(archive, input);
+    assert(archive.offset === bytes.byteLength);
+    const graph = new LayoutGraphData();
+    buildLayoutGraphData(input, graph);
+    const output = new BinaryOutputArchive();
+    saveLayoutGraphData(output, graph);
+    return output.data;
+}

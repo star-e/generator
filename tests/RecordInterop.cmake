@@ -249,11 +249,22 @@ configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsum
 
 # Compile the editor's lookup, traversal and descriptor propagation against the generated graph.
 file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-editor.ts" editor)
-source_between(editor "class LayoutGraphBuilder2 {" "    private getDescriptorSetData (" layoutDataBuilder)
+file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-utils.ts" layoutUtils)
+source_between(layoutUtils "export function sortDescriptorBlocks<" "function createDescriptorInfo (" layoutConversionUtils)
+source_between(editor "function convertDescriptorBlock (" "// cache of descriptor blocks" flattenBlock)
+source_between(editor "function buildLayoutGraphDataImpl (" "export function printLayoutGraphData (" layoutConversion)
+# The debug printer depends on the legacy graph's private arrays. The conversion entry point never calls it.
+source_between(layoutConversion "    print (): string {" "    readonly lg: LayoutGraphData;" builderPrint)
+string(REPLACE "${builderPrint}" "" layoutConversion "${layoutConversion}")
+foreach(layoutModule IN ITEMS layout-graph legacy-layout)
+    set(conversionFile "${custom}/${layoutModule}-conversion.ts")
+    configure_file("${SOURCE}/tests/consumer/records/layout-conversion.ts.in" "${conversionFile}" @ONLY)
+    list(APPEND conversionFiles "${conversionFile}")
+endforeach()
 file(READ "${ENGINE}/cocos/rendering/custom/web-program-library.ts" webPrograms)
 source_between(webPrograms "    constructor (lg: LayoutGraphData) {" "    init (deviceIn: Device): void {" programLibraryConstructor)
 foreach(symbol IN ITEMS "function indent" "function unindent" "function hasFlag" "function getVisibilityName"
-                        "function convertDescriptorBlock" "class LayoutGraphPrintVisitor" "class VectorGraphColorMap")
+                        "class LayoutGraphPrintVisitor" "class VectorGraphColorMap")
     string(REGEX MATCH "${symbol} [^\n]+[{]\n([ \t][^\n]*\n|\n)*[}]" definition "${editor}")
     if(NOT definition)
         message(FATAL_ERROR "Missing layout editor definition ${symbol}")
@@ -295,7 +306,7 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${enumConsumer}" "${graphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" "${custom}/legacy-layout.ts")
+    "${enumConsumer}" "${graphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
 run("${consumer}" write "${work}/native.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}" "${dfsCases}")
 run("${consumer}" read "${work}/web.bin")
@@ -310,7 +321,8 @@ run("${consumer}" blocks-read "${work}/blocks-web.bin")
 run("${consumer}" blocks-read "${work}/blocks-legacy.bin")
 run("${consumer}" pipeline-write "${work}/pipeline-native.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/pipeline-archive.cjs" "${work}/js/rendering/custom"
-    "${work}/pipeline-native.bin" "${work}/pipeline-web.bin" "${work}/pipeline-legacy.bin")
+    "${work}/pipeline-native.bin" "${work}/pipeline-web.bin" "${work}/pipeline-legacy.bin" "${work}/converted-layout.bin")
+run("${consumer}" converted-layout-read "${work}/converted-layout.bin")
 run("${consumer}" pipeline-read "${work}/pipeline-web.bin")
 run("${consumer}" pipeline-read "${work}/pipeline-legacy.bin")
 file(READ "${build}/legacy-${CONFIG}.txt" legacyConsumer)
