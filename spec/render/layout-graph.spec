@@ -243,36 +243,42 @@ namespace cc::render {
 }
 
 binding typescript {
+    poolModule "cocos/core/memop";
+    poolDependency renderCommon: RenderCommon;
     LayoutType => const enum;
-    Layout => class from "cocos/rendering/custom/layout-access";
+    Layout => class from "cocos/rendering/custom/layout-access" { pool l; };
     DescriptorTypeOrder => const enum { names; };
     RenderPassType => const enum;
-    Descriptor => class { reset constructor; };
-    DescriptorBlock => class { reset defaults; };
-    DescriptorBlockFlattened => class { reset defaults; };
-    DescriptorBlockIndex => class { mapKey json; };
-    DescriptorGroupBlockIndex => class { mapKey json; };
-    DescriptorDB => class { reset defaults; };
-    RenderPhase => class { reset defaults; };
-    UniformData => class { reset constructor; };
-    UniformBlockData => class { reset defaults; };
+    Descriptor => class { pool d; reset constructor; };
+    DescriptorBlock => class { pool db; reset defaults; };
+    DescriptorBlockFlattened => class { pool dbf; reset defaults; };
+    DescriptorBlockIndex => class { pool dbi assign; mapKey json; };
+    DescriptorGroupBlockIndex => class { pool dgbi assign; mapKey json; };
+    DescriptorDB => class { pool dd; reset defaults; };
+    RenderPhase => class { pool rp; reset defaults; };
+    LayoutGraph => class { pool lg; };
+    UniformData => class { pool ud; reset constructor; };
+    UniformBlockData => class { pool ubd; reset defaults; };
     NameLocalID => number(value);
-    DescriptorData => class { field descriptorID default 0; reset constructor; };
-    DescriptorBlockData => class { reset constructor; };
-    DescriptorSetLayoutData => class { reset(slot, capacity); };
+    DescriptorData => class { pool dd1; field descriptorID default 0; reset constructor; };
+    DescriptorBlockData => class { pool dbd; reset constructor; };
+    DescriptorSetLayoutData => class { pool dsld; reset(slot, capacity); };
     DescriptorSetData => class {
+        pool dsd;
         reset(descriptorSetLayout, descriptorSet);
         field descriptorSetLayoutInfo reset with resetSetLayoutInfo from "cocos/rendering/custom/layout-access";
     };
     PipelineLayoutData => class {
+        pool pld;
         reset defaults;
         extends PipelineLayoutAccess from "cocos/rendering/custom/layout-access";
     };
-    ShaderBindingData => class { reset defaults; };
-    ShaderLayoutData => class { reset defaults; };
-    TechniqueData => class { reset defaults; };
-    EffectData => class { reset defaults; };
-    ShaderProgramData => class { reset defaults; };
-    RenderStageData => class { reset defaults; };
-    RenderPhaseData => class { reset defaults; };
+    ShaderBindingData => class { pool sbd; reset defaults; };
+    ShaderLayoutData => class { pool sld; reset defaults; };
+    TechniqueData => class { pool td; reset defaults; };
+    EffectData => class { pool ed; reset defaults; };
+    ShaderProgramData => class { pool spd; reset defaults; };
+    RenderStageData => class { pool rsd; reset defaults; };
+    RenderPhaseData => class { pool rpd; reset defaults; };
+    LayoutGraphData => class { pool lgd; };
 }

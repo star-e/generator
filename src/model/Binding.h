@@ -15,6 +15,12 @@ namespace cc::codegen {
 struct PoolBinding {
     std::string member;
     std::set<std::string> keepOnReset;
+    bool assignFields{};
+};
+
+struct PoolDependency {
+    std::string member;
+    std::string module;
 };
 
 enum class BindingTarget { type, interfaceType, classType, enumeration, constEnum, numberField };
@@ -59,6 +65,7 @@ inline bool isTypedArrayName(std::string_view name) {
 struct ModuleBindings {
     std::vector<TypeScriptBinding> typescript;
     std::filesystem::path poolModule;
+    std::vector<PoolDependency> poolDependencies;
     std::optional<SourceLocation> jsb;
     std::map<std::string, SourceLocation> jsbRecords;
     std::set<std::filesystem::path> jsbIncludes;

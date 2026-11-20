@@ -153,16 +153,28 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
         }
         if (rule.base) output.bases.emplace(name, *rule.base);
         if (rule.kind == BindingTarget::classType && !rule.from.empty()) {
-            if (rule.base || rule.reset || rule.pool || !rule.fieldDefaults.empty()) invalidBinding(rule, "externally implemented class");
+            if (rule.base || rule.reset || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() ||
+                (rule.pool && (rule.pool->assignFields || !rule.pool->keepOnReset.empty()))) invalidBinding(rule, "externally implemented class");
             output.externalClasses.emplace(name, rule.from);
         }
         if (rule.pool) {
+            if (rule.pool->assignFields && (rule.reset || !rule.fieldResets.empty()))
+                throw std::runtime_error(rule.source.location.describe() + ": pool assign conflicts with reset");
             if (output.poolModule.empty()) throw std::runtime_error(rule.source.location.describe() + ": pool binding requires poolModule");
             if (!poolMembers.insert(rule.pool->member).second)
                 throw std::runtime_error(rule.source.location.describe() + ": duplicate pool member " + rule.pool->member);
             output.pools.emplace(name, *rule.pool);
         }
     }
+    if (output.pools.empty() && !bindings.poolDependencies.empty())
+        throw std::runtime_error(module.name + ": poolDependency requires a local object pool");
+    for (const auto& [member, dependency] : bindings.poolDependencies) {
+        if (!poolMembers.insert(member).second) throw std::runtime_error(module.name + ": duplicate pool member " + member);
+    }
+    for (const auto& name : {"constructor", "reset"})
+        if (poolMembers.contains(name)) throw std::runtime_error(module.name + ": conflicting pool member " + name);
+    for (const auto& [name, pool] : output.pools)
+        if (poolMembers.contains("create" + name)) throw std::runtime_error(module.name + ": conflicting pool member create" + name);
     return output;
 }
 
@@ -191,7 +203,7 @@ Files plan(const Json& settings, const fs::path& base) {
         const auto backend = config.value("backend", std::string{"interfaces"});
         if (config.contains("projection"))
             throw std::runtime_error(spec.string() + ": move JSON projection rules into .spec binding blocks");
-        if (backend != "records" && (module.bindings.jsb || !module.bindings.poolModule.empty()))
+        if (backend != "records" && (module.bindings.jsb || !module.bindings.poolModule.empty() || !module.bindings.poolDependencies.empty()))
             throw std::runtime_error(spec.string() + ": JSB and poolModule bindings require the records backend");
         if (backend == "model" || backend == "interfaces") {
             for (const auto& rule : module.bindings.typescript)
@@ -251,10 +263,19 @@ Files plan(const Json& settings, const fs::path& base) {
         Files emitted;
         if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {
             emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->binding, settingsOutput->typescript, preamble));
-        } else if (const auto* records = std::get_if<RecordOutput>(&layouts[i])) {
+        } else if (auto* records = std::get_if<RecordOutput>(&layouts[i])) {
+            const auto& module = graph.modules.at(i);
+            for (const auto& [member, name] : inputs[i].syntax.bindings.poolDependencies) {
+                const auto found = std::ranges::find_if(module.imports, [&](ModuleId id) { return graph.modules.at(id.value).name == name; });
+                if (found == module.imports.end()) throw std::runtime_error(module.name + ": poolDependency requires import " + name);
+                const auto* dependency = std::get_if<RecordOutput>(&layouts.at(found->value));
+                if (!dependency || dependency->pools.empty() || !dependency->typescript)
+                    throw std::runtime_error(module.name + ": imported module has no object pool: " + name);
+                auto from = *dependency->typescript;
+                records->poolDependencies.emplace_back(member, TypeScriptImport{name + "ObjectPool", from.replace_extension()});
+            }
             std::optional<ArchiveOutput> archive;
             if (records->serializationHeader) {
-                const auto& module = graph.modules.at(i);
                 for (auto imported : module.imports) {
                     const auto& dependency = graph.modules.at(imported.value);
                     if (dependency.name == "ArchiveInterface") {

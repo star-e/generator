@@ -4,6 +4,8 @@
 #include "model/Binding.h"
 #include <optional>
 #include <set>
+#include <utility>
+#include <vector>
 
 namespace cc::codegen {
 
@@ -24,6 +26,7 @@ struct RecordOutput {
     std::map<std::string, TypeScriptImport> bases;
     std::map<std::string, std::filesystem::path> externalClasses;
     std::filesystem::path poolModule;
+    std::vector<std::pair<std::string, TypeScriptImport>> poolDependencies;
     std::map<std::string, PoolBinding> pools;
 };
 

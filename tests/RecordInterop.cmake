@@ -217,14 +217,15 @@ foreach(type IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding Descriptor
 endforeach()
 file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n${gfxCodec}")
-source_between(layout "function resetDescriptorSetLayoutInfo " "function createPool<" legacyGraph)
+source_between(layout "function resetDescriptorSetLayoutInfo " "export function saveDescriptor (" legacyGraph)
 string(FIND "${layout}" "export function saveDescriptor (" codecStart)
 if(codecStart EQUAL -1)
     message(FATAL_ERROR "Missing engine layout graph codecs")
 endif()
 string(SUBSTRING "${layout}" ${codecStart} -1 legacyArchive)
 string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
-file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency } from './types';\n"
+file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency, RenderCommonObjectPool } from './types';\n"
+    "import { RecyclePool } from '../../core/memop';\n"
     "import { COCOS_RUNTIME, HTML5 } from 'internal:constants';\n"
     "import { DescriptorSet, DescriptorSetLayout, DescriptorSetLayoutInfo, PipelineLayout, Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n"
@@ -309,6 +310,7 @@ run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     "${enumConsumer}" "${graphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
 run("${consumer}" write "${work}/native.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}" "${dfsCases}")
+run("${node}" "${SOURCE}/tests/consumer/records/layout-pool.cjs" "${work}/js/rendering/custom")
 run("${consumer}" read "${work}/web.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${work}/native.bin" "${work}/web.bin")
 run("${consumer}" layout-write "${work}/layout-native.bin")

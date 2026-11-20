@@ -757,18 +757,30 @@ inline void load(InputArchive& ar, std::vector<bool, Allocator>& bits) {
 };
 
 struct Pool {
+    enum class Reuse { reset, assign, clear, unchanged };
     std::ostringstream resets, factories, fields;
+    size_t count{};
 
-    void add(const std::string& name, const std::string& pool, const std::vector<BoundField>& members, const Order& order) {
+    void add(const std::string& name, const std::string& pool, Reuse reuse,
+             const std::vector<BoundField>& members = {}, const Order& order = {}) {
+        ++count;
         resets << "        this." << pool << ".reset(); // " << name << "\n";
         factories << "    create" << name << " (";
         if (!order.empty()) factories << "\n        " << tsParams(members, order, true, ",\n        ") << ",\n    ";
-        factories << "): " << name << " {\n        const v = this." << pool << ".add(); // " << name << "\n        v.reset(";
-        for (size_t i = 0; i < order.size(); ++i) {
-            if (i) factories << ", ";
-            factories << members.at(order[i]).name;
+        factories << "): " << name << " {\n        const v = this." << pool << ".add(); // " << name << "\n";
+        if (reuse == Reuse::clear) factories << "        v.clear();\n";
+        if (reuse == Reuse::assign) {
+            for (const auto i : order) factories << "        v." << members.at(i).name << " = " << members.at(i).name << ";\n";
         }
-        factories << ");\n        return v;\n    }\n";
+        if (reuse == Reuse::reset) {
+            factories << "        v.reset(";
+            for (size_t i = 0; i < order.size(); ++i) {
+                if (i) factories << ", ";
+                factories << members.at(order[i]).name;
+            }
+            factories << ");\n";
+        }
+        factories << "        return v;\n    }\n";
         fields << "    private readonly " << pool << ": RecyclePool<" << name << "> = createPool(" << name << ");\n";
     }
 };
@@ -788,7 +800,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     // By-value member types are defined before the record that contains them.
     std::map<uint32_t, std::string> nestedResets;
     std::string enumImports;
-    size_t poolCount{};
     bool previousTag = false;
     bool usesGraphRuntime = false;
     const std::set<std::string> keepNone;
@@ -803,6 +814,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             continue;
         }
         previousTag = false;
+        const auto entry = output.pools.find(node.name);
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
             const auto fields = bindFields(graph, owner, model->fields, deps, output.typescript.has_value(), nestedResets);
             std::string inputArchive;
@@ -813,6 +825,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, inputArchive);
             if (output.typescript) {
                 emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields);
+                if (entry != output.pools.end()) {
+                    if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");
+                    pool.add(node.name, entry->second.member, Pool::Reuse::clear);
+                }
                 if (model->hierarchy) usesGraphRuntime = true;
             }
             if (model->serializable) {
@@ -868,6 +884,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (const auto impl = output.externalClasses.find(node.name); impl != output.externalClasses.end()) {
             deps.valueImports[impl->second.generic_string()].insert(node.name);
             ts << "export { " << node.name << " };\n";
+            if (entry != output.pools.end()) {
+                if (!members.empty()) throw std::runtime_error(node.qualifiedName + ": externally implemented pool record must be empty");
+                pool.add(node.name, entry->second.member, Pool::Reuse::unchanged);
+            }
             continue;
         }
         Order order(members.size());
@@ -878,7 +898,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 throw std::runtime_error(node.qualifiedName + ": ambiguous partial TypeScript constructor");
             order = *ctor;
         }
-        const auto entry = output.pools.find(node.name);
         const auto rule = pendingResets.extract(node.name);
         const ResetBinding constructorReset;
         const auto& binding = rule.empty() ? constructorReset : rule.mapped();
@@ -895,8 +914,14 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
         }
         std::optional<Order> reset;
-        if (entry != output.pools.end() || !rule.empty())
+        if (entry != output.pools.end() && entry->second.assignFields) {
+            if (order.size() != members.size() || std::ranges::any_of(members, &BoundField::readonly))
+                throw std::runtime_error(node.qualifiedName + ": pool assign requires constructor parameters for all fields and writable fields");
+            pool.add(node.name, entry->second.member, Pool::Reuse::assign, members, order);
+        } else if (entry != output.pools.end() || !rule.empty()) {
             reset = resetParameters(node.name, members, order, retained, binding);
+            if (entry != output.pools.end()) pool.add(node.name, entry->second.member, Pool::Reuse::reset, members, *reset);
+        }
         if (reset) {
             std::string args;
             for (auto index : *reset) {
@@ -908,16 +933,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             nestedResets.emplace(id.value, ".reset(" + args + ")");
         }
-        if (entry != output.pools.end()) {
-            ++poolCount;
-            pool.add(node.name, entry->second.member, members, *reset);
-        }
         const auto base = output.bases.find(node.name);
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
         tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained,
                  base == output.bases.end() ? "" : base->second.name);
     }
-    if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
+    if (pool.count != output.pools.size()) throw std::runtime_error("unknown pool type in " + module.name);
     if (!pendingResets.empty()) throw std::runtime_error("unknown reset record " + pendingResets.begin()->first + " in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
     if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
@@ -957,6 +978,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     script << preamble << "/* eslint-disable max-len */\n";
     // '$' cannot occur in a spec identifier, including declarations named ED, OutE or OutEI.
     if (usesGraphRuntime) script << "import * as cc$graph from '" << modulePath("cocos/rendering/custom/graph", *output.typescript) << "';\n";
+    for (const auto& [member, dependency] : output.poolDependencies)
+        deps.typeImports[dependency.from.generic_string()].insert(dependency.name);
     writeImports(script, deps.valueImports, *output.typescript, false);
     for (const auto& [modulePath, names] : deps.valueImports) {
         auto it = deps.typeImports.find(modulePath);
@@ -965,12 +988,21 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (it->second.empty()) deps.typeImports.erase(it);
     }
     writeImports(script, deps.typeImports, *output.typescript, true);
-    if (poolCount) {
+    if (pool.count) {
         script << "import { RecyclePool } from '" << modulePath(output.poolModule, *output.typescript) << "';\n";
         ts << "\nfunction createPool<T> (Constructor: new() => T): RecyclePool<T> {\n"
            << "    return new RecyclePool<T>(() => new Constructor(), 16);\n}\n"
-           << "\nexport class " << module.name << "ObjectPool {\n    constructor () {\n    }\n    reset (): void {\n"
-           << pool.resets.str() << "    }\n" << pool.factories.str() << pool.fields.str() << "}\n";
+           << "\nexport class " << module.name << "ObjectPool {\n    constructor (";
+        std::string params;
+        for (const auto& [member, dependency] : output.poolDependencies) {
+            if (!params.empty()) params += ", ";
+            params += member + ": " + dependency.name;
+        }
+        ts << params << ") {\n";
+        for (const auto& [member, dependency] : output.poolDependencies) ts << "        this." << member << " = " << member << ";\n";
+        ts << "    }\n    reset (): void {\n" << pool.resets.str() << "    }\n" << pool.factories.str();
+        for (const auto& [member, dependency] : output.poolDependencies) ts << "    public readonly " << member << ": " << dependency.name << ";\n";
+        ts << pool.fields.str() << "}\n";
     }
     if (!archives.script.view().empty()) {
         auto path = archive->layout.typescript;

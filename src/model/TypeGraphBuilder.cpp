@@ -412,6 +412,10 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                     if (method->cppOnly) reject("cannot assign a TS name to @cppOnly method " + node.name + "." + name);
                 }
                 methods.emplace(id.value, rule.methods);
+            } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {
+                if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.reset || rule.base ||
+                    !rule.from.empty() || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() || rule.jsonMapKey)
+                    reject("expected a graph pool binding");
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
                 if (!isRecord || !rule.methods.empty()) reject("expected a record binding");
                 node.typescriptJsonMapKey = rule.jsonMapKey;

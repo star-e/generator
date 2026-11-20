@@ -255,7 +255,8 @@ private:
             } else if (rule.kind == BindingTarget::classType && key == "pool") {
                 auto& pool = rule.pool.emplace();
                 pool.member = identifier();
-                if (accept("keep")) {
+                if (accept("assign")) pool.assignFields = true;
+                else if (accept("keep")) {
                     expect("(");
                     do { uniqueName(pool.keepOnReset); } while (accept(","));
                     expect(")");
@@ -313,6 +314,11 @@ private:
                 if (accept("poolModule")) {
                     if (!rules.poolModule.empty()) fail("duplicate poolModule binding");
                     rules.poolModule = bindingPath();
+                    expect(";");
+                } else if (accept("poolDependency")) {
+                    const auto member = identifier();
+                    expect(":");
+                    rules.poolDependencies.push_back({member, identifier()});
                     expect(";");
                 } else rules.typescript.push_back(typeScriptBinding());
             }

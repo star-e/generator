@@ -26,6 +26,7 @@ const ts = 'cocos/rendering/custom/types.ts';
 const layoutCpp = 'native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h';
 const layoutTs = 'cocos/rendering/custom/layout-graph.ts';
 const layout = require(path.join(jsDir, 'layout-graph.js'));
+compareDeclaration(layoutTs, 'export class LayoutGraphObjectPool {', '}');
 for (const [name, values] of Object.entries(layoutEnums)) {
     compareDeclaration(layoutCpp, `enum class ${name} : uint8_t {`, '};');
     compareDeclaration(layoutTs, `export const enum ${name} {`, '}');
