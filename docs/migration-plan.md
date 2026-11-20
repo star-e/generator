@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 38 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 39 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -158,6 +158,8 @@ TS 后端从同一声明生成 `LayoutGraphValue`、类别到载荷的类型映�
 C++ 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`out_edges(v)` 和 `out_degree(v)` 直接复用子边迭代器和计数。用 `source(e)`、`target(e)` 读取端点，`edge(u, v)` 通过父节点在 O(1) 时间内返回 `std::pair<Edge, bool>`。未命中时两个端点均为 `null_vertex()`。
 
 包含 `cocos/base/GraphDFS.h` 后可调用 `cc::graph::depthFirstSearch(g, visitor, colors, stack)`。颜色表支持按顶点下标访问，栈可用 `std::vector<cc::graph::DfsFrame<LayoutGraph>>` 或 PMR vector。`depthFirstVisit(g, root, visitor, colors, stack, terminate)` 沿用已有颜色，可选谓词在发现顶点后决定是否跳过其出边。互操作测试将原生图拓扑和每个回调写入样本，TS 用同一拓扑逐项比较，包括 25,000 层的长链。[C++ DFS](../runtime/cpp/GraphDFS.h) · [原生消费者](../tests/consumer/records/GraphDFSConsumer.cpp) · [TS 消费者](../tests/consumer/records/graph-dfs-consumer.ts)
+
+在 C++ 中，`cc::graph::ReferenceGraphView refs{graph}` 让 DFS 沿父子引用遍历。再用 `cc::graph::FilteredGraphView visible{refs, keep}` 按顶点谓词筛选，两个视图都借用底层图。颜色表按原图的顶点编号分配。被过滤的起点不触发回调。若共享子节点还挂在另一个可见父节点下，从该父节点仍能访问它。TS 使用引擎的 `ReferenceGraphView`。互操作用例逐项对照两端的进入、退出及边事件。[原生视图](../runtime/cpp/GraphView.h) · [C++ 用例](../tests/consumer/records/GraphDFSConsumer.cpp) · [TS 用例](../tests/consumer/records/graph-dfs-consumer.ts)
 
 原生运行时按消费者切换。`NativeExecutor.cpp` 在过滤视图上利用发现和完成事件执行渲染命令，`FrameGraphDispatcher.cpp` 在启用 pass 重排时计算传递闭包。阶段 3 迁移图遍历、引用视图和过滤视图时，同批适配执行器等手写调用方。阶段 4 接管 `FGDispatcher` 时，再用 Cocos 的可达性实现验证重排约束。[原生执行器](../../cocos4/native/cocos/renderer/pipeline/custom/NativeExecutor.cpp) · [帧图调度](../../cocos4/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp)
 

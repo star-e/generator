@@ -34,6 +34,7 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     cocos/rendering/custom/graph-dfs.ts
     cocos/rendering/custom/layout-access.ts
     native/cocos/base/GraphDFS.h
+    native/cocos/base/GraphView.h
     native/cocos/base/GraphEdges.h
     native/cocos/base/Pmr.h
     native/cocos/renderer/pipeline/custom/LayoutGraphFwd.h

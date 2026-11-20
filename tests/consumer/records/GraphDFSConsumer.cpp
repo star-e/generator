@@ -1,7 +1,9 @@
 #include "cocos/base/GraphDFS.h"
+#include "cocos/base/GraphView.h"
 #include "ShiftProbe.h"
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
+#include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <algorithm>
@@ -48,6 +50,11 @@ struct Trace {
         events.clear();
     }
 
+    void expect(const std::vector<std::string>& expected) {
+        if (events != expected) throw std::runtime_error("Unexpected filtered RenderGraph DFS events");
+        events.clear();
+    }
+
 private:
     void vertex(const char* name, Vertex v, GraphColor expected) {
         if (colors.at(v) != expected) throw std::runtime_error(std::string("Wrong vertex color at ") + name);
@@ -59,6 +66,65 @@ private:
     const std::vector<GraphColor>& colors;
     std::vector<std::string> events;
 };
+
+void checkRenderGraphViews(cc::render::OutputArchive& samples, boost::container::pmr::memory_resource* scratch) {
+    using namespace cc::render;
+    RenderGraph graph{scratch};
+    const auto pass = graph.add_vertex(RasterPassTag{}, "pass");
+    const auto queue = graph.add_vertex(Queue_{}, "queue", pass);
+    const auto scene = graph.add_vertex(Scene_{}, "scene", queue);
+    const auto compute = graph.add_vertex(ComputeTag{}, "compute");
+    graph.add_edge(pass, compute);
+
+    cc::graph::ReferenceGraphView refs{graph};
+    std::vector<GraphColor> colors(refs.num_vertices(), GraphColor::WHITE);
+    Trace trace(colors);
+    ccstd::pmr::vector<DfsFrame<decltype(refs)>> stack{scratch};
+    depthFirstVisit(refs, pass, trace, colors, stack);
+    trace.write(samples);
+
+    const auto alternate = graph.add_vertex(Queue_{}, "alternate", pass);
+    graph.add_reference(alternate, scene);
+    colors.assign(refs.num_vertices(), GraphColor::WHITE);
+    depthFirstVisit(refs, pass, trace, colors, stack);
+    trace.write(samples);
+
+    for (const auto v : {pass, scene, compute}) graph.getValid(v) = true;
+    cc::graph::FilteredGraphView visible{refs, [&](Vertex v) { return graph.getValid(v); }};
+    ccstd::pmr::vector<DfsFrame<decltype(visible)>> filteredStack{scratch};
+    colors.assign(refs.num_vertices(), GraphColor::WHITE);
+    depthFirstVisit(visible, pass, trace, colors, filteredStack);
+    trace.expect({"start0", "open0", "close0"});
+
+    graph.getValid(alternate) = true;
+    const auto vertices = visible.vertices();
+    if (std::vector<Vertex>(vertices.begin(), vertices.end()) != std::vector<Vertex>{pass, scene, compute, alternate})
+        throw std::runtime_error("Filtered vertices lost their original IDs or order");
+    const auto excludedEdges = visible.out_edges(queue);
+    if (excludedEdges.begin() != excludedEdges.end()) throw std::runtime_error("Excluded queue has visible edges");
+    depthFirstVisit(visible, queue, trace, colors, filteredStack);
+    trace.expect({});
+    depthFirstVisit(visible, pass, trace, colors, filteredStack);
+    trace.expect({"start0", "open0", "examine0>4", "tree0>4", "open4", "examine4>2", "tree4>2", "open2",
+                  "close2", "finish4>2", "close4", "finish0>4", "close0"});
+    if (colors.at(queue) != GraphColor::WHITE || colors.at(compute) != GraphColor::WHITE)
+        throw std::runtime_error("Rooted reference traversal reached an excluded queue or execution dependency");
+
+    depthFirstSearch(visible, trace, colors, filteredStack, queue);
+    trace.expect({"init0", "init2", "init3", "init4", "start0", "open0", "examine0>4", "tree0>4", "open4",
+                  "examine4>2", "tree4>2", "open2", "close2", "finish4>2", "close4", "finish0>4", "close0",
+                  "start3", "open3", "close3"});
+
+    cc::graph::FilteredGraphView dependencies{graph, [&](Vertex v) { return graph.getValid(v); }};
+    ccstd::pmr::vector<DfsFrame<decltype(dependencies)>> dependencyStack{scratch};
+    colors.assign(graph.num_vertices(), GraphColor::WHITE);
+    depthFirstVisit(dependencies, pass, trace, colors, dependencyStack);
+    trace.expect({"start0", "open0", "examine0>3", "tree0>3", "open3", "close3", "finish0>3", "close0"});
+
+    for (const auto v : graph.vertices()) graph.getValid(v) = false;
+    depthFirstSearch(visible, trace, colors, filteredStack, pass);
+    trace.expect({});
+}
 } // namespace
 
 bool writeDfsCases(const char* path) {
@@ -117,6 +183,7 @@ bool writeDfsCases(const char* path) {
     colors.assign(length, GraphColor::WHITE);
     depthFirstVisit(chain, 0, trace, colors, layoutStack);
     trace.write(samples);
+    checkRenderGraphViews(samples, &scratch);
     file.close();
     return !file.fail() && stack.empty() && layoutStack.empty();
 }

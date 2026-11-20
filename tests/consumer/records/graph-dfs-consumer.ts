@@ -1,9 +1,10 @@
-import { DefaultVisitor, GraphColor, OutE, OutEI } from './graph';
+import { DefaultVisitor, GraphColor, OutE, OutEI, ReferenceGraphView } from './graph';
 import type { edge_descriptor, IncidenceGraph, VertexListGraph } from './graph';
 import { depthFirstSearch, depthFirstVisit } from './graph-dfs';
 import type { InputArchive } from './archive';
 import { DescriptorDB, LayoutGraph, LayoutGraphValue, RenderPassType } from './layout-graph';
 import { HierarchyOnly } from './shift-probe';
+import { ComputePass, RasterPass, RenderData, RenderGraph, RenderGraphValue, RenderQueue, SceneData } from './render-graph';
 
 function check (ok: boolean, message: string): void {
     if (!ok) throw new Error(message);
@@ -117,6 +118,30 @@ export function checkNativeDfs (samples: InputArchive): void {
     check(opened.length === length && opened.every((event, i) => event === 'open' + i), 'Long chain discovery order');
     check(closed.length === length && closed.every((event, i) => event === 'close' + (length - 1 - i)), 'Long chain finish order');
     chainVisitor.compareNative(samples);
+    checkRenderGraphView(samples);
+}
+
+function checkRenderGraphView (samples: InputArchive): void {
+    const graph = new RenderGraph();
+    const pass = graph.addVertex(RenderGraphValue.RasterPass, new RasterPass(), 'pass', '', new RenderData(), true);
+    const queue = graph.addVertex(RenderGraphValue.Queue, new RenderQueue(), 'queue', '', new RenderData(), true, pass);
+    const scene = graph.addVertex(RenderGraphValue.Scene, new SceneData(), 'scene', '', new RenderData(), true, queue);
+    const compute = graph.addVertex(RenderGraphValue.Compute, new ComputePass(), 'compute', '', new RenderData(), true);
+    graph.addEdge(pass, compute);
+    const refs = new ReferenceGraphView(graph);
+    const visit = (expected: string): void => {
+        const color = new Colors(new Array(refs.nv()).fill(GraphColor.WHITE));
+        const visitor = new Trace(color);
+        depthFirstVisit(refs, pass, visitor, color);
+        visitor.expect(expected);
+        visitor.compareNative(samples);
+        check(color.get(compute) === GraphColor.WHITE, 'Ownership DFS followed an execution dependency');
+    };
+    const branch = 'start0 open0 examine0>1 tree0>1 open1 examine1>2 tree1>2 open2 close2 finish1>2 close1 finish0>1 ';
+    visit(branch + 'close0');
+    const alternate = graph.addVertex(RenderGraphValue.Queue, new RenderQueue(), 'alternate', '', new RenderData(), true, pass);
+    graph.addReference(alternate, scene);
+    visit(branch + 'examine0>4 tree0>4 open4 examine4>2 forward/cross4>2 finish4>2 close4 finish0>4 close0');
 }
 
 function addStage (g: LayoutGraph, parent: number): number {

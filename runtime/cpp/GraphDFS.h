@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GraphView.h"
+
 #include <cstdint>
 #include <optional>
 #include <type_traits>
@@ -64,6 +66,7 @@ void depthFirstVisit(const Graph& graph, typename DfsFrame<Graph>::Vertex root, 
     };
 
     stack.clear();
+    if (!detail::acceptsVertex(graph, root)) return;
     visitor.startVertex(root, graph);
     discover(root, std::nullopt);
     while (!stack.empty()) {

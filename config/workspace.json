@@ -102,6 +102,7 @@
       "typescript": "cocos/rendering/custom/layout-graph.ts",
       "runtimeFiles": {
         "native/cocos/base/GraphDFS.h": "../runtime/cpp/GraphDFS.h",
+        "native/cocos/base/GraphView.h": "../runtime/cpp/GraphView.h",
         "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.h": "../runtime/cpp/LayoutGraphPrint.h",
         "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.h": "../runtime/cpp/LayoutGraphDescriptorSet.h",
         "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp": "../runtime/cpp/LayoutGraphDescriptorSet.cpp",
