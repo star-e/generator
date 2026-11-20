@@ -170,9 +170,11 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         }
         return m;
     }
-    if (const auto* ext = std::get_if<ExternalTypeNode>(&node.data); ext && !node.typescriptArchiveModule.empty() && !field.isNullable) {
-        if (!field.initializer.empty()) invalid(field, "expected a default-constructed archive value");
+    if (const auto* ext = std::get_if<ExternalTypeNode>(&node.data); ext && !field.isNullable &&
+        (ext->constructorConstRef || !node.typescriptArchiveModule.empty() || (ext->isStruct && !node.typescriptModule.empty()))) {
+        if (!field.initializer.empty()) invalid(field, "expected a default-constructed external value");
         m.cpp = nativeType(graph, module, field.type.type, deps);
+        m.byConstReference = ext->constructorConstRef;
         m.move = true;
         m.usesAllocator = ext->isPmr;
         m.checkDefaultConstruction = true;
@@ -282,7 +284,8 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, ModuleId owner, const
 
 using Order = std::vector<uint32_t>;
 
-Order bindTypeScriptConstructor(const TypeNode& node, const RecordType& record, std::vector<BoundField>& fields) {
+Order bindTypeScriptConstructor(const TypeNode& node, const RecordType& record, std::vector<BoundField>& fields,
+                                const RecordOutput& output) {
     auto constructors = record.constructors;
     if (std::ranges::any_of(record.fields, &FieldInfo::cppOnly)) {
         Order indices(fields.size());
@@ -301,7 +304,14 @@ Order bindTypeScriptConstructor(const TypeNode& node, const RecordType& record, 
     if (constructors.empty()) {
         Order order(fields.size());
         std::iota(order.begin(), order.end(), 0U);
-        return order;
+        constructors.push_back(std::move(order));
+    }
+    if (const auto selected = output.constructors.find(node.name); selected != output.constructors.end()) {
+        for (const auto& candidate : constructors) {
+            if (std::ranges::equal(candidate, selected->second, {}, [&](auto i) -> std::string_view { return fields[i].name; }))
+                return candidate;
+        }
+        throw std::runtime_error(node.qualifiedName + ": TypeScript constructor does not match a declared constructor");
     }
     const auto& order = *std::ranges::max_element(constructors, {}, &Order::size);
     if (order.size() < fields.size() && std::ranges::any_of(constructors, [&](const Order& other) {
@@ -359,11 +369,12 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
             if (std::ranges::find(ctor, i) == ctor.end()) continue;
             const auto& m = members[i];
             out << (first ? "    : " : ",\n      ") << m.name << "(";
-            if (m.move) {
+            const bool moveInput = m.move && !m.byConstReference;
+            if (moveInput) {
                 headers.insert("utility");
                 out << "std::move(";
             }
-            out << m.name << "In" << (m.move ? "))" : ")");
+            out << m.name << "In" << (moveInput ? "))" : ")");
             first = false;
         }
         out << " {}\n";
@@ -390,7 +401,8 @@ void pmrInitializers(std::ostream& source, const std::vector<BoundField>& member
         if (!m.usesAllocator && !hasArg) continue;
         std::string value;
         if (hasArg) value = args == CtorArgs::fields ? m.name + "In" : "rhs." + m.name;
-        source << (first ? "\n: " : ",\n  ") << m.name << "(" << pmrArguments(m, value, args != CtorArgs::copy) << ")";
+        const bool moveValue = args == CtorArgs::move || (args == CtorArgs::fields && !m.byConstReference);
+        source << (first ? "\n: " : ",\n  ") << m.name << "(" << pmrArguments(m, value, moveValue) << ")";
         first = false;
     }
     source << " {}\n";
@@ -402,7 +414,7 @@ std::string pmrExceptionSpec(const std::string& recordName, const std::vector<Bo
         const auto& m = members[i];
         if (fields.empty() ? !m.checkDefaultConstruction : m.scalar) continue;
         const bool supplied = std::ranges::find(fields, i) != fields.end();
-        const auto args = pmrArguments(m, supplied ? m.name + "In" : "", true);
+        const auto args = pmrArguments(m, supplied ? m.name + "In" : "", !m.byConstReference);
         const auto init = args.empty() && !m.cppDefault.empty() ? "{" + m.cppDefault + "}" : "(" + args + ")";
         if (!checks.empty()) checks += " && ";
         if (!supplied && !m.emptyPmrArgument.empty()) checks += "noexcept(" + args + ")";
@@ -447,13 +459,13 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
     header << '\n';
 }
 
-void cppComparisons(std::ostream& out, const std::string& name, const std::vector<BoundField>& members, const RecordType& record) {
+void cppComparisons(std::ostream& out, const std::string& name, const std::vector<std::string_view>& elements, const RecordType& record) {
     const auto params = "(const " + name + "& lhs, const " + name + "& rhs) noexcept {\n";
     auto writeTuple = [&](std::string_view object) {
         out << "std::forward_as_tuple(";
-        for (size_t i = 0; i < members.size(); ++i) {
+        for (size_t i = 0; i < elements.size(); ++i) {
             if (i) out << ", ";
-            out << object << "." << members[i].name;
+            out << object << "." << elements[i];
         }
         out << ")";
     };
@@ -472,12 +484,12 @@ void cppComparisons(std::ostream& out, const std::string& name, const std::vecto
     if (record.compareGreater) out << "\ninline bool operator>" << params << "    return rhs < lhs;\n}\n";
 }
 
-void cppHash(std::ostream& declarations, std::ostream& definitions, const TypeNode& node, const std::vector<BoundField>& members) {
+void cppHash(std::ostream& declarations, std::ostream& definitions, const TypeNode& node, const std::vector<std::string_view>& elements) {
     const auto& type = node.qualifiedName;
     const auto signature = "operator()(const " + type + "& val) const noexcept";
     declarations << "\ntemplate <>\nstruct hash<" << type << "> {\n    hash_t " << signature << ";\n};\n";
     definitions << "\ninline hash_t hash<" << type << ">::" << signature << " {\n    hash_t seed = 0;\n";
-    for (const auto& m : members) definitions << "    hash_combine(seed, val." << m.name << ");\n";
+    for (const auto name : elements) definitions << "    hash_combine(seed, val." << name << ");\n";
     definitions << "    return seed;\n}\n";
 }
 
@@ -945,10 +957,16 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements);
             archives.add(graph, archive->module, node, fields, output.typescript.has_value() && !node.typescriptNumber, deps.valueImports);
         }
-        if (record->hashable) cppHash(hashDeclarations, hashDefinitions, node, members);
-        if (record->compareEqual || record->compareLess) {
-            deps.headers.insert("tuple");
-            cppComparisons(cpp, node.name, members, *record);
+        if (record->hashable || record->compareEqual || record->compareLess) {
+            std::vector<std::string_view> elements;
+            for (const auto& field : record->fields) {
+                if (!field.notElement) elements.push_back(field.name);
+            }
+            if (record->hashable) cppHash(hashDeclarations, hashDefinitions, node, elements);
+            if (record->compareEqual || record->compareLess) {
+                deps.headers.insert("tuple");
+                cppComparisons(cpp, node.name, elements, *record);
+            }
         }
         if (!output.typescript || node.typescriptNumber) continue;
         if (const auto impl = output.externalClasses.find(node.name); impl != output.externalClasses.end()) {
@@ -961,7 +979,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             continue;
         }
-        const Order order = bindTypeScriptConstructor(node, *record, members);
+        const Order order = bindTypeScriptConstructor(node, *record, members, output);
         const auto rule = pendingResets.extract(node.name);
         const ResetBinding constructorReset;
         const auto& binding = rule.empty() ? constructorReset : rule.mapped();
@@ -973,8 +991,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 const auto member = std::ranges::find(members, field, &BoundField::name);
                 if (member == members.end()) throw std::runtime_error(node.qualifiedName + ": unknown reset field " + field);
                 if (retained.contains(field)) throw std::runtime_error(node.qualifiedName + "." + field + ": reset conflicts with keepOnReset");
-                deps.valueImports[hook.from.generic_string()].insert(hook.name);
-                member->tsReset = hook.name + "(this." + field + ")";
+                if (hook.from.empty()) {
+                    member->tsReset = "this." + field + "." + hook.name + "()";
+                } else {
+                    deps.valueImports[hook.from.generic_string()].insert(hook.name);
+                    member->tsReset = hook.name + "(this." + field + ")";
+                }
             }
         }
         std::optional<Order> reset;

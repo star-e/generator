@@ -8,6 +8,43 @@ import GfxResource;
 import RenderWindow;
 
 namespace cc::render {
+    @comparison("==") @hash struct ClearValue {
+        x: double = 0;
+        y: double = 0;
+        z: double = 0;
+        w: double = 0;
+        constructor(x, y, z, w);
+    }
+
+    @comparison("==") @hash struct RasterView {
+        slotName: ccstd::pmr::string;
+        slotName1: ccstd::pmr::string;
+        accessType: AccessType = AccessType::WRITE;
+        attachmentType: AttachmentType = AttachmentType::RENDER_TARGET;
+        loadOp: gfx::LoadOp = gfx::LoadOp::LOAD;
+        storeOp: gfx::StoreOp = gfx::StoreOp::STORE;
+        clearFlags: gfx::ClearFlagBit = gfx::ClearFlagBit::ALL;
+        readonly clearColor: gfx::Color;
+        @notElement slotID: uint32_t = 0;
+        shaderStageFlags: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
+        constructor(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags);
+        constructor(slotName, slotName1, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags);
+    }
+
+    @comparison("==") @hash struct ComputeView {
+        name: ccstd::pmr::string;
+        accessType: AccessType = AccessType::READ;
+        plane: uint32_t = 0;
+        clearFlags: gfx::ClearFlagBit = gfx::ClearFlagBit::NONE;
+        clearValueType: ClearValueType = ClearValueType::NONE;
+        @notElement readonly clearValue: ClearValue;
+        shaderStageFlags: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
+        constructor(name, accessType, clearFlags, clearValueType, clearValue, shaderStageFlags);
+        constructor(name, accessType, plane, clearFlags, clearValueType, clearValue, shaderStageFlags);
+        fn isRead() const -> bool => "accessType != AccessType::WRITE";
+        fn isWrite() const -> bool => "accessType != AccessType::READ";
+    }
+
     struct ResourceDesc {
         dimension: ResourceDimension = ResourceDimension::BUFFER;
         alignment: uint32_t = 0;
@@ -145,6 +182,18 @@ namespace cc::render {
 binding typescript {
     poolModule "cocos/core/memop";
     poolDependency renderCommon: RenderCommon;
+    ClearValue => class { pool cv; };
+    RasterView => class {
+        pool rv;
+        constructor(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags);
+        reset(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, shaderStageFlags);
+        field clearColor reset with reset();
+    };
+    ComputeView => class {
+        pool cv1;
+        constructor(name, accessType, clearFlags, clearValueType, clearValue, shaderStageFlags);
+        reset(name, accessType, clearFlags, clearValueType, shaderStageFlags);
+    };
     ResourceDesc => class { pool rd; reset defaults; };
     ResourceTraits => class { pool rt; reset constructor; };
     ResourceStates => class { pool rs1; reset defaults; };

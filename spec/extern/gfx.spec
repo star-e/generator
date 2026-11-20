@@ -1,5 +1,16 @@
 module Gfx;
 namespace cc::gfx {
+    enum class LoadOp : uint32_t { LOAD, CLEAR, DISCARD }
+    enum class StoreOp : uint32_t { STORE, DISCARD }
+    flags ClearFlagBit : uint32_t {
+        NONE = 0,
+        COLOR = 0x1,
+        DEPTH = 0x2,
+        STENCIL = 0x4,
+        DEPTH_STENCIL = 0x6,
+        ALL = 0x7,
+    }
+
     enum class TextureType : uint32_t {
         TEX1D,
         TEX2D,
@@ -297,6 +308,9 @@ namespace cc::gfx {
 }
 
 binding typescript {
+    LoadOp => LoadOp from "cocos/gfx";
+    StoreOp => StoreOp from "cocos/gfx";
+    ClearFlagBit => ClearFlagBit from "cocos/gfx";
     TextureType => TextureType from "cocos/gfx";
     TextureFlagBit => TextureFlagBit from "cocos/gfx";
     SampleCount => SampleCount from "cocos/gfx";

@@ -145,6 +145,7 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
+        if (rule.constructor) output.constructors.emplace(name, *rule.constructor);
         if (rule.reset) output.resets.emplace(name, *rule.reset);
         if (!rule.fieldResets.empty()) {
             if (!rule.reset && !rule.pool)
@@ -153,7 +154,7 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
         }
         if (rule.base) output.bases.emplace(name, *rule.base);
         if (rule.kind == BindingTarget::classType && !rule.from.empty()) {
-            if (rule.base || rule.reset || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() ||
+            if (rule.base || rule.constructor || rule.reset || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() ||
                 (rule.pool && (rule.pool->assignFields || !rule.pool->keepOnReset.empty()))) invalidBinding(rule, "externally implemented class");
             output.externalClasses.emplace(name, rule.from);
         }

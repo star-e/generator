@@ -1,7 +1,7 @@
 extern module GfxResource;
 namespace cc::gfx {
     struct SamplerInfo;
-    struct Color;
+    @constRef struct Color;
     class RenderPass;
     class Buffer;
     class Texture;

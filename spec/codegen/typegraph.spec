@@ -35,6 +35,7 @@ namespace codegen {
         transient: bool = false;
         typescriptInitializer: std::string;
         cppOnly: bool = false;
+        notElement: bool = false;
     }
     struct Enumerator {
         name: std::string;
@@ -51,6 +52,7 @@ namespace codegen {
         isStruct: bool = false;
         isString: bool = false;
         isPmr: bool = false;
+        constructorConstRef: bool = false;
         container: ContainerKind = ContainerKind::None;
     }
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }

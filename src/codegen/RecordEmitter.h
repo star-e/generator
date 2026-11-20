@@ -22,6 +22,7 @@ struct RecordOutput {
     std::optional<std::filesystem::path> typescript;
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
+    std::map<std::string, std::vector<std::string>> constructors;
     std::map<std::string, ResetBinding> resets;
     std::map<std::string, std::map<std::string, TypeScriptImport>> fieldResets;
     std::map<std::string, TypeScriptImport> bases;

@@ -112,7 +112,7 @@
       "backend": "model",
       "types": {
         "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "Color": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "Color": { "header": "cocos/renderer/gfx-base/GFXDef.h" },
         "RenderPass": { "header": "cocos/renderer/gfx-base/GFXRenderPass.h" },
         "Buffer": { "header": "cocos/renderer/gfx-base/GFXBuffer.h" },
         "Texture": { "header": "cocos/renderer/gfx-base/GFXTexture.h" },
@@ -143,6 +143,9 @@
         "TextureType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "TextureFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "LoadOp": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "StoreOp": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "ClearFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "MemoryAccessBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "ViewDimension": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },

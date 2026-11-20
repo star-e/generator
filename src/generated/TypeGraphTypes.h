@@ -57,6 +57,7 @@ struct FieldInfo {
     bool transient = false;
     std::string typescriptInitializer;
     bool cppOnly = false;
+    bool notElement = false;
 };
 
 struct Enumerator {
@@ -81,6 +82,7 @@ struct ExternalTypeNode {
     bool isStruct = false;
     bool isString = false;
     bool isPmr = false;
+    bool constructorConstRef = false;
     ContainerKind container = ContainerKind::None;
 };
 

@@ -48,6 +48,7 @@ struct TypeScriptBinding {
     std::map<std::string, TypeScriptImport> fieldResets;
     std::optional<TypeScriptImport> base;
     std::optional<PoolBinding> pool;
+    std::optional<std::vector<std::string>> constructor;
     std::optional<ResetBinding> reset;
     bool jsonMapKey{};
     bool names{};

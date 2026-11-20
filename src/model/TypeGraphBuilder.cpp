@@ -143,7 +143,7 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
                 throw std::runtime_error(use.location.describe() + ": invalid enum default " + field.initializer);
             }
         }
-        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly});
+        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement});
     }
     return result;
 }
@@ -205,7 +205,8 @@ TypeData declare(const Declaration& decl) {
     if (std::holds_alternative<Record>(decl.data)) return RecordType{};
     if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) {
         return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString,
-                                .isPmr = external->isPmr, .container = external->container};
+                                .isPmr = external->isPmr, .constructorConstRef = external->constructorConstRef,
+                                .container = external->container};
     }
     return InterfaceType{};
 }
@@ -431,7 +432,7 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 }
                 methods.emplace(id.value, rule.methods);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {
-                if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.reset || rule.base ||
+                if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.constructor || rule.reset || rule.base ||
                     !rule.from.empty() || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() || rule.jsonMapKey)
                     reject("expected a graph pool binding");
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {

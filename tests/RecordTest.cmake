@@ -23,6 +23,9 @@ check_resource_error("fenceValue: uint64_t = 0" "fenceValue: uint64_t = 18446744
     "invalid uint64_t default")
 check_resource_error("struct RenderSwapchain" "@serialize struct RenderSwapchain"
     "@cppOnly field in a serializable record requires @transient")
+check_resource_error("pool cv;" "pool cv; constructor(x, z);"
+    "ClearValue: TypeScript constructor does not match a declared constructor")
+check_resource_error("@notElement slotID" "@notElement @notElement slotID" "duplicate @notElement")
 string(REPLACE "constructor(swapchain, isDepthStencil);" [=[
     @cppOnly nativeFence: uint64_t = 18446744073709551615;
     constructor(swapchain, isDepthStencil);
@@ -32,6 +35,9 @@ file(WRITE "${resourceSpec}" "${changed}")
 run(${generate})
 file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderGraphTypes.h" nativeResource)
 file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" webResource)
+if(NOT nativeResource MATCHES "const gfx::Color& clearColorIn")
+    message(FATAL_ERROR "RasterView must accept the external Color by const reference")
+endif()
 if(NOT nativeResource MATCHES "nativeFence[{]18446744073709551615ULL[}]" OR webResource MATCHES "nativeFence" OR
    NOT webResource MATCHES "constructor [(]swapchain: Swapchain [|] null = null, isDepthStencil = false[)]")
     message(FATAL_ERROR "RenderSwapchain must retain the native uint64_t and bind the visible constructor fields")

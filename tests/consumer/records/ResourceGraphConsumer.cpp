@@ -6,6 +6,57 @@
 #include <utility>
 
 namespace {
+template<class... Fields>
+ccstd::hash_t hashFields(const Fields&... fields) {
+    ccstd::hash_t seed = 0;
+    (ccstd::hash_combine(seed, fields), ...);
+    return seed;
+}
+
+bool checkRenderViews() {
+    using namespace cc::render;
+    namespace gfx = cc::gfx;
+    const ClearValue value{1, 2, 3, 4};
+    if (value == ClearValue{} || value == ClearValue{1, 2, 3, 5} ||
+        ccstd::hash<ClearValue>{}(value) != hashFields(value.x, value.y, value.z, value.w)) return false;
+
+    boost::container::pmr::monotonic_buffer_resource arena, other;
+    const gfx::Color color{0.25F, 0.5F, 0.75F, 1.F};
+    RasterView raster{"color", "resolve", AccessType::WRITE, AttachmentType::RENDER_TARGET,
+                      gfx::LoadOp::CLEAR, gfx::StoreOp::STORE, gfx::ClearFlagBit::COLOR, color,
+                      gfx::ShaderStageFlagBit::FRAGMENT, &arena};
+    RasterView rasterCopy{raster, &other};
+    rasterCopy.slotID = 9;
+    const auto rasterHash = hashFields(raster.slotName, raster.slotName1, raster.accessType, raster.attachmentType,
+                                       raster.loadOp, raster.storeOp, raster.clearFlags, raster.clearColor, raster.shaderStageFlags);
+    if (rasterCopy.slotName1.get_allocator().resource() != &other || rasterCopy.slotName1 != "resolve" ||
+        raster != rasterCopy || ccstd::hash<RasterView>{}(raster) != rasterHash ||
+        ccstd::hash<RasterView>{}(rasterCopy) != rasterHash) return false;
+    rasterCopy.clearColor.w = 0.F;
+    if (raster == rasterCopy) return false;
+    RasterView singleSlot{"color", raster.accessType, raster.attachmentType, raster.loadOp, raster.storeOp,
+                          raster.clearFlags, color, raster.shaderStageFlags, &arena};
+    if (!singleSlot.slotName1.empty() || singleSlot == raster) return false;
+
+    ComputeView compute{"storage", AccessType::READ_WRITE, 3, gfx::ClearFlagBit::COLOR,
+                        ClearValueType::FLOAT_TYPE, value, gfx::ShaderStageFlagBit::COMPUTE, &arena};
+    ComputeView computeCopy{compute, &other};
+    if (computeCopy.clearValue != value || computeCopy.get_allocator().resource() != &other ||
+        !compute.isRead() || !compute.isWrite()) return false;
+    computeCopy.clearValue = {};
+    const auto computeHash = hashFields(compute.name, compute.accessType, compute.plane, compute.clearFlags,
+                                        compute.clearValueType, compute.shaderStageFlags);
+    if (compute != computeCopy || ccstd::hash<ComputeView>{}(compute) != computeHash ||
+        ccstd::hash<ComputeView>{}(computeCopy) != computeHash) return false;
+    computeCopy.clearValueType = ClearValueType::INT_TYPE;
+    if (compute == computeCopy) return false;
+    ComputeView firstPlane{"storage", AccessType::READ, compute.clearFlags, compute.clearValueType,
+                           value, compute.shaderStageFlags, &arena};
+    if (firstPlane.plane != 0 || !firstPlane.isRead() || firstPlane.isWrite()) return false;
+    firstPlane.accessType = AccessType::WRITE;
+    return !firstPlane.isRead() && firstPlane.isWrite();
+}
+
 bool checkPersistentRenderPassAndFramebuffer() {
     using cc::render::PersistentRenderPassAndFramebuffer;
     static_assert(!std::is_default_constructible_v<PersistentRenderPassAndFramebuffer>);
@@ -76,7 +127,7 @@ bool checkViewHierarchy() {
 
 bool checkResourceGraph() {
     using namespace cc::render;
-    if (!checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer()) return false;
+    if (!checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer() || !checkRenderViews()) return false;
     static_assert(!std::is_move_constructible_v<ResourceGraph> && !std::is_copy_constructible_v<ResourceGraph>);
     static_assert(std::is_same_v<decltype(ResourceDesc::mipLevels), uint16_t>);
     static_assert(std::is_same_v<decltype(ManagedBuffer::fenceValue), uint64_t>);

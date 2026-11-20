@@ -1,16 +1,37 @@
-import { FormatView, ManagedResource, RenderGraphObjectPool, ResourceDesc, ResourceGraph, ResourceGraphValue,
+import { ClearValue, ComputeView, FormatView, ManagedResource, RasterView, RenderGraphObjectPool, ResourceDesc, ResourceGraph, ResourceGraphValue,
     ResourceStates, ResourceTraits, getResourceGraphValueName } from './render-graph';
 import type { ResourceGraphValueType, ResourceGraphVisitor } from './render-graph';
 import type { Buffer, Texture, Framebuffer, RenderPass, Swapchain } from '../../gfx';
 import type { RenderWindow } from '../../render-scene/core/render-window';
-import { RenderCommonObjectPool, ResourceResidency } from './types';
-import { AccessFlagBit, Color, Format, SamplerInfo, SampleCount, TextureType } from '../../gfx';
+import { AccessType, AttachmentType, ClearValueType, RenderCommonObjectPool, ResourceResidency } from './types';
+import { AccessFlagBit, ClearFlagBit, Color, Format, LoadOp, SamplerInfo, SampleCount, ShaderStageFlagBit, StoreOp, TextureType } from '../../gfx';
 
 function assert(ok: boolean): void {
     if (!ok) throw new Error('ResourceGraph assertion failed');
 }
 
 const resourcePool = new RenderGraphObjectPool(new RenderCommonObjectPool());
+const color = new Color(1, 2, 3, 4);
+const value = new ClearValue(5, 6, 7, 8);
+const directRaster = new RasterView('color', AccessType.READ, AttachmentType.DEPTH_STENCIL, LoadOp.CLEAR,
+    StoreOp.DISCARD, ClearFlagBit.DEPTH, color, ShaderStageFlagBit.FRAGMENT);
+const directCompute = new ComputeView('input', AccessType.READ_WRITE, ClearFlagBit.COLOR, ClearValueType.FLOAT_TYPE,
+    value, ShaderStageFlagBit.COMPUTE);
+assert(directRaster.clearColor === color && directRaster.shaderStageFlags === ShaderStageFlagBit.FRAGMENT);
+assert(directCompute.clearValue === value && directCompute.shaderStageFlags === ShaderStageFlagBit.COMPUTE);
+const raster = resourcePool.createRasterView('write', AccessType.READ_WRITE, AttachmentType.DEPTH_STENCIL,
+    LoadOp.CLEAR, StoreOp.DISCARD, ClearFlagBit.STENCIL, ShaderStageFlagBit.FRAGMENT);
+const compute = resourcePool.createComputeView('read', AccessType.WRITE, ClearFlagBit.COLOR, ClearValueType.INT_TYPE,
+    ShaderStageFlagBit.COMPUTE);
+const pooledValue = resourcePool.createClearValue(1, 2, 3, 4);
+const rasterColor = raster.clearColor;
+const computeValue = compute.clearValue;
+rasterColor.copy(color);
+computeValue.reset(5, 6, 7, 8);
+raster.slotName1 = 'resolve';
+raster.slotID = 9;
+compute.plane = 3;
+assert(pooledValue.w === 4 && raster.shaderStageFlags === ShaderStageFlagBit.FRAGMENT && compute.accessType === AccessType.WRITE);
 const resources: ResourceGraph = resourcePool.createResourceGraph();
 resources.nextFenceValue = 11;
 resources.version = 3;
@@ -136,6 +157,15 @@ assert(children.length === 2 && children.indexOf(depth) >= 0 && children.indexOf
     resources.od(base) === 2 && resources.id(depth) === 1 && resources.edge(base, depth) && resources.reference(depth, mip));
 assert(resources.vertex('texture') === base && resources.vertex('depth') === depth && resources.vertex('depth-mip') === mip);
 resourcePool.reset();
+assert(resourcePool.createRasterView() === raster && raster.slotName === '' && raster.slotName1 === '' && raster.slotID === 0 &&
+    raster.accessType === AccessType.WRITE && raster.attachmentType === AttachmentType.RENDER_TARGET &&
+    raster.loadOp === LoadOp.LOAD && raster.storeOp === StoreOp.STORE && raster.clearFlags === ClearFlagBit.ALL &&
+    raster.shaderStageFlags === ShaderStageFlagBit.NONE && raster.clearColor === rasterColor);
+assert(resourcePool.createComputeView() === compute && compute.name === '' && compute.plane === 0 &&
+    compute.accessType === AccessType.READ && compute.clearFlags === ClearFlagBit.NONE && compute.clearValueType === ClearValueType.NONE &&
+    compute.shaderStageFlags === ShaderStageFlagBit.NONE && compute.clearValue === computeValue);
+assert(resourcePool.createClearValue() === pooledValue);
+for (const v of [rasterColor, computeValue, pooledValue]) assert(v.x === 0 && v.y === 0 && v.z === 0 && v.w === 0);
 assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 && resources.ne() === 0 && !resources.contains('depth') &&
     resourcePool.createResourceDesc().width === 0 && resourcePool.createFormatView().format === Format.UNKNOWN);
 assert(resources.nextFenceValue === 0 && resources.version === 0);

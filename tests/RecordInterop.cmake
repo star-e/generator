@@ -34,7 +34,7 @@ namespace cc {
     using LocalUniformID = UniformWord;
     using UniformWord = render::UniformID;
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
-    @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; minor: uint32_t = 0; }
+    @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; @notElement scratch: uint32_t = 0; minor: uint32_t = 0; }
     graph TinyNames {
         vertex_descriptor Index = uint8_t;
         vertex_storage: indexed;
@@ -219,7 +219,7 @@ run("${node}" "${tsc}" --strict --noImplicitAny false --skipLibCheck --target es
 file(READ "${ENGINE}/cocos/gfx/base/define.ts" gfx)
 file(MAKE_DIRECTORY "${stage}/cocos/gfx")
 foreach(name IN ITEMS ResolveMode Type ShaderStageFlagBit MemoryAccessBit ViewDimension SampleType Format DescriptorType
-        AccessFlagBit SampleCount TextureType TextureFlagBit Filter Address ComparisonFunc)
+        AccessFlagBit SampleCount TextureType TextureFlagBit Filter Address ComparisonFunc LoadOp StoreOp ClearFlagBit)
     string(REGEX MATCH "export enum ${name} \\{[^}]+\\}" definition "${gfx}")
     if(NOT definition)
         message(FATAL_ERROR "Missing ${name} in engine gfx definitions")

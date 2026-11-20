@@ -436,8 +436,8 @@ int main(int argc, char** argv) {
     flat.uniformBlocks.clear();
     if (copy.uniformBlocks.front().name != "camera" || copy.descriptorNames.front() != "buffer" ||
         copy.descriptors.front().type != cc::gfx::Type::FLOAT4 || copy.capacity != 0 || copy.count != 0) return 13;
-    const cc::ComparisonProbe first{1, 3}, second{2, 0}, same{1, 3};
-    if (!(first == same && first != second && first < second && second > first) || same > first) return 11;
+    const cc::ComparisonProbe first{1, 9, 3}, second{1, 0, 4}, same{1, 2, 3};
+    if (!(first == same && first != second && first < second && second > first) || first > same || first < same) return 11;
     using cc::render::getName;
     using namespace std::string_view_literals;
     using cc::render::Descriptor;

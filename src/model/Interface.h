@@ -40,6 +40,7 @@ struct Field {
     bool isNullable{};
     bool transient{};
     bool cppOnly{};
+    bool notElement{};
 };
 
 struct Constructor {
@@ -81,6 +82,7 @@ struct ExternalDeclaration {
     bool isStruct{};
     bool isString{};
     bool isPmr{};
+    bool constructorConstRef{};
     ContainerKind container{};
     std::vector<std::string> templateParameters;
 };

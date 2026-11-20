@@ -62,6 +62,7 @@ private:
                     const auto annotation = identifier();
                     if (annotation == "string" && !decl.isString) decl.isString = true;
                     else if (annotation == "pmr" && !decl.isPmr) decl.isPmr = true;
+                    else if (annotation == "constRef" && !decl.constructorConstRef) decl.constructorConstRef = true;
                     else if (annotation == "container" && decl.container == ContainerKind::None) {
                         expect("(");
                         const auto kind = quotedString("container kind");
@@ -88,6 +89,8 @@ private:
                     fail("@container(\"set\") requires exactly one type parameter");
                 if (decl.isString && !decl.templateParameters.empty()) fail("@string requires a non-template declaration");
                 decl.isStruct = accept("struct");
+                if (decl.constructorConstRef && (!decl.isStruct || decl.isString || !decl.templateParameters.empty()))
+                    fail("@constRef requires an external value struct");
                 if (!decl.isStruct) expect("class");
                 const auto start = location;
                 module.declarations.push_back({uniqueName(names), start, std::move(decl)});
@@ -205,6 +208,17 @@ private:
         return {std::move(name), bindingPath()};
     }
 
+    std::vector<std::string> bindingFields() {
+        std::vector<std::string> result;
+        std::set<std::string> names;
+        expect("(");
+        if (!accept(")")) {
+            do { result.push_back(uniqueName(names)); } while (accept(","));
+            expect(")");
+        }
+        return result;
+    }
+
     void bindingOptions(TypeScriptBinding& rule) {
         std::set<std::string> options;
         while (!accept("}")) {
@@ -224,7 +238,13 @@ private:
                 const auto field = identifier();
                 if (accept("reset")) {
                     expect("with");
-                    if (!rule.fieldResets.emplace(field, bindingImport()).second) fail("duplicate field reset " + field);
+                    TypeScriptImport hook{identifier(), {}};
+                    if (accept("(")) expect(")");
+                    else {
+                        expect("from");
+                        hook.from = bindingPath();
+                    }
+                    if (!rule.fieldResets.emplace(field, std::move(hook)).second) fail("duplicate field reset " + field);
                 } else {
                     expect("default");
                     const bool negative = accept("-");
@@ -238,15 +258,13 @@ private:
             } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
                 expect("json");
                 rule.jsonMapKey = true;
+            } else if (rule.kind == BindingTarget::classType && key == "constructor") {
+                rule.constructor = bindingFields();
             } else if (rule.kind == BindingTarget::classType && key == "reset") {
                 auto& reset = rule.reset.emplace();
-                if (accept("(")) {
+                if (token == "(") {
                     reset.kind = ResetBinding::Kind::fields;
-                    if (!accept(")")) {
-                        std::set<std::string> fields;
-                        do { reset.fields.push_back(uniqueName(fields)); } while (accept(","));
-                        expect(")");
-                    }
+                    reset.fields = bindingFields();
                 } else if (accept("defaults")) {
                     reset.kind = ResetBinding::Kind::defaults;
                 } else {
@@ -608,6 +626,9 @@ private:
             if (record && accept("cppOnly")) {
                 if (result.cppOnly) fail("duplicate @cppOnly");
                 result.cppOnly = true;
+            } else if (record && accept("notElement")) {
+                if (result.notElement) fail("duplicate @notElement");
+                result.notElement = true;
             } else {
                 expect("transient");
                 if (result.transient) fail("duplicate @transient");
