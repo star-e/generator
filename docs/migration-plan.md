@@ -305,6 +305,8 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `ResourceGraph.renderPasses` 在 C++ 中用 `RasterPass` 作键。比较与哈希依次使用 `rasterViews`、`computeViews`、`textures`、`subpassGraph`、`width`、`height`、`count` 和 `quality`。插入缓存时，键中的子通道图和值中的清除颜色都使用资源图的分配器。TS 绑定通过 `mapKey string` 接受调用方提供的字符串，`ResourceGraph.clear()` 原地清空缓存。池中复用的 `RasterPass` 保留四张 Map、子通道图和视口的对象引用，恢复默认值。[规格](../spec/render/render-graph.spec) · [C++ 缓存用例](../tests/consumer/records/RasterPassConsumer.cpp) · [TS 复用用例](../tests/consumer/records/resource-graph-consumer.ts)
 
+`RasterSubpass`、`ComputeSubpass`、`ComputePass`、`ResolvePass`、`CopyPass`、`MovePass` 和 `RaytracePass` 由同一份规格生成。C++ 构造时显式传入分配器，`CopyPass` 通过 `@moveOnly` 保留上传数据的移动语义。TS 对象池复用已有的 Map、数组和视口。两个 Subpass 的工厂接收新的构造参数，省略参数时使用默认值。[C++ 跨分配器用例](../tests/consumer/records/PassConsumer.cpp) · [TS 对象池用例](../tests/consumer/records/pass-consumer.ts)
+
 ## 第一次合并及后续验收
 
 1. **把本次基线做成可以重跑的测试。** 在 `generator` 记录旧生成器和引擎的基线提交、52 条引擎相对路径及 SHA-256，单列 CMake 源列表检查。Windows 对照任务固定检出和换行策略，在临时目录复建旧工具。日常测试读取固定引擎版本的文件，旧工具用于复核来源。

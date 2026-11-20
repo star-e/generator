@@ -65,6 +65,25 @@ namespace cc::render {
         named_graph { component: Name_; }
     }
 
+    @requireAllocator struct RasterSubpass {
+        readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
+        readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
+        readonly resolvePairs: ccstd::pmr::vector<ResolvePair>;
+        readonly viewport: gfx::Viewport;
+        subpassID: uint32_t = 0xFFFFFFFF;
+        count: uint32_t = 1;
+        quality: uint32_t = 0;
+        showStatistics: bool = false;
+        constructor(subpassID, count, quality);
+    }
+
+    @requireAllocator struct ComputeSubpass {
+        readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
+        readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
+        subpassID: uint32_t = 0xFFFFFFFF;
+        constructor(subpassID);
+    }
+
     @requireAllocator @comparison("==") @hash struct RasterPass {
         readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
@@ -215,6 +234,28 @@ namespace cc::render {
         nextFenceValue: uint64_t = 0;
         version: uint64_t = 0;
     }
+
+    @requireAllocator struct ComputePass {
+        readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
+        readonly textures: PmrTransparentMap<ccstd::pmr::string, gfx::ShaderStageFlagBit>;
+    }
+
+    @requireAllocator struct ResolvePass {
+        readonly resolvePairs: ccstd::pmr::vector<ResolvePair>;
+    }
+
+    @moveOnly @requireAllocator struct CopyPass {
+        readonly copyPairs: ccstd::pmr::vector<CopyPair>;
+        readonly uploadPairs: ccstd::pmr::vector<UploadPair>;
+    }
+
+    @requireAllocator struct MovePass {
+        readonly movePairs: ccstd::pmr::vector<MovePair>;
+    }
+
+    @requireAllocator struct RaytracePass {
+        readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
+    }
 }
 
 binding typescript {
@@ -235,6 +276,8 @@ binding typescript {
     ResourceDesc => class { pool rd; reset defaults; };
     Subpass => class { pool s; reset defaults; };
     SubpassGraph => class { pool sg; };
+    RasterSubpass => class { pool rs2; reset constructor; field viewport reset with reset(); };
+    ComputeSubpass => class { pool cs; reset constructor; };
     RasterPass => class { pool rp; reset defaults; mapKey string; field viewport reset with reset(); };
     ResourceTraits => class { pool rt; reset constructor; };
     ResourceStates => class { pool rs1; reset defaults; };
@@ -248,4 +291,9 @@ binding typescript {
     FormatView => class { pool fv; reset defaults; };
     SubresourceView => class { pool sv; reset defaults; };
     ResourceGraph => class { pool rg; };
+    ComputePass => class { pool cp; reset defaults; };
+    ResolvePass => class { pool rp1; reset defaults; };
+    CopyPass => class { pool cp1; reset defaults; };
+    MovePass => class { pool mp; reset defaults; };
+    RaytracePass => class { pool rp2; reset defaults; };
 }
