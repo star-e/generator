@@ -138,6 +138,16 @@ function(source_between source start stop result)
     string(SUBSTRING "${tail}" 0 ${length} body)
     set(${result} "${body}" PARENT_SCOPE)
 endfunction()
+# Compile the engine's texture-view query with the generated descriptor and visitor member.
+file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp" nativeResourceGraph)
+source_between(nativeResourceGraph "bool ResourceGraph::isTextureView(" "gfx::Buffer* ResourceGraph::getBuffer(" textureViewQuery)
+string(REPLACE "vertex_descriptor" "Vertex" textureViewQuery "${textureViewQuery}")
+string(REGEX REPLACE "visitObject[(][ \t\r\n]*resID, [*]this," "visit_object(resID," textureViewQuery "${textureViewQuery}")
+file(WRITE "${stage}/ResourceGraphTextureView.cpp" [[
+#include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
+#include <tuple>
+namespace cc::render {
+]] "${textureViewQuery}\n}\n")
 # Compile the engine's original printer and visibility formatter against its own graph types.
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/LayoutGraphUtils.cpp" nativeLayoutUtils)
 source_between(nativeLayoutUtils "ccstd::string getName(gfx::ShaderStageFlagBit" "gfx::TextureType getTextureType(" legacyPrint)

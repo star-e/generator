@@ -226,6 +226,8 @@ void checkImports(const std::filesystem::path& specs) {
                 vertex_descriptor Vertex = uint32_t;
                 vertex_storage: indexed;
                 component cc::render::RasterPassTag: uint32_t { member: counts; }
+                fn count(v: Vertex) const noexcept -> uint32_t;
+                static fn count(info: const PassInfo&) -> uint32_t;
             }
             @tag struct Label_ {}
             @tag struct Phase_ {}
@@ -245,6 +247,14 @@ void checkImports(const std::filesystem::path& specs) {
                 "wrong tag ownership or TS binding");
         const auto& passes = std::get<GraphType>(graph.node(graph.findType("cc::render::Passes")).data);
         const auto& counts = std::get<GraphType>(graph.node(graph.findType("cc::render::PassCounts")).data);
+        const auto& query = counts.methods.at(0);
+        const auto& overload = counts.methods.at(1);
+        require(query.name == "count" && query.cppOnly && query.isConst && query.isNoexcept && !query.isStatic &&
+                query.result.type == graph.findType("uint32_t") &&
+                query.parameters.at(0).type.type == graph.findType("cc::render::PassCounts::Vertex"),
+                "lost graph method qualifiers or scoped vertex type");
+        require(overload.name == query.name && overload.isStatic && overload.parameters.at(0).byConstReference &&
+                overload.parameters.at(0).type.type == graph.findType("cc::render::PassInfo"), "lost graph method overload");
         require(passes.hierarchy && !counts.hierarchy, "lost graph hierarchy capability");
         require(passes.parentGraph && passes.nameComponentIndex == 2 && !counts.parentGraph && !counts.nameComponentIndex,
                 "parent lookup did not bind the selected name component");

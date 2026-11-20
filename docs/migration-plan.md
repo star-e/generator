@@ -308,6 +308,8 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。
 
+图可以像普通记录一样用 `fn` 声明 C++ 成员函数。例如 `fn isTextureView(resID: Vertex) const noexcept -> bool;` 中的 `Vertex` 引用本图声明的顶点类型。`ResourceGraph` 的八个原生资源管理方法由生成头声明，由引擎提供定义。C++17 消费测试核对全部签名，并用引擎的查询逻辑区分普通纹理、格式视图和子资源视图。[图声明](../spec/render/render-graph.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp) · [消费测试](../tests/consumer/records/ResourceGraphConsumer.cpp)
+
 `ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。[渲染图声明](../spec/render/render-graph.spec)
 
 `ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。[外部 GFX 类型](../spec/extern/gfx-resource.spec)

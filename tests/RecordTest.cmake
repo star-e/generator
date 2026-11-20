@@ -20,6 +20,8 @@ check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
     "subpassGraph: cannot use an @immovable graph as a value field")
 check_resource_error("getColorTexture(renderWindow: scene::RenderWindow*)" "getColorTexture(other: gfx::Swapchain*)"
     "duplicate method signature getColorTexture")
+check_resource_error("isTextureView(resID: Vertex)" "isTexture(other: uint32_t)" "duplicate method signature isTexture")
+check_resource_error("fn validateSwapchains()" "fn getDesc()" "graph method collides with C[+][+] member getDesc")
 check_resource_error("member: names;" "member: contains;" "name index collides with C[+][+] member contains")
 check_resource_error("getColorTexture(swapchain: gfx::Swapchain*) noexcept" "getColorTexture(swapchain: gfx::Swapchain*) const noexcept"
     "static method cannot be const")
@@ -44,6 +46,10 @@ file(WRITE "${resourceSpec}" "${changed}")
 run(${generate})
 file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderGraphTypes.h" nativeResource)
 file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" webResource)
+if(webResource MATCHES "(validateSwapchains|mount|unmount|isTexture|isTextureView|getTexture|getBuffer|invalidatePersistentRenderPassAndFramebuffer) *[(]"
+   OR webResource MATCHES "import[^\n]*[ {,]Device[ },]")
+    message(FATAL_ERROR "Native ResourceGraph methods or their Device dependency leaked into TypeScript")
+endif()
 if(NOT nativeResource MATCHES "const gfx::Color& clearColorIn")
     message(FATAL_ERROR "RasterView must accept the external Color by const reference")
 endif()

@@ -444,10 +444,8 @@ private:
                     }
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
-                } else if ((token == "fn" && !followedBy(":")) || (token == "static" && followedBy("fn"))) {
-                    const bool isStatic = accept("static");
-                    expect("fn");
-                    record->methods.push_back(recordMethod(members, record->methods, isStatic));
+                } else if (atMemberFunction()) {
+                    record->methods.push_back(memberFunction(members, record->methods));
                 } else {
                     record->fields.push_back(field(members, true));
                 }
@@ -560,10 +558,12 @@ private:
                 } while (!accept("}"));
             } else if (token == "@" && followedBy("tag")) {
                 fail("declare graph tags outside the graph");
+            } else if (atMemberFunction()) {
+                graph.methods.push_back(memberFunction(names, graph.methods));
             } else if (token == "@" || token == "readonly" || token == "nullable" || followedBy(":")) {
                 graph.fields.push_back(field(names));
             } else {
-                fail("expected graph descriptor, storage, capability, component reference or field");
+                fail("expected graph descriptor, storage, capability, component reference, field or member function");
             }
         }
         if (!graph.vertexType) fail("graph requires a vertex descriptor");
@@ -698,9 +698,15 @@ private:
         return result;
     }
 
-    Method recordMethod(std::set<std::string>& names, const std::vector<Method>& methods, bool isStatic) {
+    bool atMemberFunction() const {
+        return (token == "fn" && !followedBy(":")) || (token == "static" && followedBy("fn"));
+    }
+
+    Method memberFunction(std::set<std::string>& names, const std::vector<Method>& methods) {
         Method result;
-        result.isStatic = isStatic;
+        result.cppOnly = true;
+        result.isStatic = accept("static");
+        expect("fn");
         result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
         expect("(");
         std::set<std::string> parameters;
@@ -715,7 +721,7 @@ private:
             expect(")");
         }
         result.isConst = accept("const");
-        if (isStatic && result.isConst) fail("static method cannot be const");
+        if (result.isStatic && result.isConst) fail("static method cannot be const");
         result.isNoexcept = accept("noexcept");
         expect("-");
         expect(">");

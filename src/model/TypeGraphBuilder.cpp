@@ -121,6 +121,21 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
     return member;
 }
 
+std::vector<MethodInfo> resolveMemberFunctions(TypeGraph& graph, const std::vector<Method>& methods, const std::string& scope, ModuleId owner) {
+    std::vector<MethodInfo> result;
+    for (const auto& method : methods) {
+        auto resolved = resolveMethod(graph, method, scope, owner);
+        for (const auto& other : result) {
+            if (other.name != resolved.name || (!other.isStatic && !resolved.isStatic && other.isConst != resolved.isConst)) continue;
+            if (std::ranges::equal(other.parameters, resolved.parameters, [&](const auto& a, const auto& b) {
+                    return a.byConstReference == b.byConstReference && canonicalType(graph, a.type) == canonicalType(graph, b.type);
+                })) throw std::runtime_error(method.result.location.describe() + ": duplicate method signature " + method.name);
+        }
+        result.push_back(std::move(resolved));
+    }
+    return result;
+}
+
 std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>& fields, const std::string& scope, ModuleId owner) {
     std::vector<FieldInfo> result;
     for (const auto& field : fields) {
@@ -177,16 +192,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         if (syntax.serializable && field.cppOnly && !field.transient)
             throw std::runtime_error(field.type.location.describe() + ": @cppOnly field in a serializable record requires @transient");
     }
-    for (const auto& method : syntax.methods) {
-        auto resolved = resolveMethod(graph, method, scope, owner);
-        for (const auto& other : result.methods) {
-            if (other.name != resolved.name || (!other.isStatic && !resolved.isStatic && other.isConst != resolved.isConst)) continue;
-            if (std::ranges::equal(other.parameters, resolved.parameters, [&](const auto& a, const auto& b) {
-                    return a.byConstReference == b.byConstReference && canonicalType(graph, a.type) == canonicalType(graph, b.type);
-                })) throw std::runtime_error(method.result.location.describe() + ": duplicate method signature " + method.name);
-        }
-        result.methods.push_back(std::move(resolved));
-    }
+    result.methods = resolveMemberFunctions(graph, syntax.methods, scope, owner);
     return result;
 }
 
@@ -289,6 +295,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     result.incidence = syntax.incidence;
     result.bidirectional = syntax.bidirectional;
     result.fields = resolveFields(graph, syntax.fields, scope, owner);
+    result.methods = resolveMemberFunctions(graph, syntax.methods, scope, owner);
     const auto& vertex = graph.node(result.vertexType);
     if (syntax.indexed && !indexedVertexLimit(vertex.qualifiedName)) {
         throw std::runtime_error(syntax.vertexType->location.describe() + ": expected an integer descriptor for indexed vertices");

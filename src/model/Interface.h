@@ -117,6 +117,7 @@ struct GraphDeclaration {
     std::vector<GraphComponent> components;
     std::vector<GraphComponent> alternatives;
     std::vector<Field> fields;
+    std::vector<Method> methods;
 };
 
 struct Declaration {

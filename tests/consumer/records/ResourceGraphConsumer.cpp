@@ -130,6 +130,7 @@ bool checkViewHierarchy() {
     const auto texture = g.add_vertex(ManagedTexture_{}, "texture");
     const auto stencil = g.add_vertex(SubresourceView_{}, "stencil", texture);
     const auto mip = g.add_vertex(FormatView_{}, "depth-mip", depth);
+    if (g.isTextureView(texture) || !g.isTextureView(depth) || !g.isTextureView(stencil) || !g.isTextureView(mip)) return false;
 
     // Attach an existing subtree to a parent with a larger vertex descriptor.
     const auto [link, attached] = g.add_edge(texture, depth);
@@ -163,6 +164,16 @@ bool checkResourceGraph() {
     using namespace cc::render;
     if (!checkResourceEmplacement() || !checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer() || !checkRenderViews()) return false;
     static_assert(!std::is_move_constructible_v<ResourceGraph> && !std::is_copy_constructible_v<ResourceGraph>);
+    using Vertex = ResourceGraph::Vertex;
+    using TexturePredicate = bool (ResourceGraph::*)(Vertex) const noexcept;
+    static_assert(std::is_same_v<decltype(&ResourceGraph::validateSwapchains), void (ResourceGraph::*)()>);
+    static_assert(std::is_same_v<decltype(&ResourceGraph::mount), void (ResourceGraph::*)(cc::gfx::Device*, Vertex)>);
+    static_assert(std::is_same_v<decltype(&ResourceGraph::unmount), void (ResourceGraph::*)(uint64_t)>);
+    static_assert(std::is_same_v<decltype(&ResourceGraph::isTexture), TexturePredicate>);
+    static_assert(std::is_same_v<decltype(&ResourceGraph::isTextureView), TexturePredicate>);
+    static_assert(std::is_same_v<decltype(&ResourceGraph::getTexture), cc::gfx::Texture* (ResourceGraph::*)(Vertex)>);
+    static_assert(std::is_same_v<decltype(&ResourceGraph::getBuffer), cc::gfx::Buffer* (ResourceGraph::*)(Vertex)>);
+    static_assert(std::is_same_v<decltype(&ResourceGraph::invalidatePersistentRenderPassAndFramebuffer), void (ResourceGraph::*)(cc::gfx::Texture*)>);
     static_assert(std::is_same_v<decltype(ResourceDesc::mipLevels), uint16_t>);
     static_assert(std::is_same_v<decltype(ManagedBuffer::fenceValue), uint64_t>);
     static_assert(std::is_same_v<decltype(&ManagedTexture::checkResource), bool (ManagedTexture::*)(const ResourceDesc&) const>);

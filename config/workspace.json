@@ -119,6 +119,7 @@
         "Sampler": { "header": "cocos/renderer/gfx-base/states/GFXSampler.h" },
         "Viewport": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "Color": { "header": "cocos/renderer/gfx-base/GFXDef.h" },
+        "Device": { "header": "cocos/renderer/gfx-base/GFXDevice.h" },
         "RenderPass": { "header": "cocos/renderer/gfx-base/GFXRenderPass.h" },
         "Buffer": { "header": "cocos/renderer/gfx-base/GFXBuffer.h" },
         "Texture": { "header": "cocos/renderer/gfx-base/GFXTexture.h" },

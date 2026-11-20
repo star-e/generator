@@ -235,6 +235,15 @@ namespace cc::render {
         readonly renderPasses: ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>;
         nextFenceValue: uint64_t = 0;
         version: uint64_t = 0;
+
+        fn validateSwapchains() -> void;
+        fn mount(device: gfx::Device*, vertID: Vertex) -> void;
+        fn unmount(completedFenceValue: uint64_t) -> void;
+        fn isTexture(resID: Vertex) const noexcept -> bool;
+        fn isTextureView(resID: Vertex) const noexcept -> bool;
+        fn getTexture(resID: Vertex) -> gfx::Texture*;
+        fn getBuffer(resID: Vertex) -> gfx::Buffer*;
+        fn invalidatePersistentRenderPassAndFramebuffer(pTexture: gfx::Texture*) -> void;
     }
 
     @requireAllocator struct ComputePass {

@@ -32,6 +32,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
+    "${STAGING}/ResourceGraphTextureView.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp"

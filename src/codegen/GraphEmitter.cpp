@@ -622,7 +622,7 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id) {
 
 void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
                   std::set<std::string>& headers, std::set<std::string>& forwards,
-                  const std::vector<BoundField>& fields, const std::string& inputArchive) {
+                  const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     if (!model.indexedVertices || (model.components.empty() && model.alternatives.empty()))
@@ -752,6 +752,11 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (api.contains(f.name) || !members.insert(f.name).second)
             throw std::runtime_error(node.qualifiedName + ": graph field collides with C++ member " + f.name);
     }
+    for (const auto& method : model.methods) {
+        if (api.contains(method.name) || method.name == name)
+            throw std::runtime_error(method.result.location.describe() + ": graph method collides with C++ member " + method.name);
+        members.insert(method.name);
+    }
     const auto internalColumn = [&](std::string field) {
         while (!members.insert(field).second) field += "0";
         storage.push_back(field);
@@ -872,6 +877,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         headers.insert({"cstdint", "variant", "cocos/base/TemplateUtils.h"});
         payloadAccess(out, alternatives, vertex, handles);
     }
+    if (!methods.empty()) out << '\n' << methods;
     out << "\nprivate:\n";
     if (model.compareEqual) out << "    friend bool operator==(const " << name << "&, const " << name << "&) noexcept;\n";
     if (model.compareLess) out << "    friend bool operator<(const " << name << "&, const " << name << "&) noexcept;\n";

@@ -3,6 +3,7 @@ namespace cc::gfx {
     struct SamplerInfo;
     struct Viewport;
     @constRef struct Color;
+    class Device;
     class RenderPass;
     class Buffer;
     class Texture;

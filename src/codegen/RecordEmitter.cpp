@@ -612,6 +612,26 @@ std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const 
     return header.str();
 }
 
+std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module, const std::vector<MethodInfo>& methods,
+                               Dependencies& deps) {
+    std::ostringstream out;
+    for (const auto& method : methods) {
+        out << "    " << (method.isStatic ? "static " : "") << methodType(graph, module, method.result.type, deps) << " " << method.name << "(";
+        for (size_t i = 0; i < method.parameters.size(); ++i) {
+            if (i) out << ", ";
+            const auto& p = method.parameters[i];
+            if (p.byConstReference) out << "const ";
+            out << methodType(graph, module, p.type.type, deps) << (p.byConstReference ? "& " : " ") << p.name;
+        }
+        out << ")";
+        if (method.isConst) out << " const";
+        if (method.isNoexcept) out << " noexcept";
+        if (method.cppExpression.empty()) out << ";\n";
+        else out << " { return " << method.cppExpression << "; }\n";
+    }
+    return out.str();
+}
+
 void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, const TypeModule& module,
                const TypeNode& node, const std::vector<BoundField>& members, Dependencies& deps) {
     const auto& record = std::get<RecordType>(node.data);
@@ -642,21 +662,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         if (!m.cppDefault.empty()) out << "{" << m.cppDefault << "}";
         out << ";\n";
     }
-    for (const auto& method : record.methods) {
-        out << "    " << (method.isStatic ? "static " : "") << methodType(graph, module, method.result.type, deps) << " " << method.name << "(";
-        for (size_t i = 0; i < method.parameters.size(); ++i) {
-            if (i) out << ", ";
-            const auto& p = method.parameters[i];
-            if (p.byConstReference) out << "const ";
-            out << methodType(graph, module, p.type.type, deps) << (p.byConstReference ? "& " : " ") << p.name;
-        }
-        out << ")";
-        if (method.isConst) out << " const";
-        if (method.isNoexcept) out << " noexcept";
-        if (method.cppExpression.empty()) out << ";\n";
-        else out << " { return " << method.cppExpression << "; }\n";
-    }
-    out << "};\n";
+    out << cppMemberFunctions(graph, module, record.methods, deps) << "};\n";
 }
 
 bool inferTsType(const BoundField& m) {
@@ -945,7 +951,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 deps.headers.insert((archive->layout.includeDir / (archive->layout.prefix + "Fwd.h")).generic_string());
                 inputArchive = "::" + archiveInterface(graph, archive->module, "InputArchive").qualifiedName;
             }
-            emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, inputArchive);
+            const auto methods = cppMemberFunctions(graph, module, model->methods, deps);
+            emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, methods, inputArchive);
             if (model->compareEqual || model->compareLess || model->hashable) {
                 std::vector<std::string_view> elements;
                 for (const auto& component : model->components) elements.push_back(component.name);
