@@ -96,11 +96,36 @@ sub.format = Format.RGBA8;
 sub.indexOrFirstMipLevel = sub.numMipLevels = sub.firstArraySlice = sub.numArraySlices = sub.firstPlane = sub.numPlanes = 1;
 view.format = Format.RGBA8;
 desc.width = 256;
+
+function addSubview(name: string, parent: number = resources.N): number {
+    return resources.addVertex(ResourceGraphValue.SubresourceView, resourcePool.createSubresourceView(),
+        name, desc, traits, states, sampler, parent);
+}
+const depth = addSubview('depth');
+const base = resources.addVertex(ResourceGraphValue.ManagedTexture, resourcePool.createManagedTexture(),
+    'texture', desc, traits, states, sampler);
+const stencil = addSubview('stencil', base);
+const mip = resources.addVertex(ResourceGraphValue.FormatView, resourcePool.createFormatView(),
+    'depth-mip', desc, traits, states, sampler, depth);
+const vertexCount = resources.nv();
+const link = resources.addReference(base, depth);
+assert(link !== null && resources.source(link) === base && resources.target(link) === depth);
+assert(resources.addEdge(base, depth) === null && resources.addReference(stencil, depth) === null &&
+    resources.addEdge(base, base) === null && resources.addReference(mip, base) === null &&
+    resources.addEdge(resources.N, base) === null);
+assert(throws(() => addSubview('orphan', vertexCount)) && !resources.contains('orphan') && resources.nv() === vertexCount);
+assert(resources.ne() === 3 && resources.getParent(base) === resources.N && resources.getParent(depth) === base &&
+    resources.getParent(stencil) === base && resources.getParent(mip) === depth);
+const children = [...resources.children(base)].map(e => resources.child(e));
+assert(children.length === 2 && children.indexOf(depth) >= 0 && children.indexOf(stencil) >= 0 &&
+    resources.od(base) === 2 && resources.id(depth) === 1 && resources.edge(base, depth) && resources.reference(depth, mip));
+assert(resources.vertex('texture') === base && resources.vertex('depth') === depth && resources.vertex('depth-mip') === mip);
 resourcePool.reset();
-assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 &&
+assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 && resources.ne() === 0 && !resources.contains('depth') &&
     resourcePool.createResourceDesc().width === 0 && resourcePool.createFormatView().format === Format.UNKNOWN);
 assert(!resources.contains('SubresourceView') && resources.find('') === resources.N &&
     resources.addVertex(ResourceGraphValue.Managed, managed, '', desc, traits, states, sampler) === 0 && resources.vertex('') === 0);
+assert(resources.getParent(0) === resources.N && resources.numChildren(0) === 0);
 assert(resourcePool.createManagedBuffer() === mb && resourcePool.createPersistentBuffer() === pb &&
     resourcePool.createManagedTexture() === mt && resourcePool.createPersistentTexture() === pt);
 assert(mb.buffer === null && mt.texture === null && pb.buffer === null && pt.texture === null &&

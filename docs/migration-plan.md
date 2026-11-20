@@ -291,7 +291,9 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `ResourceGraph` 支持按编号遍历顶点、访问 Name、Desc、Traits、States、Sampler 五个组件。C++ 的 `Kind` 和 TS 的 `ResourceGraphValue` 沿用旧版的 0–8 顺序，依次为 Managed、ManagedBuffer、ManagedTexture、PersistentBuffer、PersistentTexture、Framebuffer、Swapchain、FormatView、SubresourceView。Framebuffer 在 C++ 中持有 `IntrusivePtr<gfx::Framebuffer>`，TS 直接保存传入的 GFX 对象。四类缓冲与纹理记录的 `fenceValue` 在 C++ 中保留完整的 `uint64_t`，TS 接受 0 到 `Number.MAX_SAFE_INTEGER` 的整数。TS 通过 `RenderGraphObjectPool` 复用图和记录。[资源图声明](../spec/render/render-graph.spec)
 
-`name_index;` 为 `named_graph` 选定的名称组件建立全图唯一索引。`ResourceGraph` 在两端都提供 `contains(name)`、`find(name)`、`vertex(name)`。名称缺失时分别返回 `false`、无效顶点编号或抛出异常。空字符串也是合法键。添加顶点或通过 `setName(v, name)` 改名遇到重名时，操作失败，原顶点和索引保持一致。C++ 使用支持 `std::string_view` 查询的 PMR 有序映射，TS 使用随图清空的 `Map`。接下来迁移共享引用边和图级缓存。
+`name_index;` 为 `named_graph` 选定的名称组件建立全图唯一索引。`ResourceGraph` 在两端都提供 `contains(name)`、`find(name)`、`vertex(name)`。名称缺失时分别返回 `false`、无效顶点编号或抛出异常。空字符串也是合法键。添加顶点或通过 `setName(v, name)` 改名遇到重名时，操作失败，原顶点和索引保持一致。C++ 使用支持 `std::string_view` 查询的 PMR 有序映射，TS 使用随图清空的 `Map`。
+
+`ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。下一步迁移图级缓存与版本字段。
 
 ## 第一次合并及后续验收
 

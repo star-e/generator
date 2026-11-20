@@ -4,8 +4,48 @@
 #include <type_traits>
 #include <utility>
 
+namespace {
+bool checkViewHierarchy() {
+    using namespace cc::render;
+    boost::container::pmr::monotonic_buffer_resource arena;
+    ResourceGraph g{&arena};
+    const auto none = ResourceGraph::null_vertex();
+    const auto depth = g.add_vertex(SubresourceView_{}, "depth");
+    const auto texture = g.add_vertex(ManagedTexture_{}, "texture");
+    const auto stencil = g.add_vertex(SubresourceView_{}, "stencil", texture);
+    const auto mip = g.add_vertex(FormatView_{}, "depth-mip", depth);
+
+    // Attach an existing subtree to a parent with a larger vertex descriptor.
+    const auto [link, attached] = g.add_edge(texture, depth);
+    if (!attached || g.source(link) != texture || g.target(link) != depth) return false;
+    if (g.add_edge(texture, depth).second || g.add_edge(stencil, depth).second ||
+        g.add_edge(texture, texture).second || g.add_edge(mip, texture).second ||
+        g.add_edge(none, texture).second) return false;
+    try {
+        (void)g.add_vertex(SubresourceView_{}, "orphan", g.num_vertices());
+        return false;
+    } catch (const std::out_of_range&) {}
+    if (g.contains("orphan") || g.num_vertices() != 4 || g.num_edges() != 3 || g.get_parent(texture) != none ||
+        g.get_parent(depth) != texture || g.get_parent(stencil) != texture || g.get_parent(mip) != depth ||
+        g.vertex("texture") != texture || g.vertex("depth-mip") != mip) return false;
+
+    if (g.num_children(texture) != 2 || g.out_degree(texture) != 2 || g.in_degree(depth) != 1) return false;
+    bool sawDepth = false, sawStencil = false;
+    for (const auto e : g.child_links(texture)) {
+        if (g.parent(e) != texture || !g.edge(texture, g.child(e)).second) return false;
+        sawDepth |= g.child(e) == depth;
+        sawStencil |= g.child(e) == stencil;
+    }
+    if (!sawDepth || !sawStencil) return false;
+    g.remove_edge(link);
+    return !g.has_link(texture, depth) && g.get_parent(depth) == none && g.get_parent(mip) == depth &&
+           g.has_link(texture, stencil) && g.num_edges() == 2 && g.vertex("depth") == depth;
+}
+} // namespace
+
 bool checkResourceGraph() {
     using namespace cc::render;
+    if (!checkViewHierarchy()) return false;
     static_assert(!std::is_move_constructible_v<ResourceGraph> && !std::is_copy_constructible_v<ResourceGraph>);
     static_assert(std::is_same_v<decltype(ResourceDesc::mipLevels), uint16_t>);
     static_assert(std::is_same_v<decltype(ManagedBuffer::fenceValue), uint64_t>);
