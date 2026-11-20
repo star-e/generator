@@ -4,6 +4,8 @@
 #include <boost/container/pmr/global_resource.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
+#include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <initializer_list>
 #include <iterator>
@@ -119,13 +121,15 @@ bool checkHierarchy() {
     return intact(moved) && assigned.num_vertices() == 0 && intact(graph);
 }
 
-// Fail each allocation in turn, including map construction and copying populated components during growth.
+// Fail each allocation in turn, including those made by nested PMR containers.
+struct InjectedFailure final : std::bad_alloc {};
+
 class FailingResource final : public boost::container::pmr::memory_resource {
 public:
     int allocationsBeforeFailure{-1};
 private:
     void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-        if (allocationsBeforeFailure == 0) throw std::bad_alloc();
+        if (allocationsBeforeFailure == 0) throw InjectedFailure{};
         if (allocationsBeforeFailure > 0) --allocationsBeforeFailure;
         return boost::container::pmr::new_delete_resource()->allocate(bytes, alignment);
     }
@@ -173,6 +177,105 @@ bool checkFailedInsertion() {
         if (!graph.getDescriptors(next).blocks.empty() || graph.getDescriptors(retry).blocks.at({}).count != 4 ||
             !graph.value(RenderPhase_{}, next).shaders.empty() || graph.value(RenderPhase_{}, retry).shaders.size() != 1) return false;
     }
+}
+
+using cc::render::LayoutGraphData;
+constexpr auto frequency = cc::render::UpdateFrequency::PER_PASS;
+constexpr auto visibility = cc::gfx::ShaderStageFlagBit::VERTEX;
+constexpr std::string_view layoutName{"vertex name long enough to allocate from the graph resource"};
+
+auto addLayout(LayoutGraphData& graph, unsigned i) {
+    const auto parent = i ? (i - 1) / 2 : LayoutGraphData::null_vertex();
+    // Exercise the view into an existing name during growth as well.
+    const auto name = i ? std::string_view{graph.getName(parent)} : layoutName;
+    return i % 2 ? graph.add_vertex(RenderPhase_{}, name, parent) : graph.add_vertex(RenderStage_{}, name, parent);
+}
+
+void fillLayout(LayoutGraphData& graph, unsigned i) {
+    graph.getLayout(i).descriptorSets[frequency].descriptorSetLayoutData.capacity = i + 1;
+    if (i % 2) {
+        auto& phase = graph.value(RenderPhase_{}, i);
+        phase.rootSignature.assign(layoutName.data(), layoutName.size());
+        phase.shaderPrograms.emplace_back().layout.descriptorGroups[frequency].descriptorSetLayoutData.slot = i;
+    } else {
+        graph.value(RenderStage_{}, i).descriptorVisibility.emplace(cc::render::NameLocalID{i}, visibility);
+    }
+}
+
+bool checkLayoutValues(const LayoutGraphData& graph, unsigned count) {
+    const auto alloc = graph.get_allocator();
+    if (graph.num_vertices() != count) return false;
+    for (const auto i : graph.vertices()) {
+        if (graph.get_parent(i) != (i ? (i - 1) / 2 : LayoutGraphData::null_vertex()) ||
+            std::string_view{graph.getName(i)} != layoutName || graph.getName(i).get_allocator() != alloc) return false;
+        unsigned child = 2 * i + 1;
+        for (const auto link : graph.child_links(i)) {
+            if (link.source != i || graph.child(link) != child++ || child > count) return false;
+        }
+        const unsigned children = (2 * i + 1 < count) + (2 * i + 2 < count);
+        if (child != 2 * i + 1 + children || graph.num_children(i) != children) return false;
+        const auto& sets = graph.getLayout(i).descriptorSets;
+        const auto& data = sets.at(frequency).descriptorSetLayoutData;
+        if (sets.size() != 1 || sets.get_allocator() != alloc || data.get_allocator() != alloc || data.capacity != i + 1)
+            return false;
+        if (i % 2) {
+            if (!graph.holds<RenderPhase_>(i)) return false;
+            const auto& phase = graph.value(RenderPhase_{}, i);
+            if (phase.rootSignature.get_allocator() != alloc || std::string_view{phase.rootSignature} != layoutName ||
+                phase.shaderPrograms.size() != 1 || phase.shaderPrograms.get_allocator() != alloc) return false;
+            const auto& nested = phase.shaderPrograms.front().layout.descriptorGroups.at(frequency).descriptorSetLayoutData;
+            if (nested.slot != i || nested.get_allocator() != alloc) return false;
+        } else {
+            if (!graph.holds<RenderStage_>(i)) return false;
+            const auto& entries = graph.value(RenderStage_{}, i).descriptorVisibility;
+            if (entries.size() != 1 || entries.at(cc::render::NameLocalID{i}) != visibility || entries.get_allocator() != alloc)
+                return false;
+        }
+    }
+    return true;
+}
+
+enum class InsertionResult { complete = 0, mismatch = 1, retried = 42, debugProxyTermination = 43 };
+
+InsertionResult insertWithFailure(unsigned count, int failAfter) {
+    static_assert(!std::is_constructible_v<LayoutGraphData, const LayoutGraphData&, LayoutGraphData::allocator_type>);
+    static_assert(!std::is_copy_assignable_v<LayoutGraphData> && std::is_move_assignable_v<LayoutGraphData>);
+    FailingResource resource;
+    LayoutGraphData graph{&resource};
+    for (unsigned i = 0; i != count; ++i) fillLayout(graph, addLayout(graph, i));
+    resource.allocationsBeforeFailure = failAfter;
+    bool failed = false;
+    try {
+        if (addLayout(graph, count) != count) return InsertionResult::mismatch;
+    } catch (const std::bad_alloc&) {
+        failed = true;
+        if (resource.allocationsBeforeFailure != 0 || !checkLayoutValues(graph, count)) return InsertionResult::mismatch;
+    }
+    resource.allocationsBeforeFailure = -1;
+    if (failed && addLayout(graph, count) != count) return InsertionResult::mismatch;
+    if (!graph.getLayout(count).descriptorSets.empty()) return InsertionResult::mismatch;
+    fillLayout(graph, count);
+    fillLayout(graph, addLayout(graph, count + 1));
+    if (!checkLayoutValues(graph, count + 2)) return InsertionResult::mismatch;
+    if (failed) return InsertionResult::retried;
+    LayoutGraphData moved{std::move(graph)};
+    FailingResource other;
+    LayoutGraphData assigned{&other};
+    assigned = std::move(moved);
+    if (failAfter == 0 || graph.num_vertices() || moved.num_vertices() || assigned.get_allocator().resource() != &other ||
+        !checkLayoutValues(assigned, count + 2)) return InsertionResult::mismatch;
+    return InsertionResult::complete;
+}
+
+bool checkMoveOnlyGrowth() {
+    for (const auto count : {3U, 15U, 31U}) {
+        for (int failAfter = 0; ; ++failAfter) {
+            const auto result = insertWithFailure(count, failAfter);
+            if (result == InsertionResult::complete) break;
+            if (result != InsertionResult::retried) return false;
+        }
+    }
+    return true;
 }
 
 bool checkChildLookup() {
@@ -329,6 +432,8 @@ bool checkFlatComponents() {
     if (toggles.num_vertices() != 2 || toggles.holds<cc::Count_>(2) || !toggles.holds<cc::Count_>(enabled) ||
         !toggles.value(cc::Count_{}, enabled) || toggles.value(cc::render::ComputeTag{}, disabled)) return false;
     cc::FlatComponents source{&sourceArena};
+    if (source.version != 1) return false;
+    source.version = 4;
     const auto a = source.add_vertex("a");
     source.getCount(a) = 12;
     source.getDescriptors(a).blocks[{}].count = 5;
@@ -336,15 +441,30 @@ bool checkFlatComponents() {
     if (a != 0 || b != 1 || source.getName(b) != "a" || source.get(cc::Count_{}, b) != 0) return false;
     cc::FlatComponents target{&targetArena};
     target = std::move(source);
-    return source.num_vertices() == 0 && target.num_vertices() == 2 &&
+    return source.num_vertices() == 0 && target.num_vertices() == 2 && target.version == 4 &&
            target.getName(b).get_allocator().resource() == &targetArena && target.getCount(a) == 12 &&
            target.getDescriptors(a).blocks.get_allocator().resource() == &targetArena &&
            target.getDescriptors(a).blocks.at({}).count == 5 && target.getDescriptors(b).blocks.empty();
 }
 } // namespace
 
+int checkStageAllocation(unsigned count, int failAfter) {
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL != 0
+    // The process is isolated because unordered_map's noexcept _Hash_vec allocates a debug proxy.
+    std::set_terminate([] {
+        if (auto exception = std::current_exception()) {
+            try { std::rethrow_exception(exception); }
+            catch (const InjectedFailure&) { std::_Exit(static_cast<int>(InsertionResult::debugProxyTermination)); }
+            catch (...) {}
+        }
+        std::_Exit(static_cast<int>(InsertionResult::mismatch));
+    });
+#endif
+    return static_cast<int>(insertWithFailure(count, failAfter));
+}
+
 bool checkLayoutGraph(const char* pathSamples) {
-    if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents()) return false;
+    if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkMoveOnlyGrowth()) return false;
     if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;

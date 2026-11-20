@@ -508,8 +508,12 @@ private:
                 do {
                     graph.alternatives.push_back(graphColumn(names));
                 } while (!accept("}"));
+            } else if (token == "@" && followedBy("tag")) {
+                fail("declare graph tags outside the graph");
+            } else if (token == "@" || token == "readonly" || token == "nullable" || followedBy(":")) {
+                graph.fields.push_back(field(names));
             } else {
-                fail("expected graph descriptor, storage, capability or component reference");
+                fail("expected graph descriptor, storage, capability, component reference or field");
             }
         }
         if (!graph.vertexType) fail("graph requires a vertex descriptor");

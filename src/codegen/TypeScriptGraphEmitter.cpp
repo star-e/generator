@@ -9,6 +9,12 @@ namespace {
 struct Column {
     std::string tagName;
     std::string type;
+
+    std::string visitorMethod() const {
+        auto method = tagName;
+        if (method.front() >= 'A' && method.front() <= 'Z') method.front() += 'a' - 'A';
+        return method;
+    }
 };
 
 std::vector<Column> bindColumns(const TypeGraph& graph, const TypeNode& owner,
@@ -59,16 +65,28 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
 
 } // namespace
 
-void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports) {
+void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports,
+                         const std::vector<BoundField>& fields) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     const auto components = bindColumns(graph, node, model.components, imports);
     const auto alternatives = bindColumns(graph, node, model.alternatives, imports);
+    std::set<std::string> api{"constructor", "vertices", "N"};
+    if (model.vertexList) api.insert({"v", "nv"});
+    if (model.mutableGraph) api.insert({"addVertex", "clear"});
+    if (model.nameComponentIndex) api.insert("vertexName");
+    if (!alternatives.empty()) api.insert({"h", "w", "object", "value", "visitVertex", "j"});
+    if (model.hierarchy) api.insert({"getParent", "reference", "parent", "child", "children", "numChildren", "edge", "source", "target", "oe", "od"});
+    if (model.parentGraph) api.insert({"roots", "locateChild"});
+    if (model.addressableGraph) api.insert({"locate", "locateRelative", "path"});
+    for (const auto& component : components) api.insert("get" + component.tagName);
+    for (const auto& field : fields)
+        if (api.contains(field.name)) throw std::runtime_error(node.qualifiedName + ": graph field collides with TypeScript member " + field.name);
     if (model.hierarchy && std::ranges::find(components, "Parent", &Column::tagName) != components.end())
         throw std::runtime_error(node.qualifiedName + ": component accessor collides with TypeScript getParent");
     const std::string kinds = node.name + "Value";
     if (!alternatives.empty()) {
-        for (const auto suffix : {"Value", "ValueType", "Object"}) {
+        for (const auto suffix : {"Value", "ValueType", "Object", "Visitor"}) {
             if (graph.findType(node.qualifiedName + suffix) != TypeId{})
                 throw std::runtime_error(node.qualifiedName + ": TypeScript graph export collides with " + node.name + suffix);
         }
@@ -77,6 +95,9 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "}\n\nexport interface " << kinds << "Type {\n";
         for (const auto& alt : alternatives)
             out << "    [" << kinds << "." << alt.tagName << "]: " << alt.type << ";\n";
+        out << "}\n\nexport interface " << node.name << "Visitor {\n";
+        for (const auto& alt : alternatives)
+            out << "    " << alt.visitorMethod() << "(value: " << alt.type << "): unknown;\n";
         out << "}\n\nexport type " << node.name << "Object = " << kinds << "Type[" << kinds << "];\n";
     }
 
@@ -93,28 +114,64 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (model.hierarchy) out << "        readonly parent: number;\n        readonly children: cc$graph.OutE[];\n";
     out << "    }[] = [];\n";
     if (model.parentGraph) out << "    " << storage << "roots: cc$graph.OutE[] = [];\n";
+    for (const auto& f : fields)
+        out << "    " << (f.readonly ? "readonly " : "") << f.name << ": " << f.ts << " = " << f.tsDefault << ";\n";
     if (model.serializable) {
         out << "\n    [cc$adopt" << node.name << "] (decoded: " << node.name << "): void {\n"
             << "        this.vertices = decoded.vertices;\n";
         if (model.parentGraph) out << "        this.roots = decoded.roots;\n";
+        for (const auto& f : model.fields) {
+            if (f.transient) continue;
+            const auto target = "this." + f.name;
+            const auto source = "decoded." + f.name;
+            const auto kind = graph.node(f.type.type).typescriptContainer;
+            if (!f.isReadonly) out << "        " << target << " = " << source << ";\n";
+            else if (kind == ContainerKind::Array)
+                out << "        " << target << ".length = 0;\n        for (const item of " << source << ") " << target << ".push(item);\n";
+            else if (kind == ContainerKind::Map)
+                out << "        " << target << ".clear();\n        for (const [key, value] of " << source << ") " << target << ".set(key, value);\n";
+            else if (kind == ContainerKind::Set)
+                out << "        " << target << ".clear();\n        for (const item of " << source << ") " << target << ".add(item);\n";
+            else out << "        Object.assign(" << target << ", " << source << ");\n";
+        }
         out << "    }\n";
     }
     if (model.vertexList)
         out << "\n    v (): IterableIterator<number> { return this.vertices.keys(); }\n"
             << "    nv (): number { return this.vertices.length; }\n";
-    if (model.mutableGraph) addVertex(out, model, kinds, components);
+    if (model.mutableGraph) {
+        out << "\n    clear (): void {\n        this.vertices.length = 0;\n";
+        if (model.parentGraph) out << "        this.roots.length = 0;\n";
+        for (const auto& f : fields) {
+            if (!f.tsReset.empty()) out << "        " << f.tsReset << ";\n";
+            else if (!f.readonly) out << "        this." << f.name << " = " << f.tsDefault << ";\n";
+            else if (f.tsDefault.starts_with("new "))
+                out << "        Object.assign(this." << f.name << ", " << f.tsDefault << ");\n";
+        }
+        out << "    }\n";
+        addVertex(out, model, kinds, components);
+    }
     for (const auto& component : components)
         out << "\n    get" << component.tagName << " (v: number): " << component.type << " {\n"
             << "        return this.vertices[v].component" << component.tagName << ";\n    }\n";
     if (model.nameComponentIndex)
         out << "\n    vertexName (v: number): string { return this.get" << components.at(*model.nameComponentIndex).tagName << "(v); }\n";
-    if (!alternatives.empty())
-        out << "\n    w (v: number): " << kinds << " { return this.vertices[v].id; }\n"
+    if (!alternatives.empty()) {
+        out << "\n    h (id: " << kinds << ", v: number): boolean { return this.w(v) === id; }\n"
+            << "    w (v: number): " << kinds << " { return this.vertices[v].id; }\n"
+            << "    object (v: number): " << node.name << "Object { return this.vertices[v].object; }\n"
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
             << "        const vertex = this.vertices[v];\n"
             << "        if (vertex.id !== id) throw new Error('Vertex kind does not match');\n"
             << "        return vertex.object as " << kinds << "Type[T];\n    }\n"
-            << "    j<T extends " << node.name << "Object> (v: number): T { return this.vertices[v].object as T; }\n";
+            << "    visitVertex (visitor: " << node.name << "Visitor, v: number): unknown {\n"
+            << "        const vertex = this.vertices[v];\n        switch (vertex.id) {\n";
+        for (const auto& alt : alternatives)
+            out << "        case " << kinds << "." << alt.tagName << ": return visitor." << alt.visitorMethod()
+                << "(vertex.object as " << alt.type << ");\n";
+        out << "        default: throw new Error('Unknown vertex kind');\n        }\n    }\n"
+            << "    j<T extends " << node.name << "Object> (v: number): T { return this.object(v) as T; }\n";
+    }
     if (model.hierarchy)
         out << "\n    getParent (v: number): number { return v === this.N ? this.N : this.vertices[v].parent; }\n"
             << "    reference (u: number, v: number): boolean { return u !== this.N && !!this.vertices[v] && this.getParent(v) === u; }\n"

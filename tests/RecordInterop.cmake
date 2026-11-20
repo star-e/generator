@@ -50,6 +50,7 @@ namespace cc {
         component cc::render::Descriptors_: render::DescriptorDB { member: data; }
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
         component Count_: uint32_t { member: counts; }
+        version: uint32_t = 1;
         named_graph { component: cc::render::Name_; }
     }
     graph HierarchyOnly {
@@ -115,6 +116,23 @@ build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)
 set(pathCases "${work}/layout-paths.bin")
 run("${consumer}" path-cases "${pathCases}")
+# Each injected failure runs independently, including the MSVC debug STL's noexcept hash proxy allocation.
+foreach(count IN ITEMS 2 16)
+    set(failAfter 0)
+    set(proxyFailure FALSE)
+    while(TRUE)
+        execute_process(COMMAND "${consumer}" stage-allocation ${count} ${failAfter} RESULT_VARIABLE rc)
+        if(rc STREQUAL "0")
+            break()
+        elseif(rc STREQUAL "43" AND NOT proxyFailure)
+            set(proxyFailure TRUE)
+            message(STATUS "Stage at vertex ${count}: MSVC debug hash proxy terminated on allocation ${failAfter}")
+        elseif(NOT rc STREQUAL "42")
+            message(FATAL_ERROR "Stage insertion at vertex ${count}, allocation ${failAfter}: result ${rc}")
+        endif()
+        math(EXPR failAfter "${failAfter} + 1")
+    endwhile()
+endforeach()
 set(dfsCases "${work}/dfs-cases.bin")
 run("${consumer}" dfs-cases "${dfsCases}")
 
@@ -199,8 +217,12 @@ foreach(type IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding Descriptor
 endforeach()
 file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n${gfxCodec}")
-source_between(layout "function resetDescriptorSetLayoutInfo " "export const enum LayoutGraphDataValue" legacyGraph)
-source_between(layout "export function saveDescriptor (" "export function saveLayoutGraphData (" legacyArchive)
+source_between(layout "function resetDescriptorSetLayoutInfo " "function createPool<" legacyGraph)
+string(FIND "${layout}" "export function saveDescriptor (" codecStart)
+if(codecStart EQUAL -1)
+    message(FATAL_ERROR "Missing engine layout graph codecs")
+endif()
+string(SUBSTRING "${layout}" ${codecStart} -1 legacyArchive)
 string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
 file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency } from './types';\n"
     "import { COCOS_RUNTIME, HTML5 } from 'internal:constants';\n"
@@ -227,6 +249,9 @@ configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsum
 
 # Compile the editor's lookup, traversal and descriptor propagation against the generated graph.
 file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-editor.ts" editor)
+source_between(editor "class LayoutGraphBuilder2 {" "    private getDescriptorSetData (" layoutDataBuilder)
+file(READ "${ENGINE}/cocos/rendering/custom/web-program-library.ts" webPrograms)
+source_between(webPrograms "    constructor (lg: LayoutGraphData) {" "    init (deviceIn: Device): void {" programLibraryConstructor)
 foreach(symbol IN ITEMS "function indent" "function unindent" "function hasFlag" "function getVisibilityName"
                         "function convertDescriptorBlock" "class LayoutGraphPrintVisitor" "class VectorGraphColorMap")
     string(REGEX MATCH "${symbol} [^\n]+[{]\n([ \t][^\n]*\n|\n)*[}]" definition "${editor}")
@@ -288,6 +313,10 @@ run("${node}" "${SOURCE}/tests/consumer/records/pipeline-archive.cjs" "${work}/j
     "${work}/pipeline-native.bin" "${work}/pipeline-web.bin" "${work}/pipeline-legacy.bin")
 run("${consumer}" pipeline-read "${work}/pipeline-web.bin")
 run("${consumer}" pipeline-read "${work}/pipeline-legacy.bin")
+file(READ "${build}/legacy-${CONFIG}.txt" legacyConsumer)
+run("${legacyConsumer}" "${work}/pipeline-native.bin" "${work}/pipeline-legacy-native.bin")
+run("${CMAKE_COMMAND}" -E compare_files "${work}/pipeline-web.bin" "${work}/pipeline-legacy-native.bin")
+run("${consumer}" pipeline-read "${work}/pipeline-legacy-native.bin")
 run("${consumer}" layout-read "${work}/layout-web.bin")
 run("${consumer}" layout-read "${work}/layout-legacy.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy.bin")

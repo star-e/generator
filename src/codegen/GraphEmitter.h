@@ -1,5 +1,6 @@
 #pragma once
 
+#include "codegen/BoundField.h"
 #include "codegen/TypeScriptImports.h"
 
 #include <iosfwd>
@@ -9,7 +10,9 @@
 namespace cc::codegen {
 
 void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& header, std::ostream& source,
-                  std::set<std::string>& headers, std::set<std::string>& forwardDeclarations);
-void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports);
+                  std::set<std::string>& headers, std::set<std::string>& forwardDeclarations,
+                  const std::vector<BoundField>& fields, const std::string& inputArchive);
+void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports,
+                         const std::vector<BoundField>& fields);
 
 } // namespace cc::codegen

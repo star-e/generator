@@ -49,10 +49,32 @@ function attachHandles([set, shader, , , renderPhase], handles) {
     [set.descriptorSetLayout, set.descriptorSet, shader.pipelineLayout, renderPhase.pipelineLayout] = handles;
 }
 
+function graphData(api, [set, , effect, stage, renderPhase]) {
+    const graph = new api.LayoutGraphData();
+    const layout = new api.PipelineLayoutData();
+    layout.descriptorSets.set(pass, set);
+    const root = graph.addVertex(0, stage, 'main', pass, layout);
+    const child = graph.addVertex(1, renderPhase, 'lighting', phase, new api.PipelineLayoutData(), root);
+    graph.valueNames.push('camera', 'bloom');
+    graph.attributeIndex.set('camera', 42);
+    graph.constantIndex.set('tint', 12);
+    graph.shaderLayoutIndex.set('bloom', child);
+    graph.effects.set('post', effect);
+    graph.constantMacros = 'writer macros';
+    return graph;
+}
+
+function graphValues(g) {
+    return [Array.from(g.v(), v => [g.w(v), g.getParent(v), g.getName(v), g.getUpdate(v), g.getLayout(v), g.value(g.w(v), v)]),
+        g.valueNames, g.attributeIndex, g.constantIndex, g.shaderLayoutIndex, g.effects];
+}
+
 function encode(api) {
     const values = records(api), archive = new BinaryOutputArchive();
     attachHandles(values, [{}, {}, {}, {}]);
     roots.forEach((type, i) => api['save' + type](archive, values[i]));
+    api.saveLayoutGraphData(archive, new api.LayoutGraphData());
+    api.saveLayoutGraphData(archive, graphData(api, values));
     return Buffer.from(archive.data);
 }
 
@@ -70,6 +92,27 @@ function checkArchive(api, bytes) {
     const expected = records(api);
     attachHandles(expected, handles);
     assert.deepEqual(values, expected);
+    const graph = new api.LayoutGraphData();
+    graph.constantMacros = 'reader macros';
+    const names = graph.valueNames, effects = graph.effects;
+    api.loadLayoutGraphData(archive, graph);
+    assert.equal(graph.nv(), 0);
+    const graphOffset = archive.offset;
+    api.loadLayoutGraphData(archive, graph);
+    assert.deepEqual(graphValues(graph), graphValues(graphData(api, records(api))));
+    assert.equal(graph.constantMacros, 'reader macros');
+    assert.strictEqual(graph.valueNames, names);
+    assert.strictEqual(graph.effects, effects);
+    if (api === current) {
+        const truncated = bytes.subarray(graphOffset, bytes.length - 1);
+        const input = new BinaryInputArchive(truncated.buffer.slice(truncated.byteOffset, truncated.byteOffset + truncated.length));
+        const effect = graph.effects.get('post');
+        graph.valueNames.push('keep');
+        assert.throws(() => api.loadLayoutGraphData(input, graph));
+        assert.deepEqual(graph.valueNames, ['camera', 'bloom', 'keep']);
+        assert.equal(graph.nv(), 2);
+        assert.strictEqual(graph.effects.get('post'), effect);
+    }
     assert.equal(archive.offset, bytes.length);
 }
 

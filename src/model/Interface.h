@@ -102,6 +102,7 @@ struct GraphDeclaration {
     std::optional<SourceLocation> addressableGraph;
     std::vector<GraphComponent> components;
     std::vector<GraphComponent> alternatives;
+    std::vector<Field> fields;
 };
 
 struct Declaration {

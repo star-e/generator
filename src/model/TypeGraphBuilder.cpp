@@ -119,12 +119,9 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
     return member;
 }
 
-RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
-    RecordType result{.moveOnly = syntax.moveOnly, .requireAllocator = syntax.requireAllocator, .serializable = syntax.serializable,
-                      .compareEqual = syntax.comparisons.contains("=="),
-                      .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
-                      .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
-    for (const auto& field : syntax.fields) {
+std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>& fields, const std::string& scope, ModuleId owner) {
+    std::vector<FieldInfo> result;
+    for (const auto& field : fields) {
         auto use = resolve(graph, field.type, scope, owner);
         std::string_view magnitude = field.initializer;
         if (magnitude.starts_with('-')) magnitude.remove_prefix(1);
@@ -146,8 +143,17 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
                 throw std::runtime_error(use.location.describe() + ": invalid enum default " + field.initializer);
             }
         }
-        result.fields.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient});
+        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient});
     }
+    return result;
+}
+
+RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
+    RecordType result{.moveOnly = syntax.moveOnly, .requireAllocator = syntax.requireAllocator, .serializable = syntax.serializable,
+                      .compareEqual = syntax.comparisons.contains("=="),
+                      .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
+                      .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
+    result.fields = resolveFields(graph, syntax.fields, scope, owner);
     std::set<std::vector<uint32_t>> signatures;
     for (const auto& ctor : syntax.constructors) {
         std::vector<uint32_t> members, signature;
@@ -259,6 +265,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     result.vertexList = syntax.vertexList;
     result.mutableGraph = syntax.mutableGraph;
     result.hierarchy = syntax.hierarchy;
+    result.fields = resolveFields(graph, syntax.fields, scope, owner);
     const auto& vertex = graph.node(result.vertexType);
     if (syntax.indexed && !indexedVertexLimit(vertex.qualifiedName)) {
         throw std::runtime_error(syntax.vertexType->location.describe() + ": expected an integer descriptor for indexed vertices");

@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <fstream>
 #include <initializer_list>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <unordered_set>
@@ -110,7 +111,8 @@ static_assert(!std::is_nothrow_constructible_v<ResolvePair, decltype(ResolvePair
 using CtorProbe = cc::AllocatorCtorProbe;
 using ProbeString = decltype(CtorProbe::countIn);
 using ProbeAlloc = const CtorProbe::allocator_type&;
-static_assert(std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeAlloc> == std::is_nothrow_constructible_v<ProbeString, ProbeAlloc>);
+static_assert(std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeAlloc> ==
+              noexcept(cc::detail::makeEmptyPmr<ProbeString>(std::declval<ProbeAlloc>(), "")));
 static_assert(std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeString, ProbeAlloc> ==
               std::is_nothrow_constructible_v<ProbeString, ProbeString&&, ProbeAlloc>);
 static_assert(std::is_nothrow_move_assignable_v<ResolvePair> && std::is_copy_assignable_v<ResolvePair>);
@@ -380,12 +382,15 @@ bool checkRenderPhase() {
 }
 
 bool checkLayoutGraph(const char* pathSamples);
+int checkStageAllocation(unsigned count, int failAfter);
 bool writeDfsCases(const char* path);
 bool exchangeLayoutArchive(std::string_view mode, const char* path);
 bool exchangeBlockArchives(bool writing, const char* path);
 bool exchangePipelineArchives(bool writing, const char* path);
 
 int main(int argc, char** argv) {
+    if (argc == 4 && std::string_view(argv[1]) == "stage-allocation")
+        return checkStageAllocation(std::stoul(argv[2]), std::stoi(argv[3]));
     if (argc == 3) {
         const std::string_view mode(argv[1]);
         if (mode == "layout-write" || mode == "layout-read" || mode == "layout-invalid")

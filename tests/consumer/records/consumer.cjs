@@ -67,7 +67,7 @@ compareDeclaration(layoutTs, 'export class DescriptorBlockFlattened {', '}');
 compareDeclaration(layoutTs, 'export class DescriptorBlockData {', '}');
 compareDeclaration(layoutTs, 'export class DescriptorSetLayoutData {', '}');
 compareDeclaration(layoutCpp, 'struct DescriptorBlockData {', '};', line => line.replace(
-    'noexcept(noexcept(decltype(DescriptorBlockData::descriptors)(alloc)))', 'noexcept'));
+    'noexcept(noexcept(::cc::detail::makeEmptyPmr<ccstd::pmr::vector<DescriptorData>>(alloc, 0U)))', 'noexcept'));
 const flat = new layout.DescriptorBlockFlattened();
 const otherFlat = new layout.DescriptorBlockFlattened();
 const elements = { descriptorNames: 'buffer', uniformBlockNames: 'camera', descriptors: new layout.Descriptor(), uniformBlocks: new UniformBlock() };
@@ -247,7 +247,11 @@ for (const name of ['ResolvePair', 'CopyPair', 'UploadPair', 'MovePair']) {
     // Moving the target string into a different PMR allocator can allocate.
     const sourceArgs = name === 'UploadPair' ? 'std::move(sourceIn)' : 'std::move(sourceIn), alloc';
     const exceptionSpec = ` noexcept(noexcept(decltype(${name}::source)(${sourceArgs})) && noexcept(decltype(${name}::target)(std::move(targetIn), alloc)))`;
-    const normalizeSpec = text => text.replace(exceptionSpec, '');
+    const emptyString = '::cc::detail::makeEmptyPmr<ccstd::pmr::string>(alloc, "")';
+    const emptyStrings = Array(name === 'UploadPair' ? 1 : 2).fill(`noexcept(${emptyString})`);
+    const normalizeSpec = text => text.replace(exceptionSpec, '')
+        .replace(`noexcept(${emptyStrings.join(' && ')})`, 'noexcept')
+        .split(emptyString).join('alloc');
     compareDeclaration(cpp, `struct ${name} {`, '};', normalizeSpec);
     compareDeclaration(ts, `export class ${name} {`, '}');
     const definitions = constructors(stage, name);

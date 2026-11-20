@@ -3,6 +3,7 @@
 #include "model/TypeName.h"
 
 #include <algorithm>
+#include <map>
 #include <ostream>
 #include <stdexcept>
 #include <string_view>
@@ -151,40 +152,90 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
 }
 
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
-                       const std::vector<std::string>& storage) {
+                       const std::vector<std::string>& storage, const std::set<std::string>& moveOnlyColumns,
+                       const std::set<std::string>& dequeColumns, const std::vector<BoundField>& fields) {
     const auto& member = storage.front();
-    out << "    explicit " << name << "(const allocator_type& alloc) noexcept";
-    for (const auto& field : storage) out << (field == member ? " : " : ", ") << field << "(alloc)";
-    out << " {}\n"
-        << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc);\n"
-        << "    " << name << "(" << name << "&& rhs, const allocator_type& alloc);\n"
-        << "    " << name << "(" << name << "&&) noexcept = default;\n"
-        << "    " << name << "(const " << name << "&) = delete;\n";
-    const auto assignment = storage.size() > 1 ? ";\n" : " = default;\n";
-    out << "    " << name << "& operator=(" << name << "&&)" << assignment
-        << "    " << name << "& operator=(const " << name << "&)" << assignment
-        << "    allocator_type get_allocator() const noexcept { return {this->" << member << ".get_allocator().resource()}; }\n";
-    source << "\n" << name << "::" << name << "(const " << name << "& rhs, const allocator_type& alloc)\n";
+    const bool copyable = moveOnlyColumns.empty();
+    out << "    explicit " << name << "(const allocator_type& alloc)";
     for (const auto& field : storage)
-        source << (field == member ? ": " : ", ") << field << "(rhs." << field << ", alloc)";
-    source << " {}\n\n" << name << "::" << name << "(" << name << "&& rhs, const allocator_type& alloc)\n";
-    if (storage.size() == 1) {
+        out << (field == member ? " : " : ", ") << field << (dequeColumns.contains(field) ? "(alloc)" : "(0, alloc)");
+    for (const auto& f : fields)
+        if (f.usesAllocator) out << ", " << f.name << "(" << f.allocatorArguments() << ")";
+    out << " {}\n"
+        << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc)" << (copyable ? ";\n" : " = delete;\n")
+        << "    " << name << "(" << name << "&& rhs, const allocator_type& alloc);\n"
+        << "    " << name << "(" << name << "&& rhs) : "
+        << name << "(std::move(rhs), rhs.get_allocator()) {}\n"
+        << "    " << name << "(const " << name << "&) = delete;\n";
+    const bool simple = storage.size() == 1 && copyable && fields.empty();
+    const auto assignment = simple ? " = default;\n" : ";\n";
+    out << "    " << name << "& operator=(" << name << "&&)" << assignment
+        << "    " << name << "& operator=(const " << name << "&)" << (copyable ? assignment : " = delete;\n")
+        << "    allocator_type get_allocator() const noexcept { return {this->" << member << ".get_allocator().resource()}; }\n";
+    if (copyable) {
+        source << "\n" << name << "::" << name << "(const " << name << "& rhs, const allocator_type& alloc)\n";
+        for (const auto& field : storage)
+            source << (field == member ? ": " : ", ") << field << "(rhs." << field << ", alloc)";
+        for (const auto& f : fields) source << ", " << f.name << "(rhs." << f.name << (f.usesAllocator ? ", alloc)" : ")");
+        source << " {}\n";
+    }
+    source << "\n" << name << "::" << name << "(" << name << "&& rhs, const allocator_type& alloc)\n";
+    if (simple) {
         source << ": " << member << "(std::move(rhs." << member << "), alloc) {}\n";
         return;
     }
     // Keep parallel component and adjacency storage together if the destination resource fails.
     source << ": " << name << "(alloc) {\n"
-           << "    if (alloc.resource() == rhs.get_allocator().resource()) {\n        swapStorage(rhs);\n    } else {\n"
-           << "        " << name << " copy(rhs, alloc);\n        swapStorage(copy);\n";
+           << "    if (alloc == rhs.get_allocator()) {\n        swapStorage(rhs);\n    } else {\n";
+    if (copyable) {
+        source << "        " << name << " copy(rhs, alloc);\n        swapStorage(copy);\n";
+    } else {
+        // Build the copyable columns first. Clear the source topology only after every transfer succeeds.
+        for (const auto& field : storage) {
+            if (!moveOnlyColumns.contains(field))
+                source << "        decltype(" << field << ")(rhs." << field << ", alloc).swap(this->" << field << ");\n";
+        }
+        for (const auto& field : storage)
+            if (moveOnlyColumns.contains(field))
+                source << "        for (auto& item : rhs." << field << ") this->" << field << ".emplace_back(std::move(item));\n";
+        for (const auto& f : fields) {
+            source << "        this->" << f.name << " = std::move(rhs." << f.name << ");\n";
+        }
+    }
     for (const auto& field : storage) source << "        rhs." << field << ".clear();\n";
-    source << "    }\n}\n\nvoid " << name << "::swapStorage(" << name << "& other) noexcept {\n";
+    const bool transients = std::ranges::any_of(fields, &BoundField::transient);
+    source << "    }\n}\n\nvoid " << name << "::swapStorage(" << name << "& other"
+           << (transients ? ", bool includeTransient" : "") << ")" << (fields.empty() ? " noexcept" : "") << " {\n";
     for (const auto& field : storage) source << "    this->" << field << ".swap(other." << field << ");\n";
+    if (!fields.empty()) source << "    using std::swap;\n";
+    for (const auto& f : fields)
+        source << "    " << (f.transient ? "if (includeTransient) " : "") << "swap(this->" << f.name << ", other." << f.name << ");\n";
     source << "}\n";
     for (bool move : {false, true}) {
+        if (!move && !copyable) continue;
         source << "\n" << name << "& " << name << "::operator=(" << (move ? "" : "const ") << name << (move ? "&&" : "&") << " rhs) {\n"
                << "    if (this != &rhs) {\n        " << name << " replacement(" << (move ? "std::move(rhs)" : "rhs")
                << ", get_allocator());\n        swapStorage(replacement);\n    }\n    return *this;\n}\n";
     }
+}
+
+bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
+    if (!visited.insert(id.value).second) return false;
+    const auto& node = graph.node(id);
+    const auto fieldMoves = [&](const FieldInfo& f) { return hasMoveOnlyValue(graph, f.type.type, visited); };
+    if (const auto* record = std::get_if<RecordType>(&node.data))
+        return record->moveOnly || std::ranges::any_of(record->fields, fieldMoves);
+    if (const auto* nested = std::get_if<GraphType>(&node.data)) {
+        const auto columnMoves = [&](const ComponentInfo& c) { return hasMoveOnlyValue(graph, c.valueType, visited); };
+        return std::ranges::any_of(nested->components, columnMoves) || std::ranges::any_of(nested->alternatives, columnMoves) ||
+               std::ranges::any_of(nested->fields, fieldMoves);
+    }
+    if (const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
+        instance && std::get<ExternalTypeNode>(graph.node(instance->declaration).data).container != ContainerKind::None) {
+        for (const auto& arg : instance->arguments)
+            if (const auto* element = std::get_if<TypeId>(&arg); element && hasMoveOnlyValue(graph, *element, visited)) return true;
+    }
+    return false;
 }
 
 struct Alternative {
@@ -215,7 +266,8 @@ void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternativ
 
 void addVertex(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
                const std::vector<std::string>& storage, const std::string& input, const std::string& rows,
-               const std::vector<Alternative>& alternatives, const std::string& handles) {
+               const std::vector<Alternative>& alternatives, const std::string& handles,
+               const std::map<std::string, std::string>& defaultArgs) {
     const bool hierarchy = !rows.empty();
     const auto& member = storage.front();
     const std::string value = input.empty() ? "" : "std::string_view value";
@@ -249,24 +301,6 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     source << "    if (this->" << member << ".size() >= (std::numeric_limits<" << name << "::" << vertex << ">::max)())\n"
            << "        throw std::length_error(\"" << name << " vertex limit exceeded\");\n"
            << "    const auto vertex = static_cast<" << name << "::" << vertex << ">(this->" << member << ".size());\n";
-    const bool hasDefaults = !alternatives.empty() || storage.size() > static_cast<size_t>(hierarchy) + (input.empty() ? 0U : 1U);
-    if (hasDefaults) {
-        source << R"(    auto appendDefault = [](auto& items) {
-        if (!items.empty() && items.size() == items.capacity()) {
-            // Allocator-extended moves may throw after modifying an earlier element.
-            // Grow from const copies and publish the new column only after insertion succeeds.
-            std::decay_t<decltype(items)> grown(items.get_allocator());
-            const auto size = items.size();
-            grown.reserve(size > items.max_size() - size ? items.max_size() : size * 2);
-            for (const auto& item : items) grown.emplace_back(item);
-            grown.emplace_back();
-            items.swap(grown);
-        } else {
-            items.emplace_back();
-        }
-    };
-)";
-    }
     const bool parallel = storage.size() > 1 || !alternatives.empty();
     const auto indent = parallel ? "        " : "    ";
     if (hierarchy) source << "    auto& edges = this->" << rows << ";\n";
@@ -274,7 +308,8 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     // Consume the view before growing other columns: it can refer to text in this graph.
     if (!input.empty()) source << indent << "this->" << input << ".emplace_back(value);\n";
     for (const auto& field : storage) {
-        if (field != input && field != rows && field != handles) source << indent << "appendDefault(this->" << field << ");\n";
+        if (field != input && field != rows && field != handles)
+            source << indent << "this->" << field << ".emplace_back(" << defaultArgs.at(field) << ");\n";
     }
     if (hierarchy) source << indent << "edges.push_back(VertexLinks{parent});\n";
     if (!alternatives.empty()) {
@@ -283,7 +318,7 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
             source << indent << "case Kind::" << alt.kind << ":\n"
                    << indent << "    this->" << handles << ".push_back({kind, static_cast<" << vertex
                    << ">(this->" << alt.member << ".size())});\n"
-                   << indent << "    appendDefault(this->" << alt.member << ");\n"
+                   << indent << "    this->" << alt.member << ".emplace_back(" << defaultArgs.at(alt.member) << ");\n"
                    << indent << "    break;\n";
         }
         source << indent << "}\n";
@@ -314,7 +349,8 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
 } // namespace
 
 void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
-                  std::set<std::string>& headers, std::set<std::string>& forwards) {
+                  std::set<std::string>& headers, std::set<std::string>& forwards,
+                  const std::vector<BoundField>& fields, const std::string& inputArchive) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     if (!model.indexedVertices || (model.components.empty() && model.alternatives.empty()))
@@ -329,8 +365,26 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     const auto& integer = graph.node(model.vertexType);
     const auto& name = node.name;
     headers.insert("cocos/base/std/container/vector.h");
+    headers.insert("utility");
     if (!integer.cppHeader.empty()) headers.insert(integer.cppHeader);
+    std::set<std::string> moveOnlyColumns;
+    std::set<std::string> dequeColumns;
+    std::map<std::string, std::string> defaultArgs;
     const auto columnType = [&](const ComponentInfo& component) {
+        std::set<uint32_t> visited;
+        if (hasMoveOnlyValue(graph, component.valueType, visited)) moveOnlyColumns.insert(component.name);
+        const auto& valueNode = graph.node(component.valueType);
+        const auto& value = valueNode.data;
+        auto& args = defaultArgs[component.name];
+        if (valueNode.qualifiedName == "ccstd::pmr::string") args = "\"\"";
+        if (const auto* instance = std::get_if<TemplateInstanceType>(&value);
+            instance && graph.node(instance->declaration).qualifiedName == "ccstd::pmr::vector") args = "0U";
+        if (!std::holds_alternative<BuiltinType>(value) && !std::holds_alternative<EnumType>(value) &&
+            !std::holds_alternative<AliasType>(value) && !std::holds_alternative<PointerType>(value)) {
+            // Segmented columns append without relocating allocator-aware or move-only elements.
+            dequeColumns.insert(component.name);
+            headers.insert("cocos/base/std/container/deque.h");
+        }
         const auto& tag = graph.node(component.tag);
         if (component.tag.value > id.value || tag.module != node.module) {
             const auto ns = tag.qualifiedName.rfind("::");
@@ -354,9 +408,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     for (const auto& alt : model.alternatives) {
         const auto& tag = graph.node(alt.tag);
         const auto& payload = graph.node(alt.valueType);
-        const auto* record = std::get_if<RecordType>(&payload.data);
-        if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data) || (record && record->moveOnly))
-            throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires a copyable object type");
+        if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data))
+            throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires an object type");
         alternatives.push_back({"::" + tag.qualifiedName, componentAccessorSuffix(tag.name), columnType(alt), alt.name});
         members.insert(alt.name);
     }
@@ -365,6 +418,24 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": polymorphic graph member name collision: " + symbol);
         }
+    }
+    std::set<std::string> api{"allocator_type", "get_allocator", "swapStorage"};
+    if (model.vertexList) api.insert({"vertices", "num_vertices", "VertexIterator", "VertexRange"});
+    if (model.mutableGraph) api.insert("add_vertex");
+    if (model.hierarchy) api.insert({"null_vertex", "VertexLinks", "Link", "ChildLinkIterator", "ChildLinkRange",
+        "get_parent", "num_children", "child_links", "child", "Edge", "source", "target", "out_edges", "out_degree", "edge"});
+    if (model.parentGraph) api.insert("locate_child");
+    if (model.addressableGraph) api.insert({"locate", "path", "exists"});
+    if (!alternatives.empty()) api.insert({"Kind", "kind", "holds", "value", "kindOf", "VertexHandle", "addVertexImpl"});
+    for (const auto& c : model.components) {
+        api.insert("get");
+        api.insert("get" + componentAccessorSuffix(graph.node(c.tag).name));
+    }
+    for (const auto& f : model.fields) {
+        std::set<uint32_t> visited;
+        if (hasMoveOnlyValue(graph, f.type.type, visited)) moveOnlyColumns.insert(f.name);
+        if (api.contains(f.name) || !members.insert(f.name).second)
+            throw std::runtime_error(node.qualifiedName + ": graph field collides with C++ member " + f.name);
     }
     const auto internalColumn = [&](std::string field) {
         while (!members.insert(field).second) field += "0";
@@ -380,7 +451,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     out << "\nstruct " << name << " {\n"
         << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    graphConstructors(out, source, name, allStorage);
+    graphConstructors(out, source, name, allStorage, moveOnlyColumns, dequeColumns, fields);
     if (model.vertexList) {
         headers.insert("cstddef");
         headers.insert("iterator");
@@ -394,8 +465,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (model.nameComponentIndex) input = storage.at(*model.nameComponentIndex);
         else if (!types.empty() && types.front() == "ccstd::pmr::string") input = storage.front();
         if (!input.empty()) headers.insert("string_view");
-        if (input.empty() || types.size() > 1 || !alternatives.empty()) headers.insert("type_traits");
-        addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles);
+        addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles, defaultArgs);
     }
     if (model.hierarchy) {
         for (const auto* symbol : {"Edge", "source", "target", "out_edges", "out_degree", "edge"}) {
@@ -435,7 +505,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     }
     out << "\nprivate:\n";
     for (size_t i = 0; i < types.size(); ++i)
-        out << "    ccstd::pmr::vector<" << types[i] << "> " << storage[i] << ";\n";
+        out << "    ccstd::pmr::" << (dequeColumns.contains(storage[i]) ? "deque" : "vector") << "<" << types[i] << "> " << storage[i] << ";\n";
     if (model.hierarchy) {
         out << "    struct VertexLinks {\n"
             << "        " << vertex << " parent{null_vertex()};\n"
@@ -452,7 +522,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             out << "    static constexpr Kind kindOf(" << alt.tag << "*) noexcept { return Kind::" << alt.kind << "; }\n";
             // Keep value() addressable even when the C++ container specializes vector<bool>.
             if (alt.type == "bool") headers.insert("array");
-            out << "    ccstd::pmr::vector<" << (alt.type == "bool" ? "std::array<bool, 1>" : alt.type)
+            out << "    ccstd::pmr::" << (dequeColumns.contains(alt.member) ? "deque" : "vector") << "<" << (alt.type == "bool" ? "std::array<bool, 1>" : alt.type)
                 << "> " << alt.member << ";\n";
         }
         if (model.mutableGraph) {
@@ -462,7 +532,14 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             out << ");\n";
         }
     }
-    if (allStorage.size() > 1) out << "    void swapStorage(" << name << "& other) noexcept;\n";
+    if (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty())
+        out << "    void swapStorage(" << name << "& other"
+            << (std::ranges::any_of(fields, &BoundField::transient) ? ", bool includeTransient = true" : "")
+            << ")" << (fields.empty() ? " noexcept" : "") << ";\n";
+    if (!inputArchive.empty()) out << "    friend void load(" << inputArchive << "&, " << name << "&);\n";
+    if (!fields.empty()) out << "\npublic:\n";
+    for (const auto& f : fields)
+        out << "    " << f.cpp << " " << f.name << (f.cppDefault.empty() ? "" : "{" + f.cppDefault + "}") << ";\n";
     out << "};\n";
 }
 

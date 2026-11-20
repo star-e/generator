@@ -6,6 +6,7 @@
 #include "gfx-empty/EmptyPipelineLayout.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <fstream>
+#include <sstream>
 #include <type_traits>
 
 namespace {
@@ -85,6 +86,55 @@ bool checkEffect(const EffectData& effect, const Alloc& alloc) {
     return shader.get_allocator() == alloc && binding.get_allocator() == alloc && layout.get_allocator() == alloc &&
            layout.bindingMap.at(id) == 12 && binding.descriptorBindings.at(id) == 23;
 }
+
+void fillGraph(LayoutGraphData& graph, Records& records) {
+    const auto root = graph.add_vertex(RenderStage_{}, "main");
+    const auto child = graph.add_vertex(RenderPhase_{}, "lighting", root);
+    graph.getUpdate(root) = pass;
+    graph.getUpdate(child) = phase;
+    graph.getLayout(root).descriptorSets[pass] = std::move(records.set);
+    graph.value(RenderStage_{}, root) = std::move(records.stage);
+    graph.value(RenderPhase_{}, child) = std::move(records.renderPhase);
+    graph.valueNames.emplace_back("camera");
+    graph.valueNames.emplace_back("bloom");
+    graph.attributeIndex.emplace("camera", id);
+    graph.constantIndex.emplace("tint", NameLocalID{12});
+    graph.shaderLayoutIndex.emplace("bloom", child);
+    graph.effects.emplace("post", std::move(records.effect));
+}
+
+bool checkGraph(const LayoutGraphData& graph) {
+    const auto alloc = graph.get_allocator();
+    return graph.num_vertices() == 2 && graph.locate("/main/lighting") == 1 && graph.get_parent(1) == 0 &&
+           graph.getUpdate(0) == pass && graph.getUpdate(1) == phase && checkSet(graph.getLayout(0).descriptorSets.at(pass), 7, alloc) &&
+           graph.value(RenderStage_{}, 0).descriptorVisibility.at(id) == ShaderStageFlagBit::COMPUTE &&
+           checkProgram(graph.value(RenderPhase_{}, 1).shaderPrograms.at(0), alloc) &&
+           graph.valueNames.size() == 2 && graph.valueNames[0] == "camera" && graph.valueNames[1] == "bloom" &&
+           graph.valueNames[0].get_allocator() == alloc && graph.attributeIndex.at("camera") == id &&
+           graph.constantIndex.at("tint").value == 12 && graph.shaderLayoutIndex.at("bloom") == 1 &&
+           graph.effects.size() == 1 && graph.effects.begin()->first.get_allocator() == alloc && checkEffect(graph.effects.at("post"), alloc);
+}
+
+bool checkTruncatedGraph(const LayoutGraphData& graph) {
+    std::ostringstream output(std::ios::binary);
+    BinaryOutputArchive writer(output, graph.get_allocator().resource());
+    save(writer, graph);
+    auto bytes = output.str();
+    bytes.pop_back();
+    std::istringstream input(bytes, std::ios::binary);
+    input.exceptions(std::ios::badbit | std::ios::failbit);
+    BinaryInputArchive reader(input, graph.get_allocator().resource());
+    LayoutGraphData target{graph.get_allocator()};
+    target.add_vertex("retained");
+    target.valueNames.emplace_back("previous");
+    target.constantMacros = "session";
+    try { load(reader, target); }
+    catch (const std::ios_base::failure&) {
+        return target.num_vertices() == 1 && target.getName(0) == "retained" && target.valueNames.size() == 1 &&
+               target.valueNames.front() == "previous" && target.effects.empty() && target.constantMacros == "session";
+    }
+    return false;
+}
 } // namespace
 
 bool exchangePipelineArchives(bool writing, const char* path) {
@@ -97,6 +147,8 @@ bool exchangePipelineArchives(bool writing, const char* path) {
     records.set.descriptorSet = set;
     records.program.pipelineLayout = pipeline;
     records.renderPhase.pipelineLayout = pipeline;
+    LayoutGraphData graph{&destination};
+    graph.constantMacros = writing ? "writer macros" : "reader macros";
     if (writing) {
         populate(records);
         std::ofstream file(path, std::ios::binary);
@@ -106,8 +158,11 @@ bool exchangePipelineArchives(bool writing, const char* path) {
         save(archive, records.effect);
         save(archive, records.stage);
         save(archive, records.renderPhase);
+        save(archive, graph);
+        fillGraph(graph, records);
+        save(archive, graph);
         file.close();
-        return !file.fail();
+        return !file.fail() && checkTruncatedGraph(graph);
     }
     std::ifstream file(path, std::ios::binary);
     file.exceptions(std::ios::badbit | std::ios::failbit);
@@ -117,6 +172,14 @@ bool exchangePipelineArchives(bool writing, const char* path) {
     load(archive, records.effect);
     load(archive, records.stage);
     load(archive, records.renderPhase);
+    graph.add_vertex("old");
+    graph.valueNames.emplace_back("stale");
+    load(archive, graph);
+    if (graph.num_vertices() || !graph.valueNames.empty() || graph.constantMacros != "reader macros") return false;
+    load(archive, graph);
+    if (!checkGraph(graph) || graph.constantMacros != "reader macros") return false;
+    LayoutGraphData movedGraph{std::move(graph), &arena};
+    if (!checkGraph(movedGraph) || movedGraph.constantMacros != "reader macros" || graph.num_vertices()) return false;
     const auto& rp = records.renderPhase;
     if (file.peek() != std::char_traits<char>::eof() || records.set.descriptorSetLayout != layout || records.set.descriptorSet != set ||
         records.program.pipelineLayout != pipeline || rp.pipelineLayout != pipeline || !checkSet(records.set, 7, &destination) ||

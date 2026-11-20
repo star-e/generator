@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 25 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`graph-dfs.ts` 和 `layout-access.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 26 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`graph-dfs.ts` 和 `layout-access.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -163,6 +163,8 @@ C++ 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`out_edges(v)` 
 
 TS 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`oe`、`od`、`edge`、`source` 和 `target` 共用父子关系的存储。编辑器迁入时从 `./graph-dfs` 导入 `depthFirstVisit` 和 `depthFirstSearch`，访问器、颜色和边类型继续从 `./graph` 导入。互操作测试用编辑器的 `print()` 对照完整布局文本，并验证 DFS 事件顺序和长链。[TS 遍历源码](../runtime/typescript/graph-dfs.ts) · [Web 图接口](../../cocos4/cocos/rendering/custom/graph.ts)
 
+TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口。`h(kind, v)` 检查顶点类型，`object(v)` 返回载荷，`visitVertex(visitor, v)` 调用该标签的访问方法并返回其结果。声明 `mutable_graph` 的图还生成 `clear()`。编辑器重建 `LayoutGraphData` 时会从头分配顶点编号，原地清空 `valueNames` 和四个 Map，并将 `constantMacros` 还原为空字符串。消费测试运行引擎编辑器的阶段、相位、着色器构建方法以及 Web 程序库的相位筛选。[TS 消费测试](../tests/consumer/records/layout-graph-consumer.ts.in)
+
 ## 模块迁移顺序
 
 ### 在 RenderSettings 之前接入 TypeGraph
@@ -199,7 +201,7 @@ TS 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`oe`、`od`、`e
 
 记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。同一模块的绑定块声明 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。工作区 JSON 指定后端、原生头文件和输出位置。
 
-C++ 索引图为每个组件生成一个按顶点编号访问的 PMR 数组。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。带 allocator 的复制、移动和赋值使用目标资源。插入失败时回滚本次已追加的组件，成功后才更新父子关系。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 PMR deque，追加元素时已有对象保留原位。标量、层级索引和载荷索引使用 PMR vector。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。跨资源移动将嵌套数据放入目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。带 allocator 的复制、移动和赋值使用目标资源。插入失败时回滚本次已追加的组件，成功后才更新父子关系。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `LayoutGraph` 声明 `hierarchy_graph { storage: shared_edges; }`，父子关系存储在图的邻接表中。`add_vertex(name)` 创建根节点，`add_vertex(name, parent)` 创建子节点。`get_parent(v)` 和 `num_children(v)` 的时间复杂度为 O(1)，根节点的父节点为 `null_vertex()`。`child_links(v)` 按插入顺序遍历直接子边，`child(link)` 取得子节点。无效父节点会触发 `std::out_of_range`。消费测试还逐次注入分配失败，检查已有顶点、名称和边，并在同一张图上重试。[层级声明](../spec/render/layout-graph.spec) · [C++17 消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
@@ -230,6 +232,10 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 `layout-graph.ts` 继续导出 `Layout` 和 `PipelineLayoutData`。平台选择逻辑由 `layout-access.ts` 维护，`getSets()` 和 `getSet(frequency)` 在 `(COCOS_RUNTIME || HTML5) && Layout.isWebGPU` 时查询 `descriptorGroups`，其余情况查询 `descriptorSets`。[平台逻辑](../runtime/typescript/layout-access.ts)
 
 互读样本覆盖效果、技术、着色器、描述符集合以及渲染阶段和相位。每个 Map 使用一个键，便于逐字节核对 C++、TS 和旧引擎 TS 的输出。GPU 句柄声明为 `@transient`，原生测试使用引擎空后端创建有效句柄，并验证加载后的对象身份。[原生测试](../tests/consumer/records/PipelineArchiveConsumer.cpp) · [TS 测试](../tests/consumer/records/pipeline-archive.cjs)
+
+`LayoutGraphData` 在同一个 `.spec` 中声明三个顶点组件、两种载荷和六个图级字段。归档先写顶点，再按声明顺序写 `valueNames`、`attributeIndex`、`constantIndex`、`shaderLayoutIndex` 和 `effects`。`@transient constantMacros` 保留目标图的运行时值。加载完整归档后才替换目标图，TS 保留只读数组和 Map 的对象身份。互读样本包含空图和带描述符、着色器及效果数据的父子图。测试编译旧引擎 C++ 读写器，逐字节核对新旧 C++ 和 TS 的输出。[图声明](../spec/render/layout-graph.spec) · [旧引擎读写器测试](../tests/consumer/records/LegacyArchiveConsumer.cpp)
+
+MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中为 `std::unordered_map` 分配代理。`RenderStageData::descriptorVisibility` 沿用这个引擎容器，若该笔分配抛错，标准库会终止进程。Windows Debug 和 Release 都对两种载荷逐笔注入分配失败。stage 用例在独立进程中执行每一次注入，单独记录 Debug 代理的终止，并验证其他分配点的回滚和原图重试。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 

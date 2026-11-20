@@ -17,11 +17,13 @@ static_assert(!std::is_default_constructible_v<DescriptorSetLayoutData>);
 static_assert(!std::is_copy_constructible_v<DescriptorSetLayoutData> && !std::is_copy_assignable_v<DescriptorSetLayoutData>);
 static_assert(std::is_nothrow_move_constructible_v<DescriptorSetLayoutData> && std::is_nothrow_move_assignable_v<DescriptorSetLayoutData>);
 static_assert(!std::is_default_constructible_v<DescriptorBlockData>);
+constexpr bool emptyDescriptorsNothrow = noexcept(cc::detail::makeEmptyPmr<decltype(DescriptorBlockData::descriptors)>(
+    std::declval<const BlockAlloc&>(), 0U));
 static_assert(std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
-                                            uint32_t, const BlockAlloc&>);
+                                            uint32_t, const BlockAlloc&> == emptyDescriptorsNothrow);
 static_assert(std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
                                             uint32_t, cc::gfx::MemoryAccessBit, cc::gfx::ViewDimension,
-                                            cc::gfx::SampleType, cc::gfx::Format, const BlockAlloc&>);
+                                            cc::gfx::SampleType, cc::gfx::Format, const BlockAlloc&> == emptyDescriptorsNothrow);
 
 bool checkDescriptorData() {
     using cc::gfx::Type;

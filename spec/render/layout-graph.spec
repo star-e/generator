@@ -92,6 +92,8 @@ namespace cc::render {
 
     @tag struct Name_ {}
     @tag struct Descriptors_ {}
+    @tag struct Update_ {}
+    @tag struct Layout_ {}
     @tag struct RenderStage_ {}
     @tag struct RenderPhase_ {}
     @serialize graph LayoutGraph {
@@ -212,6 +214,31 @@ namespace cc::render {
         readonly shaderPrograms: ccstd::pmr::vector<ShaderProgramData>;
         readonly shaderIndex: PmrTransparentMap<ccstd::pmr::string, uint32_t>;
         @transient nullable pipelineLayout: IntrusivePtr<gfx::PipelineLayout>;
+    }
+
+    @serialize graph LayoutGraphData {
+        vertex_descriptor Vertex = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        hierarchy_graph { storage: shared_edges; }
+        component Name_: ccstd::pmr::string { member: names; }
+        component Update_: UpdateFrequency { member: updateFrequencies; }
+        component Layout_: PipelineLayoutData { member: layouts; }
+        polymorphic_graph {
+            RenderStage_: RenderStageData { member: stages; }
+            RenderPhase_: RenderPhaseData { member: phases; }
+        }
+        named_graph { component: Name_; }
+        parent_graph;
+        addressable_graph;
+
+        readonly valueNames: ccstd::pmr::vector<ccstd::pmr::string>;
+        readonly attributeIndex: PmrFlatMap<ccstd::pmr::string, NameLocalID>;
+        readonly constantIndex: PmrFlatMap<ccstd::pmr::string, NameLocalID>;
+        readonly shaderLayoutIndex: PmrFlatMap<ccstd::pmr::string, uint32_t>;
+        readonly effects: PmrFlatMap<ccstd::pmr::string, EffectData>;
+        @transient constantMacros: ccstd::string;
     }
 }
 

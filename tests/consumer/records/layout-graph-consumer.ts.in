@@ -1,17 +1,16 @@
 import { DefaultVisitor, depthFirstSearch as engineSearch, ED, GraphColor, OutEI } from './graph';
-import type { AddressableGraph, IncidenceGraph, MutableVertexPropertyMap, ReferenceGraph } from './graph';
+import type { AddressableGraph, IncidenceGraph, MutableVertexPropertyMap, PolymorphicGraph, ReferenceGraph } from './graph';
 import { depthFirstSearch } from './graph-dfs';
 import type { InputArchive } from './archive';
 import { Descriptor, DescriptorBlock, DescriptorBlockFlattened, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
-    LayoutGraph, LayoutGraphValue, RenderPassType, RenderPhase } from './layout-graph';
+    EffectData, LayoutGraph, LayoutGraphData, LayoutGraphDataValue, LayoutGraphValue, PipelineLayoutData, RenderPassType,
+    RenderPhase, RenderPhaseData, RenderStageData, ShaderProgramData } from './layout-graph';
 import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
 import { UpdateFrequency } from './types';
 import { getUpdateFrequencyName } from './types-names';
 import { getDescriptorTypeOrderName } from './layout-graph-names';
 import { ShaderStageFlagBit, UniformBlock } from '../../gfx';
 
-// The engine visitor uses this annotation only on its unused finishVertex graph parameter.
-type LayoutGraphData = IncidenceGraph;
 @editorPrintHelpers@
 
 function assert (ok: boolean, message = 'Editor layout assertion failed'): void {
@@ -19,6 +18,54 @@ function assert (ok: boolean, message = 'Editor layout assertion failed'): void 
 }
 
 function error (message: string): never { throw new Error(message); }
+
+@layoutDataBuilder@
+    readonly lg: LayoutGraphData;
+}
+
+class ProgramGroup {}
+class ProgramLibraryFixture {
+    readonly layoutGraph: LayoutGraphData;
+    readonly phases = new Map<number, ProgramGroup>();
+@programLibraryConstructor@
+}
+
+function checkLayoutGraphData (): void {
+    const g = new LayoutGraphData();
+    const builder = new LayoutGraphBuilder2(g);
+    const root = builder.addRenderStage('main', g.N);
+    const phase = builder.addRenderPhase('shadow', root);
+    builder.addShader('caster', phase);
+    const programs = new ProgramLibraryFixture(g);
+    assert(programs.phases.size === 1 && programs.phases.get(phase) instanceof ProgramGroup, 'Web program phase selection');
+    assert(g.getUpdate(root) === UpdateFrequency.PER_PASS && g.getUpdate(phase) === UpdateFrequency.PER_PHASE);
+    const phaseData = g.value(LayoutGraphDataValue.RenderPhase, phase);
+    assert(g.locate('/main/shadow') === phase && phaseData.shaderIndex.get('caster') === 0 && phaseData.shaderPrograms.length === 1);
+    const poly: PolymorphicGraph = g;
+    assert(poly.h(LayoutGraphDataValue.RenderStage, root) && !poly.h(LayoutGraphDataValue.RenderStage, phase));
+    assert(poly.object(phase) === phaseData && g.object(root) === g.j<RenderStageData>(root));
+    const visitor = {
+        renderStage(value: RenderStageData) { return value.descriptorVisibility; },
+        renderPhase(value: RenderPhaseData) { return value.shaderPrograms; },
+    };
+    assert(g.visitVertex(visitor, root) === g.j<RenderStageData>(root).descriptorVisibility);
+    assert(g.visitVertex(visitor, phase) === phaseData.shaderPrograms);
+
+    const { valueNames, shaderLayoutIndex, attributeIndex, constantIndex, effects } = g;
+    assert(shaderLayoutIndex.get('caster') === phase);
+    valueNames.push('camera');
+    attributeIndex.set('camera', 9);
+    constantIndex.set('ambient', 7);
+    effects.set('lit', new EffectData());
+    g.constantMacros = 'USE_SHADOWS';
+    builder.clear();
+    assert(g.nv() === 0 && g.v().next().done === true && g.locateChild(g.N, 'main') === g.N);
+    assert(g.valueNames === valueNames && valueNames.length === 0 && g.constantMacros === '');
+    assert(g.shaderLayoutIndex === shaderLayoutIndex && g.attributeIndex === attributeIndex && g.constantIndex === constantIndex && g.effects === effects);
+    assert(shaderLayoutIndex.size === 0 && attributeIndex.size === 0 && constantIndex.size === 0 && effects.size === 0);
+    builder.clear();
+    assert(builder.addRenderStage('next', g.N) === 0 && g.locate('/main') === g.N && g.locate('/next') === 0);
+}
 
 function checkChildren (g: IncidenceGraph & Pick<ReferenceGraph, 'children' | 'child' | 'numChildren' | 'parent' | 'reference'>, parent: number, expected: number[]): void {
     const iterator = g.children(parent);
@@ -166,6 +213,10 @@ function checkTypes (lg: LayoutGraph, db: DescriptorDB): void {
     lg.value(LayoutGraphValue.RenderStage, 0).shaders;
     // @ts-expect-error DescriptorDB is a component, not a polymorphic payload.
     lg.j<DescriptorDB>(0);
+    // @ts-expect-error The visitor must handle both stage and phase.
+    lg.visitVertex({ renderStage: () => 0 }, 0);
+    // @ts-expect-error Only polymorphic graphs expose a visitor.
+    new FlatComponents().visitVertex({}, 0);
     // @ts-expect-error Named lookup requires parent_graph.
     new HierarchyOnly().locateChild(0, 'name');
     // @ts-expect-error Flat graphs have no child edges.
@@ -175,6 +226,7 @@ function checkTypes (lg: LayoutGraph, db: DescriptorDB): void {
 }
 
 new EditorFixture().run();
+checkLayoutGraphData();
 
 const tree = new HierarchyOnly();
 const root = tree.addVertex(10);
@@ -191,10 +243,17 @@ const flat = new FlatComponents();
 const db = new DescriptorDB();
 const index = flat.addVertex(db, 'flat', 42);
 assert(flat.getDescriptors(index) === db && flat.getCount(index) === 42 && flat.getName(index) === 'flat', 'Component order');
+flat.version = 9;
+flat.clear();
+assert(flat.nv() === 0 && flat.version === 1, 'Flat graph scalar default');
 const toggles = new Toggles();
 const toggle = toggles.addVertex(TogglesValue.ComputeTag, false);
 assert(toggles.w(toggle) === TogglesValue.ComputeTag && toggles.value(TogglesValue.ComputeTag, toggle) === false,
     'Distinct tags sharing a payload type');
+const count = toggles.addVertex(TogglesValue.Count, false);
+const visitToggle = { count: () => 'count', computeTag: () => 'compute', layout: () => 'layout' };
+assert(toggles.visitVertex(visitToggle, toggle) === 'compute' && toggles.visitVertex(visitToggle, count) === 'count',
+    'Visit by tag when two payload types are identical');
 const nested = new LayoutGraph();
 const layout = toggles.addVertex(TogglesValue.Layout, nested);
 assert(toggles.value(TogglesValue.Layout, layout) === nested, 'Imported graph payload');
