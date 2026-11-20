@@ -3,6 +3,7 @@
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
@@ -48,6 +49,23 @@ void checkReferenceRollback() {
         require(!graph.num_children(pass) && !graph.num_parents(queue) && graph.edge(pass, queue).second, "reference rollback");
         require(graph.add_reference(pass, queue).second && graph.get_parent(queue) == pass, "reference retry");
     }
+    struct FailedConstruction {};
+    struct BadPhase { operator uint32_t() const { throw FailedConstruction{}; } };
+    Arena arena;
+    RenderGraph graph{&arena};
+    const auto root = graph.add_vertex("root");
+    const auto insert = [&](auto phase) {
+        return graph.emplace_vertex(Queue_{}, std::forward_as_tuple("queue"), std::tuple<>{}, std::tuple<>{},
+            std::make_tuple(true), std::forward_as_tuple(phase, 13U), root);
+    };
+    try {
+        insert(BadPhase{});
+        throw std::runtime_error("expected queue construction failure");
+    } catch (const FailedConstruction&) {}
+    require(graph.num_vertices() == 1 && !graph.num_children(root) && !graph.num_edges(), "emplace reference rollback");
+    const auto queue = insert(7U);
+    require(queue == 1 && graph.num_children(root) == 1 && graph.num_parents(queue) == 1 &&
+            graph.get_parent(queue) == root && graph.value(Queue_{}, queue).phaseID == 7, "emplace reference retry");
 }
 } // namespace
 
@@ -60,7 +78,11 @@ bool checkRenderGraph() {
         Arena scratch;
         RenderGraph g{&scratch};
         const auto pass = g.add_vertex(RasterPassTag{}, "pass");
-        const auto queue = g.add_vertex(Queue_{}, "queue", pass);
+        const auto queue = g.emplace_vertex(Queue_{}, std::forward_as_tuple("queue"), std::forward_as_tuple("queue-layout"),
+            std::tuple<>{}, std::make_tuple(true), std::make_tuple(QueueHint::BLEND, 11U, 17U), pass);
+        const auto& queuePayload = g.value(Queue_{}, queue);
+        require(queuePayload.hint == QueueHint::BLEND && queuePayload.phaseID == 11 && queuePayload.passLayoutID == 17 &&
+                g.getName(queue) == "queue" && g.getLayout(queue) == "queue-layout" && g.getValid(queue), "emplaced queue");
         const auto scene = g.add_vertex(Scene_{}, "scene", queue);
         const auto compute = g.add_vertex(ComputeTag{}, "pass");
         require(g.getName(pass) == g.getName(compute) && g.index.empty(), "independent name index");
@@ -98,7 +120,25 @@ bool checkRenderGraph() {
         add(RasterSubpassTag{}, 1);
         add(ComputeSubpassTag{}, 2);
         add(ResolveTag{}, 4);
-        const auto copy = add(CopyTag{}, 5);
+        const auto copy = [&] {
+            Arena temporary;
+            CopyPass payload{&temporary};
+            auto& upload = payload.uploadPairs.emplace_back();
+            upload.target = "destination-upload-target";
+            upload.source = {7, 9};
+            RenderData data{&temporary};
+            data.constants[23] = {'c', 'p'};
+            data.custom = "copy-pass-custom-render-data";
+            return g.emplace_vertex(CopyTag{}, std::forward_as_tuple("copy"), std::forward_as_tuple(g.getLayout(queue)),
+                std::forward_as_tuple(std::move(data)), std::forward_as_tuple(g.getValid(queue)),
+                std::forward_as_tuple(std::move(payload)), queue);
+        }();
+        checkPayload(g, copy, CopyTag{}, 5);
+        const auto& data = g.getData(copy);
+        require(g.get_parent(copy) == queue && g.getLayout(copy) == "queue-layout" && g.getValid(copy) &&
+                data.get_allocator().resource() == &scratch && data.constants.at(23).at(1) == 'p' &&
+                data.constants.at(23).get_allocator().resource() == &scratch &&
+                data.custom.get_allocator().resource() == &scratch && data.custom == "copy-pass-custom-render-data", "emplaced render data");
         add(MoveTag{}, 6);
         add(RaytraceTag{}, 7);
         add(Blit_{}, 10);
@@ -112,7 +152,9 @@ bool checkRenderGraph() {
             [](CopyPass& payload) -> CopyPass& { return payload; },
             [](auto&) -> CopyPass& { throw std::runtime_error("expected CopyPass"); });
         require(&visitedCopy == &g.value(CopyTag{}, copy), "mutable move-only payload");
-        visitedCopy.uploadPairs.emplace_back().target = "destination-upload-target";
+        const auto& copiedUpload = visitedCopy.uploadPairs.at(0);
+        require(visitedCopy.uploadPairs.get_allocator().resource() == &scratch && copiedUpload.get_allocator().resource() == &scratch &&
+                copiedUpload.target == "destination-upload-target" && copiedUpload.source.at(1) == 9, "emplaced move-only payload");
         try {
             g.visit_object(g.null_vertex(), [](auto&) { throw std::runtime_error("visitor called for invalid vertex"); });
             return false;

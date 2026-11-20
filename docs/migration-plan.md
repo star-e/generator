@@ -141,6 +141,15 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 多态顶点在 `polymorphic_graph` 块内按 `RenderStage_: RenderPassType { member: stages; }` 声明。C++ 顶点保存类别和在该类别数组中的索引。用 `g.add_vertex(RenderPhase_{}, "shadow", parent)` 创建相位，用 `g.kind(v)` 或 `g.holds<RenderPhase_>(v)` 查询类别，用 `g.value(RenderPhase_{}, v)` 读写载荷。类别不符或顶点越界时，`holds` 返回 false，`value` 抛出 `std::bad_variant_access`。已有的 `add_vertex(name, parent)` 默认创建声明顺序中的第一类，载荷按值初始化。`LayoutGraph` 的第一类是阶段，初值为 `SINGLE_RENDER_PASS`。[布局图声明](../spec/render/layout-graph.spec)
 
+可变图的 C++ 成员 `emplace_vertex` 按 `.spec` 声明顺序接收每个组件的构造参数元组。多态图在开头接收载荷标签，在组件之后接收载荷构造参数元组。层级图可在末尾传入父顶点，省略时创建根顶点。`std::tuple<>{}` 表示默认构造，`std::forward_as_tuple(std::move(value))` 可传入仅移动对象。PMR 组件和载荷在图的内存资源上构造。例如下面的调用创建一个透明队列，同时写入名称、布局和有效标记。[RenderGraph 消费测试](../tests/consumer/records/RenderGraphConsumer.cpp)
+
+```cpp
+auto queue = graph.emplace_vertex(Queue_{},
+    std::forward_as_tuple("transparent"), std::forward_as_tuple("main"),
+    std::tuple<>{}, std::make_tuple(true),
+    std::make_tuple(QueueHint::BLEND, phaseID, passLayoutID), pass);
+```
+
 TS 后端从同一声明生成 `LayoutGraphValue`、类别到载荷的类型映射和 `LayoutGraph`。编辑器通过 `addVertex(id, object, name, descriptors, parent)` 创建顶点，省略父节点时创建根。传入的相位与描述符对象保留原引用。`locateChild(parent, name)` 按插入顺序返回该父节点下第一个同名顶点，未找到时返回 `g.N`。消费测试直接编译并运行引擎编辑器的 `getPassID`、`getSubpassID` 和 `getPhaseID`。[TS 图后端](../src/codegen/TypeScriptGraphEmitter.cpp) · [编辑器建图用例](../tests/consumer/records/layout-graph-consumer.ts.in)
 
 声明 `hierarchy_graph` 后，TS 的 `g.children(v)` 通过引擎的 `OutEI` 按插入顺序遍历直接子边，`g.child(e)` 和 `g.numChildren(v)` 分别返回子顶点和直接子节点数。`parent_graph` 另行提供按名字查找子节点的能力。多态图的 `j<T>(v)` 直接返回载荷，调用方负责先用 `w(v)` 确认类别。消费测试运行编辑器的阶段遍历循环和描述符构建方法，核对同名相位从各自的父阶段取得描述符。[编辑器阶段遍历](../../cocos4/cocos/rendering/custom/layout-graph-editor.ts) · [生成代码消费测试](../tests/RecordInterop.cmake)

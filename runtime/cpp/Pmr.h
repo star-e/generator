@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace cc::detail {
@@ -16,6 +18,18 @@ T makeEmptyPmr(const Alloc& alloc, const Empty& empty)
     (void)empty;
     return T(alloc);
 #endif
+}
+
+// Construct in the destination column to propagate its allocator to the new value.
+template<class Column, class Tuple, class... EmptyArgs>
+void emplacePmrBack(Column& column, Tuple&& args, EmptyArgs&&... emptyArgs) {
+    std::apply([&](auto&&... values) {
+        if constexpr (sizeof...(values) == 0) {
+            column.emplace_back(std::forward<EmptyArgs>(emptyArgs)...);
+        } else {
+            column.emplace_back(std::forward<decltype(values)>(values)...);
+        }
+    }, std::forward<Tuple>(args));
 }
 
 } // namespace cc::detail

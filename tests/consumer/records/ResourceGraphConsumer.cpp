@@ -2,6 +2,7 @@
 #include "cocos/renderer/gfx-empty/EmptyFramebuffer.h"
 #include "cocos/renderer/gfx-empty/EmptyRenderPass.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -87,6 +88,39 @@ bool checkPersistentRenderPassAndFramebuffer() {
     return pass->getRefCount() == passRefs && framebuffer->getRefCount() == framebufferRefs;
 }
 
+bool checkResourceEmplacement() {
+    using namespace cc::render;
+    boost::container::pmr::monotonic_buffer_resource arena;
+    ResourceGraph graph{&arena};
+    const auto root = graph.add_vertex("root");
+    ResourceDesc desc;
+    desc.width = 512;
+    const auto insert = [&](auto&& nameArgs, auto payload, ResourceGraph::Vertex parent) {
+        return graph.emplace_vertex(FormatView_{}, std::forward<decltype(nameArgs)>(nameArgs), std::tie(desc),
+            std::make_tuple(ResourceResidency::EXTERNAL), std::tuple<>{}, std::tuple<>{}, std::tie(payload), parent);
+    };
+    struct FailedConstruction {};
+    struct ThrowingView { operator FormatView() const { throw FailedConstruction{}; } };
+    try {
+        insert(std::forward_as_tuple("root"), ThrowingView{}, root);
+        return false;
+    } catch (const std::invalid_argument&) {}
+    try {
+        insert(std::forward_as_tuple("invalid"), ThrowingView{}, graph.num_vertices());
+        return false;
+    } catch (const std::out_of_range&) {}
+    try {
+        insert(std::make_tuple(3U, 'x'), ThrowingView{}, root);
+        return false;
+    } catch (const FailedConstruction&) {}
+    if (graph.num_vertices() != 1 || graph.vertex("root") != root || graph.num_children(root) ||
+        graph.num_edges() || graph.contains("invalid") || graph.contains("xxx")) return false;
+    const auto child = insert(std::make_tuple(3U, 'x'), FormatView{cc::gfx::Format::RGBA8}, root);
+    return child == 1 && graph.vertex("xxx") == child && graph.num_children(root) == 1 && graph.get_parent(child) == root &&
+           graph.getDesc(child).width == 512 && graph.getTraits(child).residency == ResourceResidency::EXTERNAL &&
+           graph.value(FormatView_{}, child).format == cc::gfx::Format::RGBA8;
+}
+
 bool checkViewHierarchy() {
     using namespace cc::render;
     boost::container::pmr::monotonic_buffer_resource arena;
@@ -127,7 +161,7 @@ bool checkViewHierarchy() {
 
 bool checkResourceGraph() {
     using namespace cc::render;
-    if (!checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer() || !checkRenderViews()) return false;
+    if (!checkResourceEmplacement() || !checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer() || !checkRenderViews()) return false;
     static_assert(!std::is_move_constructible_v<ResourceGraph> && !std::is_copy_constructible_v<ResourceGraph>);
     static_assert(std::is_same_v<decltype(ResourceDesc::mipLevels), uint16_t>);
     static_assert(std::is_same_v<decltype(ManagedBuffer::fenceValue), uint64_t>);

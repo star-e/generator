@@ -162,9 +162,11 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "        --counts[kind];\n        if (parent != decoded.null_vertex()) {\n"
         << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n"
         << "        const auto readVertex = [&](auto tag) {\n";
-    if (model.nameIndex)
-        cpp << "            const auto v = decoded.appendVertex(decoded.kindOf(&tag), {}, parent);\n";
-    else
+    if (model.nameIndex) {
+        cpp << "            const auto v = decoded.appendVertex(&tag, ";
+        for (size_t i = 0; i < model.components.size(); ++i) cpp << "std::tuple<>{}, ";
+        cpp << "std::tuple<>{}, false, parent);\n";
+    } else
         cpp << "            const auto v = decoded.add_vertex(tag, " << (takesName ? "{}, " : "") << "parent);\n";
     for (size_t i = 0; i < model.components.size(); ++i) {
         const auto& c = model.components[i];

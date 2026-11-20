@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -422,9 +423,7 @@ bool checkIndexedNames() {
     } catch (const std::out_of_range&) {}
     if (graph.contains("orphan") || graph.num_vertices()) return false;
     const auto root = graph.add_vertex("");
-    const auto child = graph.add_vertex("child", root);
-    graph.getCount(child) = 42;
-    graph.value(cc::Count_{}, child) = 7;
+    const auto child = graph.emplace_vertex(cc::Count_{}, std::make_tuple(42U), std::forward_as_tuple("child"), std::make_tuple(7U), root);
     std::stringstream bytes;
     cc::render::BinaryOutputArchive writer(bytes, &arena);
     cc::save(writer, graph);
@@ -454,11 +453,11 @@ bool checkIndexedNames() {
 bool checkFlatComponents() {
     boost::container::pmr::monotonic_buffer_resource sourceArena, targetArena;
     cc::Toggles toggles{&sourceArena};
-    const auto enabled = toggles.add_vertex();
+    const auto enabled = toggles.emplace_vertex(cc::Count_{}, std::make_tuple(true));
     const auto disabled = toggles.add_vertex(cc::render::ComputeTag{});
     const auto selectFlag = [](bool& flag) -> bool& { return flag; };
     const auto unexpectedLayout = [](LayoutGraph&) -> bool& { throw std::runtime_error("expected bool"); };
-    toggles.visit_object(enabled, selectFlag, unexpectedLayout) = true;
+    if (!toggles.visit_object(enabled, selectFlag, unexpectedLayout)) return false;
     if (&toggles.visit_object(disabled, selectFlag, unexpectedLayout) != &toggles.value(cc::render::ComputeTag{}, disabled)) return false;
     if (toggles.num_vertices() != 2 || toggles.holds<cc::Count_>(2) || !toggles.holds<cc::Count_>(enabled) ||
         !toggles.value(cc::Count_{}, enabled) || toggles.value(cc::render::ComputeTag{}, disabled)) return false;
@@ -468,8 +467,8 @@ bool checkFlatComponents() {
     const auto a = source.add_vertex("a");
     source.getCount(a) = 12;
     source.getDescriptors(a).blocks[{}].count = 5;
-    const auto b = source.add_vertex(source.getName(a));
-    if (a != 0 || b != 1 || source.getName(b) != "a" || source.get(cc::Count_{}, b) != 0) return false;
+    const auto b = source.emplace_vertex(std::tuple<>{}, std::forward_as_tuple(source.getName(a)), std::forward_as_tuple(source.getCount(a)));
+    if (a != 0 || b != 1 || source.getName(b) != "a" || source.get(cc::Count_{}, b) != 12) return false;
     cc::FlatComponents target{&targetArena};
     target = std::move(source);
     return source.num_vertices() == 0 && target.num_vertices() == 2 && target.version == 4 &&
