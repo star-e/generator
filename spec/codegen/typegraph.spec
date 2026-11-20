@@ -60,6 +60,7 @@ namespace codegen {
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
     struct RecordType {
         moveOnly: bool = false;
+        immovable: bool = false;
         requireAllocator: bool = false;
         serializable: bool = false;
         compareEqual: bool = false;

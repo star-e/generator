@@ -114,6 +114,12 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     BoundField m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly, .transient = field.transient};
     auto scalarType = field.type.type;
     while (const auto* alias = std::get_if<AliasType>(&graph.node(scalarType).data)) scalarType = alias->target;
+    if (std::holds_alternative<ReferenceType>(graph.node(scalarType).data)) {
+        if (emitTs) invalid(field, "borrowed reference fields require a native record or @cppOnly");
+        m.cpp = nativeType(graph, module, field.type.type, deps);
+        m.referenceMember = true;
+        return m;
+    }
     const auto& scalar = graph.node(scalarType).qualifiedName;
     if (scalar == "uint64_t" && !m.cppDefault.empty()) m.cppDefault += "ULL";
     m.scalar = std::holds_alternative<BuiltinType>(node.data) || std::holds_alternative<EnumType>(node.data) ||
@@ -169,7 +175,6 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         if (nullable) m.ts += " | null";
     };
     if ((record || nestedGraph) && !field.isNullable && field.initializer.empty()) {
-        if (nestedGraph && nestedGraph->immovable) invalid(field, "cannot use an @immovable graph as a value field");
         m.cpp = nativeType(graph, module, field.type.type, deps);
         std::set<uint32_t> visited;
         const auto storage = recordStorage(graph, field.type.type, visited);
@@ -285,12 +290,24 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     invalid(field, "unsupported scalar default " + field.initializer);
 }
 
-std::vector<BoundField> bindFields(const TypeGraph& graph, ModuleId owner, const std::vector<FieldInfo>& fields,
+std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner, const std::vector<FieldInfo>& fields,
                                    Dependencies& deps, bool emitTs, const NestedResets& nestedResets,
                                    const std::vector<std::string>& requiredFields = {}) {
+    const auto* ownerRecord = std::get_if<RecordType>(&owner.data);
+    const bool immovable = ownerRecord ? ownerRecord->immovable : std::get<GraphType>(owner.data).immovable;
     std::vector<BoundField> result;
     for (const auto& field : fields) {
-        auto member = bindMember(graph, owner, field, deps, emitTs && !field.cppOnly,
+        const auto& data = graph.node(field.type.type).data;
+        const auto* nestedGraph = std::get_if<GraphType>(&data);
+        const auto* nestedRecord = std::get_if<RecordType>(&data);
+        if ((nestedGraph && nestedGraph->immovable) || (nestedRecord && nestedRecord->immovable)) {
+            if (!immovable)
+                invalid(field, std::string("cannot use an @immovable ") + (nestedGraph ? "graph" : "record") + " as a value field of a movable owner");
+            if (ownerRecord && std::ranges::any_of(ownerRecord->constructors, [&](const auto& order) {
+                    return std::ranges::find(order, result.size()) != order.end();
+                })) invalid(field, "an @immovable value field must be constructed in place");
+        }
+        auto member = bindMember(graph, owner.module, field, deps, emitTs && !field.cppOnly,
                                  std::ranges::find(requiredFields, field.name) != requiredFields.end());
         if (emitTs && !field.cppOnly && field.isReadonly) {
             const auto childReset = nestedResets.find(field.type.type.value);
@@ -300,7 +317,7 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, ModuleId owner, const
                     const auto& type = graph.node(arg.type);
                     if (arg.expression.starts_with("new ") || std::holds_alternative<EnumType>(type.data)) {
                         auto& imports = type.typescriptContainer == ContainerKind::None ? deps.valueImports : deps.typeImports;
-                        boundTypeScriptName(graph, arg.type, owner, imports, field.name);
+                        boundTypeScriptName(graph, arg.type, owner.module, imports, field.name);
                     }
                     if (!args.empty()) args += ", ";
                     args += arg.expression;
@@ -397,7 +414,9 @@ void writeEnumNames(std::ostream& out, const std::string& name, const EnumType& 
 
 void inlineConstructors(std::ostream& out, const std::string& name, const RecordType& record,
                         const std::vector<BoundField>& members, std::set<std::string>& headers) {
-    if (!record.constructors.empty() || record.moveOnly) out << "    " << name << "() = default;\n";
+    if ((!record.constructors.empty() || record.moveOnly || record.immovable) &&
+        !std::ranges::any_of(members, &BoundField::referenceMember))
+        out << "    " << name << "() = default;\n";
     for (const auto& ctor : record.constructors) {
         if (ctor.empty()) continue;
         out << "    " << name << "(";
@@ -455,7 +474,7 @@ std::string pmrExceptionSpec(const std::string& recordName, const std::vector<Bo
     std::string checks;
     for (size_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
-        if (fields.empty() ? !m.checkDefaultConstruction : m.scalar) continue;
+        if (m.referenceMember || (fields.empty() ? !m.checkDefaultConstruction : m.scalar)) continue;
         const bool supplied = std::ranges::find(fields, i) != fields.end();
         const auto args = pmrArguments(m, supplied ? m.name + "In" : "", !m.byConstReference);
         const auto init = args.empty() && !m.cppDefault.empty() ? "{" + m.cppDefault + "}" : "(" + args + ")";
@@ -472,13 +491,15 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
     const std::string alloc = "const allocator_type& alloc";
     const auto allocParameter = record.requireAllocator ? alloc : alloc + " = boost::container::pmr::get_default_resource()";
     const auto constructor = "\n" + name + "::" + name + "(";
-    const auto exceptionSpec = pmrExceptionSpec(name, members, {});
     header << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
            << "    allocator_type get_allocator() const noexcept { // NOLINT\n"
-           << "        return {" << allocatorMember.name << ".get_allocator().resource()};\n    }\n\n"
-           << "    " << name << "(" << allocParameter << ")" << exceptionSpec << "; // NOLINT\n";
-    source << constructor << alloc << ")" << exceptionSpec;
-    pmrInitializers(source, members, CtorArgs::defaults);
+           << "        return {" << allocatorMember.name << ".get_allocator().resource()};\n    }\n\n";
+    if (!std::ranges::any_of(members, &BoundField::referenceMember)) {
+        const auto exceptionSpec = pmrExceptionSpec(name, members, {});
+        header << "    " << name << "(" << allocParameter << ")" << exceptionSpec << "; // NOLINT\n";
+        source << constructor << alloc << ")" << exceptionSpec;
+        pmrInitializers(source, members, CtorArgs::defaults);
+    }
     for (const auto& order : record.constructors) {
         if (order.empty()) continue;
         std::string params;
@@ -492,6 +513,7 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
         source << constructor << params << alloc << ")" << fieldSpec << " // NOLINT";
         pmrInitializers(source, members, CtorArgs::fields, order);
     }
+    if (record.immovable) return;
     for (auto args : {CtorArgs::move, CtorArgs::copy}) {
         if (args == CtorArgs::copy && record.moveOnly) continue;
         const auto rhs = name + (args == CtorArgs::move ? "&& rhs" : " const& rhs");
@@ -642,7 +664,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     const auto& record = std::get<RecordType>(node.data);
     for (size_t i = 0; i < members.size(); ++i) {
         const auto& field = record.fields[i];
-        if (!record.moveOnly && members[i].containsGraph && hasMoveOnlyValue(graph, field.type.type))
+        if (!record.immovable && !record.moveOnly && members[i].containsGraph && hasMoveOnlyValue(graph, field.type.type))
             invalid(field, "a record containing a move-only graph must declare @moveOnly");
     }
     out << "struct " << node.name << " {\n";
@@ -653,14 +675,21 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     } else {
         pmrConstructors(out, source, node.name, record, members, *allocator, deps.headers);
     }
-    if (allocator != members.end() || record.moveOnly) {
+    if (record.immovable) {
+        const auto& name = node.name;
+        out << "    " << name << "(" << name << "&&) = delete;\n"
+            << "    " << name << "(const " << name << "&) = delete;\n"
+            << "    " << name << "& operator=(" << name << "&&) = delete;\n"
+            << "    " << name << "& operator=(const " << name << "&) = delete;\n\n";
+    } else if (allocator != members.end() || record.moveOnly) {
         const auto& name = node.name;
         // Moving an embedded graph can allocate storage for its columns.
         const auto moveSpec = allocator != members.end() && !std::ranges::any_of(members, &BoundField::containsGraph) ? " noexcept" : "";
+        const bool assignable = !std::ranges::any_of(members, &BoundField::referenceMember);
         out << "    " << name << "(" << name << "&& rhs)" << moveSpec << " = default;\n"
             << "    " << name << "(" << name << " const& rhs) = delete;\n"
-            << "    " << name << "& operator=(" << name << "&& rhs)" << moveSpec << " = default;\n"
-            << "    " << name << "& operator=(" << name << " const& rhs) = " << (record.moveOnly ? "delete" : "default") << ";\n\n";
+            << "    " << name << "& operator=(" << name << "&& rhs)" << moveSpec << " = " << (assignable ? "default" : "delete") << ";\n"
+            << "    " << name << "& operator=(" << name << " const& rhs) = " << (record.moveOnly || !assignable ? "delete" : "default") << ";\n\n";
     }
     for (const auto& m : members) {
         out << "    " << m.cpp << " " << m.name;
@@ -954,7 +983,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             continue;
         }
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
-            const auto fields = bindFields(graph, owner, model->fields, deps, output.typescript.has_value(), nestedResets);
+            const auto fields = bindFields(graph, node, model->fields, deps, output.typescript.has_value(), nestedResets);
             std::string inputArchive;
             if (model->serializable && (!fields.empty() || model->nameIndex || model->keyComponentIndex) && archive) {
                 deps.headers.insert((archive->layout.includeDir / (archive->layout.prefix + "Fwd.h")).generic_string());
@@ -1024,7 +1053,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const std::vector<std::string> noFields;
         const auto& requiredFields = requiredConstructor && !output.pools.contains(node.name) && !output.resets.contains(node.name)
             ? output.constructors.at(node.name) : noFields;
-        auto members = bindFields(graph, owner, record->fields, deps, output.typescript.has_value(), nestedResets, requiredFields);
+        auto members = bindFields(graph, node, record->fields, deps, output.typescript.has_value(), nestedResets, requiredFields);
         cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable) {
             if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");

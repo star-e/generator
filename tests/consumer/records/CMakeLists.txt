@@ -33,6 +33,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     "${STAGING}/native/IndexedKeys.cpp"
     "${STAGING}/native/IndexedKeysSerialization.cpp"
+    "${STAGING}/DispatcherQueries.cpp"
     DispatcherGraphConsumer.cpp
     MigrationConsumer.cpp
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativeTypes.cpp"

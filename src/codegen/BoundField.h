@@ -13,6 +13,7 @@ struct BoundField {
     std::string comment;
     bool move{};
     bool byConstReference{};
+    bool referenceMember{};
     bool readonly{};
     bool transient{};
     bool usesAllocator{};

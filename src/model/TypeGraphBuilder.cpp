@@ -168,7 +168,7 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
 }
 
 RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
-    RecordType result{.moveOnly = syntax.moveOnly, .requireAllocator = syntax.requireAllocator, .serializable = syntax.serializable,
+    RecordType result{.moveOnly = syntax.moveOnly, .immovable = syntax.immovable, .requireAllocator = syntax.requireAllocator, .serializable = syntax.serializable,
                       .compareEqual = syntax.comparisons.contains("=="),
                       .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
                       .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
@@ -191,7 +191,18 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         }
         result.constructors.push_back(std::move(members));
     }
-    for (const auto& field : result.fields) {
+    for (uint32_t i = 0; i < result.fields.size(); ++i) {
+        const auto& field = result.fields[i];
+        if (std::holds_alternative<ReferenceType>(graph.node(canonicalType(graph, field.type)).data)) {
+            const auto context = field.type.location.describe() + ": " + field.name;
+            if (field.isNullable || !field.initializer.empty())
+                throw std::runtime_error(context + ": reference fields cannot have a null or default initializer");
+            if (result.constructors.empty() || std::ranges::any_of(result.constructors, [i](const auto& order) {
+                    return std::ranges::find(order, i) == order.end();
+                })) throw std::runtime_error(context + ": every constructor must initialize the reference field");
+            if (syntax.serializable && !field.transient)
+                throw std::runtime_error(context + ": serializing a borrowed reference requires @transient");
+        }
         if (syntax.serializable && field.cppOnly && !field.transient)
             throw std::runtime_error(field.type.location.describe() + ": @cppOnly field in a serializable record requires @transient");
     }

@@ -16,6 +16,48 @@ using namespace cc::render;
 static_assert(std::is_same_v<decltype(std::declval<ResourceAccessGraph&>().getPassID(0)), const RenderGraph::Vertex&>);
 static_assert(std::is_same_v<decltype(std::declval<RelationGraph&>().get(DescID_{}, 0)), const ResourceAccessGraph::Vertex&>);
 
+using Dispatcher = FrameGraphDispatcher;
+using Allocator = Dispatcher::allocator_type;
+static_assert(!std::is_default_constructible_v<Dispatcher> && !std::is_constructible_v<Dispatcher, Allocator>);
+static_assert(!std::is_copy_constructible_v<Dispatcher> && !std::is_move_constructible_v<Dispatcher>);
+static_assert(!std::is_copy_assignable_v<Dispatcher> && !std::is_move_assignable_v<Dispatcher>);
+static_assert(!std::is_constructible_v<Dispatcher, ResourceGraph&, const RenderGraph&, const LayoutGraphData&,
+                                       boost::container::pmr::memory_resource*>);
+
+static_assert(std::is_nothrow_constructible_v<Dispatcher, ResourceGraph&, const RenderGraph&, const LayoutGraphData&,
+                                              boost::container::pmr::memory_resource*, const Allocator&> ==
+              (std::is_nothrow_constructible_v<ResourceAccessGraph, const Allocator&> &&
+               std::is_nothrow_constructible_v<RelationGraph, const Allocator&>));
+
+bool checkDispatcher() {
+    boost::container::pmr::monotonic_buffer_resource graphMemory, scratch, ownedMemory;
+    ResourceGraph resources{&graphMemory};
+    RenderGraph passes{&graphMemory};
+    LayoutGraphData layout{&graphMemory};
+    Dispatcher dispatcher{resources, passes, layout, &scratch, &ownedMemory};
+    if (&dispatcher.resourceGraph != &resources || &dispatcher.renderGraph != &passes ||
+        &dispatcher.layoutGraph != &layout || dispatcher.scratch != &scratch ||
+        dispatcher.get_allocator().resource() != &ownedMemory || dispatcher.resourceAccessGraph.resource() != &ownedMemory ||
+        dispatcher.relationGraph.resource() != &ownedMemory) return false;
+    if (dispatcher._enablePassReorder || !dispatcher._enableAutoBarrier || dispatcher._enableMemoryAliasing ||
+        dispatcher._accessGraphBuilt || dispatcher._paralellExecWeight != 0.0F) return false;
+    dispatcher.enablePassReorder(true);
+    dispatcher.enableMemoryAliasing(true);
+    dispatcher.setParalellWeight(1.5F);
+    if (!dispatcher._enablePassReorder || !dispatcher._enableMemoryAliasing || dispatcher._paralellExecWeight != 1.0F) return false;
+
+    const auto pass = passes.add_vertex(RasterPassTag{}, "raster");
+    auto& access = dispatcher.resourceAccessGraph;
+    access.add_vertex(passes.null_vertex());
+    const auto v = access.add_vertex(pass);
+    const auto resource = resources.add_vertex("color");
+    access.resourceIndex.emplace("color", resource);
+    return &dispatcher.getBarrier(pass) == &access.getBarrier(v) &&
+           &dispatcher.getAccessNode(pass) == &access.getPassNode(v) &&
+           &dispatcher.getRenderPassInfo(pass) == &access.getRenderPassInfo(v).rpInfo &&
+           dispatcher.realResourceID("color") == resource;
+}
+
 bool checkIndexedArchive() {
     boost::container::pmr::monotonic_buffer_resource arena, other;
     cc::IndexedKeys graph{&arena};
@@ -126,5 +168,5 @@ bool checkDispatcherGraphs() {
     if (relation.vertex(pass) != 0 || relation.num_edges() != 0) return false;
     relation.remove_vertex(0);
     return relation.num_vertices() == 0 && !relation.contains(pass) &&
-           relation.add_vertex(start) == 0 && relation.vertex(start) == 0 && checkAllocationRollback() && checkIndexedArchive();
+           relation.add_vertex(start) == 0 && relation.vertex(start) == 0 && checkAllocationRollback() && checkIndexedArchive() && checkDispatcher();
 }

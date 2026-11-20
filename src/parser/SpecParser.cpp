@@ -392,11 +392,10 @@ private:
                 result.data = TagDeclaration{};
             } else {
                 Record record;
-                bool immovable = false;
                 do {
                     const auto annotation = identifier();
                     if (annotation == "moveOnly" && !record.moveOnly) record.moveOnly = true;
-                    else if (annotation == "immovable" && !immovable) immovable = true;
+                    else if (annotation == "immovable" && !record.immovable) record.immovable = true;
                     else if (annotation == "requireAllocator" && !record.requireAllocator) record.requireAllocator = true;
                     else if (annotation == "serialize" && !record.serializable) record.serializable = true;
                     else if (annotation == "comparison" && record.comparisons.empty()) comparison(record);
@@ -407,11 +406,11 @@ private:
                 } while (accept("@"));
                 if (accept("graph")) {
                     if (record.moveOnly || record.requireAllocator) fail("@moveOnly and @requireAllocator require a struct");
-                    if (immovable && record.serializable) fail("@serialize requires a replaceable graph");
-                    result.data = GraphDeclaration{.immovable = immovable, .serializable = record.serializable,
+                    if (record.immovable && record.serializable) fail("@serialize requires a replaceable graph");
+                    result.data = GraphDeclaration{.immovable = record.immovable, .serializable = record.serializable,
                                                    .comparisons = std::move(record.comparisons), .hashable = record.hashable};
                 } else {
-                    if (immovable) fail("@immovable requires a graph");
+                    if (record.immovable && record.moveOnly) fail("@immovable and @moveOnly cannot be combined");
                     expect("struct");
                     result.data = std::move(record);
                 }
@@ -675,7 +674,7 @@ private:
         result.isNullable = accept("nullable");
         result.name = uniqueName(names);
         expect(":");
-        result.type = type();
+        result.type = type(nullptr, record);
         if (accept("=")) {
             const bool negative = accept("-");
             if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
@@ -692,7 +691,7 @@ private:
         return result;
     }
 
-    TypeRef type(bool* byConstReference = nullptr, bool methodSignature = false) {
+    TypeRef type(bool* byConstReference = nullptr, bool allowReference = false) {
         const auto at = location;
         const bool isConst = accept("const");
         TypeRef result{at, qualifiedTypeName()};
@@ -703,7 +702,7 @@ private:
             expect(">");
         }
         result.pointer = accept("*");
-        result.reference = methodSignature && accept("&");
+        result.reference = allowReference && accept("&");
         if (isConst && !result.pointer && byConstReference && result.reference) {
             *byConstReference = true;
             result.reference = false;

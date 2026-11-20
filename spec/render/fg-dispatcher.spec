@@ -2,6 +2,7 @@ module FGDispatcher;
 import Gfx;
 import GfxResource;
 import RenderGraph;
+import LayoutGraph;
 import Containers;
 import Strings;
 import PmrContainers;
@@ -138,5 +139,46 @@ namespace cc::render {
         clearColors: ccstd::pmr::vector<gfx::Color>;
         clearDepth: float = 0;
         clearStencil: uint8_t = 0;
+    }
+
+    @immovable @requireAllocator struct FrameGraphDispatcher {
+        resourceAccessGraph: ResourceAccessGraph;
+        resourceGraph: ResourceGraph&;
+        renderGraph: const RenderGraph&;
+        layoutGraph: const LayoutGraphData&;
+        nullable scratch: boost::container::pmr::memory_resource*;
+        relationGraph: RelationGraph;
+        _enablePassReorder: bool = false;
+        _enableAutoBarrier: bool = true;
+        _enableMemoryAliasing: bool = false;
+        _accessGraphBuilt: bool = false;
+        _paralellExecWeight: float = 0;
+
+        constructor(resourceGraph, renderGraph, layoutGraph, scratch);
+
+        void enablePassReorder(bool enable);
+        void setParalellWeight(float paralellExecWeight);
+        void enableMemoryAliasing(bool enable);
+        void run();
+        const BarrierNode& getBarrier(RenderGraph::Vertex u) const;
+        const ResourceAccessNode& getAccessNode(RenderGraph::Vertex u) const;
+        const gfx::RenderPassInfo& getRenderPassInfo(RenderGraph::Vertex u) const;
+        RenderingInfo getRenderPassAndFrameBuffer(RenderGraph::Vertex u, const ResourceGraph& resg) const;
+        LayoutAccess getResourceAccess(ResourceGraph::Vertex r, RenderGraph::Vertex p) const;
+        ResourceGraph::Vertex realResourceID(const ccstd::pmr::string& name) const;
+        PmrFlatMap<NameLocalID, ResourceGraph::Vertex> buildDescriptorIndex(
+            const PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>& computeViews,
+            const PmrTransparentMap<ccstd::pmr::string, RasterView>& rasterViews,
+            boost::container::pmr::memory_resource* scratch) const;
+        PmrFlatMap<NameLocalID, ResourceGraph::Vertex> buildDescriptorIndex(
+            const PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>& computeViews,
+            boost::container::pmr::memory_resource* scratch) const;
+        void buildDescriptorIndex(
+            const PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>& computeViews,
+            const PmrTransparentMap<ccstd::pmr::string, RasterView>& rasterViews,
+            PmrFlatMap<NameLocalID, ResourceGraph::Vertex>& resourceIndex) const;
+        void buildDescriptorIndex(
+            const PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>& computeViews,
+            PmrFlatMap<NameLocalID, ResourceGraph::Vertex>& resourceIndex) const;
     }
 }

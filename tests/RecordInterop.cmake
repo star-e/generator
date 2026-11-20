@@ -174,6 +174,22 @@ file(WRITE "${stage}/ResourceGraphTextureView.cpp" [[
 #include <tuple>
 namespace cc::render {
 ]] "${textureViewQuery}\n}\n")
+# Exercise the dispatcher configuration and accessors directly from the handwritten engine source.
+file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp" dispatcherSource)
+source_between(dispatcherSource "void FrameGraphDispatcher::enablePassReorder(" "[[nodiscard]] ccstd::pmr::string concatResName(" dispatcherQueries)
+string(REPLACE "::vertex_descriptor" "::Vertex" dispatcherQueries "${dispatcherQueries}")
+string(REPLACE "resourceAccessGraph.passIndex.at(u)" "resourceAccessGraph.vertex(u)" dispatcherQueries "${dispatcherQueries}")
+foreach(tag IN ITEMS Barrier PassNode RenderPassInfo)
+    string(REPLACE "get(ResourceAccessGraph::${tag}Tag{}, resourceAccessGraph, ragVertID)"
+        "resourceAccessGraph.get${tag}(ragVertID)" dispatcherQueries "${dispatcherQueries}")
+endforeach()
+string(REPLACE "holds<RasterPassTag>(u, renderGraph)" "renderGraph.holds<RasterPassTag>(u)" dispatcherQueries "${dispatcherQueries}")
+file(WRITE "${stage}/DispatcherQueries.cpp" [[
+#include "cocos/renderer/pipeline/custom/FGDispatcherRecords.h"
+#include "cocos/renderer/pipeline/custom/details/GslUtils.h"
+#include "cocos/math/Vec2.h"
+namespace cc::render {
+]] "${dispatcherQueries}\n}\n")
 # Compile the engine's original printer and visibility formatter against its own graph types.
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/LayoutGraphUtils.cpp" nativeLayoutUtils)
 source_between(nativeLayoutUtils "ccstd::string getName(gfx::ShaderStageFlagBit" "gfx::TextureType getTextureType(" legacyPrint)

@@ -101,6 +101,7 @@ struct EnumType {
 
 struct RecordType {
     bool moveOnly = false;
+    bool immovable = false;
     bool requireAllocator = false;
     bool serializable = false;
     bool compareEqual = false;
