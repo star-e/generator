@@ -1,5 +1,4 @@
 #include "codegen/GraphEmitter.h"
-#include "model/TypeGraphBuilder.h"
 #include "model/TypeName.h"
 
 #include <algorithm>
@@ -140,47 +139,53 @@ void hierarchyInterface(std::ostream& out, const std::string& name, const std::s
 }
 
 void directedEdges(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
-                   const std::string& outgoing, const std::string& incoming, bool mutableGraph) {
-    out << "    using Edge = ::cc::detail::DirectedEdge<" << vertex << ">;\n"
-        << "    " << vertex << " source(Edge e) const noexcept { return e.source; }\n"
-        << "    " << vertex << " target(Edge e) const noexcept { return e.target; }\n";
-    const auto incident = [&](const char* direction, const std::string& rows, bool reversed) {
-        out << "    auto " << direction << "_edges(" << vertex << " v) const noexcept {\n"
+                   const std::string& outgoing, const std::string& incoming, bool mutableGraph, bool references) {
+    const std::string descriptor = references ? "Link" : "Edge";
+    const std::string operation = references ? "reference" : "edge";
+    out << "    using " << descriptor << " = ::cc::detail::DirectedEdge<" << vertex << ">;\n"
+        << "    " << vertex << (references ? " parent(" : " source(") << descriptor << " e) const noexcept { return e.source; }\n"
+        << "    " << vertex << (references ? " child(" : " target(") << descriptor << " e) const noexcept { return e.target; }\n";
+    const auto incident = [&](const char* range, const char* count, const std::string& rows, bool reversed) {
+        out << "    auto " << range << "(" << vertex << " v) const noexcept {\n"
             << "        return ::cc::detail::DirectedEdgeRange<" << (reversed ? "true" : "false") << ", decltype(" << rows
             << ")>{" << rows << ", v, static_cast<std::size_t>(v) + 1};\n    }\n"
-            << "    std::size_t " << direction << "_degree(" << vertex << " v) const noexcept { return " << rows << "[v].size(); }\n";
+            << "    std::size_t " << count << "(" << vertex << " v) const noexcept { return " << rows << "[v].size(); }\n";
     };
-    incident("out", outgoing, false);
+    incident(references ? "child_links" : "out_edges", references ? "num_children" : "out_degree", outgoing, false);
     if (!incoming.empty()) {
-        incident("in", incoming, true);
-        out << "    std::size_t degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
+        incident(references ? "parent_links" : "in_edges", references ? "num_parents" : "in_degree", incoming, true);
+        if (references)
+            out << "    " << vertex << " get_parent(" << vertex << " v) const noexcept {\n"
+                << "        return v >= " << incoming << ".size() || " << incoming << "[v].empty() ? null_vertex() : " << incoming << "[v].front();\n    }\n";
+        else out << "    std::size_t degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
     }
-    out << "    const auto& adjacent_vertices(" << vertex << " v) const noexcept { return " << outgoing << "[v]; }\n"
+    if (!references) out << "    const auto& adjacent_vertices(" << vertex << " v) const noexcept { return " << outgoing << "[v]; }\n"
         << "    auto edges() const noexcept { return ::cc::detail::DirectedEdgeRange<false, decltype(" << outgoing
         << ")>{" << outgoing << ", 0, " << outgoing << ".size()}; }\n"
         << "    std::size_t num_edges() const noexcept {\n        std::size_t count{};\n"
-        << "        for (const auto& row : " << outgoing << ") count += row.size();\n        return count;\n    }\n"
-        << "    std::pair<Edge, bool> edge(" << vertex << " u, " << vertex << " v) const noexcept {\n"
+        << "        for (const auto& row : " << outgoing << ") count += row.size();\n        return count;\n    }\n";
+    out << "    std::pair<" << descriptor << ", bool> " << operation << "(" << vertex << " u, " << vertex << " v) const noexcept {\n"
         << "        if (u < " << outgoing << ".size()) {\n            const auto& row = " << outgoing << "[u];\n"
         << "            if (std::find(row.begin(), row.end(), v) != row.end()) return {{u, v}, true};\n        }\n"
         << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
+    if (references) out << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return reference(u, v).second; }\n";
     if (!mutableGraph) return;
-    out << "    std::pair<Edge, bool> add_edge(" << vertex << " u, " << vertex << " v);\n"
-        << "    void remove_edge(Edge e) noexcept;\n"
-        << "    void remove_edge(" << vertex << " u, " << vertex << " v) noexcept;\n";
-    source << "\nstd::pair<" << name << "::Edge, bool> " << name << "::add_edge(" << vertex << " u, " << vertex << " v) {\n"
+    out << "    std::pair<" << descriptor << ", bool> add_" << operation << "(" << vertex << " u, " << vertex << " v);\n"
+        << "    void remove_" << operation << "(" << descriptor << " e) noexcept;\n"
+        << "    void remove_" << operation << "(" << vertex << " u, " << vertex << " v) noexcept;\n";
+    source << "\nstd::pair<" << name << "::" << descriptor << ", bool> " << name << "::add_" << operation << "(" << vertex << " u, " << vertex << " v) {\n"
            << "    if (u >= " << outgoing << ".size() || v >= " << outgoing << ".size()) return {{null_vertex(), null_vertex()}, false};\n"
            << "    " << outgoing << "[u].push_back(v);\n";
     if (!incoming.empty())
         source << "    try {\n        " << incoming << "[v].push_back(u);\n    } catch (...) {\n"
                << "        " << outgoing << "[u].pop_back();\n        throw;\n    }\n";
     source << "    return {{u, v}, true};\n}\n"
-           << "\nvoid " << name << "::remove_edge(Edge e) noexcept {\n"
+           << "\nvoid " << name << "::remove_" << operation << "(" << descriptor << " e) noexcept {\n"
            << "    if (e.source >= " << outgoing << ".size()) return;\n    auto& out = " << outgoing << "[e.source];\n"
            << "    const auto it = std::find(out.begin(), out.end(), e.target);\n    if (it == out.end()) return;\n    out.erase(it);\n";
     if (!incoming.empty())
         source << "    auto& in = " << incoming << "[e.target];\n    in.erase(std::find(in.begin(), in.end(), e.source));\n";
-    source << "}\n\nvoid " << name << "::remove_edge(" << vertex << " u, " << vertex << " v) noexcept {\n"
+    source << "}\n\nvoid " << name << "::remove_" << operation << "(" << vertex << " u, " << vertex << " v) noexcept {\n"
            << "    if (u >= " << outgoing << ".size() || v >= " << outgoing << ".size()) return;\n"
            << "    auto& out = " << outgoing << "[u];\n    out.erase(std::remove(out.begin(), out.end(), v), out.end());\n";
     if (!incoming.empty())
@@ -350,7 +355,10 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
             if (moveOnlyColumns.contains(field))
                 source << "        for (auto& item : rhs." << field << ") this->" << field << ".emplace_back(std::move(item));\n";
         for (const auto& f : fields) {
-            source << "        this->" << f.name << " = std::move(rhs." << f.name << ");\n";
+            source << "        this->" << f.name << " = ";
+            if (f.usesAllocator) source << f.cpp << "(std::move(rhs." << f.name << "), alloc)";
+            else source << "std::move(rhs." << f.name << ")";
+            source << ";\n";
         }
     }
     for (const auto& field : storage) source << "        rhs." << field << ".clear();\n";
@@ -418,8 +426,8 @@ void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternativ
 void addVertex(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
                const std::vector<std::string>& storage, const std::string& input, const std::string& rows,
                const std::vector<Alternative>& alternatives, const std::string& handles,
-               const std::map<std::string, std::string>& defaultArgs, bool indexedNames) {
-    const bool hierarchy = !rows.empty();
+               const std::map<std::string, std::string>& defaultArgs, bool indexedNames, const std::string& children) {
+    const bool hierarchy = !rows.empty() || !children.empty();
     const auto& member = storage.front();
     const std::string value = input.empty() ? "" : "std::string_view value";
     out << "\n    " << vertex << " add_vertex(" << value;
@@ -465,7 +473,8 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
            << "    const auto vertex = static_cast<" << name << "::" << vertex << ">(this->" << member << ".size());\n";
     const bool parallel = storage.size() > 1 || !alternatives.empty();
     const auto indent = parallel ? "        " : "    ";
-    if (hierarchy) source << "    auto& edges = this->" << rows << ";\n";
+    if (!rows.empty()) source << "    auto& edges = this->" << rows << ";\n";
+    if (!children.empty()) source << "    bool linked = false;\n";
     if (parallel) source << "    try {\n";
     // Consume the view before growing other columns: it can refer to text in this graph.
     if (!input.empty()) source << indent << "this->" << input << ".emplace_back(value);\n";
@@ -473,7 +482,8 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
         if (field != input && field != rows && field != handles)
             source << indent << "this->" << field << ".emplace_back(" << defaultArgs.at(field) << ");\n";
     }
-    if (hierarchy) source << indent << "edges.push_back(VertexLinks{parent});\n";
+    if (!rows.empty()) source << indent << "edges.push_back(VertexLinks{parent});\n";
+    if (!children.empty()) source << indent << "if (parent != null_vertex()) linked = add_reference(parent, vertex).second;\n";
     if (!alternatives.empty()) {
         source << indent << "switch (kind) {\n";
         for (const auto& alt : alternatives) {
@@ -487,12 +497,13 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     }
     if (parallel) {
         source << "    } catch (...) {\n";
+        if (!children.empty()) source << "        if (linked) this->" << children << "[parent].pop_back();\n";
         for (const auto& field : storage) {
             source << "        if (this->" << field << ".size() > vertex) this->" << field << ".pop_back();\n";
         }
         source << "        throw;\n    }\n";
     }
-    if (hierarchy) {
+    if (!rows.empty()) {
         source << R"(    if (parent != null_vertex()) {
         auto& parentLinks = edges[parent];
         if (parentLinks.lastChild == null_vertex()) {
@@ -578,7 +589,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         const auto& payload = graph.node(alt.valueType);
         if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data))
             throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires an object type");
-        alternatives.push_back({"::" + tag.qualifiedName, componentAccessorSuffix(tag.name), columnType(alt), alt.name});
+        alternatives.push_back({"::" + tag.qualifiedName, alt.publicName, columnType(alt), alt.name});
         members.insert(alt.name);
     }
     if (!alternatives.empty()) {
@@ -591,7 +602,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     std::string nameSetter;
     if (model.nameIndex) {
         const auto& component = model.components.at(*model.nameComponentIndex);
-        nameSetter = "set" + componentAccessorSuffix(graph.node(component.tag).name);
+        nameSetter = "set" + component.publicName;
         std::set<std::string> symbols{"nameIndex_", "contains", "vertex", "find", "null_vertex"};
         if (model.mutableGraph) symbols.insert({"appendVertex", nameSetter});
         for (const auto& symbol : symbols) {
@@ -613,9 +624,16 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     }
     if (model.mutableGraph) {
         api.insert("add_vertex");
-        if (model.hierarchy) api.insert({"add_edge", "remove_edge"});
+        if (model.hierarchy && !model.separateEdges) api.insert({"add_edge", "remove_edge"});
     }
-    if (model.hierarchy) api.insert({"null_vertex", "VertexLinks", "Link", "ChildIterator", "IteratorRange", "ChildLinkIterator",
+    if (model.separateEdges) {
+        std::set<std::string> symbols{"null_vertex", "Link", "get_parent", "num_children", "child_links", "child", "parent",
+                                      "parent_links", "num_parents", "reference", "has_link"};
+        if (model.mutableGraph) symbols.insert({"add_reference", "remove_reference"});
+        for (const auto& symbol : symbols)
+            if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": reference API collides with " + symbol);
+        api.insert(symbols.begin(), symbols.end());
+    } else if (model.hierarchy) api.insert({"null_vertex", "VertexLinks", "Link", "ChildIterator", "IteratorRange", "ChildLinkIterator",
         "ChildLinkRange", "ParentLinkRange", "ParentLinkIterator", "get_parent", "num_children", "child_links", "child", "parent", "parent_links",
         "num_parents", "Edge", "source", "target", "out_edges", "out_degree", "in_edges", "in_degree", "degree",
         "adjacent_vertices", "num_edges", "edge", "has_link", "EdgeIterator", "edges"});
@@ -624,7 +642,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     if (!alternatives.empty()) api.insert({"Kind", "kind", "holds", "value", "kindOf", "VertexHandle", "addVertexImpl"});
     for (const auto& c : model.components) {
         api.insert("get");
-        api.insert("get" + componentAccessorSuffix(graph.node(c.tag).name));
+        api.insert("get" + c.publicName);
     }
     for (const auto& f : model.fields) {
         if (hasMoveOnlyValue(graph, f.type.type)) moveOnlyColumns.insert(f.name);
@@ -636,7 +654,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         storage.push_back(field);
         return field;
     };
-    const std::string rows = model.hierarchy ? internalColumn("links_") : "";
+    const std::string rows = model.hierarchy && !model.separateEdges ? internalColumn("links_") : "";
     const auto adjacency = [&](const char* base) {
         auto column = internalColumn(base);
         dequeColumns.insert(column);
@@ -645,6 +663,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     };
     const auto outgoing = model.incidence ? adjacency("outgoing_") : "";
     const auto incoming = model.bidirectional ? adjacency("incoming_") : "";
+    const auto childRows = model.separateEdges ? adjacency("children_") : "";
+    const auto parentRows = model.separateEdges ? adjacency("parents_") : "";
     const std::string handles = alternatives.empty() ? "" : internalColumn("handles_");
     // Only these columns have one entry per vertex. Each payload column grows for its own kind.
     auto allStorage = storage;
@@ -671,12 +691,12 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (model.nameComponentIndex) input = storage.at(*model.nameComponentIndex);
         else if (!types.empty() && types.front() == "ccstd::pmr::string") input = storage.front();
         if (!input.empty()) headers.insert("string_view");
-        addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles, defaultArgs, model.nameIndex);
+        addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles, defaultArgs, model.nameIndex, childRows);
     }
     if (model.hierarchy || model.incidence || model.nameIndex)
         out << "\n    static constexpr " << vertex << " null_vertex() noexcept { return (std::numeric_limits<"
             << vertex << ">::max)(); }\n";
-    if (model.hierarchy) {
+    if (!rows.empty()) {
         for (const auto* symbol : {"Edge", "source", "target", "out_edges", "out_degree", "edge", "ChildIterator", "IteratorRange",
                                    "ParentLinkRange", "ParentLinkIterator", "parent", "parent_links", "num_parents", "in_edges", "in_degree", "degree",
                                    "adjacent_vertices", "num_edges", "has_link", "EdgeIterator", "edges"}) {
@@ -691,14 +711,15 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             hierarchyMutation(out, source, name, vertex, rows, model.serializable);
         }
     }
-    if (model.incidence) {
+    if (model.incidence || model.separateEdges) {
         headers.insert({"algorithm", "limits", "cocos/base/GraphEdges.h", "cocos/base/std/container/deque.h"});
-        directedEdges(out, source, name, vertex, outgoing, incoming, model.mutableGraph);
+        if (model.incidence) directedEdges(out, source, name, vertex, outgoing, incoming, model.mutableGraph, false);
+        if (model.separateEdges) directedEdges(out, source, name, vertex, childRows, parentRows, model.mutableGraph, true);
     }
     if (model.parentGraph) {
         headers.insert("string_view");
         const auto& selected = model.components.at(model.nameComponentIndex.value());
-        const auto nameAccessor = "get" + componentAccessorSuffix(graph.node(selected.tag).name);
+        const auto nameAccessor = "get" + selected.publicName;
         parentLookup(out, source, name, vertex, selected.name, nameAccessor);
         if (model.addressableGraph) {
             headers.insert("stdexcept");
@@ -728,7 +749,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     }
     for (size_t i = 0; i < model.components.size(); ++i) {
         const auto& tag = graph.node(model.components[i].tag);
-        const auto accessor = "get" + componentAccessorSuffix(tag.name);
+        const auto accessor = "get" + model.components[i].publicName;
         for (const std::string qualifier : {"", " const"}) {
             if (model.nameIndex && i == model.nameComponentIndex && qualifier.empty()) continue;
             const auto result = types[i] == "bool"
@@ -750,10 +771,10 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     if (model.hashable) out << "    friend struct ::ccstd::hash<" << name << ">;\n";
     for (size_t i = 0; i < types.size(); ++i)
         out << "    ccstd::pmr::" << (dequeColumns.contains(storage[i]) ? "deque" : "vector") << "<" << types[i] << "> " << storage[i] << ";\n";
-    for (const auto& column : {outgoing, incoming}) {
+    for (const auto& column : {outgoing, incoming, childRows, parentRows}) {
         if (!column.empty()) out << "    ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">> " << column << ";\n";
     }
-    if (model.hierarchy) {
+    if (!rows.empty()) {
         out << "    struct VertexLinks {\n"
             << "        " << vertex << " parent{null_vertex()};\n"
             << "        " << vertex << " firstChild{null_vertex()};\n"

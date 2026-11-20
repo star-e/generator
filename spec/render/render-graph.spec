@@ -316,6 +316,48 @@ namespace cc::render {
         readonly samplers: PmrFlatMap<uint32_t, gfx::Sampler*>;
         custom: ccstd::pmr::string;
     }
+
+    @tag struct Data_ {}
+    @tag struct Valid_ {}
+    @tag struct Queue_ {}
+    @tag struct Scene_ {}
+    @tag struct Blit_ {}
+    @tag struct Dispatch_ {}
+    @tag struct Clear_ {}
+    @tag struct Viewport_ {}
+    graph RenderGraph {
+        vertex_descriptor Vertex = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        incidence_graph { out_edges: vector; }
+        bidirectional_graph { in_edges: vector; }
+        hierarchy_graph { storage: separate_edges; }
+        component Name_: ccstd::pmr::string { member: names; }
+        component Layout_: ccstd::pmr::string { member: layoutNodes; }
+        component Data_: RenderData { member: data; }
+        component Valid_: bool { member: valid; }
+        named_graph { component: Name_; }
+        polymorphic_graph {
+            RasterPassTag as RasterPass: RasterPass { member: rasterPasses; }
+            RasterSubpassTag as RasterSubpass: RasterSubpass { member: rasterSubpasses; }
+            ComputeSubpassTag as ComputeSubpass: ComputeSubpass { member: computeSubpasses; }
+            ComputeTag as Compute: ComputePass { member: computePasses; }
+            ResolveTag as Resolve: ResolvePass { member: resolvePasses; }
+            CopyTag as Copy: CopyPass { member: copyPasses; }
+            MoveTag as Move: MovePass { member: movePasses; }
+            RaytraceTag as Raytrace: RaytracePass { member: raytracePasses; }
+            Queue_: RenderQueue { member: renderQueues; }
+            Scene_: SceneData { member: scenes; }
+            Blit_: Blit { member: blits; }
+            Dispatch_: Dispatch { member: dispatches; }
+            Clear_: ccstd::pmr::vector<ClearView> { member: clearViews; }
+            Viewport_: gfx::Viewport { member: viewports; }
+        }
+        readonly index: PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>;
+        readonly sortedVertices: ccstd::pmr::vector<uint32_t>;
+        readonly globalRenderData: RenderData;
+    }
 }
 
 binding typescript {
@@ -364,4 +406,5 @@ binding typescript {
     BlitType => const enum;
     Blit => class { pool b; constructor(material, passID, sceneFlags, camera, blitType); };
     RenderData => class { pool rd1; reset defaults; };
+    RenderGraph => class { pool rg1; };
 }

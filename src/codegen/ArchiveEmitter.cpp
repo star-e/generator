@@ -1,5 +1,4 @@
 #include "codegen/ArchiveEmitter.h"
-#include "model/TypeGraphBuilder.h"
 #include <algorithm>
 
 namespace cc::codegen {
@@ -111,7 +110,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
                       ArchiveRequirements& requirements) {
     const auto& model = std::get<GraphType>(node.data);
     const auto& name = node.name;
-    if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.alternatives.empty() ||
+    if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.separateEdges || model.alternatives.empty() ||
         graph.node(model.vertexType).qualifiedName != "uint32_t")
         throw std::runtime_error(node.qualifiedName + ": graph archive requires a mutable uint32_t vertex list with shared edges and polymorphic payloads");
     requirements.needsReadSize = true;
@@ -123,7 +122,6 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
             throw std::runtime_error(node.qualifiedName + "." + field.name + ": archive load requires a writable field");
         requirements.checkType(graph, node.module, field.type.type, node.qualifiedName + "." + field.name);
     }
-    const auto suffix = [&](const ComponentInfo& column) { return componentAccessorSuffix(graph.node(column.tag).name); };
     const auto tag = [&](const ComponentInfo& column) { return "::" + graph.node(column.tag).qualifiedName + "{}"; };
     const auto count = model.alternatives.size();
     const auto archiveName = [&](std::string_view type) {
@@ -141,10 +139,10 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "        ++counts[static_cast<uint32_t>(g.kind(v))];\n    }\n"
         << "    save(ar, g.num_vertices());\n    save(ar, edges);\n    for (auto n : counts) save(ar, n);\n"
         << "    for (auto v : g.vertices()) {\n        save(ar, static_cast<uint32_t>(g.kind(v)));\n        save(ar, g.get_parent(v));\n";
-    for (const auto& c : model.components) cpp << "        save(ar, g.get" << suffix(c) << "(v));\n";
+    for (const auto& c : model.components) cpp << "        save(ar, g.get" << c.publicName << "(v));\n";
     cpp << "        switch (g.kind(v)) {\n";
     for (const auto& c : model.alternatives)
-        cpp << "        case " << name << "::Kind::" << suffix(c) << ": save(ar, g.value(" << tag(c) << ", v)); break;\n";
+        cpp << "        case " << name << "::Kind::" << c.publicName << ": save(ar, g.value(" << tag(c) << ", v)); break;\n";
     cpp << "        }\n    }\n";
     for (const auto& f : model.fields) if (!f.transient) cpp << "    save(ar, g." << f.name << ");\n";
     cpp << "}\n\n" << load << " {\n"
@@ -174,7 +172,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
             cpp << "            auto& key = decoded." << c.name << "[v];\n            load(ar, key);\n"
                 << "            if (!decoded.nameIndex_.emplace(key, v).second) throw std::invalid_argument(\"duplicate vertex name\");\n";
         } else {
-            cpp << "            load(ar, decoded.get" << suffix(c) << "(v));\n";
+            cpp << "            load(ar, decoded.get" << c.publicName << "(v));\n";
         }
     }
     cpp << "            load(ar, decoded.value(tag, v));\n        };\n        switch (kind) {\n";
@@ -196,10 +194,10 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "    for (const v of g.v()) ++counts[g.w(v)];\n"
         << "    " << number << "(g.nv());\n    " << number << "(g.ne());\n    for (const n of counts) " << number << "(n);\n"
         << "    for (const v of g.v()) {\n        " << number << "(g.w(v));\n        " << number << "(g.getParent(v));\n";
-    for (const auto& c : model.components) writer.value(*ts, c.valueType, "g.get" + suffix(c) + "(v)", "        ");
+    for (const auto& c : model.components) writer.value(*ts, c.valueType, "g.get" + c.publicName + "(v)", "        ");
     *ts << "        switch (g.w(v)) {\n";
     for (const auto& c : model.alternatives) {
-        const auto kind = kinds + suffix(c);
+        const auto kind = kinds + c.publicName;
         *ts << "        case " << kind << ":\n";
         writer.value(*ts, c.valueType, "g.value(" + kind + ", v)", "            ");
         *ts << "            break;\n";
@@ -214,13 +212,13 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "        if (parent !== decoded.N) {\n            if (parent >= i || !edges) throw new RangeError('Invalid graph archive parent');\n            --edges;\n        }\n";
     std::string arguments;
     for (const auto& c : model.components) {
-        const auto component = "component" + suffix(c);
+        const auto component = "component" + c.publicName;
         reader.value(*ts, c.valueType, component, "        ", true);
         arguments += ", " + component;
     }
     *ts << "        switch (kind) {\n";
     for (const auto& c : model.alternatives) {
-        const auto kind = kinds + suffix(c);
+        const auto kind = kinds + c.publicName;
         *ts << "        case " << kind << ": {\n";
         reader.value(*ts, c.valueType, "payload", "            ", true);
         *ts << "            decoded.addVertex(" << kind << ", payload" << arguments << ", parent);\n            break;\n        }\n";

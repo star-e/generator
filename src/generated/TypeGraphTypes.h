@@ -121,6 +121,7 @@ struct ComponentInfo {
     TypeId tag;
     TypeId valueType;
     std::string name;
+    std::string publicName;
 };
 
 struct GraphType {
@@ -137,6 +138,7 @@ struct GraphType {
     bool bidirectional = false;
     bool mutableGraph = false;
     bool hierarchy = false;
+    bool separateEdges = false;
     std::optional<uint32_t> nameComponentIndex;
     bool nameIndex = false;
     bool parentGraph = false;

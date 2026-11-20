@@ -71,7 +71,7 @@ namespace codegen {
         methods: std::vector<MethodInfo>;
     }
     struct InterfaceType { bases: std::vector<TypeId>; methods: std::vector<MethodInfo>; }
-    struct ComponentInfo { tag: TypeId; valueType: TypeId; name: std::string; }
+    struct ComponentInfo { tag: TypeId; valueType: TypeId; name: std::string; publicName: std::string; }
     struct GraphType {
         immovable: bool = false;
         serializable: bool = false;
@@ -86,6 +86,7 @@ namespace codegen {
         bidirectional: bool = false;
         mutableGraph: bool = false;
         hierarchy: bool = false;
+        separateEdges: bool = false;
         nameComponentIndex: std::optional<uint32_t>;
         nameIndex: bool = false;
         parentGraph: bool = false;

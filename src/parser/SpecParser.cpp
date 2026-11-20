@@ -467,8 +467,9 @@ private:
         return result;
     }
 
-    GraphComponent graphColumn(std::set<std::string>& names) {
+    GraphComponent graphColumn(std::set<std::string>& names, bool alternative) {
         auto tag = type();
+        auto kindName = alternative && accept("as") ? identifier() : std::string{};
         expect(":");
         auto value = type();
         expect("{");
@@ -477,7 +478,7 @@ private:
         auto member = uniqueName(names);
         expect(";");
         expect("}");
-        return {std::move(tag), std::move(value), std::move(member)};
+        return {std::move(tag), std::move(value), std::move(member), std::move(kindName)};
     }
 
     void parseGraph(GraphDeclaration& graph) {
@@ -520,7 +521,8 @@ private:
                 expect("{");
                 expect("storage");
                 expect(":");
-                expect("shared_edges");
+                graph.separateEdges = accept("separate_edges");
+                if (!graph.separateEdges && !accept("shared_edges")) fail("expected 'shared_edges' or 'separate_edges'");
                 expect(";");
                 expect("}");
                 graph.hierarchy = true;
@@ -548,13 +550,13 @@ private:
                 advance();
                 expect(";");
             } else if (accept("component")) {
-                graph.components.push_back(graphColumn(names));
+                graph.components.push_back(graphColumn(names, false));
             } else if (accept("polymorphic_graph")) {
                 if (!graph.alternatives.empty()) fail("duplicate polymorphic_graph");
                 expect("{");
                 if (token == "}") fail("polymorphic_graph requires at least one alternative");
                 do {
-                    graph.alternatives.push_back(graphColumn(names));
+                    graph.alternatives.push_back(graphColumn(names, true));
                 } while (!accept("}"));
             } else if (token == "@" && followedBy("tag")) {
                 fail("declare graph tags outside the graph");
@@ -567,10 +569,10 @@ private:
         if (!graph.vertexType) fail("graph requires a vertex descriptor");
         if (graph.bidirectional && !graph.incidence) fail("bidirectional_graph requires incidence_graph");
         if (graph.incidence && !graph.indexed) fail("incidence_graph requires indexed vertex storage");
-        if (graph.incidence && graph.hierarchy) fail("explicit incidence storage conflicts with shared hierarchy edges");
+        if (graph.incidence && graph.hierarchy && !graph.separateEdges) fail("explicit incidence storage conflicts with shared hierarchy edges");
         if (!graph.alternatives.empty() && (graph.hashable || !graph.comparisons.empty()))
             fail("polymorphic graph comparison and hashing are unsupported");
-        if (graph.hierarchy && !graph.indexed) fail("shared hierarchy edges require indexed vertex storage");
+        if (graph.hierarchy && !graph.indexed) fail("hierarchy edges require indexed vertex storage");
         if (!graph.components.empty() && !graph.indexed) fail("components require indexed vertex storage");
         if (!graph.alternatives.empty() && !graph.indexed) fail("polymorphic_graph requires indexed vertex storage");
     }

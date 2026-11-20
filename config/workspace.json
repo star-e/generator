@@ -34,6 +34,7 @@
       "types": {
         "PmrTransparentMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
         "PmrUnorderedMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
+        "PmrUnorderedStringMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
         "PmrFlatMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" }
       }
     },
@@ -87,7 +88,8 @@
       "spec": "../spec/render/graph-tags.spec",
       "backend": "records",
       "nativeRoot": "native",
-      "header": "cocos/renderer/pipeline/custom/GraphTags.h"
+      "header": "cocos/renderer/pipeline/custom/GraphTags.h",
+      "namesHeader": "cocos/renderer/pipeline/custom/GraphTagNames.h"
     },
     {
       "spec": "../spec/render/layout-graph.spec",

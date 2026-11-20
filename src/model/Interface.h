@@ -93,6 +93,7 @@ struct GraphComponent {
     TypeRef tag;
     TypeRef value;
     std::string member;
+    std::string kindName;
 };
 
 struct GraphDeclaration {
@@ -108,6 +109,7 @@ struct GraphDeclaration {
     bool incidence{};
     bool bidirectional{};
     bool hierarchy{};
+    bool separateEdges{};
     std::optional<TypeRef> nameComponent;
     std::optional<SourceLocation> nameIndex;
     std::optional<SourceLocation> parentGraph;

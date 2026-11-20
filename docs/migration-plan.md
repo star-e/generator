@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 37 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供布局图和资源图共用的名称组件标签。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 38 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -308,6 +308,8 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 `RasterSubpass`、`ComputeSubpass`、`ComputePass`、`ResolvePass`、`CopyPass`、`MovePass` 和 `RaytracePass` 由同一份规格生成。C++ 构造时显式传入分配器，`CopyPass` 通过 `@moveOnly` 保留上传数据的移动语义。TS 对象池复用已有的 Map、数组和视口。两个 Subpass 的工厂接收新的构造参数，省略参数时使用默认值。[C++ 跨分配器用例](../tests/consumer/records/PassConsumer.cpp) · [TS 对象池用例](../tests/consumer/records/pass-consumer.ts)
 
 `ClearView`、`RenderQueue`、`SceneData`、`Dispatch`、`Blit` 和 `RenderData` 已接入渲染图规格，剔除标志 `CullingFlags` 和绘制类型 `BlitType` 随模块生成。`RenderQueue.viewport` 在 C++ 中按值存储，TS 通过 `field viewport default null` 声明为 `Viewport | null`。`SceneData` 复用 `LightInfo` 时，按声明模块中的参数顺序和默认值调用其重置方法。`RenderData` 通过 `@moveOnly` 声明移动语义，常量字节和四张资源表使用目标分配器。[渲染图规格](../spec/render/render-graph.spec) · [C++ 资源所有权测试](../tests/consumer/records/RenderDataConsumer.cpp) · [TS 对象池测试](../tests/consumer/records/render-node-consumer.ts)
+
+`RenderGraph` 同时声明双向执行边和 `hierarchy_graph { storage: separate_edges; }`。创建顶点时传入父节点只会添加一条父子引用。每个顶点可以有多个父节点，`get_parent`／`getParent` 返回仍在图中的第一个父节点。两种关系都保留平行边和插入顺序。按描述符删除一条，按端点删除对应关系的全部匹配项。四个组件和 14 种载荷保留引擎定义的顺序。`RasterPassTag as RasterPass` 复用既有原生标签，并指定两端公开的枚举名。顶点可以重名，调用方单独维护 `index`。[渲染图规格](../spec/render/render-graph.spec) · [C++ 跨分配器与边操作](../tests/consumer/records/RenderGraphConsumer.cpp) · [TS 边操作与对象池](../tests/consumer/records/render-graph-consumer.ts)
 
 ## 第一次合并及后续验收
 

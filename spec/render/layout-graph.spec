@@ -93,7 +93,6 @@ namespace cc::render {
 
     @tag struct Descriptors_ {}
     @tag struct Update_ {}
-    @tag struct Layout_ {}
     @tag struct RenderStage_ {}
     @tag struct RenderPhase_ {}
     @serialize graph LayoutGraph {

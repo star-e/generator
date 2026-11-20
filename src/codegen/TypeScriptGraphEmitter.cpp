@@ -34,7 +34,7 @@ std::vector<Column> bindColumns(const TypeGraph& graph, const TypeNode& owner,
             (std::holds_alternative<RecordType>(value.data) || std::holds_alternative<GraphType>(value.data)))
             throw std::runtime_error(context + ": missing TypeScript import mapping for " + value.qualifiedName);
         const auto& type = boundTypeScriptName(graph, id, owner.module, imports, context);
-        result.push_back({componentAccessorSuffix(graph.node(column.tag).name), type,
+        result.push_back({column.publicName, type,
                           type == "number" || type == "boolean" || type == "string" || std::holds_alternative<EnumType>(value.data)});
     }
     return result;
@@ -56,28 +56,34 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     if (model.hierarchy)
         out << "        if (parent !== this.N && (!Number.isInteger(parent) || parent < 0 || parent >= v)) {\n"
             << "            throw new RangeError('Invalid parent vertex');\n        }\n";
-    const auto indent = model.nameIndex ? "            " : "        ";
+    const bool rollback = model.nameIndex || model.separateEdges;
+    const auto indent = rollback ? "            " : "        ";
     if (model.nameIndex) {
         const auto key = "component" + components.at(*model.nameComponentIndex).tagName;
         out << "        if (this.nameIndex.has(" << key << ")) throw new Error('Duplicate vertex name');\n"
-            << "        this.nameIndex.set(" << key << ", v);\n        try {\n";
+            << "        this.nameIndex.set(" << key << ", v);\n";
     }
+    if (rollback) out << "        try {\n";
     out << indent << "this.vertices.push({\n";
     if (polymorphic) out << indent << "    id, object,\n";
     for (const auto& component : components) out << indent << "    component" << component.tagName << ",\n";
-    if (model.hierarchy) out << indent << "    parent,\n" << indent << "    children: [],\n";
+    if (model.separateEdges) out << indent << "    parents: [], children: [],\n";
+    else if (model.hierarchy) out << indent << "    parent,\n" << indent << "    children: [],\n";
     if (model.incidence) out << indent << "    outgoing: [],\n";
     if (model.bidirectional) out << indent << "    incoming: [],\n";
     out << indent << "});\n";
     if (model.parentGraph)
         out << indent << "const siblings = parent === this.N ? this.roots : this.vertices[parent].children;\n"
             << indent << "siblings.push(new cc$graph.OutE(v));\n";
+    else if (model.separateEdges)
+        out << indent << "if (parent !== this.N) this.addReference(parent, v);\n";
     else if (model.hierarchy)
         out << indent << "if (parent !== this.N) this.vertices[parent].children.push(new cc$graph.OutE(v));\n";
-    if (model.nameIndex)
-        out << "        } catch (error) {\n            this.vertices.length = v;\n"
-            << "            this.nameIndex.delete(component" << components.at(*model.nameComponentIndex).tagName << ");\n"
-            << "            throw error;\n        }\n";
+    if (rollback) {
+        out << "        } catch (error) {\n            this.vertices.length = v;\n";
+        if (model.nameIndex) out << "            this.nameIndex.delete(component" << components.at(*model.nameComponentIndex).tagName << ");\n";
+        out << "            throw error;\n        }\n";
+    }
     out << "        return v;\n    }\n";
 }
 
@@ -97,16 +103,21 @@ void directedEdges(std::ostream& out, const GraphType& model) {
         out << "    ie (v: number): cc$graph.InEI { return new cc$graph.InEI(this.vertices[v].incoming.values(), v); }\n"
             << "    id (v: number): number { return this.vertices[v].incoming.length; }\n"
             << "    d (v: number): number { return this.od(v) + this.id(v); }\n";
-    if (!model.mutableGraph) return;
-    out << R"(    addEdge (u: number, v: number): cc$graph.ED | null {
+}
+
+void adjacencyMutation(std::ostream& out, bool references, bool bidirectional) {
+    const auto operation = references ? "Reference" : "Edge";
+    const auto outgoing = references ? "children" : "outgoing";
+    const auto incoming = references ? "parents" : "incoming";
+    out << "    add" << operation << R"( (u: number, v: number): cc$graph.ED | null {
         if (!Number.isInteger(u) || !Number.isInteger(v) || u < 0 || v < 0 ||
             u >= this.vertices.length || v >= this.vertices.length) return null;
         const edge = new cc$graph.ED(u, v);
-        const out = this.vertices[u].outgoing;
+        const out = this.vertices[u].)" << outgoing << R"(;
         out.push(new cc$graph.OutE(v));
 )";
-    if (model.bidirectional) out << R"(        try {
-            this.vertices[v].incoming.push(new cc$graph.OutE(u));
+    if (bidirectional) out << R"(        try {
+            this.vertices[v].)" << incoming << R"(.push(new cc$graph.OutE(u));
         } catch (error) {
             out.pop();
             throw error;
@@ -114,18 +125,18 @@ void directedEdges(std::ostream& out, const GraphType& model) {
 )";
     out << R"(        return edge;
     }
-    removeEdge (e: cc$graph.ED): void {
-        const u = this.source(e), v = this.target(e);
+    remove)" << operation << R"( (e: cc$graph.ED): void {
+        const u = e.source as number, v = e.target as number;
         if (!Number.isInteger(u) || u < 0 || u >= this.vertices.length) return;
-        const out = this.vertices[u].outgoing;
+        const out = this.vertices[u].)" << outgoing << R"(;
         const index = out.findIndex(other => other.target === v);
         if (index < 0) return;
         out.splice(index, 1);
 )";
-    if (model.bidirectional) out << "        const incoming = this.vertices[v].incoming;\n"
+    if (bidirectional) out << "        const incoming = this.vertices[v]." << incoming << ";\n"
                                 << "        incoming.splice(incoming.findIndex(other => other.target === u), 1);\n";
     out << R"(    }
-    removeEdges (u: number, v: number): void {
+    remove)" << operation << R"(s (u: number, v: number): void {
         if (!Number.isInteger(u) || !Number.isInteger(v) || u < 0 || v < 0 ||
             u >= this.vertices.length || v >= this.vertices.length) return;
         const compact = (list: cc$graph.OutE[], neighbor: number): void => {
@@ -133,9 +144,9 @@ void directedEdges(std::ostream& out, const GraphType& model) {
             for (const edge of list) if (edge.target !== neighbor) list[count++] = edge;
             list.length = count;
         };
-        compact(this.vertices[u].outgoing, v);
+        compact(this.vertices[u].)" << outgoing << R"(, v);
 )";
-    if (model.bidirectional) out << "        compact(this.vertices[v].incoming, u);\n";
+    if (bidirectional) out << "        compact(this.vertices[v]." << incoming << ", u);\n";
     out << "    }\n";
 }
 
@@ -151,15 +162,20 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     std::set<std::string> api{"constructor", "vertices", "N"};
     if (model.vertexList) api.insert({"v", "nv"});
     if (model.mutableGraph) api.insert({"addVertex", "clear"});
-    if (model.mutableGraph && model.hierarchy) api.insert({"addEdge", "addReference"});
-    if (model.incidence) api.insert({"edge", "source", "target", "oe", "od", "adj", "ne"});
-    if (model.bidirectional) api.insert({"ie", "id", "d"});
+    const bool sharedEdges = model.hierarchy && !model.separateEdges;
+    if (model.mutableGraph && model.hierarchy) api.insert("addReference");
+    if (model.mutableGraph && sharedEdges) api.insert("addEdge");
+    if (model.separateEdges) {
+        api.insert({"parents", "numParents"});
+        if (model.mutableGraph) api.insert({"removeReference", "removeReferences"});
+    }
+    if (model.incidence || sharedEdges) api.insert({"edge", "source", "target", "oe", "od", "adj", "ne"});
+    if (model.bidirectional || sharedEdges) api.insert({"ie", "id", "d"});
     if (model.incidence && model.mutableGraph) api.insert({"addEdge", "removeEdge", "removeEdges"});
     if (model.nameComponentIndex) api.insert("vertexName");
     if (model.nameIndex) api.insert({"nameIndex", "contains", "vertex", "find"});
     if (!alternatives.empty()) api.insert({"h", "w", "object", "value", "visitVertex", "j"});
-    if (model.hierarchy) api.insert({"getParent", "reference", "parent", "child", "children", "numChildren",
-                                      "edge", "source", "target", "oe", "od", "ie", "id", "d", "adj", "ne"});
+    if (model.hierarchy) api.insert({"getParent", "reference", "parent", "child", "children", "numChildren"});
     if (model.parentGraph) api.insert({"roots", "locateChild"});
     if (model.addressableGraph) api.insert({"locate", "locateRelative", "path"});
     for (size_t i = 0; i < components.size(); ++i) {
@@ -201,7 +217,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "        readonly id: " << kinds << ";\n        readonly object: " << node.name << "Object;\n";
     for (size_t i = 0; i < components.size(); ++i)
         out << "        " << (hasSetter(i) ? "" : "readonly ") << "component" << components[i].tagName << ": " << components[i].type << ";\n";
-    if (model.hierarchy) out << "        parent: number;\n        readonly children: cc$graph.OutE[];\n";
+    if (model.separateEdges) out << "        readonly parents: cc$graph.OutE[];\n        readonly children: cc$graph.OutE[];\n";
+    else if (model.hierarchy) out << "        parent: number;\n        readonly children: cc$graph.OutE[];\n";
     if (model.incidence) out << "        readonly outgoing: cc$graph.OutE[];\n";
     if (model.bidirectional) out << "        readonly incoming: cc$graph.OutE[];\n";
     out << "    }[] = [];\n";
@@ -251,7 +268,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         }
         out << "    }\n";
         addVertex(out, model, kinds, components);
-        if (model.hierarchy) {
+        if (sharedEdges) {
             out << "\n    addEdge (u: number, v: number): cc$graph.ED | null {\n"
                 << "        if (!Number.isInteger(u) || !Number.isInteger(v) || !this.vertices[u] || !this.vertices[v] ||\n"
                 << "            this.vertices[v].parent !== this.N" << (model.serializable ? " || u >= v" : "") << ") return null;\n";
@@ -284,7 +301,10 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             out << "    }\n";
         }
     }
-    if (model.incidence) directedEdges(out, model);
+    if (model.incidence) {
+        directedEdges(out, model);
+        if (model.mutableGraph) adjacencyMutation(out, false, model.bidirectional);
+    }
     if (model.nameIndex)
         out << "\n    contains (key: string): boolean { return this.nameIndex.has(key); }\n"
             << "    find (key: string): number {\n        const v = this.nameIndex.get(key);\n"
@@ -309,13 +329,22 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "        default: throw new Error('Unknown vertex kind');\n        }\n    }\n"
             << "    j<T extends " << node.name << "Object> (v: number): T { return this.object(v) as T; }\n";
     }
-    if (model.hierarchy)
-        out << "\n    getParent (v: number): number { return v === this.N ? this.N : this.vertices[v].parent; }\n"
-            << "    reference (u: number, v: number): boolean { return u !== this.N && !!this.vertices[v] && this.getParent(v) === u; }\n"
-            << "    parent (e: cc$graph.ED): number { return e.source as number; }\n"
+    if (model.hierarchy) {
+        out << "\n    parent (e: cc$graph.ED): number { return e.source as number; }\n"
             << "    children (v: number): cc$graph.OutEI { return new cc$graph.OutEI(this.vertices[v].children.values(), v); }\n"
             << "    child (e: cc$graph.ED): number { return e.target as number; }\n"
-            << "    numChildren (v: number): number { return this.vertices[v].children.length; }\n"
+            << "    numChildren (v: number): number { return this.vertices[v].children.length; }\n";
+    }
+    if (model.separateEdges) {
+        out << "    parents (v: number): cc$graph.InEI { return new cc$graph.InEI(this.vertices[v].parents.values(), v); }\n"
+            << "    numParents (v: number): number { return this.vertices[v].parents.length; }\n"
+            << "    getParent (v: number): number {\n        const row = this.vertices[v];\n"
+            << "        return row && row.parents.length ? row.parents[0].target as number : this.N;\n    }\n"
+            << "    reference (u: number, v: number): boolean { return Number.isInteger(u) && !!this.vertices[u] && this.vertices[u].children.some(e => e.target === v); }\n";
+        if (model.mutableGraph) adjacencyMutation(out, true, true);
+    } else if (model.hierarchy)
+        out << "\n    getParent (v: number): number { return v === this.N ? this.N : this.vertices[v].parent; }\n"
+            << "    reference (u: number, v: number): boolean { return u !== this.N && !!this.vertices[v] && this.getParent(v) === u; }\n"
             << "\n    edge (u: number, v: number): boolean { return this.reference(u, v); }\n"
             << "    source (e: cc$graph.ED): number { return this.parent(e); }\n"
             << "    target (e: cc$graph.ED): number { return this.child(e); }\n"
