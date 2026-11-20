@@ -1,18 +1,18 @@
-import { DefaultVisitor, depthFirstSearch as engineSearch, ED, GraphColor, OutEI } from './graph';
-import type { AddressableGraph, IncidenceGraph, MutableVertexPropertyMap, PolymorphicGraph, ReferenceGraph } from './graph';
+import { DefaultVisitor, depthFirstSearch as engineSearch, ED, OutEI } from './graph';
+import type { AddressableGraph, IncidenceGraph, PolymorphicGraph, ReferenceGraph } from './graph';
 import { depthFirstSearch } from './graph-dfs';
 import type { InputArchive } from './archive';
 import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
     EffectData, LayoutGraph, LayoutGraphData, LayoutGraphDataValue, LayoutGraphValue, RenderPassType,
     RenderPhase, RenderPhaseData, RenderStageData } from './layout-graph';
-import { convertDescriptorBlock, LayoutGraphBuilder2 } from './layout-graph-conversion';
+import { convertDescriptorBlock, getVisibilityName, indent, LayoutGraphBuilder2, unindent, VectorGraphColorMap } from './layout-graph-conversion';
 import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
 import { UpdateFrequency } from './types';
 import { getUpdateFrequencyName } from './types-names';
 import { getDescriptorTypeOrderName } from './layout-graph-names';
 import { ShaderStageFlagBit, UniformBlock } from '../../gfx';
 
-@editorPrintHelpers@
+@layoutGraphPrintVisitor@
 
 function assert (ok: boolean, message = 'Editor layout assertion failed'): void {
     if (!ok) throw new Error(message);

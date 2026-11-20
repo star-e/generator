@@ -237,6 +237,8 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 编辑器转换测试把同一份 `LayoutGraph` 归档分别读入旧引擎和新生成的 TS 类型，调用引擎的 `buildLayoutGraphData()`，逐字节比较两份输出。C++ 再加载转换结果，核对顶点与父节点编号、着色器索引、描述符排序和偏移、预留容量，以及普通集合和描述符组中共用的 uniform 名称编号。[转换样本](../tests/consumer/records/layout-conversion.ts.in) · [原生读回](../tests/consumer/records/PipelineArchiveConsumer.cpp)
 
+同一份转换结果也用于核对 TS 调用方。`printLayoutGraphData()` 与构建器的 `print()` 通过 `getName(v)` 读取顶点名，测试逐字比较两种图的打印文本。`createGfxDescriptorSetsAndPipelines()` 用 `v()` 遍历顶点，再用 `getLayout(v)` 获取布局。测试分别在普通集合和 WebGPU 描述符组上检查绑定编号、类型、数量、可见性和图像属性，并用测试设备核对布局句柄如何传给描述符集合。[调用方对照测试](../tests/consumer/records/layout-bindings.cjs)
+
 `LayoutGraphObjectPool` 的 24 个工厂由 TS 绑定生成。`poolDependency renderCommon: RenderCommon;` 将已导入模块的对象池作为构造参数和只读属性。`reset()` 只重置本地子池的取用位置。下次取出时，普通记录调用自己的 `reset(...)`，两个描述符索引用 `pool … assign;` 按构造参数逐字段赋值，可修改的图调用 `clear()`，外部实现的空记录 `Layout` 直接复用。消费测试用同一套用例对照旧引擎和新生成的池。[布局绑定](../spec/render/layout-graph.spec) · [对象池测试](../tests/consumer/records/layout-pool.cjs)
 
 MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中为 `std::unordered_map` 分配代理。`RenderStageData::descriptorVisibility` 沿用这个引擎容器，若该笔分配抛错，标准库会终止进程。Windows Debug 和 Release 都对两种载荷逐笔注入分配失败。stage 用例在独立进程中执行每一次注入，单独记录 Debug 代理的终止，并验证其他分配点的回滚和原图重试。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
