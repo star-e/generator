@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 36 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供布局图和资源图共用的名称组件标签。`RenderGraph` 首批输出为 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 37 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供布局图和资源图共用的名称组件标签。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -300,6 +300,8 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 `ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。[外部 GFX 类型](../spec/extern/gfx-resource.spec)
 
 `binding typescript` 可用 `constructor(...)` 按参数名和顺序选择一个构造重载。两个视图的池化工厂复用嵌套对象，分别调用 `Color.reset()` 和 `ClearValue.reset(0, 0, 0, 0)`。[渲染图声明与绑定](../spec/render/render-graph.spec)
+
+`Subpass` 用三个容器保存光栅视图、计算视图和解析对。TS 对象池在复用时原地清空这三个容器。`SubpassGraph` 用 `incidence_graph` 存储出边，用 `bidirectional_graph` 存储入边，两端都保留插入顺序，允许多个前驱、平行边和自环。按描述符删除一条匹配边，按端点删除该方向的全部匹配边。C++ 的图比较和哈希按顶点顺序使用名称与 `Subpass` 两列，连边不同的图可以命中同一个缓存键。[渲染图规格](../spec/render/render-graph.spec) · [原生用例](../tests/consumer/records/SubpassGraphConsumer.cpp) · [TS 用例](../tests/consumer/records/subpass-graph-consumer.ts)
 
 ## 第一次合并及后续验收
 

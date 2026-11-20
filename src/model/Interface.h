@@ -98,11 +98,15 @@ struct GraphComponent {
 struct GraphDeclaration {
     bool immovable{};
     bool serializable{};
+    std::set<std::string> comparisons;
+    bool hashable{};
     std::string vertexAlias;
     std::optional<TypeRef> vertexType;
     bool indexed{};
     bool vertexList{};
     bool mutableGraph{};
+    bool incidence{};
+    bool bidirectional{};
     bool hierarchy{};
     std::optional<TypeRef> nameComponent;
     std::optional<SourceLocation> nameIndex;

@@ -383,27 +383,28 @@ private:
             if (accept("tag")) {
                 expect("struct");
                 result.data = TagDeclaration{};
-            } else if (accept("immovable")) {
-                expect("graph");
-                result.data = GraphDeclaration{.immovable = true};
             } else {
                 Record record;
+                bool immovable = false;
                 do {
                     const auto annotation = identifier();
                     if (annotation == "moveOnly" && !record.moveOnly) record.moveOnly = true;
+                    else if (annotation == "immovable" && !immovable) immovable = true;
                     else if (annotation == "requireAllocator" && !record.requireAllocator) record.requireAllocator = true;
                     else if (annotation == "serialize" && !record.serializable) record.serializable = true;
                     else if (annotation == "comparison" && record.comparisons.empty()) comparison(record);
                     else if (annotation == "hash" && !record.hashable) record.hashable = true;
                     else fail("unknown or duplicate record annotation @" + annotation);
-                    if (token != "@" && token != "struct" && !(annotation == "serialize" && token == "graph"))
+                    if (token != "@" && token != "struct" && token != "graph")
                         fail("@" + annotation + " requires a struct");
                 } while (accept("@"));
                 if (accept("graph")) {
-                    if (record.moveOnly || record.requireAllocator || record.hashable || !record.comparisons.empty())
-                        fail("only @serialize applies to a graph");
-                    result.data = GraphDeclaration{.serializable = true};
+                    if (record.moveOnly || record.requireAllocator) fail("@moveOnly and @requireAllocator require a struct");
+                    if (immovable && record.serializable) fail("@serialize requires a replaceable graph");
+                    result.data = GraphDeclaration{.immovable = immovable, .serializable = record.serializable,
+                                                   .comparisons = std::move(record.comparisons), .hashable = record.hashable};
                 } else {
+                    if (immovable) fail("@immovable requires a graph");
                     expect("struct");
                     result.data = std::move(record);
                 }
@@ -500,6 +501,18 @@ private:
                 if (graph.mutableGraph) fail("duplicate mutable_graph");
                 expect(";");
                 graph.mutableGraph = true;
+            } else if (token == "incidence_graph" || token == "bidirectional_graph") {
+                const bool incoming = token == "bidirectional_graph";
+                auto& enabled = incoming ? graph.bidirectional : graph.incidence;
+                if (enabled) fail("duplicate " + std::string(token));
+                enabled = true;
+                advance();
+                expect("{");
+                expect(incoming ? "in_edges" : "out_edges");
+                expect(":");
+                expect("vector");
+                expect(";");
+                expect("}");
             } else if (accept("hierarchy_graph")) {
                 if (graph.hierarchy) fail("duplicate hierarchy_graph");
                 expect("{");
@@ -550,6 +563,11 @@ private:
             }
         }
         if (!graph.vertexType) fail("graph requires a vertex descriptor");
+        if (graph.bidirectional && !graph.incidence) fail("bidirectional_graph requires incidence_graph");
+        if (graph.incidence && !graph.indexed) fail("incidence_graph requires indexed vertex storage");
+        if (graph.incidence && graph.hierarchy) fail("explicit incidence storage conflicts with shared hierarchy edges");
+        if (!graph.alternatives.empty() && (graph.hashable || !graph.comparisons.empty()))
+            fail("polymorphic graph comparison and hashing are unsupported");
         if (graph.hierarchy && !graph.indexed) fail("shared hierarchy edges require indexed vertex storage");
         if (!graph.components.empty() && !graph.indexed) fail("components require indexed vertex storage");
         if (!graph.alternatives.empty() && !graph.indexed) fail("polymorphic_graph requires indexed vertex storage");
@@ -626,7 +644,7 @@ private:
             if (record && accept("cppOnly")) {
                 if (result.cppOnly) fail("duplicate @cppOnly");
                 result.cppOnly = true;
-            } else if (record && accept("notElement")) {
+            } else if (accept("notElement")) {
                 if (result.notElement) fail("duplicate @notElement");
                 result.notElement = true;
             } else {

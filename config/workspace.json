@@ -131,7 +131,10 @@
       "nativeRoot": "native",
       "header": "cocos/renderer/pipeline/custom/RenderGraphTypes.h",
       "forwardHeader": "cocos/renderer/pipeline/custom/RenderGraphFwd.h",
-      "typescript": "cocos/rendering/custom/render-graph.ts"
+      "typescript": "cocos/rendering/custom/render-graph.ts",
+      "runtimeFiles": {
+        "native/cocos/base/GraphEdges.h": "../runtime/cpp/GraphEdges.h"
+      }
     },
     {
       "spec": "../spec/extern/gfx.spec",

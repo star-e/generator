@@ -74,6 +74,10 @@ namespace codegen {
     struct GraphType {
         immovable: bool = false;
         serializable: bool = false;
+        compareEqual: bool = false;
+        compareLess: bool = false;
+        compareGreater: bool = false;
+        hashable: bool = false;
         vertexType: TypeId;
         indexedVertices: bool = false;
         vertexList: bool = false;

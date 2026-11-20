@@ -40,6 +40,7 @@ namespace cc {
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;
+        incidence_graph { out_edges: vector; }
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
     }
     graph FlatComponents {
@@ -350,6 +351,8 @@ set(dfsConsumer "${stage}/cocos/rendering/custom/graph-dfs-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/graph-dfs-consumer.ts" "${dfsConsumer}" COPYONLY)
 set(resourceConsumer "${custom}/resource-graph-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/resource-graph-consumer.ts" "${resourceConsumer}" COPYONLY)
+set(subpassConsumer "${custom}/subpass-graph-consumer.ts")
+configure_file("${SOURCE}/tests/consumer/records/subpass-graph-consumer.ts" "${subpassConsumer}" COPYONLY)
 
 # Compile both versions against the same engine imports to exercise the bound defaults at runtime.
 set(commonSpec "${work}/spec/render/render-common.spec")
@@ -365,8 +368,9 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
+    "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${subpassConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
 run("${node}" "${work}/js/rendering/custom/resource-graph-consumer.js")
+run("${node}" "${work}/js/rendering/custom/subpass-graph-consumer.js")
 run("${consumer}" write "${work}/native.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}" "${dfsCases}")
 run("${node}" "${SOURCE}/tests/consumer/records/layout-pool.cjs" "${work}/js/rendering/custom")

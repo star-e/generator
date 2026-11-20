@@ -274,12 +274,18 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     GraphType result;
     result.immovable = syntax.immovable;
     result.serializable = syntax.serializable;
+    result.compareEqual = syntax.comparisons.contains("==");
+    result.compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">");
+    result.compareGreater = syntax.comparisons.contains(">");
+    result.hashable = syntax.hashable;
     const auto descriptor = graph.findType(qualify(scope, syntax.vertexAlias));
     result.vertexType = canonicalType(graph, {descriptor, syntax.vertexType->location});
     result.indexedVertices = syntax.indexed;
     result.vertexList = syntax.vertexList;
     result.mutableGraph = syntax.mutableGraph;
     result.hierarchy = syntax.hierarchy;
+    result.incidence = syntax.incidence;
+    result.bidirectional = syntax.bidirectional;
     result.fields = resolveFields(graph, syntax.fields, scope, owner);
     const auto& vertex = graph.node(result.vertexType);
     if (syntax.indexed && !indexedVertexLimit(vertex.qualifiedName)) {

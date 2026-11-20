@@ -66,6 +66,8 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     if (polymorphic) out << indent << "    id, object,\n";
     for (const auto& component : components) out << indent << "    component" << component.tagName << ",\n";
     if (model.hierarchy) out << indent << "    parent,\n" << indent << "    children: [],\n";
+    if (model.incidence) out << indent << "    outgoing: [],\n";
+    if (model.bidirectional) out << indent << "    incoming: [],\n";
     out << indent << "});\n";
     if (model.parentGraph)
         out << indent << "const siblings = parent === this.N ? this.roots : this.vertices[parent].children;\n"
@@ -79,6 +81,64 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     out << "        return v;\n    }\n";
 }
 
+void directedEdges(std::ostream& out, const GraphType& model) {
+    out << R"(
+    edge (u: number, v: number): boolean {
+        return Number.isInteger(u) && u >= 0 && u < this.vertices.length && this.vertices[u].outgoing.some(e => e.target === v);
+    }
+    source (e: cc$graph.ED): number { return e.source as number; }
+    target (e: cc$graph.ED): number { return e.target as number; }
+    oe (v: number): cc$graph.OutEI { return new cc$graph.OutEI(this.vertices[v].outgoing.values(), v); }
+    od (v: number): number { return this.vertices[v].outgoing.length; }
+    adj (v: number): cc$graph.AdjI { return new cc$graph.AdjI(this, this.oe(v)); }
+    ne (): number { return this.vertices.reduce((sum, row) => sum + row.outgoing.length, 0); }
+)";
+    if (model.bidirectional)
+        out << "    ie (v: number): cc$graph.InEI { return new cc$graph.InEI(this.vertices[v].incoming.values(), v); }\n"
+            << "    id (v: number): number { return this.vertices[v].incoming.length; }\n"
+            << "    d (v: number): number { return this.od(v) + this.id(v); }\n";
+    if (!model.mutableGraph) return;
+    out << R"(    addEdge (u: number, v: number): cc$graph.ED | null {
+        if (!Number.isInteger(u) || !Number.isInteger(v) || u < 0 || v < 0 ||
+            u >= this.vertices.length || v >= this.vertices.length) return null;
+        const edge = new cc$graph.ED(u, v);
+        const out = this.vertices[u].outgoing;
+        out.push(new cc$graph.OutE(v));
+)";
+    if (model.bidirectional) out << R"(        try {
+            this.vertices[v].incoming.push(new cc$graph.OutE(u));
+        } catch (error) {
+            out.pop();
+            throw error;
+        }
+)";
+    out << R"(        return edge;
+    }
+    removeEdge (e: cc$graph.ED): void {
+        const u = this.source(e), v = this.target(e);
+        if (!Number.isInteger(u) || u < 0 || u >= this.vertices.length) return;
+        const out = this.vertices[u].outgoing;
+        const index = out.findIndex(other => other.target === v);
+        if (index < 0) return;
+        out.splice(index, 1);
+)";
+    if (model.bidirectional) out << "        const incoming = this.vertices[v].incoming;\n"
+                                << "        incoming.splice(incoming.findIndex(other => other.target === u), 1);\n";
+    out << R"(    }
+    removeEdges (u: number, v: number): void {
+        if (!Number.isInteger(u) || !Number.isInteger(v) || u < 0 || v < 0 ||
+            u >= this.vertices.length || v >= this.vertices.length) return;
+        const compact = (list: cc$graph.OutE[], neighbor: number): void => {
+            let count = 0;
+            for (const edge of list) if (edge.target !== neighbor) list[count++] = edge;
+            list.length = count;
+        };
+        compact(this.vertices[u].outgoing, v);
+)";
+    if (model.bidirectional) out << "        compact(this.vertices[v].incoming, u);\n";
+    out << "    }\n";
+}
+
 } // namespace
 
 void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports,
@@ -87,11 +147,14 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     const auto& model = std::get<GraphType>(node.data);
     const auto components = bindColumns(graph, node, model.components, imports);
     const auto alternatives = bindColumns(graph, node, model.alternatives, imports);
-    const auto hasSetter = [&](size_t i) { return components[i].scalar && (i != model.nameComponentIndex || (model.nameIndex && model.mutableGraph)); };
+    const auto hasSetter = [&](size_t i) { return components[i].scalar && (i != model.nameComponentIndex || ((model.nameIndex || model.incidence) && model.mutableGraph)); };
     std::set<std::string> api{"constructor", "vertices", "N"};
     if (model.vertexList) api.insert({"v", "nv"});
     if (model.mutableGraph) api.insert({"addVertex", "clear"});
     if (model.mutableGraph && model.hierarchy) api.insert({"addEdge", "addReference"});
+    if (model.incidence) api.insert({"edge", "source", "target", "oe", "od", "adj", "ne"});
+    if (model.bidirectional) api.insert({"ie", "id", "d"});
+    if (model.incidence && model.mutableGraph) api.insert({"addEdge", "removeEdge", "removeEdges"});
     if (model.nameComponentIndex) api.insert("vertexName");
     if (model.nameIndex) api.insert({"nameIndex", "contains", "vertex", "find"});
     if (!alternatives.empty()) api.insert({"h", "w", "object", "value", "visitVertex", "j"});
@@ -139,6 +202,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     for (size_t i = 0; i < components.size(); ++i)
         out << "        " << (hasSetter(i) ? "" : "readonly ") << "component" << components[i].tagName << ": " << components[i].type << ";\n";
     if (model.hierarchy) out << "        parent: number;\n        readonly children: cc$graph.OutE[];\n";
+    if (model.incidence) out << "        readonly outgoing: cc$graph.OutE[];\n";
+    if (model.bidirectional) out << "        readonly incoming: cc$graph.OutE[];\n";
     out << "    }[] = [];\n";
     if (model.nameIndex) out << "    " << storage << "nameIndex = new Map<string, number>();\n";
     if (model.parentGraph) out << "    " << storage << "roots: cc$graph.OutE[] = [];\n";
@@ -219,6 +284,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             out << "    }\n";
         }
     }
+    if (model.incidence) directedEdges(out, model);
     if (model.nameIndex)
         out << "\n    contains (key: string): boolean { return this.nameIndex.has(key); }\n"
             << "    find (key: string): number {\n        const v = this.nameIndex.get(key);\n"

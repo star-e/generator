@@ -4,6 +4,7 @@ import RenderCommon;
 import GraphTags;
 import Strings;
 import PmrContainers;
+import Maps;
 import GfxResource;
 import RenderWindow;
 
@@ -43,6 +44,25 @@ namespace cc::render {
         constructor(name, accessType, plane, clearFlags, clearValueType, clearValue, shaderStageFlags);
         fn isRead() const -> bool => "accessType != AccessType::WRITE";
         fn isWrite() const -> bool => "accessType != AccessType::READ";
+    }
+
+    @requireAllocator @comparison("==") @hash struct Subpass {
+        readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
+        readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
+        readonly resolvePairs: ccstd::pmr::vector<ResolvePair>;
+    }
+
+    @tag struct Subpass_ {}
+    @comparison("==") @hash graph SubpassGraph {
+        vertex_descriptor Vertex = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        incidence_graph { out_edges: vector; }
+        bidirectional_graph { in_edges: vector; }
+        component Name_: ccstd::pmr::string { member: names; }
+        component Subpass_: Subpass { member: subpasses; }
+        named_graph { component: Name_; }
     }
 
     struct ResourceDesc {
@@ -195,6 +215,8 @@ binding typescript {
         reset(name, accessType, clearFlags, clearValueType, shaderStageFlags);
     };
     ResourceDesc => class { pool rd; reset defaults; };
+    Subpass => class { pool s; reset defaults; };
+    SubpassGraph => class { pool sg; };
     ResourceTraits => class { pool rt; reset constructor; };
     ResourceStates => class { pool rs1; reset defaults; };
     ManagedResource => class { pool mr; reset defaults; };

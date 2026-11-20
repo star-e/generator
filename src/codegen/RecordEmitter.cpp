@@ -459,7 +459,7 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
     header << '\n';
 }
 
-void cppComparisons(std::ostream& out, const std::string& name, const std::vector<std::string_view>& elements, const RecordType& record) {
+void cppComparisons(std::ostream& out, const std::string& name, const std::vector<std::string_view>& elements, const auto& record) {
     const auto params = "(const " + name + "& lhs, const " + name + "& rhs) noexcept {\n";
     auto writeTuple = [&](std::string_view object) {
         out << "std::forward_as_tuple(";
@@ -904,6 +904,18 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 inputArchive = "::" + archiveInterface(graph, archive->module, "InputArchive").qualifiedName;
             }
             emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, inputArchive);
+            if (model->compareEqual || model->compareLess || model->hashable) {
+                std::vector<std::string_view> elements;
+                for (const auto& component : model->components) elements.push_back(component.name);
+                for (const auto& field : model->fields) {
+                    if (!field.notElement) elements.push_back(field.name);
+                }
+                if (model->hashable) cppHash(hashDeclarations, hashDefinitions, node, elements);
+                if (model->compareEqual || model->compareLess) {
+                    deps.headers.insert("tuple");
+                    cppComparisons(cpp, node.name, elements, *model);
+                }
+            }
             if (output.typescript) {
                 emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields);
                 usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
@@ -911,7 +923,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                     if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");
                     pool.add(node.name, entry->second.member, Pool::Reuse::clear);
                 }
-                if (model->hierarchy) usesGraphRuntime = true;
+                if (model->hierarchy || model->incidence) usesGraphRuntime = true;
             }
             if (model->serializable) {
                 if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");

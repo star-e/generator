@@ -120,6 +120,10 @@ struct ComponentInfo {
 struct GraphType {
     bool immovable = false;
     bool serializable = false;
+    bool compareEqual = false;
+    bool compareLess = false;
+    bool compareGreater = false;
+    bool hashable = false;
     TypeId vertexType;
     bool indexedVertices = false;
     bool vertexList = false;

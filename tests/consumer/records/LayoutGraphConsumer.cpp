@@ -1,3 +1,4 @@
+#include "FailingResource.h"
 #include "ShiftProbe.h"
 #include "ShiftSerialization.h"
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
@@ -123,24 +124,6 @@ bool checkHierarchy() {
     LayoutGraph moved{std::move(assigned), &firstArena};
     return intact(moved) && assigned.num_vertices() == 0 && intact(graph);
 }
-
-// Fail each allocation in turn, including those made by nested PMR containers.
-struct InjectedFailure final : std::bad_alloc {};
-
-class FailingResource final : public boost::container::pmr::memory_resource {
-public:
-    int allocationsBeforeFailure{-1};
-private:
-    void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-        if (allocationsBeforeFailure == 0) throw InjectedFailure{};
-        if (allocationsBeforeFailure > 0) --allocationsBeforeFailure;
-        return boost::container::pmr::new_delete_resource()->allocate(bytes, alignment);
-    }
-    void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
-        boost::container::pmr::new_delete_resource()->deallocate(p, bytes, alignment);
-    }
-    bool do_is_equal(const memory_resource& other) const noexcept override { return this == &other; }
-};
 
 bool checkFailedInsertion() {
     const std::string longName(160, 'x');
@@ -586,6 +569,12 @@ bool checkLayoutGraph(const char* pathSamples) {
     for (unsigned i = 0; i < limit; ++i) {
         if (tiny.add_vertex("entry") != i) return false;
     }
+    for (unsigned i = 0; i < 260; ++i) {
+        if (!tiny.add_edge(0, limit - 1).second) return false;
+    }
+    if (tiny.out_degree(0) != 260 || tiny.num_edges() != 260) return false;
+    tiny.remove_edge(0, limit - 1);
+    if (tiny.num_edges() != 0) return false;
     try {
         tiny.add_vertex();
         return false;

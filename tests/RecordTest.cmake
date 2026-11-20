@@ -26,6 +26,9 @@ check_resource_error("struct RenderSwapchain" "@serialize struct RenderSwapchain
 check_resource_error("pool cv;" "pool cv; constructor(x, z);"
     "ClearValue: TypeScript constructor does not match a declared constructor")
 check_resource_error("@notElement slotID" "@notElement @notElement slotID" "duplicate @notElement")
+check_resource_error("incidence_graph { out_edges: vector; }" "" "bidirectional_graph requires incidence_graph")
+check_resource_error("bidirectional_graph { in_edges: vector; }" "hierarchy_graph { storage: shared_edges; }"
+    "explicit incidence storage conflicts with shared hierarchy edges")
 string(REPLACE "constructor(swapchain, isDepthStencil);" [=[
     @cppOnly nativeFence: uint64_t = 18446744073709551615;
     constructor(swapchain, isDepthStencil);
