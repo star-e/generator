@@ -1,4 +1,5 @@
 const assert = require('assert').strict;
+require('./platform.cjs');
 const fs = require('fs');
 const path = require('path');
 const [jsDir, stage, engine, nativeFile, webFile, pathCases, dfsCases] = process.argv.slice(2);

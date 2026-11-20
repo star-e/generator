@@ -39,7 +39,7 @@ struct Member {
     bool usesAllocator{};
     bool scalar{};
     bool checkDefaultConstruction{};
-    std::string_view tsClear;
+    std::string tsReset;
 
     std::string parameterType() const { return byConstReference ? "const " + cpp + "&" : cpp; }
 };
@@ -125,8 +125,8 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         if (emitTs) {
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.typeImports);
             m.tsDefault = typeScriptContainerInitializer(node);
-            if (node.typescriptContainer == ContainerKind::Array) m.tsClear = ".length = 0";
-            if (isAssociativeContainer(node.typescriptContainer)) m.tsClear = ".clear()";
+            if (node.typescriptContainer == ContainerKind::Array) m.tsReset = "this." + m.name + ".length = 0";
+            if (isAssociativeContainer(node.typescriptContainer)) m.tsReset = "this." + m.name + ".clear()";
         }
         return m;
     }
@@ -149,6 +149,18 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
                 return m;
             }
             if (node.module != owner && node.typescriptModule.empty()) invalid(field, "missing external record mapping");
+            m.ts = boundTypeScriptName(graph, field.type, owner, deps.valueImports);
+            m.tsDefault = "new " + m.ts + "()";
+        }
+        return m;
+    }
+    if (const auto* ext = std::get_if<ExternalTypeNode>(&node.data); ext && !node.typescriptArchiveModule.empty() && !field.isNullable) {
+        if (!field.initializer.empty()) invalid(field, "expected a default-constructed archive value");
+        m.cpp = nativeType(graph, module, field.type.type, deps);
+        m.move = true;
+        m.usesAllocator = ext->isPmr;
+        m.checkDefaultConstruction = true;
+        if (emitTs) {
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.valueImports);
             m.tsDefault = "new " + m.ts + "()";
         }
@@ -556,7 +568,7 @@ Order resetParameters(const std::string& name, const std::vector<Member>& member
         const auto& m = members[i];
         if (m.name == "reset") throw std::runtime_error(name + ".reset: field conflicts with reset method");
         if (retained.erase(m.name)) continue;
-        if (m.readonly && (m.tsClear.empty() || std::ranges::find(order, i) != order.end()))
+        if (m.readonly && (m.tsReset.empty() || std::ranges::find(order, i) != order.end()))
             throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
     }
     if (!retained.empty()) throw std::runtime_error(name + ": unknown keepOnReset field " + *retained.begin());
@@ -565,7 +577,7 @@ Order resetParameters(const std::string& name, const std::vector<Member>& member
 }
 
 void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members, const Order& order,
-                           const Order* reset, const std::set<std::string>& keepOnReset) {
+                           const Order* reset, const std::set<std::string>& keepOnReset, bool hasBase) {
     const auto params = tsParams(members, order, true, ", ");
     const bool multiline = params.size() + std::string_view("    constructor () {").size() > 120;
     auto signature = [&](const Order& fields, bool defaults) {
@@ -573,6 +585,7 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members,
         return defaults ? params : tsParams(members, fields, false, ", ");
     };
     ts << "    constructor (" << signature(order, true) << ") {\n";
+    if (hasBase) ts << "        super();\n";
     for (uint32_t i = 0; i < members.size(); ++i) {
         if (std::ranges::find(order, i) != order.end()) ts << "        this." << members[i].name << " = " << members[i].name << ";\n";
     }
@@ -586,8 +599,8 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members,
                 continue;
             }
             const bool parameter = std::ranges::find(*reset, i) != reset->end();
-            if (!m.tsClear.empty() && !parameter) {
-                ts << "        this." << m.name << m.tsClear << ";\n";
+            if (!m.tsReset.empty() && !parameter) {
+                ts << "        " << m.tsReset << ";\n";
                 continue;
             }
             const auto& value = parameter ? m.name : m.tsDefault;
@@ -598,16 +611,18 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<Member>& members,
 }
 
 void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<Member>& members, const Order& order,
-              const Order* reset, bool resetToDefaults, const std::set<std::string>& keepOnReset) {
+              const Order* reset, bool resetToDefaults, const std::set<std::string>& keepOnReset, const std::string& base) {
     const bool initializeFields = resetToDefaults && std::get<RecordType>(node.data).constructors.empty();
-    ts << "export class " << node.name << " {\n";
-    if (!initializeFields) tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset);
+    ts << "export class " << node.name;
+    if (!base.empty()) ts << " extends " << base;
+    ts << " {\n";
+    if (!initializeFields) tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset, !base.empty());
     if (resetToDefaults) {
         ts << "    reset (): void {\n";
         for (const auto& m : members) {
             if (m.name == "reset") throw std::runtime_error(node.name + ".reset: field conflicts with reset method");
-            if (!m.tsClear.empty()) {
-                ts << "        this." << m.name << m.tsClear << ";\n";
+            if (!m.tsReset.empty()) {
+                ts << "        " << m.tsReset << ";\n";
                 continue;
             }
             if (m.readonly) throw std::runtime_error(node.name + "." + m.name + ": reset requires a writable field");
@@ -752,6 +767,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
     auto pendingResets = output.resets;
+    // By-value member types are defined before the record that contains them.
+    std::map<uint32_t, std::string> nestedResets;
     std::string enumImports;
     size_t poolCount{};
     bool previousTag = false;
@@ -814,6 +831,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         std::vector<Member> members;
         for (const auto& field : record->fields) {
             auto member = bindMember(graph, owner, field, deps, output.typescript.has_value());
+            if (field.isReadonly) {
+                const auto childReset = nestedResets.find(field.type.type.value);
+                if (childReset != nestedResets.end()) member.tsReset = "this." + member.name + childReset->second;
+            }
             if (!field.typescriptInitializer.empty()) {
                 auto id = field.type.type;
                 if (graph.node(id).typescriptNumber) id = std::get<RecordType>(graph.node(id).data).fields.front().type.type;
@@ -836,6 +857,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             cppComparisons(cpp, node.name, members, *record);
         }
         if (!output.typescript || node.typescriptNumber) continue;
+        if (const auto impl = output.externalClasses.find(node.name); impl != output.externalClasses.end()) {
+            deps.valueImports[impl->second.generic_string()].insert(node.name);
+            ts << "export { " << node.name << " };\n";
+            continue;
+        }
         Order order(members.size());
         std::iota(order.begin(), order.end(), 0U);
         if (!record->constructors.empty()) {
@@ -850,14 +876,38 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto& binding = rule.empty() ? constructorReset : rule.mapped();
         const bool resetToDefaults = binding.kind == ResetBinding::Kind::defaults;
         const auto& retained = entry == output.pools.end() ? keepNone : entry->second.keepOnReset;
+        const auto hooks = output.fieldResets.find(node.name);
+        if (hooks != output.fieldResets.end()) {
+            for (const auto& [field, hook] : hooks->second) {
+                const auto member = std::ranges::find(members, field, &Member::name);
+                if (member == members.end()) throw std::runtime_error(node.qualifiedName + ": unknown reset field " + field);
+                if (retained.contains(field)) throw std::runtime_error(node.qualifiedName + "." + field + ": reset conflicts with keepOnReset");
+                deps.valueImports[hook.from.generic_string()].insert(hook.name);
+                member->tsReset = hook.name + "(this." + field + ")";
+            }
+        }
         std::optional<Order> reset;
         if (entry != output.pools.end() || !rule.empty())
             reset = resetParameters(node.name, members, order, retained, binding);
+        if (reset) {
+            std::string args;
+            for (auto index : *reset) {
+                const auto& member = members[index];
+                if (hooks != output.fieldResets.end() && hooks->second.contains(member.name))
+                    throw std::runtime_error(node.qualifiedName + "." + member.name + ": reset parameter also has a reset function");
+                if (!args.empty()) args += ", ";
+                args += member.tsDefault;
+            }
+            nestedResets.emplace(id.value, ".reset(" + args + ")");
+        }
         if (entry != output.pools.end()) {
             ++poolCount;
             pool.add(node.name, entry->second.member, members, *reset);
         }
-        tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained);
+        const auto base = output.bases.find(node.name);
+        if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
+        tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained,
+                 base == output.bases.end() ? "" : base->second.name);
     }
     if (poolCount != output.pools.size()) throw std::runtime_error("unknown pool record in " + module.name);
     if (!pendingResets.empty()) throw std::runtime_error("unknown reset record " + pendingResets.begin()->first + " in " + module.name);

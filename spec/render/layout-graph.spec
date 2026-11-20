@@ -8,12 +8,15 @@ import PmrContainers;
 import Sets;
 import Maps;
 import GfxUniformBlock;
+import GfxDescriptorSet;
 
 namespace cc::render {
     enum class LayoutType : uint8_t {
         VULKAN,
         WEBGPU,
     }
+
+    struct Layout {}
 
     enum class DescriptorTypeOrder : uint8_t {
         UNIFORM_BUFFER,
@@ -164,10 +167,57 @@ namespace cc::render {
 
         constructor(slot, capacity, descriptorBlocks, uniformBlocks, bindingMap);
     }
+
+    @serialize @moveOnly @requireAllocator struct DescriptorSetData {
+        readonly descriptorSetLayoutData: DescriptorSetLayoutData;
+        readonly descriptorSetLayoutInfo: gfx::DescriptorSetLayoutInfo;
+        @transient nullable descriptorSetLayout: IntrusivePtr<gfx::DescriptorSetLayout>;
+        @transient nullable descriptorSet: IntrusivePtr<gfx::DescriptorSet>;
+        constructor(descriptorSetLayoutData, descriptorSetLayout, descriptorSet);
+    }
+
+    @serialize @moveOnly @requireAllocator struct PipelineLayoutData {
+        readonly descriptorSets: ccstd::pmr::map<UpdateFrequency, DescriptorSetData>;
+        readonly descriptorGroups: ccstd::pmr::map<UpdateFrequency, DescriptorSetData>;
+    }
+
+    @serialize @moveOnly @requireAllocator struct ShaderBindingData {
+        readonly descriptorBindings: PmrFlatMap<NameLocalID, uint32_t>;
+    }
+
+    @serialize @moveOnly @requireAllocator struct ShaderLayoutData {
+        readonly layoutData: ccstd::pmr::map<UpdateFrequency, DescriptorSetLayoutData>;
+        readonly bindingData: ccstd::pmr::map<UpdateFrequency, ShaderBindingData>;
+    }
+
+    @serialize @moveOnly @requireAllocator struct TechniqueData {
+        readonly passes: ccstd::pmr::vector<ShaderLayoutData>;
+    }
+
+    @serialize @moveOnly @requireAllocator struct EffectData {
+        readonly techniques: ccstd::pmr::map<ccstd::pmr::string, TechniqueData>;
+    }
+
+    @serialize @moveOnly @requireAllocator struct ShaderProgramData {
+        readonly layout: PipelineLayoutData;
+        @transient nullable pipelineLayout: IntrusivePtr<gfx::PipelineLayout>;
+    }
+
+    @serialize @moveOnly @requireAllocator struct RenderStageData {
+        readonly descriptorVisibility: PmrUnorderedMap<NameLocalID, gfx::ShaderStageFlagBit>;
+    }
+
+    @serialize @moveOnly @requireAllocator struct RenderPhaseData {
+        rootSignature: ccstd::pmr::string;
+        readonly shaderPrograms: ccstd::pmr::vector<ShaderProgramData>;
+        readonly shaderIndex: PmrTransparentMap<ccstd::pmr::string, uint32_t>;
+        @transient nullable pipelineLayout: IntrusivePtr<gfx::PipelineLayout>;
+    }
 }
 
 binding typescript {
     LayoutType => const enum;
+    Layout => class from "cocos/rendering/custom/layout-access";
     DescriptorTypeOrder => const enum { names; };
     RenderPassType => const enum;
     Descriptor => class { reset constructor; };
@@ -183,4 +233,19 @@ binding typescript {
     DescriptorData => class { field descriptorID default 0; reset constructor; };
     DescriptorBlockData => class { reset constructor; };
     DescriptorSetLayoutData => class { reset(slot, capacity); };
+    DescriptorSetData => class {
+        reset(descriptorSetLayout, descriptorSet);
+        field descriptorSetLayoutInfo reset with resetSetLayoutInfo from "cocos/rendering/custom/layout-access";
+    };
+    PipelineLayoutData => class {
+        reset defaults;
+        extends PipelineLayoutAccess from "cocos/rendering/custom/layout-access";
+    };
+    ShaderBindingData => class { reset defaults; };
+    ShaderLayoutData => class { reset defaults; };
+    TechniqueData => class { reset defaults; };
+    EffectData => class { reset defaults; };
+    ShaderProgramData => class { reset defaults; };
+    RenderStageData => class { reset defaults; };
+    RenderPhaseData => class { reset defaults; };
 }

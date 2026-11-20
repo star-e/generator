@@ -1,4 +1,5 @@
 const assert = require('assert').strict;
+require('./platform.cjs');
 const fs = require('fs');
 const path = require('path');
 const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture, blocksNativeFile, blocksWebFile, blocksLegacyFile] = process.argv.slice(2);

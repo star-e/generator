@@ -31,6 +31,7 @@
       "backend": "model",
       "spec": "../spec/extern/maps.spec",
       "types": {
+        "PmrTransparentMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
         "PmrUnorderedMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
         "PmrFlatMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" }
       }
@@ -39,6 +40,16 @@
       "backend": "model",
       "spec": "../spec/extern/uniform-block.spec",
       "types": { "UniformBlock": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
+    },
+    {
+      "backend": "model",
+      "spec": "../spec/extern/descriptor-set.spec",
+      "types": {
+        "DescriptorSetLayoutInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "DescriptorSetLayout": { "header": "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h" },
+        "DescriptorSet": { "header": "cocos/renderer/gfx-base/GFXDescriptorSet.h" },
+        "PipelineLayout": { "header": "cocos/renderer/gfx-base/GFXPipelineLayout.h" }
+      }
     },
     {
       "backend": "model",
@@ -78,7 +89,8 @@
       "typescript": "cocos/rendering/custom/layout-graph.ts",
       "runtimeFiles": {
         "native/cocos/base/GraphDFS.h": "../runtime/cpp/GraphDFS.h",
-        "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts"
+        "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts",
+        "cocos/rendering/custom/layout-access.ts": "../runtime/typescript/layout-access.ts"
       }
     },
     {

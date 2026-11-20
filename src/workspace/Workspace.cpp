@@ -146,6 +146,16 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
         if (rule.reset) output.resets.emplace(name, *rule.reset);
+        if (!rule.fieldResets.empty()) {
+            if (!rule.reset && !rule.pool)
+                throw std::runtime_error(rule.source.location.describe() + ": field reset requires a reset method on " + name);
+            output.fieldResets.emplace(name, rule.fieldResets);
+        }
+        if (rule.base) output.bases.emplace(name, *rule.base);
+        if (rule.kind == BindingTarget::classType && !rule.from.empty()) {
+            if (rule.base || rule.reset || rule.pool || !rule.fieldDefaults.empty()) invalidBinding(rule, "externally implemented class");
+            output.externalClasses.emplace(name, rule.from);
+        }
         if (rule.pool) {
             if (output.poolModule.empty()) throw std::runtime_error(rule.source.location.describe() + ": pool binding requires poolModule");
             if (!poolMembers.insert(rule.pool->member).second)

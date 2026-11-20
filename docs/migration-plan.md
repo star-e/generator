@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 24 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h` 和 `graph-dfs.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 25 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`graph-dfs.ts` 和 `layout-access.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -224,6 +224,12 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 `DescriptorSetLayoutData` 在 C++ 中只支持移动，构造时显式接收 PMR 分配器。TS 构造函数可以接收调用方的数组和两个 Map。`reset(slot, capacity)` 保留这三个容器的引用，清空内容，并将 `uniformBlockCapacity` 和 `samplerTextureCapacity` 归零。[布局声明](../spec/render/layout-graph.spec) · [容器声明](../spec/extern/maps.spec)
 
 归档依次写入四个标量、描述符块数组、uniform block 映射和 binding 映射。空映射与单键映射可以逐字节核对，多键映射按键值核对。向已有对象加载时，数组按归档长度调整，两个 Map 都保留归档中缺失的键。遇到重复键，TS 用归档值覆盖，C++ 保留已有值。[原生互读测试](../tests/consumer/records/LayoutArchiveConsumer.cpp) · [TS 互读测试](../tests/consumer/records/layout-archive.cjs)
+
+`DescriptorSetData` 到 `RenderPhaseData` 的九个记录都由同一份布局声明生成。C++ 记录只支持移动，并将传入的分配器传给嵌套记录和 PMR 容器。TS 重置只读的本模块记录时，调用其已有的 `reset`，按子记录的绑定顺序传入字段默认值。`DescriptorSetData` 据此调用 `descriptorSetLayoutData.reset(0xFFFFFFFF, 0)`。外部 GFX 对象通过 `field descriptorSetLayoutInfo reset with resetSetLayoutInfo from "...";` 原地清空绑定数组。[布局声明](../spec/render/layout-graph.spec) · [GFX 绑定](../spec/extern/descriptor-set.spec)
+
+`layout-graph.ts` 继续导出 `Layout` 和 `PipelineLayoutData`。平台选择逻辑由 `layout-access.ts` 维护，`getSets()` 和 `getSet(frequency)` 在 `(COCOS_RUNTIME || HTML5) && Layout.isWebGPU` 时查询 `descriptorGroups`，其余情况查询 `descriptorSets`。[平台逻辑](../runtime/typescript/layout-access.ts)
+
+互读样本覆盖效果、技术、着色器、描述符集合以及渲染阶段和相位。每个 Map 使用一个键，便于逐字节核对 C++、TS 和旧引擎 TS 的输出。GPU 句柄声明为 `@transient`，原生测试使用引擎空后端创建有效句柄，并验证加载后的对象身份。[原生测试](../tests/consumer/records/PipelineArchiveConsumer.cpp) · [TS 测试](../tests/consumer/records/pipeline-archive.cjs)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 

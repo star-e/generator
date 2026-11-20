@@ -145,7 +145,7 @@ run("${node}" "${tsc}" --strict --noImplicitAny false --skipLibCheck --target es
 # Isolate the engine's exported enums without loading its graphics device at runtime.
 file(READ "${ENGINE}/cocos/gfx/base/define.ts" gfx)
 file(MAKE_DIRECTORY "${stage}/cocos/gfx")
-foreach(name IN ITEMS ResolveMode Type ShaderStageFlagBit MemoryAccessBit ViewDimension SampleType Format)
+foreach(name IN ITEMS ResolveMode Type ShaderStageFlagBit MemoryAccessBit ViewDimension SampleType Format DescriptorType)
     string(REGEX MATCH "export enum ${name} \\{[^}]+\\}" definition "${gfx}")
     if(NOT definition)
         message(FATAL_ERROR "Missing ${name} in engine gfx definitions")
@@ -158,14 +158,22 @@ if(NOT copyHelper)
     message(FATAL_ERROR "Missing UniformBlock copy helper in engine gfx definitions")
 endif()
 set(gfxClasses "type Constructor<T> = new () => T;\n${copyHelper}\n")
-foreach(name IN ITEMS Uniform UniformBlock)
+foreach(name IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding DescriptorSetLayoutInfo)
     string(REGEX MATCH "export class ${name} [{]\n([ \t][^\n]*\n|\n)*[}]" definition "${gfx}")
     if(NOT definition)
         message(FATAL_ERROR "Missing ${name} class in engine gfx definitions")
     endif()
     string(APPEND gfxClasses "${definition}\n")
 endforeach()
-file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}")
+file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}"
+    "export type ShaderStageFlags = ShaderStageFlagBit; export type MemoryAccess = MemoryAccessBit;\n"
+    "export interface Sampler {}\n"
+    "export declare class DescriptorSet { private set: void; }\n"
+    "export declare class DescriptorSetLayout { private layout: void; }\n"
+    "export declare class PipelineLayout { private pipeline: void; }\n")
+set(constants "${stage}/cocos/internal-constants.d.ts")
+file(WRITE "${constants}" "declare module 'internal:constants' { export const COCOS_RUNTIME: boolean; export const HTML5: boolean; }\n")
+list(APPEND declarations "${constants}")
 file(READ "${ENGINE}/cocos/rendering/custom/layout-graph.ts" layout)
 # Compile the old graph and its archive functions separately from the generated implementation.
 function(source_between source start stop result)
@@ -180,16 +188,25 @@ function(source_between source start stop result)
 endfunction()
 set(custom "${stage}/cocos/rendering/custom")
 file(READ "${ENGINE}/cocos/rendering/custom/serialization.ts" codec)
-source_between(codec "export function saveUniform (" "export function saveDescriptorSetLayoutBinding (" uniformCodec)
-file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock } from '../../gfx';\n"
-    "import type { InputArchive, OutputArchive } from './archive';\n${uniformCodec}")
-source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorSetData " legacyGraph)
-source_between(layout "export function saveDescriptor (" "export function saveDescriptorSetData (" legacyArchive)
+foreach(type IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding DescriptorSetLayoutInfo)
+    foreach(op IN ITEMS save load)
+        string(REGEX MATCH "export function ${op}${type} [(][^\n]+[{]\n([ \t][^\n]*\n|\n)*[}]" definition "${codec}")
+        if(NOT definition)
+            message(FATAL_ERROR "Missing ${op}${type} in engine serialization.ts")
+        endif()
+        string(APPEND gfxCodec "${definition}\n")
+    endforeach()
+endforeach()
+file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo } from '../../gfx';\n"
+    "import type { InputArchive, OutputArchive } from './archive';\n${gfxCodec}")
+source_between(layout "function resetDescriptorSetLayoutInfo " "export const enum LayoutGraphDataValue" legacyGraph)
+source_between(layout "export function saveDescriptor (" "export function saveLayoutGraphData (" legacyArchive)
 string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
 file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency } from './types';\n"
-    "import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"
+    "import { COCOS_RUNTIME, HTML5 } from 'internal:constants';\n"
+    "import { DescriptorSet, DescriptorSetLayout, DescriptorSetLayoutInfo, PipelineLayout, Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n"
-    "import { saveUniformBlock, loadUniformBlock } from './serialization';\n${legacyGraph}\n${legacyArchive}")
+    "import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';\n${legacyGraph}\n${legacyArchive}")
 foreach(name IN ITEMS DescriptorBlockIndex DescriptorGroupBlockIndex)
     string(REGEX MATCH "export class ${name} [^\n]+(\n[ \t][^\n]*)*\n}" definition "${layout}")
     if(NOT definition)
@@ -266,6 +283,11 @@ run("${node}" "${SOURCE}/tests/consumer/records/layout-archive.cjs" "${work}/js/
     "${work}/blocks-native.bin" "${work}/blocks-web.bin" "${work}/blocks-legacy.bin")
 run("${consumer}" blocks-read "${work}/blocks-web.bin")
 run("${consumer}" blocks-read "${work}/blocks-legacy.bin")
+run("${consumer}" pipeline-write "${work}/pipeline-native.bin")
+run("${node}" "${SOURCE}/tests/consumer/records/pipeline-archive.cjs" "${work}/js/rendering/custom"
+    "${work}/pipeline-native.bin" "${work}/pipeline-web.bin" "${work}/pipeline-legacy.bin")
+run("${consumer}" pipeline-read "${work}/pipeline-web.bin")
+run("${consumer}" pipeline-read "${work}/pipeline-legacy.bin")
 run("${consumer}" layout-read "${work}/layout-web.bin")
 run("${consumer}" layout-read "${work}/layout-legacy.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy.bin")

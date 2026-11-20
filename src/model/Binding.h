@@ -24,6 +24,11 @@ struct ResetBinding {
     std::vector<std::string> fields;
 };
 
+struct TypeScriptImport {
+    std::string name;
+    std::filesystem::path from;
+};
+
 struct TypeScriptBinding {
     TypeRef source;
     BindingTarget kind{};
@@ -34,6 +39,8 @@ struct TypeScriptBinding {
     std::map<std::string, std::string> renamedFrom;
     std::string numberField;
     std::map<std::string, std::string> fieldDefaults;
+    std::map<std::string, TypeScriptImport> fieldResets;
+    std::optional<TypeScriptImport> base;
     std::optional<PoolBinding> pool;
     std::optional<ResetBinding> reset;
     bool jsonMapKey{};

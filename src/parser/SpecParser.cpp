@@ -199,6 +199,12 @@ private:
         return path.lexically_normal();
     }
 
+    TypeScriptImport bindingImport() {
+        auto name = identifier();
+        expect("from");
+        return {std::move(name), bindingPath()};
+    }
+
     void bindingOptions(TypeScriptBinding& rule) {
         std::set<std::string> options;
         while (!accept("}")) {
@@ -216,12 +222,19 @@ private:
                 if (!rule.renamedFrom.emplace(name, identifier()).second) fail("duplicate field binding " + name);
             } else if (rule.kind == BindingTarget::classType && key == "field") {
                 const auto field = identifier();
-                expect("default");
-                const bool negative = accept("-");
-                if (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))) fail("expected a numeric default");
-                if (!rule.fieldDefaults.emplace(field, (negative ? "-" : "") + std::string(token)).second)
-                    fail("duplicate field default " + field);
-                advance();
+                if (accept("reset")) {
+                    expect("with");
+                    if (!rule.fieldResets.emplace(field, bindingImport()).second) fail("duplicate field reset " + field);
+                } else {
+                    expect("default");
+                    const bool negative = accept("-");
+                    if (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))) fail("expected a numeric default");
+                    if (!rule.fieldDefaults.emplace(field, (negative ? "-" : "") + std::string(token)).second)
+                        fail("duplicate field default " + field);
+                    advance();
+                }
+            } else if (rule.kind == BindingTarget::classType && key == "extends") {
+                rule.base = bindingImport();
             } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
                 expect("json");
                 rule.jsonMapKey = true;
@@ -260,8 +273,10 @@ private:
         TypeScriptBinding rule{.source = type()};
         expect("=>");
         if (accept("interface")) rule.kind = BindingTarget::interfaceType;
-        else if (accept("class")) rule.kind = BindingTarget::classType;
-        else if (accept("const")) { expect("enum"); rule.kind = BindingTarget::constEnum; }
+        else if (accept("class")) {
+            rule.kind = BindingTarget::classType;
+            if (accept("from")) rule.from = bindingPath();
+        } else if (accept("const")) { expect("enum"); rule.kind = BindingTarget::constEnum; }
         else if (accept("enum")) rule.kind = BindingTarget::enumeration;
         else {
             if (accept("extern")) {

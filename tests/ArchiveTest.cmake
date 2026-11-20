@@ -27,6 +27,7 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/RenderCommonSerialization.h)
 set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/rendering/custom/layout-graph.ts
     cocos/rendering/custom/graph-dfs.ts
+    cocos/rendering/custom/layout-access.ts
     native/cocos/base/GraphDFS.h
     native/cocos/renderer/pipeline/custom/LayoutGraphFwd.h
     native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.h native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp
