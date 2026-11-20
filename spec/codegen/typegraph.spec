@@ -13,6 +13,7 @@ namespace codegen {
     struct ParameterInfo {
         type: TypeUse;
         name: std::string;
+        byConstReference: bool = false;
     }
     struct MethodInfo {
         result: TypeUse;
@@ -23,6 +24,7 @@ namespace codegen {
         cppOnly: bool = false;
         typescriptName: std::optional<std::string>;
         cppExpression: std::string;
+        isStatic: bool = false;
     }
     struct FieldInfo {
         type: TypeUse;
@@ -32,6 +34,7 @@ namespace codegen {
         isNullable: bool = false;
         transient: bool = false;
         typescriptInitializer: std::string;
+        cppOnly: bool = false;
     }
     struct Enumerator {
         name: std::string;

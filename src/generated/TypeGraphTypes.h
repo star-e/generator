@@ -33,6 +33,7 @@ struct TypeUse {
 struct ParameterInfo {
     TypeUse type;
     std::string name;
+    bool byConstReference = false;
 };
 
 struct MethodInfo {
@@ -44,6 +45,7 @@ struct MethodInfo {
     bool cppOnly = false;
     std::optional<std::string> typescriptName;
     std::string cppExpression;
+    bool isStatic = false;
 };
 
 struct FieldInfo {
@@ -54,6 +56,7 @@ struct FieldInfo {
     bool isNullable = false;
     bool transient = false;
     std::string typescriptInitializer;
+    bool cppOnly = false;
 };
 
 struct Enumerator {

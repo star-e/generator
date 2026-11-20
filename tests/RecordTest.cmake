@@ -5,6 +5,38 @@ set(spec "${work}/spec/render/render-common.spec")
 file(READ "${spec}" original)
 set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --output "${work}/stage")
 
+set(resourceSpec "${work}/spec/render/render-graph.spec")
+file(READ "${resourceSpec}" resource)
+function(check_resource_error before after diagnostic)
+    string(REPLACE "${before}" "${after}" invalid "${resource}")
+    file(WRITE "${resourceSpec}" "${invalid}")
+    expect_failure(2 "${diagnostic}" ${generate})
+endfunction()
+check_resource_error("getColorTexture(renderWindow: scene::RenderWindow*)" "getColorTexture(other: gfx::Swapchain*)"
+    "duplicate method signature getColorTexture")
+check_resource_error("getColorTexture(swapchain: gfx::Swapchain*) noexcept" "getColorTexture(swapchain: gfx::Swapchain*) const noexcept"
+    "static method cannot be const")
+check_resource_error("fenceValue: uint64_t = 0" "fenceValue: uint64_t = 9007199254740992"
+    "uint64_t default exceeds the TypeScript safe integer range")
+check_resource_error("fenceValue: uint64_t = 0" "fenceValue: uint64_t = 18446744073709551616"
+    "invalid uint64_t default")
+check_resource_error("struct RenderSwapchain" "@serialize struct RenderSwapchain"
+    "@cppOnly field in a serializable record requires @transient")
+string(REPLACE "constructor(swapchain, isDepthStencil);" [=[
+    @cppOnly nativeFence: uint64_t = 18446744073709551615;
+    constructor(swapchain, isDepthStencil);
+    constructor(swapchain, nativeFence);
+]=] changed "${resource}")
+file(WRITE "${resourceSpec}" "${changed}")
+run(${generate})
+file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderGraphTypes.h" nativeResource)
+file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" webResource)
+if(NOT nativeResource MATCHES "nativeFence[{]18446744073709551615ULL[}]" OR webResource MATCHES "nativeFence" OR
+   NOT webResource MATCHES "constructor [(]swapchain: Swapchain [|] null = null, isDepthStencil = false[)]")
+    message(FATAL_ERROR "RenderSwapchain must retain the native uint64_t and bind the visible constructor fields")
+endif()
+file(WRITE "${resourceSpec}" "${resource}")
+
 set(layoutSpec "${work}/spec/render/layout-graph.spec")
 file(READ "${layoutSpec}" layout)
 function(check_pool_error before after diagnostic)

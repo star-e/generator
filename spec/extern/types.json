@@ -6,6 +6,7 @@
   "uint8_t": { "header": "cstdint" },
   "uint16_t": { "header": "cstdint" },
   "uint32_t": { "header": "cstdint" },
+  "uint64_t": { "header": "cstdint" },
   "cc::Material": {},
   "cc::Texture2D": {},
   "cc::IntrusivePtr": { "header": "cocos/base/Ptr.h" },

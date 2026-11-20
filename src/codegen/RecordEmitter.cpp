@@ -42,6 +42,7 @@ std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModu
 }
 
 bool numericDefault(const std::string& type, const std::string& literal) {
+    if (type == "uint64_t") return safeUnsignedNumber(literal);
     if (type != "float" && type != "double") return validUnsignedFieldDefault(type, literal);
     if (literal.empty()) return false;
     const auto first = literal.front() == '-' ? 1U : 0U;
@@ -64,6 +65,24 @@ std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId 
     });
 }
 
+std::string pointerType(const TypeGraph& graph, const TypeModule& module, const TypeNode& resource, Dependencies& deps) {
+    const auto ns = resource.qualifiedName.rfind("::");
+    std::string decl = std::get<ExternalTypeNode>(resource.data).isStruct ? "struct " : "class ";
+    decl += resource.name + ";";
+    if (ns != std::string::npos) decl = "namespace " + resource.qualifiedName.substr(0, ns) + " { " + decl + " }";
+    deps.forwardDeclarations.insert(decl);
+    return cppName(graph, resource, module) + "*";
+}
+
+std::string methodType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
+    if (const auto* ptr = std::get_if<PointerType>(&graph.node(id).data)) {
+        const auto& target = graph.node(ptr->pointee);
+        if (std::holds_alternative<ExternalTypeNode>(target.data) && target.module != ModuleId{})
+            return pointerType(graph, module, target, deps);
+    }
+    return nativeType(graph, module, id, deps);
+}
+
 bool hasPmrStorage(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
     const auto& data = graph.node(id).data;
     if (const auto* external = std::get_if<ExternalTypeNode>(&data)) return external->isPmr;
@@ -80,9 +99,13 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     const auto& module = graph.modules.at(owner.value);
     const auto& node = graph.node(field.type.type);
     BoundField m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly, .transient = field.transient};
+    auto scalarType = field.type.type;
+    while (const auto* alias = std::get_if<AliasType>(&graph.node(scalarType).data)) scalarType = alias->target;
+    const auto& scalar = graph.node(scalarType).qualifiedName;
+    if (scalar == "uint64_t" && !m.cppDefault.empty()) m.cppDefault += "ULL";
     m.scalar = std::holds_alternative<BuiltinType>(node.data) || std::holds_alternative<EnumType>(node.data) ||
                std::holds_alternative<AliasType>(node.data) || std::holds_alternative<PointerType>(node.data) ||
-               (std::holds_alternative<ExternalTypeNode>(node.data) && archivePrimitive(graph, field.type.type) == "Number");
+               (std::holds_alternative<ExternalTypeNode>(node.data) && (scalar == "uint64_t" || archivePrimitive(graph, field.type.type) == "Number"));
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {
         if (field.isNullable || !field.initializer.empty()) invalid(field, "expected a default-constructed owning string");
         if (node.cppHeader.empty()) invalid(field, "missing native header for " + node.qualifiedName);
@@ -193,11 +216,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         }
         const auto name = cppName(graph, resource, module);
         if (ptr) {
-            const auto ns = resource.qualifiedName.rfind("::");
-            std::string decl = std::string(external->isStruct ? "struct " : "class ") + resource.name + ";";
-            if (ns != std::string::npos) decl = "namespace " + resource.qualifiedName.substr(0, ns) + " { " + decl + " }";
-            deps.forwardDeclarations.insert(decl);
-            m.cpp = name + "*";
+            m.cpp = pointerType(graph, module, resource, deps);
             m.cppDefault = "nullptr";
             m.comment = "/*pointer*/ ";
         } else {
@@ -228,8 +247,14 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         return m;
     }
     if (m.ts == "boolean" && (m.tsDefault == "false" || m.tsDefault == "true")) return m;
-    const auto* alias = std::get_if<AliasType>(&node.data);
-    if (m.ts == "number" && numericDefault(alias ? graph.node(alias->target).qualifiedName : node.qualifiedName, m.tsDefault)) return m;
+    m.safeUnsignedInteger = scalar == "uint64_t";
+    if (m.safeUnsignedInteger) {
+        if (!field.typescriptInitializer.empty()) m.tsDefault = field.typescriptInitializer;
+        if (!safeUnsignedNumber(m.tsDefault))
+            invalid(field, "uint64_t default exceeds the TypeScript safe integer range: " + m.tsDefault);
+        return m;
+    }
+    if (m.ts == "number" && numericDefault(scalar, m.tsDefault)) return m;
     invalid(field, "unsupported scalar default " + field.initializer);
 }
 
@@ -237,7 +262,7 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, ModuleId owner, const
                                    Dependencies& deps, bool emitTs, const std::map<uint32_t, std::string>& nestedResets) {
     std::vector<BoundField> result;
     for (const auto& field : fields) {
-        auto member = bindMember(graph, owner, field, deps, emitTs);
+        auto member = bindMember(graph, owner, field, deps, emitTs && !field.cppOnly);
         if (field.isReadonly) {
             const auto childReset = nestedResets.find(field.type.type.value);
             if (childReset != nestedResets.end()) member.tsReset = "this." + member.name + childReset->second;
@@ -256,6 +281,34 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, ModuleId owner, const
 }
 
 using Order = std::vector<uint32_t>;
+
+Order bindTypeScriptConstructor(const TypeNode& node, const RecordType& record, std::vector<BoundField>& fields) {
+    auto constructors = record.constructors;
+    if (std::ranges::any_of(record.fields, &FieldInfo::cppOnly)) {
+        Order indices(fields.size());
+        std::vector<BoundField> visible;
+        for (uint32_t i = 0; i < fields.size(); ++i) {
+            if (record.fields[i].cppOnly) continue;
+            indices[i] = static_cast<uint32_t>(visible.size());
+            visible.push_back(std::move(fields[i]));
+        }
+        fields = std::move(visible);
+        for (auto& ctor : constructors) {
+            std::erase_if(ctor, [&](auto index) { return record.fields[index].cppOnly; });
+            for (auto& index : ctor) index = indices[index];
+        }
+    }
+    if (constructors.empty()) {
+        Order order(fields.size());
+        std::iota(order.begin(), order.end(), 0U);
+        return order;
+    }
+    const auto& order = *std::ranges::max_element(constructors, {}, &Order::size);
+    if (order.size() < fields.size() && std::ranges::any_of(constructors, [&](const Order& other) {
+            return other.size() == order.size() && other != order;
+        })) throw std::runtime_error(node.qualifiedName + ": ambiguous partial TypeScript constructor");
+    return order;
+}
 
 void cppFlagOperators(std::ostream& out, const std::string& name, const std::string& base) {
     for (const char op : {'|', '&'}) {
@@ -535,11 +588,12 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         out << ";\n";
     }
     for (const auto& method : record.methods) {
-        out << "    " << nativeType(graph, module, method.result.type, deps) << " " << method.name << "(";
+        out << "    " << (method.isStatic ? "static " : "") << methodType(graph, module, method.result.type, deps) << " " << method.name << "(";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             if (i) out << ", ";
             const auto& p = method.parameters[i];
-            out << nativeType(graph, module, p.type.type, deps) << " " << p.name;
+            if (p.byConstReference) out << "const ";
+            out << methodType(graph, module, p.type.type, deps) << (p.byConstReference ? "& " : " ") << p.name;
         }
         out << ")";
         if (method.isConst) out << " const";
@@ -607,7 +661,13 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& memb
     ts << "    constructor (" << signature(order, true) << ") {\n";
     if (hasBase) ts << "        super();\n";
     for (uint32_t i = 0; i < members.size(); ++i) {
-        if (std::ranges::find(order, i) != order.end()) ts << "        this." << members[i].name << " = " << members[i].name << ";\n";
+        const auto& m = members[i];
+        const bool parameter = std::ranges::find(order, i) != order.end();
+        if (m.safeUnsignedInteger) {
+            ts << "        cc$defineUint64(this, '" << m.name << "', " << (parameter ? m.name : m.tsDefault) << ");\n";
+        } else if (parameter) {
+            ts << "        this." << m.name << " = " << m.name << ";\n";
+        }
     }
     ts << "    }\n";
     if (reset) {
@@ -637,6 +697,8 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<BoundFie
     if (!base.empty()) ts << " extends " << base;
     ts << " {\n";
     if (!initializeFields) tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset, !base.empty());
+    else if (std::ranges::any_of(members, &BoundField::safeUnsignedInteger))
+        tsConstructorAndReset(ts, members, {}, nullptr, keepOnReset, !base.empty());
     if (resetToDefaults) {
         ts << "    reset (): void {\n";
         for (const auto& m : members) {
@@ -652,6 +714,10 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<BoundFie
     }
     for (uint32_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
+        if (m.safeUnsignedInteger) {
+            ts << "    declare " << (m.readonly ? "readonly " : "") << m.name << ": number;\n";
+            continue;
+        }
         if (initializeFields || std::ranges::find(order, i) == order.end()) {
             ts << "    " << (m.readonly ? "readonly " : "") << m.comment << m.name;
             if (!inferTsType(m)) ts << ": " << m.ts;
@@ -713,7 +779,7 @@ struct RecordArchives {
                 const auto member = "v." + field.name;
                 if (field.transient) {
                     definitions << "    // skip, " << field.name << ": " << field.cppDescription << '\n';
-                    if (emitTs) script << "    // skip, " << member << ": " << field.tsDescription << '\n';
+                    if (emitTs && !field.tsDescription.empty()) script << "    // skip, " << member << ": " << field.tsDescription << '\n';
                     continue;
                 }
                 definitions << "    " << op << "(ar, " << member << ");\n";
@@ -804,6 +870,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     std::string enumImports;
     bool previousTag = false;
     bool usesGraphRuntime = false;
+    bool usesUint64Field = false;
     const std::set<std::string> keepNone;
     if (!output.forwardHeader) writeScalarAliases(cpp, graph, module, deps.headers);
     for (auto id : module.declarations) {
@@ -887,19 +954,13 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             deps.valueImports[impl->second.generic_string()].insert(node.name);
             ts << "export { " << node.name << " };\n";
             if (entry != output.pools.end()) {
-                if (!members.empty()) throw std::runtime_error(node.qualifiedName + ": externally implemented pool record must be empty");
+                if (!std::ranges::all_of(record->fields, &FieldInfo::cppOnly))
+                    throw std::runtime_error(node.qualifiedName + ": externally implemented pool record must be empty");
                 pool.add(node.name, entry->second.member, Pool::Reuse::unchanged);
             }
             continue;
         }
-        Order order(members.size());
-        std::iota(order.begin(), order.end(), 0U);
-        if (!record->constructors.empty()) {
-            const auto ctor = std::ranges::max_element(record->constructors, {}, &Order::size);
-            if (ctor->size() < members.size() && std::ranges::count(record->constructors, ctor->size(), &Order::size) > 1)
-                throw std::runtime_error(node.qualifiedName + ": ambiguous partial TypeScript constructor");
-            order = *ctor;
-        }
+        const Order order = bindTypeScriptConstructor(node, *record, members);
         const auto rule = pendingResets.extract(node.name);
         const ResetBinding constructorReset;
         const auto& binding = rule.empty() ? constructorReset : rule.mapped();
@@ -937,6 +998,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         const auto base = output.bases.find(node.name);
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
+        usesUint64Field |= std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
         tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained,
                  base == output.bases.end() ? "" : base->second.name);
     }
@@ -1011,6 +1073,19 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         script << "import type { OutputArchive, InputArchive } from '" << modulePath(path.replace_extension(), *output.typescript) << "';\n";
     }
     script << ts.str();
+    if (usesUint64Field) {
+        script << R"(
+function cc$defineUint64 (target: object, key: string, initial: number): void {
+    let value: number;
+    const set = (next: number): void => {
+        if (!Number.isSafeInteger(next) || next < 0) throw new RangeError(key + ' requires a safe unsigned integer');
+        value = next;
+    };
+    set(initial);
+    Object.defineProperty(target, key, { enumerable: true, configurable: true, get: () => value, set });
+}
+)";
+    }
     if (archives.requirements.needsReadSize) {
         const auto& input = archiveInterface(graph, archive->module, "InputArchive");
         script << "\nfunction cc$readSize (a: InputArchive): number {\n"

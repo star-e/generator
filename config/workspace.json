@@ -110,7 +110,18 @@
     {
       "spec": "../spec/extern/gfx-resource.spec",
       "backend": "model",
-      "types": { "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
+      "types": {
+        "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "Buffer": { "header": "cocos/renderer/gfx-base/GFXBuffer.h" },
+        "Texture": { "header": "cocos/renderer/gfx-base/GFXTexture.h" },
+        "Framebuffer": { "header": "cocos/renderer/gfx-base/GFXFramebuffer.h" },
+        "Swapchain": { "header": "cocos/renderer/gfx-base/GFXSwapchain.h" }
+      }
+    },
+    {
+      "spec": "../spec/extern/render-window.spec",
+      "backend": "model",
+      "types": { "RenderWindow": { "header": "cocos/scene/RenderWindow.h" } }
     },
     {
       "spec": "../spec/render/render-graph.spec",

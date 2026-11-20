@@ -84,6 +84,8 @@ BoundField bindField(const TypeGraph& graph, const FieldInfo& field, Imports& im
         return {FieldKind::record, name, "make" + name + "()"};
     }
     const auto& initial = field.initializer;
+    if (node.qualifiedName == "uint64_t" && !safeUnsignedNumber(initial))
+        invalid(field, "uint64_t default exceeds the TypeScript safe integer range: " + initial);
     const auto pos = initial.rfind("::");
     if (pos != std::string::npos) {
         auto alias = name;
@@ -119,7 +121,7 @@ void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node,
     for (const auto& [to, from] : renames) {
         const auto dst = std::ranges::find(fields, to, &FieldInfo::name);
         const auto src = std::ranges::find(fields, from, &FieldInfo::name);
-        if (!helpers || dst == fields.end() || src == fields.end() || dst == src || !dst->isNullable ||
+        if (!helpers || dst == fields.end() || src == fields.end() || dst->cppOnly || src->cppOnly || dst == src || !dst->isNullable ||
             !src->isNullable || src->type.type != dst->type.type) {
             throw std::runtime_error("invalid settings migration " + node.name + "." + to + " from " + from);
         }
@@ -128,6 +130,7 @@ void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node,
     std::ostringstream factory, fill;
     out << "export interface " << node.name << " {\n";
     for (const auto& field : fields) {
+        if (field.cppOnly) continue;
         const auto p = bindField(graph, field, imports);
         out << "    ";
         if (p.kind == FieldKind::resource) out << "/* refcount */ ";

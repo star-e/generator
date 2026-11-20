@@ -423,11 +423,12 @@ private:
                     }
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
-                } else if (token == "fn" && !followedBy(":")) {
-                    advance();
-                    record->methods.push_back(recordMethod(members));
+                } else if ((token == "fn" && !followedBy(":")) || (token == "static" && followedBy("fn"))) {
+                    const bool isStatic = accept("static");
+                    expect("fn");
+                    record->methods.push_back(recordMethod(members, record->methods, isStatic));
                 } else {
-                    record->fields.push_back(field(members));
+                    record->fields.push_back(field(members, true));
                 }
             }
         } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {
@@ -596,11 +597,17 @@ private:
         return next.token == expected;
     }
 
-    Field field(std::set<std::string>& names) {
+    Field field(std::set<std::string>& names, bool record = false) {
         Field result;
-        if (accept("@")) {
-            expect("transient");
-            result.transient = true;
+        while (accept("@")) {
+            if (record && accept("cppOnly")) {
+                if (result.cppOnly) fail("duplicate @cppOnly");
+                result.cppOnly = true;
+            } else {
+                expect("transient");
+                if (result.transient) fail("duplicate @transient");
+                result.transient = true;
+            }
         }
         result.isReadonly = accept("readonly");
         result.isNullable = accept("nullable");
@@ -635,20 +642,25 @@ private:
         return result;
     }
 
-    Method recordMethod(std::set<std::string>& names) {
+    Method recordMethod(std::set<std::string>& names, const std::vector<Method>& methods, bool isStatic) {
         Method result;
-        result.name = uniqueName(names);
+        result.isStatic = isStatic;
+        result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
         expect("(");
         std::set<std::string> parameters;
         if (!accept(")")) {
             do {
                 auto name = uniqueName(parameters);
                 expect(":");
-                result.parameters.push_back({type(), std::move(name)});
+                const bool byConstReference = accept("const");
+                auto parameter = type();
+                if (byConstReference) expect("&");
+                result.parameters.push_back({std::move(parameter), std::move(name), byConstReference});
             } while (accept(","));
             expect(")");
         }
         result.isConst = accept("const");
+        if (isStatic && result.isConst) fail("static method cannot be const");
         result.isNoexcept = accept("noexcept");
         expect("-");
         expect(">");

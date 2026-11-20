@@ -17,6 +17,7 @@ struct BoundField {
     bool transient{};
     bool usesAllocator{};
     bool scalar{};
+    bool safeUnsignedInteger{};
     bool checkDefaultConstruction{};
     std::string emptyPmrArgument;
     std::string tsReset;

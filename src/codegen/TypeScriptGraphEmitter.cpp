@@ -24,6 +24,10 @@ std::vector<Column> bindColumns(const TypeGraph& graph, const TypeNode& owner,
     for (const auto& column : columns) {
         auto id = column.valueType;
         while (const auto* alias = std::get_if<AliasType>(&graph.node(id).data)) id = alias->target;
+        if (const auto* wrapper = std::get_if<TemplateInstanceType>(&graph.node(id).data);
+            wrapper && graph.node(wrapper->declaration).qualifiedName == "cc::IntrusivePtr" &&
+            wrapper->arguments.size() == 1 && std::holds_alternative<TypeId>(wrapper->arguments.front()))
+            id = std::get<TypeId>(wrapper->arguments.front());
         const auto& value = graph.node(id);
         const auto context = owner.qualifiedName + "." + column.name;
         if (value.module != owner.module && value.typescriptModule.empty() && !value.typescriptNumber &&

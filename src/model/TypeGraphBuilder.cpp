@@ -44,7 +44,7 @@ std::optional<std::string> defaultScalarBinding(std::string_view qualifiedName) 
     if (qualifiedName == "void") return "void";
     if (qualifiedName == "bool") return "boolean";
     if (qualifiedName == "double" || qualifiedName == "float" ||
-        qualifiedName == "uint8_t" || qualifiedName == "uint16_t" || qualifiedName == "uint32_t") return "number";
+        qualifiedName == "uint8_t" || qualifiedName == "uint16_t" || qualifiedName == "uint32_t" || qualifiedName == "uint64_t") return "number";
     return std::nullopt;
 }
 
@@ -113,9 +113,9 @@ TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
-                      .cppExpression = method.cppExpression};
+                      .cppExpression = method.cppExpression, .isStatic = method.isStatic};
     for (const auto& parameter : method.parameters) {
-        member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name});
+        member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name, parameter.byConstReference});
     }
     return member;
 }
@@ -126,12 +126,11 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
         auto use = resolve(graph, field.type, scope, owner);
         std::string_view magnitude = field.initializer;
         if (magnitude.starts_with('-')) magnitude.remove_prefix(1);
-        if (hasHexPrefix(magnitude)) {
-            const auto& type = graph.node(canonicalType(graph, use)).qualifiedName;
-            if (!validUnsignedFieldDefault(type, field.initializer)) {
-                throw std::runtime_error(use.location.describe() + ": " + field.name + ": invalid " + type +
-                                         " default " + field.initializer);
-            }
+        const auto& typeName = graph.node(canonicalType(graph, use)).qualifiedName;
+        if ((hasHexPrefix(magnitude) || (typeName == "uint64_t" && !field.initializer.empty())) &&
+            !validUnsignedFieldDefault(typeName, field.initializer)) {
+            throw std::runtime_error(use.location.describe() + ": " + field.name + ": invalid " + typeName +
+                                     " default " + field.initializer);
         }
         const auto pos = field.initializer.rfind("::");
         if (pos != std::string::npos) {
@@ -144,7 +143,7 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
                 throw std::runtime_error(use.location.describe() + ": invalid enum default " + field.initializer);
             }
         }
-        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient});
+        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly});
     }
     return result;
 }
@@ -173,7 +172,20 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         }
         result.constructors.push_back(std::move(members));
     }
-    for (const auto& method : syntax.methods) result.methods.push_back(resolveMethod(graph, method, scope, owner));
+    for (const auto& field : result.fields) {
+        if (syntax.serializable && field.cppOnly && !field.transient)
+            throw std::runtime_error(field.type.location.describe() + ": @cppOnly field in a serializable record requires @transient");
+    }
+    for (const auto& method : syntax.methods) {
+        auto resolved = resolveMethod(graph, method, scope, owner);
+        for (const auto& other : result.methods) {
+            if (other.name != resolved.name || (!other.isStatic && !resolved.isStatic && other.isConst != resolved.isConst)) continue;
+            if (std::ranges::equal(other.parameters, resolved.parameters, [&](const auto& a, const auto& b) {
+                    return a.byConstReference == b.byConstReference && canonicalType(graph, a.type) == canonicalType(graph, b.type);
+                })) throw std::runtime_error(method.result.location.describe() + ": duplicate method signature " + method.name);
+        }
+        result.methods.push_back(std::move(resolved));
+    }
     return result;
 }
 
@@ -669,7 +681,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             auto& fields = std::get<RecordType>(graph.getNode(id.value).data).fields;
             if (rule.kind == BindingTarget::numberField) {
                 if (fields.size() != 1 || fields.front().name != rule.numberField ||
-                    fields.front().transient || fields.front().isNullable)
+                    fields.front().transient || fields.front().isNullable || fields.front().cppOnly)
                     throw std::runtime_error(at.describe() + ": number(field) requires a single non-transient numeric field named " + rule.numberField);
                 const auto& target = graph.node(canonicalType(graph, fields.front().type));
                 if (target.typescriptName != "number" || (!integerRanges().contains(target.qualifiedName) &&

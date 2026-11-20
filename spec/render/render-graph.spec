@@ -4,6 +4,7 @@ import RenderCommon;
 import GraphTags;
 import Strings;
 import GfxResource;
+import RenderWindow;
 
 namespace cc::render {
     struct ResourceDesc {
@@ -34,8 +35,59 @@ namespace cc::render {
         unused: uint32_t = 0;
     }
 
+    struct ManagedBuffer {
+        nullable buffer: IntrusivePtr<gfx::Buffer>;
+        fenceValue: uint64_t = 0;
+        constructor(buffer);
+    }
+
+    struct ManagedTexture {
+        nullable texture: IntrusivePtr<gfx::Texture>;
+        fenceValue: uint64_t = 0;
+        constructor(texture);
+        fn checkResource(desc: const ResourceDesc&) const -> bool;
+    }
+
+    struct PersistentBuffer {
+        nullable buffer: IntrusivePtr<gfx::Buffer>;
+        fenceValue: uint64_t = 0;
+        constructor(buffer);
+    }
+
+    struct PersistentTexture {
+        nullable texture: IntrusivePtr<gfx::Texture>;
+        fenceValue: uint64_t = 0;
+        constructor(texture);
+        fn checkResource(desc: const ResourceDesc&) const -> bool;
+    }
+
+    struct RenderSwapchain {
+        nullable swapchain: gfx::Swapchain*;
+        nullable renderWindow: scene::RenderWindow*;
+        currentID: uint32_t = 0;
+        numBackBuffers: uint32_t = 0;
+        generation: uint32_t = 0xFFFFFFFF;
+        isDepthStencil: bool = false;
+        @cppOnly nullable texture: gfx::Texture*;
+        constructor(swapchain, isDepthStencil);
+        static fn getColorTexture(swapchain: gfx::Swapchain*) noexcept -> gfx::Texture*;
+        static fn getColorTexture(renderWindow: scene::RenderWindow*) noexcept -> gfx::Texture*;
+        static fn getDepthStencilTexture(swapchain: gfx::Swapchain*) noexcept -> gfx::Texture*;
+    }
+
     struct FormatView {
         format: gfx::Format = gfx::Format::UNKNOWN;
+    }
+
+    struct SubresourceView {
+        nullable textureView: IntrusivePtr<gfx::Texture>;
+        format: gfx::Format = gfx::Format::UNKNOWN;
+        indexOrFirstMipLevel: uint16_t = 0;
+        numMipLevels: uint16_t = 0;
+        firstArraySlice: uint16_t = 0;
+        numArraySlices: uint16_t = 0;
+        firstPlane: uint16_t = 0;
+        numPlanes: uint16_t = 0;
     }
 
     @tag struct Desc_ {}
@@ -43,6 +95,14 @@ namespace cc::render {
     @tag struct States_ {}
     @tag struct Sampler_ {}
     @tag struct Managed_ {}
+    @tag struct ManagedBuffer_ {}
+    @tag struct ManagedTexture_ {}
+    @tag struct PersistentBuffer_ {}
+    @tag struct PersistentTexture_ {}
+    @tag struct Framebuffer_ {}
+    @tag struct Swapchain_ {}
+    @tag struct FormatView_ {}
+    @tag struct SubresourceView_ {}
     @immovable graph ResourceGraph {
         vertex_descriptor Vertex = uint32_t;
         vertex_storage: indexed;
@@ -56,6 +116,14 @@ namespace cc::render {
         named_graph { component: Name_; }
         polymorphic_graph {
             Managed_: ManagedResource { member: resources; }
+            ManagedBuffer_: ManagedBuffer { member: managedBuffers; }
+            ManagedTexture_: ManagedTexture { member: managedTextures; }
+            PersistentBuffer_: PersistentBuffer { member: buffers; }
+            PersistentTexture_: PersistentTexture { member: textures; }
+            Framebuffer_: IntrusivePtr<gfx::Framebuffer> { member: framebuffers; }
+            Swapchain_: RenderSwapchain { member: swapchains; }
+            FormatView_: FormatView { member: formatViews; }
+            SubresourceView_: SubresourceView { member: subresourceViews; }
         }
     }
 }
@@ -67,6 +135,12 @@ binding typescript {
     ResourceTraits => class { pool rt; reset constructor; };
     ResourceStates => class { pool rs1; reset defaults; };
     ManagedResource => class { pool mr; reset defaults; };
+    ManagedBuffer => class { pool mb; reset constructor; };
+    ManagedTexture => class { pool mt; reset constructor; };
+    PersistentBuffer => class { pool pb; reset constructor; };
+    PersistentTexture => class { pool pt; reset constructor; };
+    RenderSwapchain => class { pool rs; reset constructor; };
     FormatView => class { pool fv; reset defaults; };
+    SubresourceView => class { pool sv; reset defaults; };
     ResourceGraph => class { pool rg; };
 }

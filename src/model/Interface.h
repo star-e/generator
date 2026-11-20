@@ -14,6 +14,7 @@ namespace cc::codegen {
 struct Parameter {
     TypeRef type;
     std::string name;
+    bool byConstReference{};
 };
 
 struct Method {
@@ -24,6 +25,7 @@ struct Method {
     bool isNoexcept{};
     bool cppOnly{};
     std::string cppExpression;
+    bool isStatic{};
 };
 
 struct Interface {
@@ -37,6 +39,7 @@ struct Field {
     bool isReadonly{};
     bool isNullable{};
     bool transient{};
+    bool cppOnly{};
 };
 
 struct Constructor {

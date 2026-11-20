@@ -183,13 +183,17 @@ file(WRITE "${stage}/cocos/core/memop/index.ts" "export { RecyclePool } from './
 file(MAKE_DIRECTORY "${stage}/cocos/core/platform" "${stage}/cocos/render-scene/scene")
 file(WRITE "${stage}/cocos/core/platform/debug.ts" "export function logID(id: number): void { throw Error(String(id)); }\n")
 set(scene "${stage}/cocos/render-scene/scene")
+set(window "${stage}/cocos/render-scene/core/render-window.d.ts")
+file(MAKE_DIRECTORY "${stage}/cocos/render-scene/core")
 set(engineAPI "${ENGINE}/bin/.declarations/cc.d.ts")
 if(EXISTS "${engineAPI}")
+    file(WRITE "${window}" "import { renderer } from 'cc'; export import RenderWindow = renderer.RenderWindow;\n")
     list(APPEND declarations "${engineAPI}")
     file(WRITE "${scene}/index.d.ts" "import { renderer } from 'cc'; export import Light = renderer.scene.Light;\n")
     file(WRITE "${scene}/reflection-probe.d.ts" "import { renderer } from 'cc'; export import ReflectionProbe = renderer.scene.ReflectionProbe;\n")
 else()
     file(WRITE "${scene}/index.d.ts" "export declare class Light { private light: void; }\n")
+    file(WRITE "${window}" "export declare class RenderWindow { private window: void; }\n")
     file(WRITE "${scene}/reflection-probe.d.ts" "export declare class ReflectionProbe { private probe: void; }\n")
 endif()
 find_program(node node REQUIRED)
@@ -226,6 +230,10 @@ endforeach()
 file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}"
     "export type ShaderStageFlags = ShaderStageFlagBit; export type MemoryAccess = MemoryAccessBit;\n"
     "export interface Sampler {}\n"
+    "export declare class Buffer { private buffer: void; }\n"
+    "export declare class Texture { private texture: void; }\n"
+    "export declare class Framebuffer { private framebuffer: void; }\n"
+    "export declare class Swapchain { private swapchain: void; }\n"
     "export declare class DescriptorSet { private set: void; }\n"
     "export declare class DescriptorSetLayout { private layout: void; }\n"
     "export declare class PipelineLayout { private pipeline: void; }\n")
