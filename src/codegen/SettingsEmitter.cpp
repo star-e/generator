@@ -41,6 +41,10 @@ std::string typeName(const TypeNode& type, const FieldInfo& field, Imports& impo
             imports.names.insert("gfx");
             return "gfx." + name;
         }
+        if (type.typescriptModule == "cocos/asset/assets") {
+            imports.names.insert(name);
+            return name;
+        }
         imports.modules[type.typescriptModule].insert(name);
         return name;
     }

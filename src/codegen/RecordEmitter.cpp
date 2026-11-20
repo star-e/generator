@@ -65,20 +65,21 @@ std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId 
     });
 }
 
-std::string pointerType(const TypeGraph& graph, const TypeModule& module, const TypeNode& resource, Dependencies& deps) {
+std::string pointerType(const TypeGraph& graph, const TypeModule& module, TypeId id, const TypeNode& resource, Dependencies& deps) {
     const auto ns = resource.qualifiedName.rfind("::");
     std::string decl = std::get<ExternalTypeNode>(resource.data).isStruct ? "struct " : "class ";
     decl += resource.name + ";";
     if (ns != std::string::npos) decl = "namespace " + resource.qualifiedName.substr(0, ns) + " { " + decl + " }";
     deps.forwardDeclarations.insert(decl);
-    return cppName(graph, resource, module) + "*";
+    return formatTypeName(graph, id, [&](const TypeNode& type) { return cppName(graph, type, module); });
 }
 
 std::string methodType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
     if (const auto* ptr = std::get_if<PointerType>(&graph.node(id).data)) {
-        const auto& target = graph.node(ptr->pointee);
+        const auto* q = std::get_if<QualifiedType>(&graph.node(ptr->pointee).data);
+        const auto& target = graph.node(q ? q->base : ptr->pointee);
         if (std::holds_alternative<ExternalTypeNode>(target.data) && target.module != ModuleId{})
-            return pointerType(graph, module, target, deps);
+            return pointerType(graph, module, id, target, deps);
     }
     return nativeType(graph, module, id, deps);
 }
@@ -160,6 +161,12 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     }
     const auto* record = std::get_if<RecordType>(&node.data);
     const auto* nestedGraph = std::get_if<GraphType>(&node.data);
+    const auto bindObject = [&] {
+        const bool nullable = field.typescriptInitializer == "null";
+        m.ts = boundTypeScriptName(graph, field.type, owner, nullable ? deps.typeImports : deps.valueImports);
+        m.tsDefault = nullable ? "null" : "new " + m.ts + "()";
+        if (nullable) m.ts += " | null";
+    };
     if ((record || nestedGraph) && !field.isNullable && field.initializer.empty()) {
         if (nestedGraph && nestedGraph->immovable) invalid(field, "cannot use an @immovable graph as a value field");
         m.cpp = nativeType(graph, module, field.type.type, deps);
@@ -182,9 +189,8 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
                 return m;
             }
             if (node.module != owner && node.typescriptModule.empty()) invalid(field, "missing external record mapping");
-            m.ts = boundTypeScriptName(graph, field.type, owner, deps.valueImports);
-            m.tsDefault = "new " + m.ts + "()";
-            if (nestedGraph && nestedGraph->mutableGraph) m.tsReset = "this." + m.name + ".clear()";
+            bindObject();
+            if (nestedGraph && nestedGraph->mutableGraph && m.tsDefault != "null") m.tsReset = "this." + m.name + ".clear()";
         }
         return m;
     }
@@ -196,10 +202,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         m.move = true;
         m.usesAllocator = ext->isPmr;
         m.checkDefaultConstruction = true;
-        if (emitTs) {
-            m.ts = boundTypeScriptName(graph, field.type, owner, deps.valueImports);
-            m.tsDefault = "new " + m.ts + "()";
-        }
+        if (emitTs) bindObject();
         return m;
     }
     if (!emitTs && !field.isNullable) {
@@ -225,7 +228,8 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
             deps.headers.insert("utility");
             target = std::get<TypeId>(instance->arguments[0]);
         }
-        const auto& resource = graph.node(target);
+        const auto* qualifier = std::get_if<QualifiedType>(&graph.node(target).data);
+        const auto& resource = graph.node(qualifier ? qualifier->base : target);
         const auto* external = std::get_if<ExternalTypeNode>(&resource.data);
         if (!external) invalid(field, "expected an external resource");
         if (emitTs) {
@@ -236,7 +240,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         }
         const auto name = cppName(graph, resource, module);
         if (ptr) {
-            m.cpp = pointerType(graph, module, resource, deps);
+            m.cpp = pointerType(graph, module, field.type.type, resource, deps);
             m.cppDefault = "nullptr";
             m.comment = "/*pointer*/ ";
         } else {
@@ -279,15 +283,30 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
 }
 
 std::vector<BoundField> bindFields(const TypeGraph& graph, ModuleId owner, const std::vector<FieldInfo>& fields,
-                                   Dependencies& deps, bool emitTs, const std::map<uint32_t, std::string>& nestedResets) {
+                                   Dependencies& deps, bool emitTs, const NestedResets& nestedResets) {
     std::vector<BoundField> result;
     for (const auto& field : fields) {
         auto member = bindMember(graph, owner, field, deps, emitTs && !field.cppOnly);
-        if (field.isReadonly) {
+        if (emitTs && !field.cppOnly && field.isReadonly) {
             const auto childReset = nestedResets.find(field.type.type.value);
-            if (childReset != nestedResets.end()) member.tsReset = "this." + member.name + childReset->second;
+            if (childReset != nestedResets.end()) {
+                std::string args;
+                for (const auto& arg : childReset->second) {
+                    const auto& type = graph.node(arg.type);
+                    if (arg.expression.starts_with("new ") || std::holds_alternative<EnumType>(type.data)) {
+                        auto& imports = type.typescriptContainer == ContainerKind::None ? deps.valueImports : deps.typeImports;
+                        boundTypeScriptName(graph, arg.type, owner, imports, field.name);
+                    }
+                    if (!args.empty()) args += ", ";
+                    args += arg.expression;
+                }
+                member.tsReset = "this." + member.name + ".reset(" + args + ")";
+            }
         }
-        if (!field.typescriptInitializer.empty()) {
+        if (field.typescriptInitializer == "null") {
+            if (field.cppOnly || member.tsDefault != "null" || field.isNullable || field.isReadonly)
+                invalid(field, "TypeScript default null requires a writable value object field");
+        } else if (!field.typescriptInitializer.empty()) {
             auto id = field.type.type;
             if (graph.node(id).typescriptNumber) id = std::get<RecordType>(graph.node(id).data).fields.front().type.type;
             if (const auto* alias = std::get_if<AliasType>(&graph.node(id).data)) id = alias->target;
@@ -787,6 +806,7 @@ std::vector<ArchiveField> archiveFields(const TypeGraph& graph, ModuleId owner, 
             entry.cppDescription = cpp;
             entry.tsDescription = ts;
         } else {
+            if (field.typescriptInitializer == "null") invalid(field, "native value archive cannot encode TypeScript null");
             if (field.isReadonly && !archivePrimitive(graph, field.type.type).empty())
                 invalid(field, "archive load requires a writable field");
             requirements.checkType(graph, owner, field.type.type, field.type.location.describe() + ": " + field.name);
@@ -892,7 +912,7 @@ struct Pool {
 } // namespace
 
 Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, std::optional<ArchiveOutput> archive,
-                  const std::string& preamble) {
+                  const std::string& preamble, NestedResets& nestedResets) {
     const auto& module = graph.modules.at(owner.value);
     Dependencies deps;
     Pool pool;
@@ -901,8 +921,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
     auto pendingResets = output.resets;
-    // By-value member types are defined before the record that contains them.
-    std::map<uint32_t, std::string> nestedResets;
     std::string enumImports;
     bool previousTag = false;
     bool usesGraphRuntime = false;
@@ -1028,6 +1046,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 if (member == members.end()) throw std::runtime_error(node.qualifiedName + ": unknown reset field " + field);
                 if (retained.contains(field)) throw std::runtime_error(node.qualifiedName + "." + field + ": reset conflicts with keepOnReset");
                 if (hook.from.empty()) {
+                    if (member->tsDefault == "null") throw std::runtime_error(node.qualifiedName + "." + field + ": reset method requires a non-null receiver");
                     member->tsReset = "this." + field + "." + hook.name + "()";
                 } else {
                     deps.valueImports[hook.from.generic_string()].insert(hook.name);
@@ -1045,15 +1064,14 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (entry != output.pools.end()) pool.add(node.name, entry->second.member, Pool::Reuse::reset, members, *reset);
         }
         if (reset) {
-            std::string args;
+            auto& args = nestedResets[id.value];
             for (auto index : *reset) {
                 const auto& member = members[index];
                 if (hooks != output.fieldResets.end() && hooks->second.contains(member.name))
                     throw std::runtime_error(node.qualifiedName + "." + member.name + ": reset parameter also has a reset function");
-                if (!args.empty()) args += ", ";
-                args += member.tsDefault;
+                const auto field = std::ranges::find(record->fields, member.name, &FieldInfo::name);
+                args.push_back({field->type.type, member.tsDefault});
             }
-            nestedResets.emplace(id.value, ".reset(" + args + ")");
         }
         const auto base = output.bases.find(node.name);
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);

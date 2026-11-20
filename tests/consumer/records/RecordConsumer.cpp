@@ -395,6 +395,7 @@ bool checkResourceGraph();
 bool checkSubpassGraph();
 bool checkRasterPassCache();
 bool checkPassRecords();
+bool checkRenderNodeData();
 
 int main(int argc, char** argv) {
     if (argc == 4 && std::string_view(argv[1]) == "layout-descriptors")
@@ -423,6 +424,7 @@ int main(int argc, char** argv) {
     if (!checkSubpassGraph()) return 19;
     if (!checkRasterPassCache()) return 20;
     if (!checkPassRecords()) return 21;
+    if (!checkRenderNodeData()) return 22;
     if (!checkDescriptorBlockIndex()) return 10;
     if (!checkDescriptorGroupBlockIndex()) return 12;
     if (!checkDescriptorDB()) return 15;

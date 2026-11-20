@@ -7,6 +7,7 @@ namespace cc::gfx {
     class Buffer;
     class Texture;
     class Framebuffer;
+    class Sampler;
     class Swapchain;
 }
 
@@ -18,5 +19,6 @@ binding typescript {
     Buffer => Buffer from "cocos/gfx";
     Texture => Texture from "cocos/gfx";
     Framebuffer => Framebuffer from "cocos/gfx";
+    Sampler => Sampler from "cocos/gfx";
     Swapchain => Swapchain from "cocos/gfx";
 }

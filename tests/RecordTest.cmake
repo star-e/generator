@@ -12,6 +12,8 @@ function(check_resource_error before after diagnostic)
     file(WRITE "${resourceSpec}" "${invalid}")
     expect_failure(2 "${diagnostic}" ${generate})
 endfunction()
+check_resource_error("field viewport default null;" "field phaseID default null;"
+    "phaseID: TypeScript default null requires a writable value object field")
 check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
     "subpassGraph: a record containing a move-only graph must declare @moveOnly")
 check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
@@ -50,6 +52,18 @@ if(NOT nativeResource MATCHES "nativeFence[{]18446744073709551615ULL[}]" OR webR
     message(FATAL_ERROR "RenderSwapchain must retain the native uint64_t and bind the visible constructor fields")
 endif()
 file(WRITE "${resourceSpec}" "${resource}")
+
+# The consumer must follow the imported record's binding even if its reset signature changes.
+string(REPLACE "LightInfo => class { pool li; }" "LightInfo => class { pool li; reset(level, light); }" changed "${original}")
+string(REPLACE "level: uint32_t = 0;" "level: uint32_t = 7;" changed "${changed}")
+file(WRITE "${spec}" "${changed}")
+run(${generate})
+file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" renderGraphTs)
+string(FIND "${renderGraphTs}" "this.light.reset(7, null);" importedReset)
+if(importedReset EQUAL -1)
+    message(FATAL_ERROR "SceneData must use LightInfo's declared reset order and defaults")
+endif()
+file(WRITE "${spec}" "${original}")
 
 set(layoutSpec "${work}/spec/render/layout-graph.spec")
 file(READ "${layoutSpec}" layout)

@@ -23,13 +23,15 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${native}/cocos/renderer/gfx-empty/EmptyFramebuffer.cpp"
     "${native}/cocos/renderer/gfx-base/GFXRenderPass.cpp"
     "${native}/cocos/renderer/gfx-empty/EmptyRenderPass.cpp"
+    "${native}/cocos/renderer/gfx-empty/EmptyBuffer.cpp"
+    "${native}/cocos/renderer/gfx-empty/EmptyTexture.cpp"
     "${native}/cocos/renderer/gfx-base/GFXPipelineLayout.cpp"
     "${native}/cocos/renderer/gfx-empty/EmptyPipelineLayout.cpp"
     "${STAGING}/native/ShiftProbe.cpp"
     "${STAGING}/native/ShiftSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
-    ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp
+    ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp"
@@ -42,7 +44,11 @@ add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${STAGING}/Legac
     "${custom}/ArchiveTypes.cpp" "${custom}/RenderCommonTypes.cpp" "${custom}/LayoutGraphTypes.cpp"
     "${custom}/LayoutGraphSerialization.cpp")
 target_compile_definitions(LegacyArchiveConsumer PRIVATE CC_TEST_LEGACY_LAYOUT=1)
-target_include_directories(RecordConsumer PRIVATE "${STAGING}/native")
+# Material and Model transitively include the engine's native typed array headers.
+target_include_directories(RecordConsumer PRIVATE "${STAGING}/native"
+    "$<$<PLATFORM_ID:Windows>:${native}/external/win64/include/v8>"
+    "$<$<PLATFORM_ID:Darwin>:${native}/external/mac/include/v8>"
+    "$<$<PLATFORM_ID:Linux>:${native}/external/linux/include/v8>")
 get_target_property(containerType Boost::container TYPE)
 if(WIN32 AND containerType STREQUAL "SHARED_LIBRARY")
     add_custom_command(TARGET RecordConsumer POST_BUILD COMMAND "${CMAKE_COMMAND}" -E

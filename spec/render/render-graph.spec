@@ -7,6 +7,8 @@ import PmrContainers;
 import Maps;
 import GfxResource;
 import RenderWindow;
+import Scene;
+import Light;
 
 namespace cc::render {
     @comparison("==") @hash struct ClearValue {
@@ -256,6 +258,64 @@ namespace cc::render {
     @requireAllocator struct RaytracePass {
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
     }
+
+    struct ClearView {
+        slotName: ccstd::pmr::string;
+        clearFlags: gfx::ClearFlagBit = gfx::ClearFlagBit::ALL;
+        readonly clearColor: gfx::Color;
+        constructor(slotName, clearFlags, clearColor);
+    }
+
+    struct RenderQueue {
+        hint: QueueHint = QueueHint::RENDER_OPAQUE;
+        phaseID: uint32_t = 0xFFFFFFFF;
+        passLayoutID: uint32_t = 0xFFFFFFFF;
+        viewport: gfx::Viewport;
+        constructor(hint, phaseID, passLayoutID);
+        constructor(phaseID, passLayoutID);
+    }
+
+    flags CullingFlags : uint32_t { NONE = 0, CAMERA_FRUSTUM = 0x1, LIGHT_FRUSTUM = 0x2, LIGHT_BOUNDS = 0x4 }
+
+    struct SceneData {
+        nullable scene: const scene::RenderScene*;
+        nullable camera: const scene::Camera*;
+        readonly light: LightInfo;
+        flags: SceneFlags = SceneFlags::NONE;
+        cullingFlags: CullingFlags = CullingFlags::CAMERA_FRUSTUM;
+        nullable shadingLight: IntrusivePtr<scene::Light>;
+        constructor(scene, camera, flags, light, cullingFlags, shadingLight);
+    }
+
+    struct Dispatch {
+        nullable material: IntrusivePtr<Material>;
+        passID: uint32_t = 0;
+        threadGroupCountX: uint32_t = 0;
+        threadGroupCountY: uint32_t = 0;
+        threadGroupCountZ: uint32_t = 0;
+        constructor(material, passID, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+    }
+
+    enum class BlitType : uint8_t { FULLSCREEN_QUAD, DRAW_2D, DRAW_PROFILE, DRAW_3D }
+
+    @requireAllocator struct Blit {
+        nullable material: IntrusivePtr<Material>;
+        passID: uint32_t = 0;
+        sceneFlags: SceneFlags = SceneFlags::NONE;
+        nullable camera: const scene::Camera*;
+        blitType: BlitType = BlitType::FULLSCREEN_QUAD;
+        readonly models: ccstd::pmr::vector<IntrusivePtr<scene::Model>>;
+        constructor(material, passID, sceneFlags, camera, blitType);
+        constructor(camera, blitType, models);
+    }
+
+    @moveOnly @requireAllocator struct RenderData {
+        readonly constants: PmrFlatMap<uint32_t, ccstd::pmr::vector<char>>;
+        readonly buffers: PmrFlatMap<uint32_t, IntrusivePtr<gfx::Buffer>>;
+        readonly textures: PmrFlatMap<uint32_t, IntrusivePtr<gfx::Texture>>;
+        readonly samplers: PmrFlatMap<uint32_t, gfx::Sampler*>;
+        custom: ccstd::pmr::string;
+    }
 }
 
 binding typescript {
@@ -296,4 +356,12 @@ binding typescript {
     CopyPass => class { pool cp1; reset defaults; };
     MovePass => class { pool mp; reset defaults; };
     RaytracePass => class { pool rp2; reset defaults; };
+    ClearView => class { pool cv2; reset(slotName, clearFlags); field clearColor reset with reset(); };
+    RenderQueue => class { pool rq; field viewport default null; };
+    CullingFlags => const enum;
+    SceneData => class { pool sd; reset(scene, camera, flags, cullingFlags, shadingLight); };
+    Dispatch => class { pool d; };
+    BlitType => const enum;
+    Blit => class { pool b; constructor(material, passID, sceneFlags, camera, blitType); };
+    RenderData => class { pool rd1; reset defaults; };
 }

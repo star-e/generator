@@ -12,14 +12,31 @@ inline bool usesStringMapKey(const TypeNode& container, size_t position, const T
     return container.typescriptContainer == ContainerKind::Map && position == 0 && argument.typescriptMapKey != MapKeyKind::Native;
 }
 
+// In a TS collection, a native resource handle is represented by its referenced object.
+inline const TypeNode& typeScriptElement(const TypeGraph& graph, TypeId id) {
+    const auto& node = graph.node(id);
+    const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
+    if (const auto* ptr = std::get_if<PointerType>(&node.data)) {
+        id = ptr->pointee;
+    } else if (!node.typescriptName && instance && graph.node(instance->declaration).qualifiedName == "cc::IntrusivePtr" &&
+               instance->arguments.size() == 1 && std::holds_alternative<TypeId>(instance->arguments.front())) {
+        id = std::get<TypeId>(instance->arguments.front());
+    } else {
+        return node;
+    }
+    if (const auto* q = std::get_if<QualifiedType>(&graph.node(id).data)) id = q->base;
+    const auto& target = graph.node(id);
+    return std::holds_alternative<ExternalTypeNode>(target.data) && !target.typescriptModule.empty() ? target : node;
+}
+
 inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph, const TypeNode& container) {
     const auto& arguments = std::get<TemplateInstanceType>(container.data).arguments;
-    const auto& first = graph.node(std::get<TypeId>(arguments.front()));
+    const auto& first = typeScriptElement(graph, std::get<TypeId>(arguments.front()));
     if (!first.typescriptName) return std::nullopt;
     const auto& name = *first.typescriptName;
     if (container.typescriptContainer == ContainerKind::Set) return "Set<" + name + ">";
     if (container.typescriptContainer == ContainerKind::Map) {
-        const auto& value = graph.node(std::get<TypeId>(arguments.at(1)));
+        const auto& value = typeScriptElement(graph, std::get<TypeId>(arguments.at(1)));
         if (!value.typescriptName) return std::nullopt;
         return "Map<" + (usesStringMapKey(container, 0, first) ? "string" : name) + ", " + *value.typescriptName + ">";
     }
@@ -34,6 +51,12 @@ inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph
 template<class NameOf>
 std::string formatTypeName(const TypeGraph& graph, TypeId id, const NameOf& nameOf) {
     const auto& node = graph.node(id);
+    if (const auto* q = std::get_if<QualifiedType>(&node.data)) {
+        auto base = formatTypeName(graph, q->base, nameOf);
+        if (std::holds_alternative<PointerType>(graph.node(q->base).data))
+            return base + (q->isConst ? " const" : "") + (q->isVolatile ? " volatile" : "");
+        return std::string(q->isConst ? "const " : "") + (q->isVolatile ? "volatile " : "") + base;
+    }
     if (const auto* pointer = std::get_if<PointerType>(&node.data))
         return formatTypeName(graph, pointer->pointee, nameOf) + "*";
     if (const auto* instance = std::get_if<TemplateInstanceType>(&node.data)) {

@@ -20,7 +20,7 @@ void visitTypeScriptImportSources(const TypeGraph& graph, const TypeNode& node, 
     }
     const auto& arguments = std::get<TemplateInstanceType>(node.data).arguments;
     for (size_t i = 0; i < arguments.size(); ++i) {
-        const auto& argument = graph.node(std::get<TypeId>(arguments[i]));
+        const auto& argument = typeScriptElement(graph, std::get<TypeId>(arguments[i]));
         if (!usesStringMapKey(node, i, argument)) visitTypeScriptImportSources(graph, argument, visit);
     }
 }

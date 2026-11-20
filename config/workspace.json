@@ -113,6 +113,7 @@
       "backend": "model",
       "types": {
         "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
+        "Sampler": { "header": "cocos/renderer/gfx-base/states/GFXSampler.h" },
         "Viewport": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
         "Color": { "header": "cocos/renderer/gfx-base/GFXDef.h" },
         "RenderPass": { "header": "cocos/renderer/gfx-base/GFXRenderPass.h" },
@@ -120,6 +121,15 @@
         "Texture": { "header": "cocos/renderer/gfx-base/GFXTexture.h" },
         "Framebuffer": { "header": "cocos/renderer/gfx-base/GFXFramebuffer.h" },
         "Swapchain": { "header": "cocos/renderer/gfx-base/GFXSwapchain.h" }
+      }
+    },
+    {
+      "spec": "../spec/extern/scene.spec",
+      "backend": "model",
+      "types": {
+        "Camera": { "header": "cocos/scene/Camera.h" },
+        "RenderScene": { "header": "cocos/scene/RenderScene.h" },
+        "Model": { "header": "cocos/scene/Model.h" }
       }
     },
     {

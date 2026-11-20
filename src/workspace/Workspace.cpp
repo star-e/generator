@@ -250,7 +250,8 @@ Files plan(const Json& settings, const fs::path& base) {
             throw std::runtime_error("unknown backend " + backend);
         }
     }
-    const auto graph = buildTypeGraph(inputs, types);
+    std::vector<ModuleId> dependencyOrder;
+    const auto graph = buildTypeGraph(inputs, types, &dependencyOrder);
     std::set<std::string> outputKeys;
     Files files;
     const auto addFile = [&](const fs::path& path, const std::string& content) {
@@ -260,9 +261,10 @@ Files plan(const Json& settings, const fs::path& base) {
         if (!outputKeys.insert(key).second) throw std::runtime_error("duplicate output " + key);
         files.emplace(relative, normalizeLines(content, eol == "crlf"));
     };
-    for (size_t i = 0; i < layouts.size(); ++i) {
+    NestedResets nestedResets;
+    for (const auto owner : dependencyOrder) {
+        const auto i = owner.value;
         if (std::holds_alternative<std::monostate>(layouts[i])) continue;
-        const ModuleId owner{static_cast<uint32_t>(i)};
         Files emitted;
         if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {
             emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->binding, settingsOutput->typescript, preamble));
@@ -289,7 +291,7 @@ Files plan(const Json& settings, const fs::path& base) {
             }
             if (records->serializationHeader && !archive)
                 throw std::runtime_error(module.name + ": serialization requires import ArchiveInterface with interface output");
-            emitted = emitRecords(graph, owner, *records, archive, preamble);
+            emitted = emitRecords(graph, owner, *records, archive, preamble, nestedResets);
         } else {
             emitted = emitInterfaces(graph, owner, std::get<OutputLayout>(layouts[i]), preamble);
         }

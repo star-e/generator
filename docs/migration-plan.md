@@ -307,6 +307,8 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `RasterSubpass`、`ComputeSubpass`、`ComputePass`、`ResolvePass`、`CopyPass`、`MovePass` 和 `RaytracePass` 由同一份规格生成。C++ 构造时显式传入分配器，`CopyPass` 通过 `@moveOnly` 保留上传数据的移动语义。TS 对象池复用已有的 Map、数组和视口。两个 Subpass 的工厂接收新的构造参数，省略参数时使用默认值。[C++ 跨分配器用例](../tests/consumer/records/PassConsumer.cpp) · [TS 对象池用例](../tests/consumer/records/pass-consumer.ts)
 
+`ClearView`、`RenderQueue`、`SceneData`、`Dispatch`、`Blit` 和 `RenderData` 已接入渲染图规格，剔除标志 `CullingFlags` 和绘制类型 `BlitType` 随模块生成。`RenderQueue.viewport` 在 C++ 中按值存储，TS 通过 `field viewport default null` 声明为 `Viewport | null`。`SceneData` 复用 `LightInfo` 时，按声明模块中的参数顺序和默认值调用其重置方法。`RenderData` 通过 `@moveOnly` 声明移动语义，常量字节和四张资源表使用目标分配器。[渲染图规格](../spec/render/render-graph.spec) · [C++ 资源所有权测试](../tests/consumer/records/RenderDataConsumer.cpp) · [TS 对象池测试](../tests/consumer/records/render-node-consumer.ts)
+
 ## 第一次合并及后续验收
 
 1. **把本次基线做成可以重跑的测试。** 在 `generator` 记录旧生成器和引擎的基线提交、52 条引擎相对路径及 SHA-256，单列 CMake 源列表检查。Windows 对照任务固定检出和换行策略，在临时目录复建旧工具。日常测试读取固定引擎版本的文件，旧工具用于复核来源。

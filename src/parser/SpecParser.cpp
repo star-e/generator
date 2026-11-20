@@ -248,7 +248,8 @@ private:
                 } else {
                     expect("default");
                     const bool negative = accept("-");
-                    if (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))) fail("expected a numeric default");
+                    if ((negative || token != "null") && (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))))
+                        fail("expected a numeric default or null");
                     if (!rule.fieldDefaults.emplace(field, (negative ? "-" : "") + std::string(token)).second)
                         fail("duplicate field default " + field);
                     advance();
@@ -675,8 +676,10 @@ private:
         return result;
     }
 
-    TypeRef type() {
-        TypeRef result{location, qualifiedTypeName()};
+    TypeRef type(bool* byConstReference = nullptr) {
+        const auto at = location;
+        const bool isConst = accept("const");
+        TypeRef result{at, qualifiedTypeName()};
         if (accept("<")) {
             do {
                 result.arguments.push_back(type());
@@ -684,6 +687,12 @@ private:
             expect(">");
         }
         result.pointer = accept("*");
+        if (isConst && byConstReference && accept("&")) {
+            *byConstReference = true;
+        } else if (isConst) {
+            if (!result.pointer) fail("expected '*' after const pointee type");
+            result.constPointee = true;
+        }
         return result;
     }
 
@@ -697,9 +706,8 @@ private:
             do {
                 auto name = uniqueName(parameters);
                 expect(":");
-                const bool byConstReference = accept("const");
-                auto parameter = type();
-                if (byConstReference) expect("&");
+                bool byConstReference = false;
+                auto parameter = type(&byConstReference);
                 result.parameters.push_back({std::move(parameter), std::move(name), byConstReference});
             } while (accept(","));
             expect(")");

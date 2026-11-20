@@ -43,7 +43,7 @@ TypeId ensureNamespace(TypeGraph& graph, const std::string& scope) {
 std::optional<std::string> defaultScalarBinding(std::string_view qualifiedName) {
     if (qualifiedName == "void") return "void";
     if (qualifiedName == "bool") return "boolean";
-    if (qualifiedName == "double" || qualifiedName == "float" ||
+    if (qualifiedName == "double" || qualifiedName == "float" || qualifiedName == "char" ||
         qualifiedName == "uint8_t" || qualifiedName == "uint16_t" || qualifiedName == "uint32_t" || qualifiedName == "uint64_t") return "number";
     return std::nullopt;
 }
@@ -98,6 +98,7 @@ TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, 
         for (const auto& argument : use.arguments) arguments.emplace_back(resolve(graph, argument, scope, owner).type);
         id = graph.makeTemplateInstance(id, std::move(arguments));
     }
+    if (use.constPointee) id = graph.makeQualified(id, true, false);
     return {use.pointer ? graph.makePointer(id) : id, use.location};
 }
 
@@ -588,7 +589,7 @@ std::optional<uint64_t> indexedVertexLimit(const std::string& type) {
     return it->second.max;
 }
 
-TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes) {
+TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes, std::vector<ModuleId>* dependencyOrder) {
     TypeGraph graph;
     registerExternalTypes(graph, externalTypes);
     std::map<std::string, ModuleId> moduleNames;
@@ -642,7 +643,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         }
         scopes.push_back(std::move(scope));
     }
-    const auto order = bindImports(graph.modules, inputs, moduleNames);
+    auto order = bindImports(graph.modules, inputs, moduleNames);
     // Link all alias targets before resolving uses, including forward references in the same module.
     for (ModuleId owner : order) {
         const auto i = owner.value;
@@ -707,6 +708,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         }
     }
     checkRecordCycles(graph);
+    if (dependencyOrder) *dependencyOrder = std::move(order);
     return graph;
 }
 
