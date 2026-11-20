@@ -499,6 +499,11 @@ private:
                 graph.nameComponent = type();
                 expect(";");
                 expect("}");
+            } else if (token == "name_index" && !followedBy(":")) {
+                if (graph.nameIndex) fail("duplicate name_index");
+                graph.nameIndex = location;
+                advance();
+                expect(";");
             } else if (token == "parent_graph") {
                 if (graph.parentGraph) fail("duplicate parent_graph");
                 graph.parentGraph = location;

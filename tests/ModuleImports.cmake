@@ -211,6 +211,8 @@ bad_graph("${storage}" "${storage} polymorphic_graph { LightInfo: uint32_t { mem
 bad_graph("${storage}" "${storage} polymorphic_graph { BufferTag: Missing { member: data; } }" "unknown type Missing")
 bad_graph("${storage}" "${storage} polymorphic_graph { BufferTag: uint32_t { member: passes; } }" "duplicate name 'passes'")
 set(named "named_graph { component: RasterPassTag; }")
+bad_graph("${storage}" "${storage} name_index;" "name_index requires named_graph")
+bad_graph("${storage}" "${storage} name_index; name_index;" "duplicate name_index")
 bad_graph("${storage}" "${storage} ${named} ${named}" "duplicate named_graph")
 bad_graph("${storage}" "${storage} parent_graph; parent_graph;" "duplicate parent_graph")
 bad_graph("${storage}" "${storage} addressable_graph; addressable_graph;" "duplicate addressable_graph")

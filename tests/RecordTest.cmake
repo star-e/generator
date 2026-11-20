@@ -14,6 +14,7 @@ function(check_resource_error before after diagnostic)
 endfunction()
 check_resource_error("getColorTexture(renderWindow: scene::RenderWindow*)" "getColorTexture(other: gfx::Swapchain*)"
     "duplicate method signature getColorTexture")
+check_resource_error("member: names;" "member: contains;" "name index collides with C[+][+] member contains")
 check_resource_error("getColorTexture(swapchain: gfx::Swapchain*) noexcept" "getColorTexture(swapchain: gfx::Swapchain*) const noexcept"
     "static method cannot be const")
 check_resource_error("fenceValue: uint64_t = 0" "fenceValue: uint64_t = 9007199254740992"

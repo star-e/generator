@@ -80,6 +80,7 @@ namespace codegen {
         mutableGraph: bool = false;
         hierarchy: bool = false;
         nameComponentIndex: std::optional<uint32_t>;
+        nameIndex: bool = false;
         parentGraph: bool = false;
         addressableGraph: bool = false;
         components: std::vector<ComponentInfo>;

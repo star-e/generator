@@ -126,6 +126,7 @@ struct GraphType {
     bool mutableGraph = false;
     bool hierarchy = false;
     std::optional<uint32_t> nameComponentIndex;
+    bool nameIndex = false;
     bool parentGraph = false;
     bool addressableGraph = false;
     std::vector<ComponentInfo> components;

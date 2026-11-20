@@ -43,9 +43,7 @@ void vertexRange(std::ostream& out, const std::string& vertex) {
 
 void hierarchyInterface(std::ostream& out, const std::string& name, const std::string& vertex,
                         const std::string& rows) {
-    out << "\n    static constexpr " << vertex << " null_vertex() noexcept { return (std::numeric_limits<"
-        << vertex << ">::max)(); }\n"
-        << "    struct Link { " << vertex << " source, target; };\n"
+    out << "    struct Link { " << vertex << " source, target; };\n"
         << "    " << vertex << " child(Link link) const noexcept { return link.target; }\n"
         << "    " << vertex << " get_parent(" << vertex << " v) const noexcept { return v == null_vertex() ? v : this->"
         << rows << "[v].parent; }\n"
@@ -247,16 +245,18 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
 
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
                        const std::vector<std::string>& storage, const std::set<std::string>& moveOnlyColumns,
-                       const std::set<std::string>& dequeColumns, const std::vector<BoundField>& fields, bool immovable) {
+                       const std::set<std::string>& dequeColumns, const std::vector<BoundField>& fields, const GraphType& model) {
     const auto& member = storage.front();
     const bool copyable = moveOnlyColumns.empty();
     out << "    explicit " << name << "(const allocator_type& alloc)";
-    for (const auto& field : storage)
-        out << (field == member ? " : " : ", ") << field << (dequeColumns.contains(field) ? "(alloc)" : "(0, alloc)");
+    for (const auto& field : storage) {
+        const bool allocatorOnly = dequeColumns.contains(field) || (model.nameIndex && field == "nameIndex_");
+        out << (field == member ? " : " : ", ") << field << (allocatorOnly ? "(alloc)" : "(0, alloc)");
+    }
     for (const auto& f : fields)
         if (f.usesAllocator) out << ", " << f.name << "(" << f.allocatorArguments() << ")";
     out << " {}\n";
-    if (immovable) {
+    if (model.immovable) {
         out << "    " << name << "(const " << name << "&) = delete;\n"
             << "    " << name << "(" << name << "&&) = delete;\n"
             << "    " << name << "& operator=(const " << name << "&) = delete;\n"
@@ -369,7 +369,7 @@ void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternativ
 void addVertex(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
                const std::vector<std::string>& storage, const std::string& input, const std::string& rows,
                const std::vector<Alternative>& alternatives, const std::string& handles,
-               const std::map<std::string, std::string>& defaultArgs) {
+               const std::map<std::string, std::string>& defaultArgs, bool indexedNames) {
     const bool hierarchy = !rows.empty();
     const auto& member = storage.front();
     const std::string value = input.empty() ? "" : "std::string_view value";
@@ -396,6 +396,17 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     }
     if (hierarchy) source << (value.empty() && alternatives.empty() ? "" : ", ") << vertex << " parent";
     source << ") {\n";
+    if (indexedNames) {
+        source << "    const auto entry = this->nameIndex_.emplace(value, static_cast<" << vertex << ">(this->" << member << ".size()));\n"
+               << "    if (!entry.second) throw std::invalid_argument(\"duplicate vertex name\");\n"
+               << "    try {\n        return appendVertex(" << (alternatives.empty() ? "" : "kind, ")
+               << "entry.first->first" << (hierarchy ? ", parent" : "") << ");\n"
+               << "    } catch (...) {\n        this->nameIndex_.erase(entry.first);\n        throw;\n    }\n}\n"
+               << "\n" << name << "::" << vertex << " " << name << "::appendVertex("
+               << (alternatives.empty() ? "" : "Kind kind, ") << value;
+        if (hierarchy) source << ", " << vertex << " parent";
+        source << ") {\n";
+    }
     if (hierarchy) {
         source << "    if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= this->" << member << ".size())\n"
                << "        throw std::out_of_range(\"invalid " << name << " parent\");\n";
@@ -524,6 +535,18 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         }
     }
     std::set<std::string> api{"allocator_type", "get_allocator", "swapStorage"};
+    std::string nameSetter;
+    if (model.nameIndex) {
+        const auto& component = model.components.at(*model.nameComponentIndex);
+        nameSetter = "set" + componentAccessorSuffix(graph.node(component.tag).name);
+        std::set<std::string> symbols{"nameIndex_", "contains", "vertex", "find", "null_vertex"};
+        if (model.mutableGraph) symbols.insert({"appendVertex", nameSetter});
+        for (const auto& symbol : symbols) {
+            if (members.contains(symbol))
+                throw std::runtime_error(node.qualifiedName + ": name index collides with C++ member " + symbol);
+        }
+        api.insert(symbols.begin(), symbols.end());
+    }
     if (model.vertexList) api.insert({"vertices", "num_vertices", "VertexIterator", "VertexRange"});
     if (model.mutableGraph) {
         api.insert("add_vertex");
@@ -556,11 +579,15 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     // Only these columns have one entry per vertex. Each payload column grows for its own kind.
     auto allStorage = storage;
     for (const auto& alt : alternatives) allStorage.push_back(alt.member);
+    if (model.nameIndex) {
+        allStorage.emplace_back("nameIndex_");
+        headers.insert({"cocos/base/std/container/map.h", "cocos/base/std/container/string.h", "functional", "limits", "stdexcept", "string_view"});
+    }
 
     out << "\nstruct " << name << " {\n"
         << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    graphConstructors(out, source, name, allStorage, moveOnlyColumns, dequeColumns, fields, model.immovable);
+    graphConstructors(out, source, name, allStorage, moveOnlyColumns, dequeColumns, fields, model);
     if (model.vertexList) {
         headers.insert("cstddef");
         headers.insert("iterator");
@@ -574,8 +601,11 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (model.nameComponentIndex) input = storage.at(*model.nameComponentIndex);
         else if (!types.empty() && types.front() == "ccstd::pmr::string") input = storage.front();
         if (!input.empty()) headers.insert("string_view");
-        addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles, defaultArgs);
+        addVertex(out, source, name, vertex, storage, input, rows, alternatives, handles, defaultArgs, model.nameIndex);
     }
+    if (model.hierarchy || model.nameIndex)
+        out << "\n    static constexpr " << vertex << " null_vertex() noexcept { return (std::numeric_limits<"
+            << vertex << ">::max)(); }\n";
     if (model.hierarchy) {
         for (const auto* symbol : {"Edge", "source", "target", "out_edges", "out_degree", "edge", "ChildIterator", "IteratorRange",
                                    "ParentLinkRange", "ParentLinkIterator", "parent", "parent_links", "num_parents", "in_edges", "in_degree", "degree",
@@ -602,10 +632,31 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             addressableGraph(out, source, name, vertex, selected.name, nameAccessor);
         }
     }
+    if (model.nameIndex) {
+        out << "\n    bool contains(std::string_view key) const noexcept { return find(key) != null_vertex(); }\n"
+            << "    " << vertex << " find(std::string_view key) const noexcept {\n"
+            << "        const auto it = this->nameIndex_.find(key);\n"
+            << "        return it == this->nameIndex_.end() ? null_vertex() : it->second;\n    }\n"
+            << "    " << vertex << " vertex(std::string_view key) const {\n"
+            << "        const auto v = find(key);\n        if (v == null_vertex()) throw std::out_of_range(\"unknown vertex name\");\n"
+            << "        return v;\n    }\n";
+        if (model.mutableGraph) {
+            const auto i = *model.nameComponentIndex;
+            out << "    void " << nameSetter << "(" << vertex << " v, std::string_view value);\n";
+            source << "\nvoid " << name << "::" << nameSetter << "(" << vertex << " v, std::string_view value) {\n"
+                   << "    auto& current = this->" << storage[i] << ".at(v);\n"
+                   << "    if (std::string_view{current} == value) return;\n"
+                   << "    " << types[i] << " replacement(value, current.get_allocator());\n"
+                   << "    const auto old = this->nameIndex_.find(std::string_view{current});\n"
+                   << "    if (!this->nameIndex_.emplace(value, v).second) throw std::invalid_argument(\"duplicate vertex name\");\n"
+                   << "    current.swap(replacement);\n    this->nameIndex_.erase(old);\n}\n";
+        }
+    }
     for (size_t i = 0; i < model.components.size(); ++i) {
         const auto& tag = graph.node(model.components[i].tag);
         const auto accessor = "get" + componentAccessorSuffix(tag.name);
         for (const std::string qualifier : {"", " const"}) {
+            if (model.nameIndex && i == model.nameComponentIndex && qualifier.empty()) continue;
             const auto result = types[i] == "bool"
                 ? "ccstd::pmr::vector<bool>::" + std::string(qualifier.empty() ? "reference" : "const_reference")
                 : types[i] + qualifier + "&";
@@ -644,6 +695,14 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (model.mutableGraph) {
             out << "    " << vertex << " addVertexImpl(Kind kind";
             if (!input.empty()) out << ", std::string_view value";
+            if (model.hierarchy) out << ", " << vertex << " parent";
+            out << ");\n";
+        }
+    }
+    if (model.nameIndex) {
+        out << "    ccstd::pmr::map<ccstd::pmr::string, " << vertex << ", std::less<>> nameIndex_;\n";
+        if (model.mutableGraph) {
+            out << "    " << vertex << " appendVertex(" << (alternatives.empty() ? "" : "Kind kind, ") << "std::string_view value";
             if (model.hierarchy) out << ", " << vertex << " parent";
             out << ");\n";
         }

@@ -56,16 +56,26 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     if (model.hierarchy)
         out << "        if (parent !== this.N && (!Number.isInteger(parent) || parent < 0 || parent >= v)) {\n"
             << "            throw new RangeError('Invalid parent vertex');\n        }\n";
-    out << "        this.vertices.push({\n";
-    if (polymorphic) out << "            id, object,\n";
-    for (const auto& component : components) out << "            component" << component.tagName << ",\n";
-    if (model.hierarchy) out << "            parent,\n            children: [],\n";
-    out << "        });\n";
+    const auto indent = model.nameIndex ? "            " : "        ";
+    if (model.nameIndex) {
+        const auto key = "component" + components.at(*model.nameComponentIndex).tagName;
+        out << "        if (this.nameIndex.has(" << key << ")) throw new Error('Duplicate vertex name');\n"
+            << "        this.nameIndex.set(" << key << ", v);\n        try {\n";
+    }
+    out << indent << "this.vertices.push({\n";
+    if (polymorphic) out << indent << "    id, object,\n";
+    for (const auto& component : components) out << indent << "    component" << component.tagName << ",\n";
+    if (model.hierarchy) out << indent << "    parent,\n" << indent << "    children: [],\n";
+    out << indent << "});\n";
     if (model.parentGraph)
-        out << "        const siblings = parent === this.N ? this.roots : this.vertices[parent].children;\n"
-            << "        siblings.push(new cc$graph.OutE(v));\n";
+        out << indent << "const siblings = parent === this.N ? this.roots : this.vertices[parent].children;\n"
+            << indent << "siblings.push(new cc$graph.OutE(v));\n";
     else if (model.hierarchy)
-        out << "        if (parent !== this.N) this.vertices[parent].children.push(new cc$graph.OutE(v));\n";
+        out << indent << "if (parent !== this.N) this.vertices[parent].children.push(new cc$graph.OutE(v));\n";
+    if (model.nameIndex)
+        out << "        } catch (error) {\n            this.vertices.length = v;\n"
+            << "            this.nameIndex.delete(component" << components.at(*model.nameComponentIndex).tagName << ");\n"
+            << "            throw error;\n        }\n";
     out << "        return v;\n    }\n";
 }
 
@@ -77,12 +87,13 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     const auto& model = std::get<GraphType>(node.data);
     const auto components = bindColumns(graph, node, model.components, imports);
     const auto alternatives = bindColumns(graph, node, model.alternatives, imports);
-    const auto hasSetter = [&](size_t i) { return components[i].scalar && i != model.nameComponentIndex; };
+    const auto hasSetter = [&](size_t i) { return components[i].scalar && (i != model.nameComponentIndex || (model.nameIndex && model.mutableGraph)); };
     std::set<std::string> api{"constructor", "vertices", "N"};
     if (model.vertexList) api.insert({"v", "nv"});
     if (model.mutableGraph) api.insert({"addVertex", "clear"});
     if (model.mutableGraph && model.hierarchy) api.insert({"addEdge", "addReference"});
     if (model.nameComponentIndex) api.insert("vertexName");
+    if (model.nameIndex) api.insert({"nameIndex", "contains", "vertex", "find"});
     if (!alternatives.empty()) api.insert({"h", "w", "object", "value", "visitVertex", "j"});
     if (model.hierarchy) api.insert({"getParent", "reference", "parent", "child", "children", "numChildren",
                                       "edge", "source", "target", "oe", "od", "ie", "id", "d", "adj", "ne"});
@@ -129,12 +140,14 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "        " << (hasSetter(i) ? "" : "readonly ") << "component" << components[i].tagName << ": " << components[i].type << ";\n";
     if (model.hierarchy) out << "        parent: number;\n        readonly children: cc$graph.OutE[];\n";
     out << "    }[] = [];\n";
+    if (model.nameIndex) out << "    " << storage << "nameIndex = new Map<string, number>();\n";
     if (model.parentGraph) out << "    " << storage << "roots: cc$graph.OutE[] = [];\n";
     for (const auto& f : fields)
         out << "    " << (f.readonly ? "readonly " : "") << f.name << ": " << f.ts << " = " << f.tsDefault << ";\n";
     if (model.serializable) {
         out << "\n    [cc$adopt" << node.name << "] (decoded: " << node.name << "): void {\n"
             << "        this.vertices = decoded.vertices;\n";
+        if (model.nameIndex) out << "        this.nameIndex = decoded.nameIndex;\n";
         if (model.parentGraph) out << "        this.roots = decoded.roots;\n";
         for (const auto& f : model.fields) {
             if (f.transient) continue;
@@ -157,6 +170,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "    nv (): number { return this.vertices.length; }\n";
     if (model.mutableGraph) {
         out << "\n    clear (): void {\n        this.vertices.length = 0;\n";
+        if (model.nameIndex) out << "        this.nameIndex.clear();\n";
         if (model.parentGraph) out << "        this.roots.length = 0;\n";
         for (const auto& f : fields) {
             if (!f.tsReset.empty()) out << "        " << f.tsReset << ";\n";
@@ -184,10 +198,27 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         const auto& component = components[i];
         out << "\n    get" << component.tagName << " (v: number): " << component.type << " {\n"
             << "        return this.vertices[v].component" << component.tagName << ";\n    }\n";
-        if (hasSetter(i))
-            out << "    set" << component.tagName << " (v: number, value: " << component.type << "): void {\n"
-                << "        this.vertices[v].component" << component.tagName << " = value;\n    }\n";
+        if (hasSetter(i)) {
+            out << "    set" << component.tagName << " (v: number, value: " << component.type << "): void {\n";
+            if (model.nameIndex && i == model.nameComponentIndex) {
+                out << "        if (!Number.isInteger(v) || v < 0 || v >= this.vertices.length) throw new RangeError('Invalid vertex');\n"
+                    << "        const row = this.vertices[v];\n"
+                    << "        if (row.component" << component.tagName << " === value) return;\n"
+                    << "        if (this.nameIndex.has(value)) throw new Error('Duplicate vertex name');\n"
+                    << "        this.nameIndex.set(value, v);\n        this.nameIndex.delete(row.component" << component.tagName << ");\n"
+                    << "        row.component" << component.tagName << " = value;\n";
+            } else {
+                out << "        this.vertices[v].component" << component.tagName << " = value;\n";
+            }
+            out << "    }\n";
+        }
     }
+    if (model.nameIndex)
+        out << "\n    contains (key: string): boolean { return this.nameIndex.has(key); }\n"
+            << "    find (key: string): number {\n        const v = this.nameIndex.get(key);\n"
+            << "        return v === undefined ? this.N : v;\n    }\n"
+            << "    vertex (key: string): number {\n        const v = this.find(key);\n"
+            << "        if (v === this.N) throw new RangeError('Unknown vertex name');\n        return v;\n    }\n";
     if (model.nameComponentIndex)
         out << "\n    vertexName (v: number): string { return this.get" << components.at(*model.nameComponentIndex).tagName << "(v); }\n";
     if (!alternatives.empty()) {

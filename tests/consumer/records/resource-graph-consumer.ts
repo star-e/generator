@@ -17,7 +17,14 @@ const traits: ResourceTraits = resourcePool.createResourceTraits(ResourceResiden
 const states: ResourceStates = resourcePool.createResourceStates();
 const managed: ManagedResource = resourcePool.createManagedResource();
 const sampler = new SamplerInfo();
+function throws(action: () => void): boolean {
+    try { action(); } catch (error) { return error instanceof Error; }
+    return false;
+}
+assert(!resources.contains('color') && resources.find('color') === resources.N && throws(() => resources.vertex('color')));
 const res = resources.addVertex(ResourceGraphValue.Managed, managed, 'color', desc, traits, states, sampler);
+assert(res === 0 && resources.contains('color') && resources.find('color') === res && resources.vertex('color') === res);
+assert(throws(() => resources.addVertex(ResourceGraphValue.Managed, managed, 'color', desc, traits, states, sampler)));
 assert([...resources.v()].length === 1 && resources.getName(res) === 'color' && resources.getDesc(res) === desc &&
     resources.getTraits(res) === traits && resources.getStates(res) === states && resources.getSampler(res) === sampler &&
     resources.value(ResourceGraphValue.Managed, res) === managed);
@@ -56,6 +63,14 @@ check(ResourceGraphValue.Framebuffer, framebuffer, 5, 'Framebuffer');
 check(ResourceGraphValue.Swapchain, sc, 6, 'Swapchain');
 check(ResourceGraphValue.FormatView, view, 7, 'FormatView');
 check(ResourceGraphValue.SubresourceView, sub, 8, 'SubresourceView');
+assert(throws(() => resources.setName(res, 'SubresourceView')) && resources.getName(res) === 'color' &&
+    resources.vertex('color') === res && resources.vertex('SubresourceView') !== res);
+assert(throws(() => resources.setName(resources.N, 'missing')) && !resources.contains('missing'));
+resources.setName(res, 'color');
+resources.setName(res, 'a\0b');
+assert(!resources.contains('a') && !resources.contains('color') && resources.vertex('a\0b') === res && resources.vertexName(res) === 'a\0b');
+resources.setName(res, '');
+assert(resources.vertex('') === res && !resources.contains('a\0b'));
 let rejected = false;
 try { resources.value(ResourceGraphValue.Framebuffer, res); } catch (error) { rejected = error instanceof Error; }
 assert(rejected);
@@ -84,6 +99,8 @@ desc.width = 256;
 resourcePool.reset();
 assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 &&
     resourcePool.createResourceDesc().width === 0 && resourcePool.createFormatView().format === Format.UNKNOWN);
+assert(!resources.contains('SubresourceView') && resources.find('') === resources.N &&
+    resources.addVertex(ResourceGraphValue.Managed, managed, '', desc, traits, states, sampler) === 0 && resources.vertex('') === 0);
 assert(resourcePool.createManagedBuffer() === mb && resourcePool.createPersistentBuffer() === pb &&
     resourcePool.createManagedTexture() === mt && resourcePool.createPersistentTexture() === pt);
 assert(mb.buffer === null && mt.texture === null && pb.buffer === null && pt.texture === null &&

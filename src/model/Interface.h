@@ -103,6 +103,7 @@ struct GraphDeclaration {
     bool mutableGraph{};
     bool hierarchy{};
     std::optional<TypeRef> nameComponent;
+    std::optional<SourceLocation> nameIndex;
     std::optional<SourceLocation> parentGraph;
     std::optional<SourceLocation> addressableGraph;
     std::vector<GraphComponent> components;

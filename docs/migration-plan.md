@@ -289,7 +289,9 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 两张布局图的归档为每个顶点保存一个父编号。C++ `add_edge(u, v)` 和 TS `addEdge(u, v)`、`addReference(u, v)` 可将已有根节点挂到编号更小的父节点。第二个父节点、重复边、自环、前向父引用和无效编号都会被拒绝。C++ 返回的成功标志为 `false`，TS 返回 `null`。新挂接的节点按编号插入兄弟序列，保证同名节点的查找结果在归档往返后稳定。C++ `remove_edge(e)` 可将整棵子树拆为独立的树。
 
-`ResourceGraph` 支持按编号遍历顶点、访问 Name、Desc、Traits、States、Sampler 五个组件。C++ 的 `Kind` 和 TS 的 `ResourceGraphValue` 沿用旧版的 0–8 顺序，依次为 Managed、ManagedBuffer、ManagedTexture、PersistentBuffer、PersistentTexture、Framebuffer、Swapchain、FormatView、SubresourceView。Framebuffer 在 C++ 中持有 `IntrusivePtr<gfx::Framebuffer>`，TS 直接保存传入的 GFX 对象。四类缓冲与纹理记录的 `fenceValue` 在 C++ 中保留完整的 `uint64_t`，TS 接受 0 到 `Number.MAX_SAFE_INTEGER` 的整数。TS 通过 `RenderGraphObjectPool` 复用图和记录。下一步迁移名称索引，之后处理共享引用边和图级缓存。[资源图声明](../spec/render/render-graph.spec)
+`ResourceGraph` 支持按编号遍历顶点、访问 Name、Desc、Traits、States、Sampler 五个组件。C++ 的 `Kind` 和 TS 的 `ResourceGraphValue` 沿用旧版的 0–8 顺序，依次为 Managed、ManagedBuffer、ManagedTexture、PersistentBuffer、PersistentTexture、Framebuffer、Swapchain、FormatView、SubresourceView。Framebuffer 在 C++ 中持有 `IntrusivePtr<gfx::Framebuffer>`，TS 直接保存传入的 GFX 对象。四类缓冲与纹理记录的 `fenceValue` 在 C++ 中保留完整的 `uint64_t`，TS 接受 0 到 `Number.MAX_SAFE_INTEGER` 的整数。TS 通过 `RenderGraphObjectPool` 复用图和记录。[资源图声明](../spec/render/render-graph.spec)
+
+`name_index;` 为 `named_graph` 选定的名称组件建立全图唯一索引。`ResourceGraph` 在两端都提供 `contains(name)`、`find(name)`、`vertex(name)`。名称缺失时分别返回 `false`、无效顶点编号或抛出异常。空字符串也是合法键。添加顶点或通过 `setName(v, name)` 改名遇到重名时，操作失败，原顶点和索引保持一致。C++ 使用支持 `std::string_view` 查询的 PMR 有序映射，TS 使用随图清空的 `Map`。接下来迁移共享引用边和图级缓存。
 
 ## 第一次合并及后续验收
 

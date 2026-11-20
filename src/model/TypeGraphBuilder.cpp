@@ -313,6 +313,10 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
             throw std::runtime_error(selected.location.describe() + ": named_graph requires a string component: " + selected.name);
         result.nameComponentIndex = static_cast<uint32_t>(it - result.components.begin());
     }
+    if (syntax.nameIndex) {
+        if (!result.nameComponentIndex) throw std::runtime_error(syntax.nameIndex->describe() + ": name_index requires named_graph");
+        result.nameIndex = true;
+    }
     if (syntax.parentGraph) {
         if (!result.hierarchy) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires hierarchy_graph");
         if (!result.nameComponentIndex) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires named_graph");

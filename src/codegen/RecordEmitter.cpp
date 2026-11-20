@@ -887,7 +887,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
             const auto fields = bindFields(graph, owner, model->fields, deps, output.typescript.has_value(), nestedResets);
             std::string inputArchive;
-            if (model->serializable && !fields.empty() && archive) {
+            if (model->serializable && (!fields.empty() || model->nameIndex) && archive) {
                 deps.headers.insert((archive->layout.includeDir / (archive->layout.prefix + "Fwd.h")).generic_string());
                 inputArchive = "::" + archiveInterface(graph, archive->module, "InputArchive").qualifiedName;
             }

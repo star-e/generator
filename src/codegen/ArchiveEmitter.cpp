@@ -161,9 +161,20 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "        if (kind >= " << count << " || counts[kind] == 0) throw std::runtime_error(\"Invalid graph archive kind\");\n"
         << "        --counts[kind];\n        if (parent != decoded.null_vertex()) {\n"
         << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n"
-        << "        const auto readVertex = [&](auto tag) {\n            const auto v = decoded.add_vertex(tag, "
-        << (takesName ? "{}, " : "") << "parent);\n";
-    for (const auto& c : model.components) cpp << "            load(ar, decoded.get" << suffix(c) << "(v));\n";
+        << "        const auto readVertex = [&](auto tag) {\n";
+    if (model.nameIndex)
+        cpp << "            const auto v = decoded.appendVertex(decoded.kindOf(&tag), {}, parent);\n";
+    else
+        cpp << "            const auto v = decoded.add_vertex(tag, " << (takesName ? "{}, " : "") << "parent);\n";
+    for (size_t i = 0; i < model.components.size(); ++i) {
+        const auto& c = model.components[i];
+        if (model.nameIndex && i == model.nameComponentIndex) {
+            cpp << "            auto& key = decoded." << c.name << "[v];\n            load(ar, key);\n"
+                << "            if (!decoded.nameIndex_.emplace(key, v).second) throw std::invalid_argument(\"duplicate vertex name\");\n";
+        } else {
+            cpp << "            load(ar, decoded.get" << suffix(c) << "(v));\n";
+        }
+    }
     cpp << "            load(ar, decoded.value(tag, v));\n        };\n        switch (kind) {\n";
     for (size_t i = 0; i != count; ++i) cpp << "        case " << i << ": readVertex(" << tag(model.alternatives[i]) << "); break;\n";
     cpp << "        }\n    }\n    if (edges) throw std::runtime_error(\"Invalid graph archive edge count\");\n"

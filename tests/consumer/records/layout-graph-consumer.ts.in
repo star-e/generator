@@ -6,7 +6,9 @@ import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, Descri
     EffectData, LayoutGraph, LayoutGraphData, LayoutGraphDataValue, LayoutGraphValue, RenderPassType,
     RenderPhase, RenderPhaseData, RenderStageData, getLayoutGraphValueName, getLayoutGraphDataValueName } from './layout-graph';
 import { convertDescriptorBlock, getVisibilityName, indent, LayoutGraphBuilder2, unindent, VectorGraphColorMap } from './layout-graph-conversion';
-import { FlatComponents, HierarchyOnly, TinyNames, Toggles, TogglesValue } from './shift-probe';
+import { FlatComponents, HierarchyOnly, IndexedNames, IndexedNamesValue, loadIndexedNames, saveIndexedNames,
+    TinyNames, Toggles, TogglesValue } from './shift-probe';
+import { BinaryInputArchive, BinaryOutputArchive } from './binary-archive';
 import { UpdateFrequency } from './types';
 import { getUpdateFrequencyName } from './types-names';
 import { getDescriptorTypeOrderName } from './layout-graph-names';
@@ -273,3 +275,18 @@ for (let i = 0; i < 255; ++i) assert(tiny.addVertex('v') === i);
 let full = false;
 try { tiny.addVertex('overflow'); } catch (e) { full = e instanceof RangeError; }
 assert(full && tiny.nv() === tiny.N, 'Narrow vertex descriptor');
+
+const indexed = new IndexedNames();
+indexed.addVertex(IndexedNamesValue.Count, 17, 23, '');
+indexed.addVertex(IndexedNamesValue.Count, 19, 29, 'child', 0);
+const writer = new BinaryOutputArchive();
+saveIndexedNames(writer, indexed);
+indexed.setName(0, 'replaced');
+const corrupt = new BinaryInputArchive(writer.data);
+let duplicate = false;
+try { loadIndexedNames({ b: () => corrupt.b(), n: () => corrupt.n(), s: () => { corrupt.s(); return ''; } }, indexed); }
+catch (e) { duplicate = e instanceof Error; }
+assert(duplicate && indexed.find('replaced') === 0 && indexed.find('child') === 1 && !indexed.contains(''));
+loadIndexedNames(new BinaryInputArchive(writer.data), indexed);
+assert(!indexed.contains('replaced') && indexed.vertex('') === 0 && indexed.find('child') === 1 &&
+    indexed.getParent(1) === 0 && indexed.getCount(1) === 29 && indexed.value(IndexedNamesValue.Count, 1) === 19);

@@ -114,6 +114,7 @@ namespace cc::render {
         component States_: ResourceStates { member: states; }
         component Sampler_: gfx::SamplerInfo { member: samplerInfo; }
         named_graph { component: Name_; }
+        name_index;
         polymorphic_graph {
             Managed_: ManagedResource { member: resources; }
             ManagedBuffer_: ManagedBuffer { member: managedBuffers; }

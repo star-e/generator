@@ -1,4 +1,5 @@
 #include "ShiftProbe.h"
+#include "ShiftSerialization.h"
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 #include <boost/container/pmr/global_resource.hpp>
@@ -12,6 +13,7 @@
 #include <iterator>
 #include <limits>
 #include <new>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -424,6 +426,44 @@ bool checkFailedAssignment(bool move) {
     }
 }
 
+bool checkIndexedNames() {
+    FailingResource arena, other;
+    cc::IndexedNames graph{&arena};
+    try {
+        (void)graph.add_vertex("orphan", 42);
+        return false;
+    } catch (const std::out_of_range&) {}
+    if (graph.contains("orphan") || graph.num_vertices()) return false;
+    const auto root = graph.add_vertex("");
+    const auto child = graph.add_vertex("child", root);
+    graph.getCount(child) = 42;
+    graph.value(cc::Count_{}, child) = 7;
+    std::stringstream bytes;
+    cc::render::BinaryOutputArchive writer(bytes, &arena);
+    cc::save(writer, graph);
+    cc::IndexedNames copy{graph, &other};
+    copy.setName(root, "replaced");
+    if (copy.contains("") || !graph.contains("")) return false;
+    cc::render::BinaryInputArchive reader(bytes, &other);
+    cc::load(reader, copy);
+    if (copy.contains("replaced") || copy.vertex("") != root || copy.find("child") != child ||
+        copy.getCount(child) != 42 || copy.value(cc::Count_{}, child) != 7 || copy.get_parent(child) != root) return false;
+    cc::IndexedNames moved{std::move(copy), &arena};
+    if (copy.contains("child") || copy.num_vertices() || moved.vertex("child") != child) return false;
+    const std::string longName(160, 'x');
+    for (int n = 0; ; ++n) {
+        arena.allocationsBeforeFailure = n;
+        try {
+            moved.setName(child, longName);
+            break;
+        } catch (const InjectedFailure&) {
+            if (moved.contains(longName) || moved.vertex("child") != child || moved.getName(child) != "child") return false;
+        }
+    }
+    arena.allocationsBeforeFailure = -1;
+    return moved.vertex(longName) == child && !moved.contains("child") && graph.vertex("child") == child;
+}
+
 bool checkFlatComponents() {
     boost::container::pmr::monotonic_buffer_resource sourceArena, targetArena;
     cc::Toggles toggles{&sourceArena};
@@ -497,7 +537,7 @@ static bool checkLayoutEdges() {
 
 bool checkLayoutGraph(const char* pathSamples) {
     if (!checkLayoutEdges()) return false;
-    if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkMoveOnlyGrowth()) return false;
+    if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkIndexedNames() || !checkMoveOnlyGrowth()) return false;
     if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;

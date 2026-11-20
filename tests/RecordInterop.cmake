@@ -53,6 +53,18 @@ namespace cc {
         version: uint32_t = 1;
         named_graph { component: cc::render::Name_; }
     }
+    @serialize graph IndexedNames {
+        vertex_descriptor Index = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        hierarchy_graph { storage: shared_edges; }
+        component Count_: uint32_t { member: counts; }
+        component cc::render::Name_: ccstd::pmr::string { member: labels; }
+        name_index;
+        named_graph { component: cc::render::Name_; }
+        polymorphic_graph { Count_: uint32_t { member: values; } }
+    }
     graph HierarchyOnly {
         vertex_descriptor Index = uint32_t;
         vertex_storage: indexed;

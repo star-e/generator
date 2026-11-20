@@ -18,7 +18,20 @@ bool checkResourceGraph() {
     static_assert(std::is_same_v<decltype(&RenderSwapchain::getDepthStencilTexture), SwapchainTexture>);
     boost::container::pmr::monotonic_buffer_resource arena;
     ResourceGraph g{&arena};
+    static_assert(std::is_same_v<decltype(g.getName(0)), const ccstd::pmr::string&>);
+    static_assert(std::is_same_v<decltype(g.get(Name_{}, 0)), const ccstd::pmr::string&>);
+    const auto none = ResourceGraph::null_vertex();
+    if (g.contains("missing") || g.find("missing") != none) return false;
+    try {
+        (void)g.vertex("missing");
+        return false;
+    } catch (const std::out_of_range&) {}
     const auto v = g.add_vertex(Managed_{}, "color");
+    if (v != 0 || !g.contains("color") || g.find("color") != v || g.vertex("color") != v) return false;
+    try {
+        (void)g.add_vertex(Framebuffer_{}, "color");
+        return false;
+    } catch (const std::invalid_argument&) {}
     const auto& desc = g.getDesc(v);
     if (g.get(Name_{}, v) != g.getName(v) || g.kind(v) != ResourceGraph::Kind::Managed) return false;
     if (g.num_vertices() != 1 || g.getName(v) != "color" || !g.holds<Managed_>(v) ||
@@ -37,6 +50,24 @@ bool checkResourceGraph() {
                &g.value(tag, vertex) == &read.value(tag, vertex);
     };
     const auto mb = g.add_vertex(ManagedBuffer_{}, "mb");
+    try {
+        g.setName(v, "mb");
+        return false;
+    } catch (const std::invalid_argument&) {}
+    if (g.getName(v) != "color" || g.vertex("color") != v || g.vertex("mb") != mb || g.num_vertices() != 2) return false;
+    try {
+        g.setName(none, "invalid");
+        return false;
+    } catch (const std::out_of_range&) {}
+    if (g.contains("invalid")) return false;
+    g.setName(v, g.getName(v));
+    g.setName(v, std::string_view{g.getName(v)}.substr(1));
+    if (g.contains("color") || g.vertex("olor") != v) return false;
+    constexpr std::string_view binaryName{"a\0b", 3};
+    g.setName(v, binaryName);
+    if (g.contains("olor") || g.contains("a") || g.vertex(binaryName) != v) return false;
+    g.setName(v, "");
+    if (g.contains(binaryName) || g.vertex("") != v || !g.get(Name_{}, v).empty()) return false;
     const auto mt = g.add_vertex(ManagedTexture_{}, "mt");
     const auto pb = g.add_vertex(PersistentBuffer_{}, "pb");
     const auto pt = g.add_vertex(PersistentTexture_{}, "pt");
