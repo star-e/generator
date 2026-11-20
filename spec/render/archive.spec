@@ -1,16 +1,16 @@
 module ArchiveInterface;
 namespace cc::render {
     interface OutputArchive {
-        void writeBool(bool value);
-        void writeNumber(double value);
-        void writeString(std::string_view value);
-        @cppOnly boost::container::pmr::memory_resource* scratch() const noexcept;
+        virtual void writeBool(bool value) = 0;
+        virtual void writeNumber(double value) = 0;
+        virtual void writeString(std::string_view value) = 0;
+        @cppOnly virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
     }
     interface InputArchive {
-        bool readBool();
-        double readNumber();
-        std::string_view readString();
-        @cppOnly boost::container::pmr::memory_resource* scratch() const noexcept;
+        virtual bool readBool() = 0;
+        virtual double readNumber() = 0;
+        virtual std::string_view readString() = 0;
+        @cppOnly virtual boost::container::pmr::memory_resource* scratch() const noexcept = 0;
     }
 }
 

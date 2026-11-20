@@ -5,6 +5,6 @@ namespace cc::codegen {
         line: std::size_t = 0;
         column: std::size_t = 0;
 
-        fn describe() const -> std::string;
+        std::string describe() const;
     }
 }

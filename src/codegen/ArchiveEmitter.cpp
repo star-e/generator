@@ -13,8 +13,9 @@ const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& modul
 
 const std::string& archiveMethod(const TypeNode& api, const std::string& method) {
     const auto& methods = std::get<InterfaceType>(api.data).methods;
-    const auto found = std::ranges::find(methods, method, &MethodInfo::name);
-    if (found != methods.end() && found->typescriptName) return *found->typescriptName;
+    for (const auto& member : methods) {
+        if (member.name == method && member.typescriptName) return *member.typescriptName;
+    }
     throw std::runtime_error("missing TypeScript binding for " + api.qualifiedName + "." + method);
 }
 

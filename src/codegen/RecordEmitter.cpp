@@ -631,8 +631,8 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
         out << ")";
         if (method.isConst) out << " const";
         if (method.isNoexcept) out << " noexcept";
-        if (method.cppExpression.empty()) out << ";\n";
-        else out << " { return " << method.cppExpression << "; }\n";
+        if (method.cppBody.empty()) out << ";\n";
+        else out << ' ' << method.cppBody << '\n';
     }
     return out.str();
 }

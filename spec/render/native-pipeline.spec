@@ -25,11 +25,11 @@ namespace cc::render {
 
     @requireAllocator struct ProbeHelperQueue {
         probeMap: ccstd::pmr::vector<scene::SubModel*>;
-        static fn getDefaultId(lg: const LayoutGraphData&) -> LayoutGraphData::Vertex;
-        fn clear() noexcept -> void => "probeMap.clear()";
-        fn removeMacro() const -> void;
-        static fn getPassIndexFromLayout(subModel: const IntrusivePtr<scene::SubModel>&, phaseLayoutId: LayoutGraphData::Vertex) -> int32_t;
-        fn applyMacro(lg: const LayoutGraphData&, model: const scene::Model&, probeLayoutId: LayoutGraphData::Vertex) -> void;
+        static LayoutGraphData::Vertex getDefaultId(const LayoutGraphData& lg);
+        void clear() noexcept { return probeMap.clear(); }
+        void removeMacro() const;
+        static int32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::Vertex phaseLayoutId);
+        void applyMacro(const LayoutGraphData& lg, const scene::Model& model, LayoutGraphData::Vertex probeLayoutId);
     }
 
     @requireAllocator @moveOnly struct BufferPool {
@@ -41,9 +41,9 @@ namespace cc::render {
         freeBuffers: ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>;
         freeBufferViews: ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>;
         constructor(device, bufferSize, dynamic);
-        fn init(deviceIn: gfx::Device*, sz: uint32_t, bDynamic: bool) -> void;
-        fn syncResources() -> void;
-        fn allocateBuffer() -> gfx::Buffer*;
+        void init(gfx::Device* deviceIn, uint32_t sz, bool bDynamic);
+        void syncResources();
+        gfx::Buffer* allocateBuffer();
     }
 
     @requireAllocator @moveOnly struct DescriptorSetPool {
@@ -52,31 +52,31 @@ namespace cc::render {
         currentDescriptorSets: ccstd::pmr::vector<IntrusivePtr<gfx::DescriptorSet>>;
         freeDescriptorSets: ccstd::pmr::vector<IntrusivePtr<gfx::DescriptorSet>>;
         constructor(device, setLayout);
-        fn init(deviceIn: gfx::Device*, layout: IntrusivePtr<gfx::DescriptorSetLayout>) -> void;
-        fn syncDescriptorSets() -> void;
-        fn getCurrentDescriptorSet() const -> const gfx::DescriptorSet&;
-        fn getCurrentDescriptorSet() -> gfx::DescriptorSet&;
-        fn allocateDescriptorSet() -> gfx::DescriptorSet*;
+        void init(gfx::Device* deviceIn, IntrusivePtr<gfx::DescriptorSetLayout> layout);
+        void syncDescriptorSets();
+        const gfx::DescriptorSet& getCurrentDescriptorSet() const;
+        gfx::DescriptorSet& getCurrentDescriptorSet();
+        gfx::DescriptorSet* allocateDescriptorSet();
     }
 
     @requireAllocator @moveOnly struct UniformBlockResource {
         cpuBuffer: ccstd::pmr::vector<char>;
         bufferPool: BufferPool;
-        fn init(deviceIn: gfx::Device*, sz: uint32_t, bDynamic: bool) -> void;
-        fn createFromCpuBuffer() -> gfx::Buffer*;
+        void init(gfx::Device* deviceIn, uint32_t sz, bool bDynamic);
+        gfx::Buffer* createFromCpuBuffer();
     }
 
     @requireAllocator @moveOnly struct ProgramResource {
         uniformBuffers: ccstd::pmr::unordered_map<NameLocalID, UniformBlockResource>;
         descriptorSetPool: DescriptorSetPool;
-        fn syncResources() noexcept -> void;
+        void syncResources() noexcept;
     }
 
     @requireAllocator @moveOnly struct LayoutGraphNodeResource {
         uniformBuffers: ccstd::pmr::unordered_map<NameLocalID, UniformBlockResource>;
         descriptorSetPool: DescriptorSetPool;
         programResources: PmrTransparentMap<ccstd::pmr::string, ProgramResource>;
-        fn syncResources() noexcept -> void;
+        void syncResources() noexcept;
     }
 
     struct QuadResource {

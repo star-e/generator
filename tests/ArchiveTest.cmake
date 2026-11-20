@@ -133,7 +133,16 @@ file(WRITE "${spec}" "${broken}")
 expect_failure(2 "duplicate TS method OutputArchive.n" ${generate})
 string(REPLACE "bool value" "double enabled" changed "${original}")
 string(REPLACE "module ArchiveInterface;" "module ArchiveInterface; import Containers;" changed "${changed}")
-string(REPLACE "interface InputArchive {" "interface InputArchive { ccstd::vector<uint8_t> copyBytes(ccstd::vector<uint8_t> value);" changed "${changed}")
+set(extraMethods [=[interface InputArchive {
+        void nativeOnly();
+        bool readBool(bool fallback) { return fallback; }
+        static void inspect() {
+            const char close = '}'; // }
+            const auto text = R"cpp("} /*)cpp"; /* } */
+            if (close == text[1]) { (void)1'000; }
+        }
+        virtual ccstd::vector<uint8_t> copyBytes(ccstd::vector<uint8_t> value) = 0;]=])
+string(REPLACE "interface InputArchive {" "${extraMethods}" changed "${changed}")
 file(WRITE "${spec}" "${changed}")
 run(${generate})
 file(READ "${ts}" emitted)
@@ -146,6 +155,17 @@ if(at EQUAL -1 OR NOT header MATCHES "ccstd::vector<uint8_t> copyBytes[(]ccstd::
    OR NOT header MATCHES "#include <cstdint>" OR NOT header MATCHES "#include <cocos/base/std/container/vector.h>")
     message(FATAL_ERROR "Interface signature or native includes did not follow the concrete template instance")
 endif()
+string(FIND "${header}" [=[const auto text = R"cpp("} /*)cpp"; /* } */]=] quoted)
+if(quoted EQUAL -1 OR NOT header MATCHES "void nativeOnly[(][)][;]" OR header MATCHES "virtual void nativeOnly"
+   OR emitted MATCHES "nativeOnly|inspect|fallback")
+    message(FATAL_ERROR "Native method body, declaration or visibility changed")
+endif()
+string(REPLACE "virtual bool readBool() = 0;" "virtual bool readBool();" broken "${changed}")
+file(WRITE "${spec}" "${broken}")
+expect_failure(2 "expected '='" ${generate})
+string(REPLACE "virtual bool readBool() = 0;" "bool readBool() = 0;" broken "${changed}")
+file(WRITE "${spec}" "${broken}")
+expect_failure(2 "pure virtual method requires 'virtual'" ${generate})
 string(REPLACE "double enabled" "Missing enabled" broken "${changed}")
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "archive.spec:4:[0-9]+: unknown type Missing" ${generate})

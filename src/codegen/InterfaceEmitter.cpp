@@ -33,7 +33,7 @@ void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use
 }
 
 void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers) {
-    out << "    " << (method.cppExpression.empty() ? "virtual " : method.isStatic ? "static " : "");
+    out << "    " << (method.isPureVirtual ? "virtual " : method.isStatic ? "static " : "");
     cppDeclarator(out, graph, method.result, method.name, owner, headers);
     out << '(';
     for (size_t i = 0; i < method.parameters.size(); ++i) {
@@ -45,8 +45,9 @@ void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& meth
     out << ')';
     if (method.isConst) out << " const";
     if (method.isNoexcept) out << " noexcept";
-    if (method.cppExpression.empty()) out << " = 0;\n";
-    else out << " { return " << method.cppExpression << "; }\n";
+    if (method.isPureVirtual) out << " = 0";
+    if (method.cppBody.empty()) out << ";\n";
+    else out << ' ' << method.cppBody << '\n';
 }
 
 void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, std::set<std::string>& headers) {

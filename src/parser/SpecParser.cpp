@@ -451,10 +451,10 @@ private:
                     }
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
-                } else if (atMemberFunction()) {
-                    record->methods.push_back(memberFunction(members, record->methods));
-                } else {
+                } else if (atField()) {
                     record->fields.push_back(field(members, true));
+                } else {
+                    record->methods.push_back(method(members, record->methods));
                 }
             }
         } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {
@@ -468,13 +468,7 @@ private:
         } else {
             auto& methods = std::get<Interface>(result.data).methods;
             while (!accept("}")) {
-                if (atMemberFunction()) {
-                    auto member = memberFunction(members, methods);
-                    if (member.cppExpression.empty()) fail("interface helper requires an inline expression");
-                    methods.push_back(std::move(member));
-                } else {
-                    methods.push_back(method(members));
-                }
+                methods.push_back(method(members, methods, true));
             }
         }
         return result;
@@ -573,12 +567,10 @@ private:
                 } while (!accept("}"));
             } else if (token == "@" && followedBy("tag")) {
                 fail("declare graph tags outside the graph");
-            } else if (atMemberFunction()) {
-                graph.methods.push_back(memberFunction(names, graph.methods));
-            } else if (token == "@" || token == "readonly" || token == "nullable" || followedBy(":")) {
+            } else if (atField()) {
                 graph.fields.push_back(field(names));
             } else {
-                fail("expected graph descriptor, storage, capability, component reference, field or member function");
+                graph.methods.push_back(method(names, graph.methods));
             }
         }
         if (!graph.vertexType) fail("graph requires a vertex descriptor");
@@ -715,48 +707,95 @@ private:
         return result;
     }
 
-    bool atMemberFunction() const {
-        return (token == "fn" && !followedBy(":")) || (token == "static" && followedBy("fn"));
+    bool atField() const {
+        return token == "@" || token == "readonly" || token == "nullable" || followedBy(":");
     }
 
-    Method memberFunction(std::set<std::string>& names, const std::vector<Method>& methods) {
+    void skipCppWord() {
+        const bool number = std::isdigit(static_cast<unsigned char>(remaining.front()));
+        size_t count = 1;
+        while (count < remaining.size()) {
+            const char ch = remaining[count];
+            if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_' && !(number && (ch == '.' || ch == '\''))) break;
+            ++count;
+        }
+        const auto word = remaining.substr(0, count);
+        consume(count);
+        if (!remaining.starts_with('"') || (word != "R" && word != "u8R" && word != "uR" && word != "UR" && word != "LR")) return;
+
+        const auto open = remaining.find('(', 1);
+        if (open == remaining.npos || open > 17) fail("invalid C++ raw string delimiter");
+        const auto delimiter = remaining.substr(1, open - 1);
+        if (delimiter.find_first_of(" )\\\t\v\f\r\n") != delimiter.npos) fail("invalid C++ raw string delimiter");
+        const auto end = remaining.find(")" + std::string(delimiter) + "\"", open + 1);
+        if (end == remaining.npos) fail("unterminated C++ raw string");
+        consume(end + delimiter.size() + 2);
+    }
+
+    void skipCppLiteral(char quote) {
+        consume(1);
+        while (!remaining.empty() && remaining.front() != quote) {
+            if (remaining.front() == '\n' || remaining.front() == '\r') fail("unterminated C++ literal");
+            if (remaining.front() == '\\') {
+                consume(1);
+                if (remaining.empty()) break;
+                if (remaining.starts_with("\r\n")) consume(1);
+            }
+            consume(1);
+        }
+        if (remaining.empty()) fail("unterminated C++ literal");
+        consume(1);
+    }
+
+    // Keep the native body verbatim. Braces in literals and comments do not
+    // participate in matching the brace that returns control to the spec lexer.
+    std::string cppBody() {
+        const char* start = token.data();
+        const auto opening = location;
+        size_t depth = 1;
+        while (!remaining.empty()) {
+            location = position;
+            const char ch = remaining.front();
+            if (remaining.starts_with("//")) {
+                size_t end = remaining.find('\n');
+                while (end != remaining.npos && end > 0 &&
+                       (remaining[end - 1] == '\\' || (end > 1 && remaining.substr(end - 2, 2) == "\\\r")))
+                    end = remaining.find('\n', end + 1);
+                consume(remaining.substr(0, end).size());
+            } else if (remaining.starts_with("/*")) {
+                const auto end = remaining.find("*/", 2);
+                if (end == remaining.npos) fail("unterminated C++ block comment");
+                consume(end + 2);
+            } else if (identifierStart(ch) || std::isdigit(static_cast<unsigned char>(ch))) {
+                skipCppWord();
+            } else if (ch == '"' || ch == '\'') {
+                skipCppLiteral(ch);
+            } else {
+                consume(1);
+                if (ch == '{') ++depth;
+                if (ch == '}' && --depth == 0) {
+                    std::string body(start, remaining.data());
+                    advance();
+                    return body;
+                }
+            }
+        }
+        location = opening;
+        fail("unterminated C++ method body");
+    }
+
+    Method method(std::set<std::string>& names, const std::vector<Method>& methods, bool inInterface = false) {
         Method result;
-        result.cppOnly = true;
-        result.isStatic = accept("static");
-        expect("fn");
-        result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
-        expect("(");
-        std::set<std::string> parameters;
-        if (!accept(")")) {
-            do {
-                auto name = uniqueName(parameters);
-                expect(":");
-                bool byConstReference = false;
-                auto parameter = type(&byConstReference, true);
-                result.parameters.push_back({std::move(parameter), std::move(name), byConstReference});
-            } while (accept(","));
-            expect(")");
-        }
-        result.isConst = accept("const");
-        if (result.isStatic && result.isConst) fail("static method cannot be const");
-        result.isNoexcept = accept("noexcept");
-        expect("-");
-        expect(">");
-        result.result = type(nullptr, true);
-        if (accept("=>")) {
-            result.cppExpression = quotedString("C++ return expression");
-            if (result.cppExpression.empty()) fail("expected a non-empty C++ return expression");
-        }
-        expect(";");
-        return result;
-    }
-
-    Method method(std::set<std::string>& names) {
         const bool cppOnly = accept("@");
         if (cppOnly) expect("cppOnly");
-        Method result{type(nullptr, true), identifier()};
-        names.insert(result.name);
-        result.cppOnly = cppOnly;
+        result.isPureVirtual = accept("virtual");
+        result.isStatic = accept("static");
+        if (result.isPureVirtual && !inInterface) fail("pure virtual methods require an interface");
+        if ((result.isPureVirtual && result.isStatic) || (result.isStatic && token == "virtual"))
+            fail("static method cannot be virtual");
+        result.cppOnly = cppOnly || !result.isPureVirtual;
+        result.result = type(nullptr, true);
+        result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
         expect("(");
         std::set<std::string> parameters;
         if (!accept(")")) {
@@ -768,8 +807,19 @@ private:
             expect(")");
         }
         result.isConst = accept("const");
+        if (result.isStatic && result.isConst) fail("static method cannot be const");
         result.isNoexcept = accept("noexcept");
-        expect(";");
+        if (result.isPureVirtual) {
+            expect("=");
+            expect("0");
+            expect(";");
+        } else if (token == "{") {
+            result.cppBody = cppBody();
+            accept(";");
+        } else {
+            if (token == "=") fail("pure virtual method requires 'virtual'");
+            expect(";");
+        }
         return result;
     }
 };

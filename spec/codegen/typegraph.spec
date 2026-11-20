@@ -23,8 +23,9 @@ namespace codegen {
         isNoexcept: bool = false;
         cppOnly: bool = false;
         typescriptName: std::optional<std::string>;
-        cppExpression: std::string;
+        cppBody: std::string;
         isStatic: bool = false;
+        isPureVirtual: bool = false;
     }
     struct FieldInfo {
         type: TypeUse;

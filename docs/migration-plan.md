@@ -59,6 +59,10 @@ ctest --test-dir build/host --output-on-failure
 
 以 `ArchiveInterface` 为例，一份声明描述 `OutputArchive` 和 `InputArchive` 的八个 C++ 方法。类型图记录签名，语言绑定把布尔值、数值、字符串的读写方法分别映射成 TS 接口上的 `b`、`n`、`s`，两个 `scratch()` 在接口声明中标注 `@cppOnly`，由 TypeGraph 记录其原生可见性。文件计划为这个模块列出三个原生文件和一个 TS 文件。后端分别按引擎的 C++17 和 `target: es6` 配置生成。[旧模块声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [原生接口](../../cocos4/native/cocos/renderer/pipeline/custom/ArchiveTypes.h) · [TS 接口](../../cocos4/cocos/rendering/custom/archive.ts) · [引擎 C++ 配置](../../cocos4/native/cmake/predefine.cmake) · [引擎 TS 配置](../../cocos4/tsconfig.json)
 
+### 在模块中声明方法
+
+`interface` 中的 `virtual void writeBool(bool value) = 0;` 由 C++ 派生类实现，默认也生成 TS 接口方法。需要只在原生侧公开时写 `@cppOnly virtual ... = 0;`。普通成员采用 `ReturnType name(Type arg)`，支持 `static`、`const`、`noexcept`。以分号结尾会生成 C++ 声明，以花括号提供的 C++ 函数体会随头文件输出。普通成员在 `interface`、`struct`、`graph` 中均只生成 C++；字段和构造器继续使用各自的声明语法。[归档接口](../spec/render/archive.spec) · [原生转发重载](../spec/render/private-interface.spec)
+
 ### 在模块中声明绑定
 
 在 `module` 和 `import` 之后，把 `binding typescript` 或 `binding jsb` 写在命名空间外。一个文件可以包含多个绑定块。类型规则以分号结束。声明所属模块可以使用短名、限定名或从根命名空间开始的 `::` 名称。每个原生类型只能有一条 TS 绑定，同一类型的选项写在同一个规则内。
@@ -129,6 +133,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 ## 生成器自举
 
 `CocosCodegenModel` 编译 `src/generated/` 中的类型图种子。解析器保留语法和源位置，建图器先登记作用域与声明，再绑定字段和方法签名中的类型。Archive 的 C++、TS 后端和 RenderSettings 的 TS 后端消费同一张只读图。作用域边从父指向子，字段和签名通过 `TypeId` 引用其类型，模块按声明顺序保存输出列表。[类型图声明](../spec/codegen/typegraph.spec) · [生成源码](../src/generated/TypeGraphTypes.h) · [建图器](../src/model/TypeGraphBuilder.cpp)
+
+`config/seed-project.json` 引用的 `typegraph.spec` 和 `model-support.spec` 采用一次性种子工具的语法，其中图的方法仍使用 `fn`。日常自举使用的 `source-location.spec` 由当前解析器读取。
 
 首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
 
@@ -321,7 +327,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。
 
-图可以像普通记录一样用 `fn` 声明 C++ 成员函数。例如 `fn isTextureView(resID: Vertex) const noexcept -> bool;` 中的 `Vertex` 引用本图声明的顶点类型。`ResourceGraph` 的八个原生资源管理方法由生成头声明，由引擎提供定义。C++17 消费测试核对全部签名，并用引擎的查询逻辑区分普通纹理、格式视图和子资源视图。[图声明](../spec/render/render-graph.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp) · [消费测试](../tests/consumer/records/ResourceGraphConsumer.cpp)
+图和普通记录使用 C++ 成员函数语法。例如 `bool isTextureView(Vertex resID) const noexcept;` 中的 `Vertex` 引用本图声明的顶点类型。`ResourceGraph` 的八个原生资源管理方法由生成头声明，由引擎提供定义。C++17 消费测试核对全部签名，并用引擎的查询逻辑区分普通纹理、格式视图和子资源视图。[图声明](../spec/render/render-graph.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp) · [消费测试](../tests/consumer/records/ResourceGraphConsumer.cpp)
 
 `ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。[渲染图声明](../spec/render/render-graph.spec)
 

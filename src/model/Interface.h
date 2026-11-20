@@ -24,8 +24,9 @@ struct Method {
     bool isConst{};
     bool isNoexcept{};
     bool cppOnly{};
-    std::string cppExpression;
+    std::string cppBody;
     bool isStatic{};
+    bool isPureVirtual{};
 };
 
 struct Interface {

@@ -68,7 +68,7 @@ void checkTemplateBindings() {
         module Buffers;
         namespace vendor {
             struct Element {}
-            interface Input { Buffer<Element, ::Element> get(); }
+            interface Input { virtual Buffer<Element, ::Element> get() = 0; }
         }
         binding typescript { Buffer<Element, ::Element> => Uint8Array; }
     )");
@@ -226,8 +226,8 @@ void checkImports(const std::filesystem::path& specs) {
                 vertex_descriptor Vertex = uint32_t;
                 vertex_storage: indexed;
                 component cc::render::RasterPassTag: uint32_t { member: counts; }
-                fn count(v: Vertex) const noexcept -> uint32_t;
-                static fn count(info: const PassInfo&) -> uint32_t;
+                uint32_t count(Vertex v) const noexcept;
+                static uint32_t count(const PassInfo& info);
             }
             @tag struct Label_ {}
             @tag struct Phase_ {}
@@ -322,8 +322,8 @@ void checkTypes() {
     auto module = parseModule("forward.spec", R"(
         module Test;
         namespace cc::test {
-            interface First { Last* get(); }
-            interface Last { First* get(); }
+            interface First { virtual Last* get() = 0; }
+            interface Last { virtual First* get() = 0; }
         })");
     auto graph = buildTypeGraph({{std::move(module), {}}}, {});
     const auto first = graph.findType("cc::test::First");

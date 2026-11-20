@@ -45,8 +45,8 @@ namespace cc::render {
         shaderStageFlags: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
         constructor(name, accessType, clearFlags, clearValueType, clearValue, shaderStageFlags);
         constructor(name, accessType, plane, clearFlags, clearValueType, clearValue, shaderStageFlags);
-        fn isRead() const -> bool => "accessType != AccessType::WRITE";
-        fn isWrite() const -> bool => "accessType != AccessType::READ";
+        bool isRead() const { return accessType != AccessType::WRITE; }
+        bool isWrite() const { return accessType != AccessType::READ; }
     }
 
     @requireAllocator @comparison("==") @hash struct Subpass {
@@ -125,7 +125,7 @@ namespace cc::render {
     struct ResourceTraits {
         residency: ResourceResidency = ResourceResidency::MANAGED;
         constructor(residency);
-        fn hasSideEffects() const noexcept -> bool => "residency == ResourceResidency::PERSISTENT || residency == ResourceResidency::EXTERNAL || residency == ResourceResidency::BACKBUFFER";
+        bool hasSideEffects() const noexcept { return residency == ResourceResidency::PERSISTENT || residency == ResourceResidency::EXTERNAL || residency == ResourceResidency::BACKBUFFER; }
     }
 
     struct ManagedResource {
@@ -142,7 +142,7 @@ namespace cc::render {
         nullable texture: IntrusivePtr<gfx::Texture>;
         fenceValue: uint64_t = 0;
         constructor(texture);
-        fn checkResource(desc: const ResourceDesc&) const -> bool;
+        bool checkResource(const ResourceDesc& desc) const;
     }
 
     struct PersistentBuffer {
@@ -155,7 +155,7 @@ namespace cc::render {
         nullable texture: IntrusivePtr<gfx::Texture>;
         fenceValue: uint64_t = 0;
         constructor(texture);
-        fn checkResource(desc: const ResourceDesc&) const -> bool;
+        bool checkResource(const ResourceDesc& desc) const;
     }
 
     struct RenderSwapchain {
@@ -167,9 +167,9 @@ namespace cc::render {
         isDepthStencil: bool = false;
         @cppOnly nullable texture: gfx::Texture*;
         constructor(swapchain, isDepthStencil);
-        static fn getColorTexture(swapchain: gfx::Swapchain*) noexcept -> gfx::Texture*;
-        static fn getColorTexture(renderWindow: scene::RenderWindow*) noexcept -> gfx::Texture*;
-        static fn getDepthStencilTexture(swapchain: gfx::Swapchain*) noexcept -> gfx::Texture*;
+        static gfx::Texture* getColorTexture(gfx::Swapchain* swapchain) noexcept;
+        static gfx::Texture* getColorTexture(scene::RenderWindow* renderWindow) noexcept;
+        static gfx::Texture* getDepthStencilTexture(gfx::Swapchain* swapchain) noexcept;
     }
 
     @requireAllocator struct PersistentRenderPassAndFramebuffer {
@@ -237,14 +237,14 @@ namespace cc::render {
         nextFenceValue: uint64_t = 0;
         version: uint64_t = 0;
 
-        fn validateSwapchains() -> void;
-        fn mount(device: gfx::Device*, vertID: Vertex) -> void;
-        fn unmount(completedFenceValue: uint64_t) -> void;
-        fn isTexture(resID: Vertex) const noexcept -> bool;
-        fn isTextureView(resID: Vertex) const noexcept -> bool;
-        fn getTexture(resID: Vertex) -> gfx::Texture*;
-        fn getBuffer(resID: Vertex) -> gfx::Buffer*;
-        fn invalidatePersistentRenderPassAndFramebuffer(pTexture: gfx::Texture*) -> void;
+        void validateSwapchains();
+        void mount(gfx::Device* device, Vertex vertID);
+        void unmount(uint64_t completedFenceValue);
+        bool isTexture(Vertex resID) const noexcept;
+        bool isTextureView(Vertex resID) const noexcept;
+        gfx::Texture* getTexture(Vertex resID);
+        gfx::Buffer* getBuffer(Vertex resID);
+        void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
     }
 
     @requireAllocator struct ComputePass {
@@ -367,8 +367,8 @@ namespace cc::render {
         readonly index: PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>;
         readonly sortedVertices: ccstd::pmr::vector<uint32_t>;
         readonly globalRenderData: RenderData;
-        fn getPassID(nodeID: Vertex) const -> Vertex;
-        fn print(scratch: boost::container::pmr::memory_resource*) const -> ccstd::string;
+        Vertex getPassID(Vertex nodeID) const;
+        ccstd::string print(boost::container::pmr::memory_resource* scratch) const;
     }
 }
 

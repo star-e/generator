@@ -44,8 +44,9 @@ struct MethodInfo {
     bool isNoexcept = false;
     bool cppOnly = false;
     std::optional<std::string> typescriptName;
-    std::string cppExpression;
+    std::string cppBody;
     bool isStatic = false;
+    bool isPureVirtual = false;
 };
 
 struct FieldInfo {

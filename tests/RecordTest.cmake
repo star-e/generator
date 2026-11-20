@@ -28,12 +28,12 @@ check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
     "subpassGraph: a record containing a move-only graph must declare @moveOnly")
 check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
     "subpassGraph: cannot use an @immovable graph as a value field")
-check_resource_error("getColorTexture(renderWindow: scene::RenderWindow*)" "getColorTexture(other: gfx::Swapchain*)"
+check_resource_error("getColorTexture(scene::RenderWindow* renderWindow)" "getColorTexture(gfx::Swapchain* other)"
     "duplicate method signature getColorTexture")
-check_resource_error("isTextureView(resID: Vertex)" "isTexture(other: uint32_t)" "duplicate method signature isTexture")
-check_resource_error("fn validateSwapchains()" "fn getDesc()" "graph method collides with C[+][+] member getDesc")
+check_resource_error("isTextureView(Vertex resID)" "isTexture(uint32_t other)" "duplicate method signature isTexture")
+check_resource_error("void validateSwapchains()" "void getDesc()" "graph method collides with C[+][+] member getDesc")
 check_resource_error("member: names;" "member: contains;" "name index collides with C[+][+] member contains")
-check_resource_error("getColorTexture(swapchain: gfx::Swapchain*) noexcept" "getColorTexture(swapchain: gfx::Swapchain*) const noexcept"
+check_resource_error("getColorTexture(gfx::Swapchain* swapchain) noexcept" "getColorTexture(gfx::Swapchain* swapchain) const noexcept"
     "static method cannot be const")
 check_resource_error("fenceValue: uint64_t = 0" "fenceValue: uint64_t = 9007199254740992"
     "uint64_t default exceeds the TypeScript safe integer range")
@@ -514,7 +514,7 @@ expect_failure(2 "sourceFirstSlice: invalid uint8_t default 0x100" ${generate})
 # The C++-only backend must bind native method types from the spec without TS mappings.
 set(spec "${work}/spec/codegen/source-location.spec")
 file(READ "${spec}" original)
-string(REPLACE "describe() const" "format(prefix: std::string) const noexcept" changed "${original}")
+string(REPLACE "describe() const" "format(std::string prefix) const noexcept" changed "${original}")
 file(WRITE "${spec}" "${changed}")
 set(generate "${TOOL}" generate --workspace "${work}/config/self-host.json" --output "${work}/native")
 run(${generate})
@@ -523,7 +523,7 @@ string(FIND "${header}" "std::string format(std::string prefix) const noexcept;"
 if(at EQUAL -1)
     message(FATAL_ERROR "Native method signature did not follow the spec")
 endif()
-string(REPLACE "prefix: std::string" "prefix: MissingType" broken "${changed}")
+string(REPLACE "std::string prefix" "MissingType prefix" broken "${changed}")
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "source-location.spec:[0-9]+:[0-9]+: unknown type MissingType" ${generate})
 finish_workspace("${work}")

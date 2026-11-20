@@ -117,7 +117,7 @@ TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
-                      .cppExpression = method.cppExpression, .isStatic = method.isStatic};
+                      .cppBody = method.cppBody, .isStatic = method.isStatic, .isPureVirtual = method.isPureVirtual};
     for (const auto& parameter : method.parameters) {
         member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name, parameter.byConstReference});
     }
@@ -458,9 +458,9 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 const auto decl = std::ranges::find(input.syntax.declarations, node.name, &Declaration::name);
                 const auto& members = std::get<Interface>(decl->data).methods;
                 for (const auto& [name, target] : rule.methods) {
-                    const auto method = std::ranges::find(members, name, &Method::name);
-                    if (method == members.end()) reject("unknown method " + name);
-                    if (method->cppOnly) reject("cannot assign a TS name to @cppOnly method " + node.name + "." + name);
+                    if (std::ranges::find(members, name, &Method::name) == members.end()) reject("unknown method " + name);
+                    if (std::ranges::none_of(members, [&](const Method& member) { return member.name == name && !member.cppOnly; }))
+                        reject("cannot assign a TS name to @cppOnly method " + node.name + "." + name);
                 }
                 methods.emplace(id.value, rule.methods);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {

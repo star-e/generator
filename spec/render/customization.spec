@@ -5,13 +5,13 @@ import PipelineExternals;
 
 namespace cc::render {
     interface Customization {
-        std::string_view getName() const noexcept;
+        virtual std::string_view getName() const noexcept = 0;
     }
 
     interface CustomPipelineContext : Customization {
-        IntrusivePtr<gfx::Buffer> createCustomBuffer(std::string_view type, const gfx::BufferInfo& info);
-        IntrusivePtr<gfx::Texture> createCustomTexture(std::string_view type, const gfx::TextureInfo& info);
-        void destroy() noexcept;
+        virtual IntrusivePtr<gfx::Buffer> createCustomBuffer(std::string_view type, const gfx::BufferInfo& info) = 0;
+        virtual IntrusivePtr<gfx::Texture> createCustomTexture(std::string_view type, const gfx::TextureInfo& info) = 0;
+        virtual void destroy() noexcept = 0;
     }
 
     struct CustomRenderGraphContext {
@@ -23,32 +23,32 @@ namespace cc::render {
     }
 
     interface CustomRenderPass : Customization {
-        void beginRenderPass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
-        void endRenderPass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
+        virtual void beginRenderPass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
+        virtual void endRenderPass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
     }
 
     interface CustomRenderSubpass : Customization {
-        void beginRenderSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
-        void endRenderSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
+        virtual void beginRenderSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
+        virtual void endRenderSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
     }
 
     interface CustomComputeSubpass : Customization {
-        void beginComputeSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
-        void endComputeSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
+        virtual void beginComputeSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
+        virtual void endComputeSubpass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
     }
 
     interface CustomComputePass : Customization {
-        void beginComputePass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
-        void endComputePass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
+        virtual void beginComputePass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
+        virtual void endComputePass(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
     }
 
     interface CustomRenderQueue {
-        void beginRenderQueue(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
-        void endRenderQueue(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
+        virtual void beginRenderQueue(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
+        virtual void endRenderQueue(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
     }
 
     interface CustomRenderCommand {
-        void beginRenderCommand(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
-        void endRenderCommand(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID);
+        virtual void beginRenderCommand(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
+        virtual void endRenderCommand(const CustomRenderGraphContext& rg, RenderGraph::Vertex passID) = 0;
     }
 }
