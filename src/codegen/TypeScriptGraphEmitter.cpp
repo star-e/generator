@@ -156,6 +156,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
                          const std::vector<BoundField>& fields) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
+    if (model.keyComponentIndex || model.removeVertex)
+        throw std::runtime_error(node.qualifiedName + ": component_index and remove_vertex currently require C++ graph output");
     const auto components = bindColumns(graph, node, model.components, imports);
     const auto alternatives = bindColumns(graph, node, model.alternatives, imports);
     const auto hasSetter = [&](size_t i) { return components[i].scalar && (i != model.nameComponentIndex || ((model.nameIndex || model.incidence) && model.mutableGraph)); };

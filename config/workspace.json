@@ -27,7 +27,10 @@
     {
       "backend": "model",
       "spec": "../spec/extern/sets.spec",
-      "types": { "PmrTransparentSet": { "header": "cocos/renderer/pipeline/custom/details/Set.h" } }
+      "types": {
+        "PmrFlatSet": { "header": "cocos/renderer/pipeline/custom/details/Set.h" },
+        "PmrTransparentSet": { "header": "cocos/renderer/pipeline/custom/details/Set.h" }
+      }
     },
     {
       "backend": "model",

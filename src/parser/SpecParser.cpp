@@ -509,8 +509,13 @@ private:
                 graph.vertexList = true;
             } else if (accept("mutable_graph")) {
                 if (graph.mutableGraph) fail("duplicate mutable_graph");
-                expect(";");
                 graph.mutableGraph = true;
+                if (accept("{")) {
+                    expect("remove_vertex");
+                    expect(";");
+                    expect("}");
+                    graph.removeVertex = true;
+                } else expect(";");
             } else if (token == "incidence_graph" || token == "bidirectional_graph") {
                 const bool incoming = token == "bidirectional_graph";
                 auto& enabled = incoming ? graph.bidirectional : graph.incidence;
@@ -533,12 +538,14 @@ private:
                 expect(";");
                 expect("}");
                 graph.hierarchy = true;
-            } else if (accept("named_graph")) {
-                if (graph.nameComponent) fail("duplicate named_graph");
+            } else if (token == "named_graph" || (token == "component_index" && !followedBy(":"))) {
+                auto& selected = token == "named_graph" ? graph.nameComponent : graph.indexedComponent;
+                if (selected) fail("duplicate " + std::string(token));
+                advance();
                 expect("{");
                 expect("component");
                 expect(":");
-                graph.nameComponent = type();
+                selected = type();
                 expect(";");
                 expect("}");
             } else if (token == "name_index" && !followedBy(":")) {

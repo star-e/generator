@@ -90,6 +90,8 @@ namespace codegen {
         separateEdges: bool = false;
         nameComponentIndex: std::optional<uint32_t>;
         nameIndex: bool = false;
+        keyComponentIndex: std::optional<uint32_t>;
+        removeVertex: bool = false;
         parentGraph: bool = false;
         addressableGraph: bool = false;
         components: std::vector<ComponentInfo>;

@@ -305,7 +305,8 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
     const bool copyable = moveOnlyColumns.empty();
     out << "    explicit " << name << "(const allocator_type& alloc)";
     for (const auto& field : storage) {
-        const bool allocatorOnly = dequeColumns.contains(field) || (model.nameIndex && field == "nameIndex_");
+        const bool allocatorOnly = dequeColumns.contains(field) || (model.nameIndex && field == "nameIndex_") ||
+                                   (model.keyComponentIndex && field == "componentIndex_");
         out << (field == member ? " : " : ", ") << field << (allocatorOnly ? "(alloc)" : "(0, alloc)");
     }
     for (const auto& f : fields)
@@ -444,29 +445,70 @@ void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternativ
     }
 }
 
+void removeVertex(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
+                  const GraphType& model, const std::vector<std::string>& storage,
+                  const std::string& outgoing, const std::string& incoming) {
+    out << "    void remove_vertex(" << vertex << " v);\n";
+    source << "\nvoid " << name << "::remove_vertex(" << vertex << " v) {\n"
+           << "    if (v >= this->" << storage.front() << ".size()) throw std::out_of_range(\"invalid vertex\");\n";
+    const auto eraseKey = [&](const std::string& map, const std::string& column) {
+        source << "    this->" << map << ".erase(this->" << column << "[v]);\n"
+               << "    for (auto& entry : this->" << map << ") if (entry.second > v) --entry.second;\n";
+    };
+    if (model.keyComponentIndex) eraseKey("componentIndex_", storage.at(*model.keyComponentIndex));
+    if (model.nameIndex) eraseKey("nameIndex_", storage.at(*model.nameComponentIndex));
+    for (const auto& c : model.components) {
+        source << "    static_assert(std::is_nothrow_move_assignable_v<decltype(" << c.name << ")::value_type>);\n"
+               << "    this->" << c.name << ".erase(this->" << c.name << ".begin() + v);\n";
+    }
+    if (!outgoing.empty()) {
+        source << R"(    const auto compact = [v](auto& rows) {
+        for (std::size_t i = v; i + 1 < rows.size(); ++i) rows[i].swap(rows[i + 1]);
+        rows.pop_back();
+        for (auto& row : rows) {
+            row.erase(std::remove(row.begin(), row.end(), v), row.end());
+            for (auto& neighbor : row) if (neighbor > v) --neighbor;
+        }
+    };
+)" << "    compact(this->" << outgoing << ");\n";
+        if (!incoming.empty()) source << "    compact(this->" << incoming << ");\n";
+    }
+    source << "}\n";
+}
+
 void addVertex(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
                const std::vector<ComponentInfo>& components, const std::string& input,
-               const std::vector<Alternative>& alternatives, bool hierarchy) {
-    const std::string value = input.empty() ? "" : "std::string_view value";
-    const std::string parameters = value + (hierarchy ? (input.empty() ? "" : ", ") + vertex + " parent" : "");
+               const std::vector<Alternative>& alternatives, bool hierarchy,
+               const std::string& keyColumn, const std::string& keyType) {
+    std::string value, arguments;
+    if (!keyColumn.empty()) {
+        value = keyType + " key";
+        arguments = "key";
+    }
+    if (!input.empty()) {
+        value += value.empty() ? "std::string_view value" : ", std::string_view value";
+        arguments += arguments.empty() ? "value" : ", value";
+    }
+    const std::string parameters = value + (hierarchy ? (value.empty() ? "" : ", ") + vertex + " parent" : "");
     const std::string definition = "\n" + name + "::" + vertex + " " + name + "::add_vertex(";
     out << "\n    " << vertex << " add_vertex(" << value;
-    if (!value.empty()) out << " = {}";
+    if (!input.empty()) out << " = {}";
     if (hierarchy) {
-        out << ") { return add_vertex(" << (input.empty() ? "" : "value, ") << "null_vertex()); }\n"
+        out << ") { return add_vertex(" << (arguments.empty() ? "" : arguments + ", ") << "null_vertex()); }\n"
             << "    " << vertex << " add_vertex(" << parameters;
     }
     out << ");\n";
     source << definition << parameters << ") {\n";
     if (!alternatives.empty()) {
-        source << "    return add_vertex(" << alternatives.front().tag << "{}" << (input.empty() ? "" : ", value")
+        source << "    return add_vertex(" << alternatives.front().tag << "{}" << (arguments.empty() ? "" : ", " + arguments)
                << (hierarchy ? ", parent" : "") << ");\n}\n";
     }
     const auto forwardDefaults = [&](bool tagged) {
         std::vector<std::string> args;
         if (tagged) args.emplace_back("tag");
         for (const auto& component : components)
-            args.emplace_back(component.name == input ? "std::forward_as_tuple(value)" : "std::tuple<>{}");
+            args.emplace_back(component.name == input ? "std::forward_as_tuple(value)" :
+                              component.name == keyColumn ? "std::forward_as_tuple(key)" : "std::tuple<>{}");
         if (tagged) args.emplace_back("std::tuple<>{}");
         if (hierarchy) args.emplace_back("parent");
         source << "    return emplace_vertex(";
@@ -476,7 +518,7 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     if (alternatives.empty()) forwardDefaults(false);
     for (const auto& alt : alternatives) {
         out << "    " << vertex << " add_vertex(const " << alt.tag << "&";
-        if (!input.empty()) out << ", " << value;
+        if (!value.empty()) out << ", " << value;
         if (hierarchy) out << ", " << vertex << " parent = null_vertex()";
         out << ");\n";
         source << definition << "const " << alt.tag << "& tag" << (parameters.empty() ? "" : ", ") << parameters << ") {\n";
@@ -489,7 +531,9 @@ void emplaceVertex(std::ostream& out, std::ostream& impl, const std::string& nam
                    const std::vector<std::string>& types, const std::set<std::string>& dequeColumns,
                    const std::string& input, const std::string& rows, const std::vector<Alternative>& alternatives,
                    const std::string& handles, const std::map<std::string, std::string>& defaultArgs,
-                   bool indexedNames, const std::string& children) {
+                   const GraphType& model, const std::string& children) {
+    const bool indexedNames = model.nameIndex;
+    const bool deferredIndex = indexedNames || (model.keyComponentIndex && model.serializable);
     const bool tagged = !alternatives.empty();
     const bool hierarchy = !rows.empty() || !children.empty();
     std::string templateParams, componentParams, forwarded;
@@ -515,13 +559,13 @@ void emplaceVertex(std::ostream& out, std::ostream& impl, const std::string& nam
     if (tagged) out << "const " << tagType << "& tag, ";
     out << componentParams << (hierarchy ? ", " + vertex + " parent = null_vertex()" : "") << ") {\n"
         << "        return appendVertex(" << (tagged ? "&tag, " : "") << forwarded
-        << (indexedNames ? ", true" : "") << (hierarchy ? ", parent" : "") << ");\n    }\n";
+        << (deferredIndex ? ", true" : "") << (hierarchy ? ", parent" : "") << ");\n    }\n";
 
     for (const auto& alt : alternatives)
         impl << "    auto& payloadColumn(const " << alt.tag << "*) noexcept { return this->" << alt.member << "; }\n";
     impl << "\n    template<" << templateParams << ">\n    " << vertex << " appendVertex(";
     if (tagged) impl << "const " << tagType << "* tag, ";
-    impl << componentParams << (indexedNames ? ", bool indexName" : "") << (hierarchy ? ", " + vertex + " parent" : "") << ") {\n";
+    impl << componentParams << (deferredIndex ? ", bool indexName" : "") << (hierarchy ? ", " + vertex + " parent" : "") << ") {\n";
     const auto count = "this->" + storage.front() + ".size()";
     const auto descriptor = name + "::" + vertex;
     if (hierarchy)
@@ -590,6 +634,11 @@ void emplaceVertex(std::ostream& out, std::ostream& impl, const std::string& nam
     for (size_t i = 0; i < types.size(); ++i)
         if (storage[i] != input && !dequeColumns.contains(storage[i]))
             impl << "            this->" << storage[i] << ".emplace_back(std::move(component" << i << "));\n";
+    if (model.keyComponentIndex) {
+        impl << "            if (" << (deferredIndex ? "indexName && " : "")
+             << "!this->componentIndex_.emplace(this->" << storage[*model.keyComponentIndex] << ".back(), vertex).second)\n"
+             << "                throw std::invalid_argument(\"duplicate vertex key\");\n";
+    }
     impl << "        } catch (...) {\n";
     if (indexedNames) impl << "            if (entry != this->nameIndex_.end()) this->nameIndex_.erase(entry);\n";
     if (!children.empty()) impl << "            if (linked) this->" << children << "[parent].pop_back();\n";
@@ -681,6 +730,9 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         members.insert(component.name);
         types.push_back(columnType(component));
     }
+    const auto keyColumn = model.keyComponentIndex ? storage.at(*model.keyComponentIndex) : "";
+    const auto keyType = model.keyComponentIndex ? types.at(*model.keyComponentIndex) : "";
+    dequeColumns.erase(keyColumn);
     std::vector<Alternative> alternatives;
     for (const auto& alt : model.alternatives) {
         const auto& tag = graph.node(alt.tag);
@@ -696,6 +748,12 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_object", "kindOf", "VertexHandle"}) {
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": polymorphic graph member name collision: " + symbol);
+            api.insert(symbol);
+        }
+    }
+    if (model.keyComponentIndex) {
+        for (const auto* symbol : {"componentIndex_", "contains", "vertex", "find", "null_vertex", "reserve"}) {
+            if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": component index collides with " + symbol);
             api.insert(symbol);
         }
     }
@@ -724,6 +782,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     }
     if (model.mutableGraph) {
         std::set<std::string> symbols{"add_vertex", "emplace_vertex", "appendVertex"};
+        if (model.removeVertex) symbols.insert("remove_vertex");
         if (!alternatives.empty()) symbols.insert("payloadColumn");
         for (const auto& symbol : symbols)
             if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": vertex API collides with " + symbol);
@@ -777,6 +836,10 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     // Only these columns have one entry per vertex. Each payload column grows for its own kind.
     auto allStorage = storage;
     for (const auto& alt : alternatives) allStorage.push_back(alt.member);
+    if (model.keyComponentIndex) {
+        allStorage.emplace_back("componentIndex_");
+        headers.insert({"cocos/base/std/container/unordered_map.h", "cocos/base/std/hash/hash.h", "limits", "stdexcept"});
+    }
     if (model.nameIndex) {
         allStorage.emplace_back("nameIndex_");
         headers.insert({"cocos/base/std/container/map.h", "cocos/base/std/container/string.h", "functional", "limits", "stdexcept", "string_view"});
@@ -801,11 +864,11 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         else if (!types.empty() && types.front() == "ccstd::pmr::string") input = storage.front();
         if (!input.empty()) headers.insert("string_view");
         headers.insert({"tuple", "cocos/base/Pmr.h"});
-        addVertex(out, source, name, vertex, model.components, input, alternatives, model.hierarchy);
+        addVertex(out, source, name, vertex, model.components, input, alternatives, model.hierarchy, keyColumn, keyType);
         emplaceVertex(out, insertion, name, vertex, model.components, storage, types, dequeColumns, input, rows,
-                      alternatives, handles, defaultArgs, model.nameIndex, childRows);
+                      alternatives, handles, defaultArgs, model, childRows);
     }
-    if (model.hierarchy || model.incidence || model.nameIndex)
+    if (model.hierarchy || model.incidence || model.nameIndex || model.keyComponentIndex)
         out << "\n    static constexpr " << vertex << " null_vertex() noexcept { return (std::numeric_limits<"
             << vertex << ">::max)(); }\n";
     if (!rows.empty()) {
@@ -839,6 +902,22 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             addressableGraph(out, source, name, vertex, selected.name, nameAccessor);
         }
     }
+    if (model.keyComponentIndex) {
+        out << "\n    bool contains(" << keyType << " key) const noexcept { return find(key) != null_vertex(); }\n"
+            << "    " << vertex << " find(" << keyType << " key) const noexcept {\n"
+            << "        const auto it = this->componentIndex_.find(key);\n"
+            << "        return it == this->componentIndex_.end() ? null_vertex() : it->second;\n    }\n"
+            << "    " << vertex << " vertex(" << keyType << " key) const { return this->componentIndex_.at(key); }\n"
+            << "    void reserve(" << vertex << " capacity);\n";
+        source << "\nvoid " << name << "::reserve(" << vertex << " capacity) {\n";
+        for (const auto& field : storage)
+            if (!dequeColumns.contains(field)) source << "    this->" << field << ".reserve(capacity);\n";
+        source << "    this->componentIndex_.reserve(capacity);\n}\n";
+    }
+    if (model.removeVertex) {
+        headers.insert({"algorithm", "cstddef", "type_traits"});
+        removeVertex(out, source, name, vertex, model, storage, outgoing, incoming);
+    }
     if (model.nameIndex) {
         out << "\n    bool contains(std::string_view key) const noexcept { return find(key) != null_vertex(); }\n"
             << "    " << vertex << " find(std::string_view key) const noexcept {\n"
@@ -863,7 +942,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         const auto& tag = graph.node(model.components[i].tag);
         const auto accessor = "get" + model.components[i].publicName;
         for (const std::string qualifier : {"", " const"}) {
-            if (model.nameIndex && i == model.nameComponentIndex && qualifier.empty()) continue;
+            if (qualifier.empty() && ((model.nameIndex && i == model.nameComponentIndex) || i == model.keyComponentIndex)) continue;
             const auto result = columnValue(model.components[i].valueType).qualifiedName == "bool"
                 ? "ccstd::pmr::vector<bool>::" + std::string(qualifier.empty() ? "reference" : "const_reference")
                 : types[i] + qualifier + "&";
@@ -909,6 +988,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     }
     if (model.nameIndex)
         out << "    ccstd::pmr::map<ccstd::pmr::string, " << vertex << ", std::less<>> nameIndex_;\n";
+    if (model.keyComponentIndex)
+        out << "    ccstd::pmr::unordered_map<" << keyType << ", " << vertex << "> componentIndex_;\n";
     out << insertion.str();
     if (!model.immovable && (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty()))
         out << "    void swapStorage(" << name << "& other"

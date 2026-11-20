@@ -102,6 +102,32 @@ string(JSON config SET "${config}" modules ${count} [[{
     "backend": "model", "spec": "../spec/text.spec",
     "types": { "Text": { "header": "SampleText.h" }, "Label": { "header": "SampleText.h" } }
 }]])
+file(WRITE "${work}/spec/indexed-keys.spec" [[module IndexedKeys;
+import GraphTags;
+import Strings;
+import ArchiveInterface;
+namespace cc {
+    @tag struct SignedKey_ {}
+    @serialize graph IndexedKeys {
+        vertex_descriptor Vertex = uint32_t;
+        vertex_storage: indexed;
+        vertex_list_graph;
+        mutable_graph;
+        hierarchy_graph { storage: shared_edges; }
+        component render::Name_: ccstd::pmr::string { member: labels; }
+        component SignedKey_: int32_t { member: keys; }
+        named_graph { component: render::Name_; }
+        name_index;
+        component_index { component: SignedKey_; }
+        polymorphic_graph { SignedKey_: uint32_t { member: values; } }
+    }
+}
+]])
+math(EXPR count "${count} + 1")
+string(JSON config SET "${config}" modules ${count} [[{
+    "backend": "records", "spec": "../spec/indexed-keys.spec", "nativeRoot": "native",
+    "header": "IndexedKeys.h", "serializationHeader": "IndexedKeysSerialization.h"
+}]])
 file(WRITE "${workspace}" "${config}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
 file(WRITE "${stage}/native/SampleText.h" "#pragma once\n#include <string>\nnamespace sample { using Text = std::string; using Label = std::string; }\n")

@@ -142,6 +142,8 @@ struct GraphType {
     bool separateEdges = false;
     std::optional<uint32_t> nameComponentIndex;
     bool nameIndex = false;
+    std::optional<uint32_t> keyComponentIndex;
+    bool removeVertex = false;
     bool parentGraph = false;
     bool addressableGraph = false;
     std::vector<ComponentInfo> components;

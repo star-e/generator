@@ -293,6 +293,9 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     result.indexedVertices = syntax.indexed;
     result.vertexList = syntax.vertexList;
     result.mutableGraph = syntax.mutableGraph;
+    result.removeVertex = syntax.removeVertex;
+    if (syntax.removeVertex && (syntax.hierarchy || !syntax.alternatives.empty()))
+        throw std::runtime_error(syntax.vertexType->location.describe() + ": remove_vertex requires a flat component graph");
     result.hierarchy = syntax.hierarchy;
     result.separateEdges = syntax.separateEdges;
     result.incidence = syntax.incidence;
@@ -324,16 +327,28 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     };
     for (const auto& component : syntax.components) result.components.push_back(bindColumn(component, false));
     for (const auto& alternative : syntax.alternatives) result.alternatives.push_back(bindColumn(alternative, true));
-    if (syntax.nameComponent) {
-        const auto& selected = *syntax.nameComponent;
+    const auto componentIndex = [&](const TypeRef& selected, const char* role) {
         const auto tag = canonicalType(graph, resolve(graph, selected, scope, owner));
         const auto it = std::ranges::find(result.components, tag, &ComponentInfo::tag);
         if (it == result.components.end())
-            throw std::runtime_error(selected.location.describe() + ": named_graph requires a component of this graph: " + selected.name);
-        const auto& value = graph.node(canonicalType(graph, {it->valueType, selected.location})).qualifiedName;
+            throw std::runtime_error(selected.location.describe() + ": " + role + " requires a component of this graph: " + selected.name);
+        return static_cast<uint32_t>(it - result.components.begin());
+    };
+    if (syntax.indexedComponent) {
+        const auto& selected = *syntax.indexedComponent;
+        result.keyComponentIndex = componentIndex(selected, "component_index");
+        const auto key = result.components[*result.keyComponentIndex].valueType;
+        const auto& value = graph.node(canonicalType(graph, {key, selected.location})).qualifiedName;
+        if (value == "bool" || !integerRanges().contains(value))
+            throw std::runtime_error(selected.location.describe() + ": component_index requires an integer component: " + selected.name);
+    }
+    if (syntax.nameComponent) {
+        const auto& selected = *syntax.nameComponent;
+        result.nameComponentIndex = componentIndex(selected, "named_graph");
+        const auto key = result.components[*result.nameComponentIndex].valueType;
+        const auto& value = graph.node(canonicalType(graph, {key, selected.location})).qualifiedName;
         if (value != "ccstd::pmr::string" && value != "ccstd::string" && value != "std::pmr::string" && value != "std::string")
             throw std::runtime_error(selected.location.describe() + ": named_graph requires a string component: " + selected.name);
-        result.nameComponentIndex = static_cast<uint32_t>(it - result.components.begin());
     }
     if (syntax.nameIndex) {
         if (!result.nameComponentIndex) throw std::runtime_error(syntax.nameIndex->describe() + ": name_index requires named_graph");

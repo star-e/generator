@@ -114,6 +114,8 @@ struct GraphDeclaration {
     bool separateEdges{};
     std::optional<TypeRef> nameComponent;
     std::optional<SourceLocation> nameIndex;
+    std::optional<TypeRef> indexedComponent;
+    bool removeVertex{};
     std::optional<SourceLocation> parentGraph;
     std::optional<SourceLocation> addressableGraph;
     std::vector<GraphComponent> components;

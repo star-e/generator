@@ -48,8 +48,10 @@ ctest --test-dir build/host --output-on-failure
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
-| FGDispatcher | `FGDispatcherRecords.h/.cpp` 覆盖 14 个记录，含资源访问、屏障、附件和渲染通道信息。 | 两张图分别依赖整数键索引 `passIndex`、`vertexMap`。关系图还需要支持删点后更新顶点编号、边及索引，才能接管 `FrameGraphDispatcher`。 |
+| FGDispatcher | `FGDispatcherRecords.h/.cpp` 覆盖 14 个记录及两张双向图。`ResourceAccessGraph` 按渲染通道 ID 查找顶点，`RelationGraph` 按资源访问图的顶点 ID 查找并支持删点。 | 迁移手写 `FrameGraphDispatcher` 的调用，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
 | NativePipeline | `NativePipelineRecords.h/.cpp` 及前置声明覆盖 16 个记录，含资源池、绘制实例、裁剪结果、自定义管线注册表及级联阴影数据。 | 剩余记录和实现类需要显式转换运算符、带默认参数的方法、禁止默认构造或移动的记录、自定义析构、多重继承或私有状态。 |
+
+C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `emplace_vertex(...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
 两个 `*Records.h` 只供暂存消费验证。引擎中的同名类型仍定义在旧模块内；切换这些模块时需要一起移走旧定义。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
 

@@ -16,6 +16,8 @@ static_assert(!std::is_copy_constructible_v<BufferPool>);
 static_assert(std::is_move_constructible_v<DescriptorSetContext> && !std::is_copy_constructible_v<DescriptorSetContext>);
 static_assert(std::tuple_size_v<decltype(BuiltinCascadedShadowMap::layers)> == 4);
 
+bool checkDispatcherGraphs();
+
 bool checkMigratedModules() {
     boost::container::pmr::monotonic_buffer_resource memory;
     ProgramGroup programs(&memory);
@@ -25,7 +27,7 @@ bool checkMigratedModules() {
     FGRenderPassInfo copy(pass, &memory);
     Barrier barrier;
     CustomRenderGraphContext context;
-    return programs.programInfos.empty() && customization.contexts.empty() && context.renderGraph == nullptr &&
+    return checkDispatcherGraphs() && programs.programInfos.empty() && customization.contexts.empty() && context.renderGraph == nullptr &&
            copy.orderedViews == pass.orderedViews && copy.get_allocator().resource() == &memory &&
            barrier.type == cc::gfx::BarrierType::FULL && PipelineCapabilities{}.subpass == SubpassCapabilities::NONE;
 }
