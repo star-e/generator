@@ -13,6 +13,9 @@ static_assert(!std::is_default_constructible_v<UniformBlockData>);
 static_assert(std::is_aggregate_v<NameLocalID> && !std::is_convertible_v<uint32_t, NameLocalID>);
 static_assert(std::is_convertible_v<NameLocalID, DescriptorData>);
 using BlockAlloc = DescriptorBlockData::allocator_type;
+static_assert(!std::is_default_constructible_v<DescriptorSetLayoutData>);
+static_assert(!std::is_copy_constructible_v<DescriptorSetLayoutData> && !std::is_copy_assignable_v<DescriptorSetLayoutData>);
+static_assert(std::is_nothrow_move_constructible_v<DescriptorSetLayoutData> && std::is_nothrow_move_assignable_v<DescriptorSetLayoutData>);
 static_assert(!std::is_default_constructible_v<DescriptorBlockData>);
 static_assert(std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
                                             uint32_t, const BlockAlloc&>);
@@ -135,6 +138,72 @@ bool matches(const DescriptorBlockData& block, const DescriptorBlockData& expect
     }
     return true;
 }
+DescriptorSetLayoutData setLayout(uint32_t size, const BlockAlloc& alloc) {
+    DescriptorSetLayoutData layout(alloc);
+    if (!size) return layout;
+    layout.slot = size;
+    layout.capacity = 8 * size;
+    layout.uniformBlockCapacity = 3 * size;
+    layout.samplerTextureCapacity = 5 * size;
+    for (uint32_t i = 1; i <= size; ++i) layout.descriptorBlocks.push_back(descriptorBlock(i, alloc));
+    for (uint32_t key : {17U, 42U}) {
+        if (size == 1 && key == 17) continue;
+        const NameLocalID id{key};
+        auto& uniform = layout.uniformBlocks[id];
+        uniform.set = size;
+        uniform.binding = key;
+        uniform.name = "Scene";
+        uniform.members.push_back({"tint", cc::gfx::Type::FLOAT4, key});
+        uniform.count = 2;
+        layout.bindingMap.emplace(id, key + size);
+    }
+    return layout;
+}
+
+bool usesResource(const DescriptorSetLayoutData& layout, const BlockAlloc& alloc) {
+    if (layout.get_allocator() != alloc || layout.descriptorBlocks.get_allocator().resource() != alloc.resource() ||
+        layout.uniformBlocks.get_allocator().resource() != alloc.resource() || layout.bindingMap.get_allocator().resource() != alloc.resource()) return false;
+    for (const auto& block : layout.descriptorBlocks)
+        if (block.get_allocator() != alloc || block.descriptors.get_allocator().resource() != alloc.resource()) return false;
+    return true;
+}
+
+bool checkSetLayoutMoves() {
+    boost::container::pmr::monotonic_buffer_resource source, destination;
+    auto input = setLayout(2, &source);
+    DescriptorSetLayoutData value(7, 16, std::move(input.descriptorBlocks), std::move(input.uniformBlocks), std::move(input.bindingMap), &destination);
+    if (!usesResource(value, &destination) || value.uniformBlockCapacity || value.samplerTextureCapacity) return false;
+    value.uniformBlockCapacity = 6;
+    value.samplerTextureCapacity = 10;
+    DescriptorSetLayoutData moved(std::move(value), &source);
+    return moved.slot == 7 && moved.capacity == 16 && moved.uniformBlockCapacity == 6 && moved.samplerTextureCapacity == 10 &&
+           moved.descriptorBlocks.size() == 2 && matches(moved.descriptorBlocks.back(), descriptorBlock(2, &destination)) &&
+           moved.uniformBlocks.at(NameLocalID{42}).binding == 42 && moved.bindingMap.at(NameLocalID{17}) == 19 && usesResource(moved, &source);
+}
+
+bool readSetLayouts(BinaryInputArchive& archive, const BlockAlloc& alloc) {
+    DescriptorSetLayoutData layout(alloc);
+    DescriptorSetLayoutData accumulated(alloc);
+    for (uint32_t size : {0U, 1U, 2U, 0U}) {
+        load(archive, layout);
+        const auto expected = setLayout(size, alloc);
+        if (layout.slot != expected.slot || layout.capacity != expected.capacity || layout.uniformBlockCapacity != expected.uniformBlockCapacity ||
+            layout.samplerTextureCapacity != expected.samplerTextureCapacity || layout.descriptorBlocks.size() != size || !usesResource(layout, alloc)) return false;
+        for (size_t i = 0; i < size; ++i)
+            if (!matches(layout.descriptorBlocks[i], expected.descriptorBlocks[i])) return false;
+        // The engine's native loader uses emplace, so an earlier value wins for a repeated key.
+        accumulated.uniformBlocks.insert(expected.uniformBlocks.begin(), expected.uniformBlocks.end());
+        accumulated.bindingMap.insert(expected.bindingMap.begin(), expected.bindingMap.end());
+        if (layout.bindingMap != accumulated.bindingMap || layout.uniformBlocks.size() != accumulated.uniformBlocks.size()) return false;
+        for (const auto& [key, want] : accumulated.uniformBlocks) {
+            const auto& uniform = layout.uniformBlocks.at(key);
+            if (uniform.set != want.set || uniform.binding != want.binding || uniform.name != want.name || uniform.count != want.count ||
+                uniform.members.size() != 1 || uniform.members[0].name != "tint" ||
+                uniform.members[0].type != cc::gfx::Type::FLOAT4 || uniform.members[0].count != key.value) return false;
+        }
+    }
+    return true;
+}
 } // namespace
 
 bool exchangeLayoutArchive(std::string_view mode, const char* path) {
@@ -165,7 +234,7 @@ bool exchangeLayoutArchive(std::string_view mode, const char* path) {
 }
 
 bool exchangeBlockArchives(bool writing, const char* path) {
-    if (!checkDescriptorData()) return false;
+    if (!checkDescriptorData() || !checkSetLayoutMoves()) return false;
     boost::container::pmr::monotonic_buffer_resource arena;
     constexpr uint32_t sizes[] = {0, 2, 1, 0};
     constexpr uint32_t ids[] = {0, 23, UINT32_MAX};
@@ -181,6 +250,7 @@ bool exchangeBlockArchives(bool writing, const char* path) {
             save(archive, NameLocalID{id});
             save(archive, DescriptorData{NameLocalID{id}, cc::gfx::Type::FLOAT4, 3});
         }
+        for (uint32_t size : {0U, 1U, 2U, 0U}) save(archive, setLayout(size, &arena));
         file.close();
         return !file.fail();
     }
@@ -228,5 +298,5 @@ bool exchangeBlockArchives(bool writing, const char* path) {
         load(archive, descriptor);
         if (name.value != id || descriptor.descriptorID != name || descriptor.type != cc::gfx::Type::FLOAT4 || descriptor.count != 3) return false;
     }
-    return file.peek() == std::char_traits<char>::eof();
+    return readSetLayouts(archive, &destination) && file.peek() == std::char_traits<char>::eof();
 }

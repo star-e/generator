@@ -145,8 +145,7 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
-        if (rule.reset == ResetBinding::defaults) output.resetToDefaults.insert(name);
-        if (rule.reset == ResetBinding::constructor) output.resetFromConstructor.insert(name);
+        if (rule.reset) output.resets.emplace(name, *rule.reset);
         if (rule.pool) {
             if (output.poolModule.empty()) throw std::runtime_error(rule.source.location.describe() + ": pool binding requires poolModule");
             if (!poolMembers.insert(rule.pool->member).second)

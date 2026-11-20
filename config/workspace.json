@@ -29,6 +29,14 @@
     },
     {
       "backend": "model",
+      "spec": "../spec/extern/maps.spec",
+      "types": {
+        "PmrUnorderedMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
+        "PmrFlatMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" }
+      }
+    },
+    {
+      "backend": "model",
       "spec": "../spec/extern/uniform-block.spec",
       "types": { "UniformBlock": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
     },

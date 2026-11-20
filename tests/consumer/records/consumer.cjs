@@ -64,6 +64,7 @@ assert.equal(block.count, 0);
 compareDeclaration(layoutCpp, 'struct DescriptorBlockFlattened {', '};');
 compareDeclaration(layoutTs, 'export class DescriptorBlockFlattened {', '}');
 compareDeclaration(layoutTs, 'export class DescriptorBlockData {', '}');
+compareDeclaration(layoutTs, 'export class DescriptorSetLayoutData {', '}');
 compareDeclaration(layoutCpp, 'struct DescriptorBlockData {', '};', line => line.replace(
     'noexcept(noexcept(decltype(DescriptorBlockData::descriptors)(alloc)))', 'noexcept'));
 const flat = new layout.DescriptorBlockFlattened();

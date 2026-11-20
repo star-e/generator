@@ -19,8 +19,7 @@ struct RecordOutput {
     std::optional<std::filesystem::path> typescript;
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
-    std::set<std::string> resetToDefaults;
-    std::set<std::string> resetFromConstructor;
+    std::map<std::string, ResetBinding> resets;
     std::filesystem::path poolModule;
     std::map<std::string, PoolBinding> pools;
 };

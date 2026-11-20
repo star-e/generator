@@ -226,8 +226,19 @@ private:
                 expect("json");
                 rule.jsonMapKey = true;
             } else if (rule.kind == BindingTarget::classType && key == "reset") {
-                if (accept("constructor")) rule.reset = ResetBinding::constructor;
-                else { expect("defaults"); rule.reset = ResetBinding::defaults; }
+                auto& reset = rule.reset.emplace();
+                if (accept("(")) {
+                    reset.kind = ResetBinding::Kind::fields;
+                    if (!accept(")")) {
+                        std::set<std::string> fields;
+                        do { reset.fields.push_back(uniqueName(fields)); } while (accept(","));
+                        expect(")");
+                    }
+                } else if (accept("defaults")) {
+                    reset.kind = ResetBinding::Kind::defaults;
+                } else {
+                    expect("constructor");
+                }
             } else if (rule.kind == BindingTarget::classType && key == "pool") {
                 auto& pool = rule.pool.emplace();
                 pool.member = identifier();

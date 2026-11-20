@@ -67,7 +67,7 @@ binding typescript {
 | Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，`reset defaults;` 通过 `.clear()` 原地清空。 |
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
-| 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`Descriptor => class { reset constructor; };` 按构造参数重置。 |
+| 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`reset constructor;` 沿用构造参数，`reset(slot, capacity);` 按所列字段和顺序生成重置参数。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 
@@ -220,6 +220,10 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 `NameLocalID => number(value)` 将 C++ 结构体的唯一数值字段绑定为 TS 的 `number`。用作字段、Map 键或 Map 值时均可直接传数值。默认值继承自 `value`。`DescriptorData` 在类绑定中用 `field descriptorID default 0;` 保留 TS 构造默认值，C++ 默认构造仍使用 `0xFFFFFFFF`。两端按编号、类型、数量的顺序归档。[布局声明](../spec/render/layout-graph.spec) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
 `DescriptorBlockData` 在 C++ 中提供 3 个和 7 个业务参数的构造重载，末尾均接收分配器。生成器根据各成员的实际初始化表达式推导带参 PMR 构造的 `noexcept`。该记录先写入类型、可见性、偏移、容量、访问方式、视图维度、采样类型和格式，再写 `descriptors` 数组。TS 的 `reset()` 更新构造参数、将 `offset` 归零，并原地清空数组。[布局声明](../spec/render/layout-graph.spec) · [互读测试](../tests/consumer/records/layout-archive.cjs)
+
+`DescriptorSetLayoutData` 在 C++ 中只支持移动，构造时显式接收 PMR 分配器。TS 构造函数可以接收调用方的数组和两个 Map。`reset(slot, capacity)` 保留这三个容器的引用，清空内容，并将 `uniformBlockCapacity` 和 `samplerTextureCapacity` 归零。[布局声明](../spec/render/layout-graph.spec) · [容器声明](../spec/extern/maps.spec)
+
+归档依次写入四个标量、描述符块数组、uniform block 映射和 binding 映射。空映射与单键映射可以逐字节核对，多键映射按键值核对。向已有对象加载时，数组按归档长度调整，两个 Map 都保留归档中缺失的键。遇到重复键，TS 用归档值覆盖，C++ 保留已有值。[原生互读测试](../tests/consumer/records/LayoutArchiveConsumer.cpp) · [TS 互读测试](../tests/consumer/records/layout-archive.cjs)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 

@@ -18,7 +18,11 @@ struct PoolBinding {
 };
 
 enum class BindingTarget { type, interfaceType, classType, enumeration, constEnum, numberField };
-enum class ResetBinding { constructor, defaults };
+struct ResetBinding {
+    enum class Kind { constructor, defaults, fields };
+    Kind kind{Kind::constructor};
+    std::vector<std::string> fields;
+};
 
 struct TypeScriptBinding {
     TypeRef source;

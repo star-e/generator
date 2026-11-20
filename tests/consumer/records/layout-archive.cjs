@@ -1,7 +1,7 @@
 const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
-const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture, blocksNativeFile, blocksWebFile] = process.argv.slice(2);
+const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture, blocksNativeFile, blocksWebFile, blocksLegacyFile] = process.argv.slice(2);
 const current = require(path.join(jsDir, 'layout-graph.js'));
 const legacy = require(path.join(jsDir, 'legacy-layout.js'));
 const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
@@ -135,7 +135,25 @@ function descriptorBlock(api, size) {
     return block;
 }
 
-function encodeBlocks(api) {
+const setSizes = [0, 1, 2, 0];
+function setLayout(api, size) {
+    if (!size) return new api.DescriptorSetLayoutData();
+    const blocks = [], uniforms = new Map(), bindings = new Map();
+    for (let i = 1; i <= size; ++i) blocks.push(descriptorBlock(api, i));
+    for (const key of [42, 17].slice(0, size)) {
+        uniforms.set(key, new UniformBlock(size, key, 'Scene', [new Uniform('tint', Type.FLOAT4, key)], 2));
+        bindings.set(key, key + size);
+    }
+    const layout = new api.DescriptorSetLayoutData(size, size * 8, blocks, uniforms, bindings);
+    assert.strictEqual(layout.descriptorBlocks, blocks);
+    assert.strictEqual(layout.uniformBlocks, uniforms);
+    assert.strictEqual(layout.bindingMap, bindings);
+    layout.uniformBlockCapacity = size * 3;
+    layout.samplerTextureCapacity = size * 5;
+    return layout;
+}
+
+function encodeBlocks(api, layoutSizes = setSizes) {
     const output = new BinaryOutputArchive();
     for (const size of sizes) {
         api.saveDescriptorBlockFlattened(output, flattened(api, size));
@@ -146,6 +164,7 @@ function encodeBlocks(api) {
         output.n(id);
         api.saveDescriptorData(output, new api.DescriptorData(id, Type.FLOAT4, 3));
     }
+    for (const size of layoutSizes) api.saveDescriptorSetLayoutData(output, setLayout(api, size));
     return Buffer.from(output.data);
 }
 
@@ -175,6 +194,23 @@ function verifyBlocks(api, bytes) {
         api.loadDescriptorData(archive, descriptor);
         assert.deepEqual(descriptor, new api.DescriptorData(id, Type.FLOAT4, 3));
     }
+    const layout = new api.DescriptorSetLayoutData();
+    const { descriptorBlocks, uniformBlocks, bindingMap } = layout;
+    const expectedUniforms = new Map(), expectedBindings = new Map();
+    for (const size of setSizes) {
+        api.loadDescriptorSetLayoutData(archive, layout);
+        const expected = setLayout(api, size);
+        for (const key of ['slot', 'capacity', 'uniformBlockCapacity', 'samplerTextureCapacity']) assert.equal(layout[key], expected[key]);
+        assert.strictEqual(layout.descriptorBlocks, descriptorBlocks);
+        assert.strictEqual(layout.uniformBlocks, uniformBlocks);
+        assert.strictEqual(layout.bindingMap, bindingMap);
+        assert.deepEqual(descriptorBlocks, expected.descriptorBlocks);
+        // The engine's TS loader overwrites matching keys and preserves keys absent from the archive.
+        for (const [key, uniform] of expected.uniformBlocks) expectedUniforms.set(key, uniform);
+        for (const [key, binding] of expected.bindingMap) expectedBindings.set(key, binding);
+        assert.deepEqual(uniformBlocks, expectedUniforms);
+        assert.deepEqual(bindingMap, expectedBindings);
+    }
     assert.equal(archive.offset, bytes.length);
 }
 
@@ -182,10 +218,26 @@ const blocksLegacy = encodeBlocks(legacy);
 const blocksWeb = encodeBlocks(current);
 const blocksNative = fs.readFileSync(blocksNativeFile);
 assert.deepEqual(blocksWeb, blocksLegacy);
-assert.deepEqual(blocksNative, blocksLegacy);
+// The empty and single-key layouts have deterministic bytes. Multi-key maps can be traversed in different orders.
+const prefix = encodeBlocks(legacy, [0, 1]);
+assert.deepEqual(blocksNative.subarray(0, prefix.length), prefix);
+assert.deepEqual(blocksWeb.subarray(0, prefix.length), prefix);
 verifyBlocks(current, blocksNative);
+verifyBlocks(current, blocksLegacy);
 verifyBlocks(legacy, blocksWeb);
+verifyBlocks(legacy, blocksNative);
 fs.writeFileSync(blocksWebFile, blocksWeb);
+fs.writeFileSync(blocksLegacyFile, blocksLegacy);
+
+const layout = setLayout(current, 2);
+const { descriptorBlocks, uniformBlocks, bindingMap } = layout;
+layout.reset(9, 12);
+assert.deepEqual(layout, new current.DescriptorSetLayoutData(9, 12));
+assert.strictEqual(layout.descriptorBlocks, descriptorBlocks);
+assert.strictEqual(layout.uniformBlocks, uniformBlocks);
+assert.strictEqual(layout.bindingMap, bindingMap);
+const first = new current.DescriptorSetLayoutData(), second = new current.DescriptorSetLayoutData();
+for (const key of ['descriptorBlocks', 'uniformBlocks', 'bindingMap']) assert.notStrictEqual(first[key], second[key]);
 
 const resetBlock = uniformBlock(current, 2);
 const uniforms = resetBlock.uniforms;

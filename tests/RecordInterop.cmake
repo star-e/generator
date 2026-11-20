@@ -183,8 +183,8 @@ file(READ "${ENGINE}/cocos/rendering/custom/serialization.ts" codec)
 source_between(codec "export function saveUniform (" "export function saveDescriptorSetLayoutBinding (" uniformCodec)
 file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n${uniformCodec}")
-source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorSetLayoutData " legacyGraph)
-source_between(layout "export function saveDescriptor (" "export function saveDescriptorSetLayoutData (" legacyArchive)
+source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorSetData " legacyGraph)
+source_between(layout "export function saveDescriptor (" "export function saveDescriptorSetData (" legacyArchive)
 string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
 file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency } from './types';\n"
     "import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"
@@ -263,8 +263,9 @@ run("${consumer}" blocks-write "${work}/blocks-native.bin")
 set(legacyFixture "${SOURCE}/tests/consumer/records/fixtures/layout-graph.bin")
 run("${node}" "${SOURCE}/tests/consumer/records/layout-archive.cjs" "${work}/js/rendering/custom"
     "${work}/layout-native.bin" "${work}/layout-web.bin" "${work}/layout-legacy.bin" "${work}/layout-invalid.bin" "${legacyFixture}"
-    "${work}/blocks-native.bin" "${work}/blocks-web.bin")
+    "${work}/blocks-native.bin" "${work}/blocks-web.bin" "${work}/blocks-legacy.bin")
 run("${consumer}" blocks-read "${work}/blocks-web.bin")
+run("${consumer}" blocks-read "${work}/blocks-legacy.bin")
 run("${consumer}" layout-read "${work}/layout-web.bin")
 run("${consumer}" layout-read "${work}/layout-legacy.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy.bin")

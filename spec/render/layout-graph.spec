@@ -6,6 +6,7 @@ import Strings;
 import Containers;
 import PmrContainers;
 import Sets;
+import Maps;
 import GfxUniformBlock;
 
 namespace cc::render {
@@ -151,6 +152,18 @@ namespace cc::render {
         constructor(type, visibility, capacity, accessType, viewDimension, sampleType, format);
         constructor(type, visibility, capacity);
     }
+
+    @serialize @moveOnly @requireAllocator struct DescriptorSetLayoutData {
+        slot: uint32_t = 0xFFFFFFFF;
+        capacity: uint32_t = 0;
+        uniformBlockCapacity: uint32_t = 0;
+        samplerTextureCapacity: uint32_t = 0;
+        readonly descriptorBlocks: ccstd::pmr::vector<DescriptorBlockData>;
+        readonly uniformBlocks: PmrUnorderedMap<NameLocalID, gfx::UniformBlock>;
+        readonly bindingMap: PmrFlatMap<NameLocalID, uint32_t>;
+
+        constructor(slot, capacity, descriptorBlocks, uniformBlocks, bindingMap);
+    }
 }
 
 binding typescript {
@@ -169,4 +182,5 @@ binding typescript {
     NameLocalID => number(value);
     DescriptorData => class { field descriptorID default 0; reset constructor; };
     DescriptorBlockData => class { reset constructor; };
+    DescriptorSetLayoutData => class { reset(slot, capacity); };
 }
