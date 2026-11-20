@@ -174,8 +174,12 @@ bool checkResourceGraph() {
         if (ResourceTraits{residency}.hasSideEffects()) return false;
     const auto matches = [&](auto tag, ResourceGraph::Vertex vertex, unsigned ordinal) {
         const auto& read = std::as_const(g);
+        const void* visited = read.visit_object(vertex, [](auto& payload) -> const void* {
+            static_assert(std::is_const_v<std::remove_reference_t<decltype(payload)>>);
+            return &payload;
+        });
         return static_cast<unsigned>(read.kind(vertex)) == ordinal && read.holds<decltype(tag)>(vertex) &&
-               &g.value(tag, vertex) == &read.value(tag, vertex);
+               visited == &read.value(tag, vertex) && &g.value(tag, vertex) == &read.value(tag, vertex);
     };
     const auto mb = g.add_vertex(ManagedBuffer_{}, "mb");
     try {
@@ -215,7 +219,8 @@ bool checkResourceGraph() {
         swapchain.generation != UINT32_MAX || g.value(FormatView_{}, fmt).format != cc::gfx::Format::UNKNOWN) return false;
     g.value(ManagedBuffer_{}, mb).fenceValue = UINT64_MAX;
     const auto mb2 = g.add_vertex(ManagedBuffer_{}, "mb2");
-    if (g.value(ManagedBuffer_{}, mb2).fenceValue != 0 || g.value(ManagedBuffer_{}, mb).fenceValue != UINT64_MAX) return false;
+    if (!matches(ManagedBuffer_{}, mb2, 1) || g.value(ManagedBuffer_{}, mb2).fenceValue != 0 ||
+        g.value(ManagedBuffer_{}, mb).fenceValue != UINT64_MAX) return false;
     cc::IntrusivePtr<cc::gfx::Framebuffer> framebuffer{new cc::gfx::EmptyFramebuffer};
     const auto refs = framebuffer->getRefCount();
     g.value(Framebuffer_{}, fb) = framebuffer;

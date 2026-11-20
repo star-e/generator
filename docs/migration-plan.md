@@ -165,6 +165,8 @@ C++ 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`out_edges(v)` 
 
 TS 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`oe`、`od`、`edge`、`source` 和 `target` 共用父子关系的存储。编辑器迁入时从 `./graph-dfs` 导入 `depthFirstVisit` 和 `depthFirstSearch`，访问器、颜色和边类型继续从 `./graph` 导入。互操作测试用编辑器的 `print()` 对照完整布局文本，并验证 DFS 事件顺序和长链。[TS 遍历源码](../runtime/typescript/graph-dfs.ts) · [Web 图接口](../../cocos4/cocos/rendering/custom/graph.ts)
 
+对声明了 `polymorphic_graph` 的图，C++ 生成成员函数 `g.visit_object(v, visitor)`，也接受多个按载荷类型重载的 lambda。图按顶点类别调用一次处理函数，并保留其返回值或引用。可修改图传入 `T&`，只读图传入 `const T&`，两者都直接访问该顶点的载荷。无效编号会在调用访问器之前抛出 `std::out_of_range`。原生 DFS 用这一接口分派 Pass、Queue、Scene 的进入与退出操作。[渲染图访问用例](../tests/consumer/records/RenderGraphConsumer.cpp) · [DFS 用例](../tests/consumer/records/GraphDFSConsumer.cpp)
+
 TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口。`h(kind, v)` 检查顶点类型，`object(v)` 返回载荷，`visitVertex(visitor, v)` 调用该标签的访问方法并返回其结果。声明 `mutable_graph` 的图还生成 `clear()`。编辑器重建 `LayoutGraphData` 时会从头分配顶点编号，原地清空 `valueNames` 和四个 Map，并将 `constantMacros` 还原为空字符串。消费测试运行引擎编辑器的阶段、相位、着色器构建方法以及 Web 程序库的相位筛选。[TS 消费测试](../tests/consumer/records/layout-graph-consumer.ts.in)
 
 ## 模块迁移顺序

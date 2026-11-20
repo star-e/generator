@@ -14,6 +14,17 @@ void require(bool ok, const char* message) {
     if (!ok) throw std::runtime_error(message);
 }
 
+template<class Tag>
+void checkPayload(const RenderGraph& graph, RenderGraph::Vertex v, Tag tag, unsigned ordinal) {
+    require(static_cast<unsigned>(graph.kind(v)) == ordinal && graph.holds<Tag>(v), "payload kind");
+    const auto& expected = graph.value(tag, v);
+    unsigned calls = 0;
+    const bool matched = graph.visit_object(v,
+        [&](decltype(expected) payload) { ++calls; return &payload == &expected; },
+        [&](auto&) { ++calls; return false; });
+    require(matched && calls == 1, "const visitor payload type, address and call count");
+}
+
 template<class Range>
 std::vector<RenderGraph::Vertex> sources(Range range) {
     std::vector<RenderGraph::Vertex> result;
@@ -77,11 +88,13 @@ bool checkRenderGraph() {
         } catch (const std::out_of_range&) {}
         const auto add = [&](auto tag, unsigned ordinal) {
             const auto v = g.add_vertex(tag, "");
-            require(static_cast<unsigned>(g.kind(v)) == ordinal && g.holds<decltype(tag)>(v), "payload kind");
+            checkPayload(g, v, tag, ordinal);
             return v;
         };
-        require(static_cast<unsigned>(g.kind(pass)) == 0 && static_cast<unsigned>(g.kind(queue)) == 8 &&
-                static_cast<unsigned>(g.kind(scene)) == 9 && static_cast<unsigned>(g.kind(compute)) == 3, "pass, queue, scene kinds");
+        checkPayload(g, pass, RasterPassTag{}, 0);
+        checkPayload(g, queue, Queue_{}, 8);
+        checkPayload(g, scene, Scene_{}, 9);
+        checkPayload(g, compute, ComputeTag{}, 3);
         add(RasterSubpassTag{}, 1);
         add(ComputeSubpassTag{}, 2);
         add(ResolveTag{}, 4);
@@ -95,7 +108,15 @@ bool checkRenderGraph() {
         g.getLayout(pass) = "main-layout";
         g.getValid(scene) = true;
         g.getData(scene).constants[7] = {'s'};
-        g.value(CopyTag{}, copy).uploadPairs.emplace_back().target = "destination-upload-target";
+        auto& visitedCopy = g.visit_object(copy,
+            [](CopyPass& payload) -> CopyPass& { return payload; },
+            [](auto&) -> CopyPass& { throw std::runtime_error("expected CopyPass"); });
+        require(&visitedCopy == &g.value(CopyTag{}, copy), "mutable move-only payload");
+        visitedCopy.uploadPairs.emplace_back().target = "destination-upload-target";
+        try {
+            g.visit_object(g.null_vertex(), [](auto&) { throw std::runtime_error("visitor called for invalid vertex"); });
+            return false;
+        } catch (const std::out_of_range&) {}
         g.value(Clear_{}, clear).emplace_back().slotName = "destination-clear-slot";
         g.value(Viewport_{}, viewport).width = 640.F;
         g.index.emplace("execution-index", compute);

@@ -179,13 +179,14 @@ auto addLayout(LayoutGraphData& graph, unsigned i) {
 
 void fillLayout(LayoutGraphData& graph, unsigned i) {
     graph.getLayout(i).descriptorSets[frequency].descriptorSetLayoutData.capacity = i + 1;
-    if (i % 2) {
-        auto& phase = graph.value(RenderPhase_{}, i);
-        phase.rootSignature.assign(layoutName.data(), layoutName.size());
-        phase.shaderPrograms.emplace_back().layout.descriptorGroups[frequency].descriptorSetLayoutData.slot = i;
-    } else {
-        graph.value(RenderStage_{}, i).descriptorVisibility.emplace(cc::render::NameLocalID{i}, visibility);
-    }
+    graph.visit_object(i,
+        [&](cc::render::RenderPhaseData& phase) {
+            phase.rootSignature.assign(layoutName.data(), layoutName.size());
+            phase.shaderPrograms.emplace_back().layout.descriptorGroups[frequency].descriptorSetLayoutData.slot = i;
+        },
+        [&](cc::render::RenderStageData& stage) {
+            stage.descriptorVisibility.emplace(cc::render::NameLocalID{i}, visibility);
+        });
 }
 
 bool checkLayoutValues(const LayoutGraphData& graph, unsigned count) {
@@ -352,9 +353,12 @@ bool checkGraphPaths(const char* sampleFile) {
         for (const auto v : view.vertices()) {
             samples.writeNumber(view.get_parent(v));
             samples.writeString(view.getName(v));
-            const bool isPhase = view.holds<RenderPhase_>(v);
-            samples.writeBool(isPhase);
-            if (!isPhase) samples.writeNumber(static_cast<unsigned>(view.value(RenderStage_{}, v)));
+            view.visit_object(v,
+                [&](RenderPassType pass) {
+                    samples.writeBool(false);
+                    samples.writeNumber(static_cast<unsigned>(pass));
+                },
+                [&](const RenderPhase&) { samples.writeBool(true); });
             const auto path = view.path(v);
             samples.writeString(path);
             samples.writeNumber(view.locate(path));
@@ -452,7 +456,10 @@ bool checkFlatComponents() {
     cc::Toggles toggles{&sourceArena};
     const auto enabled = toggles.add_vertex();
     const auto disabled = toggles.add_vertex(cc::render::ComputeTag{});
-    toggles.value(cc::Count_{}, enabled) = true;
+    const auto selectFlag = [](bool& flag) -> bool& { return flag; };
+    const auto unexpectedLayout = [](LayoutGraph&) -> bool& { throw std::runtime_error("expected bool"); };
+    toggles.visit_object(enabled, selectFlag, unexpectedLayout) = true;
+    if (&toggles.visit_object(disabled, selectFlag, unexpectedLayout) != &toggles.value(cc::render::ComputeTag{}, disabled)) return false;
     if (toggles.num_vertices() != 2 || toggles.holds<cc::Count_>(2) || !toggles.holds<cc::Count_>(enabled) ||
         !toggles.value(cc::Count_{}, enabled) || toggles.value(cc::render::ComputeTag{}, disabled)) return false;
     cc::FlatComponents source{&sourceArena};

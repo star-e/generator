@@ -402,6 +402,11 @@ struct Alternative {
     std::string kind;
     std::string type;
     std::string member;
+    bool isBoolean;
+
+    std::string element(const std::string& index) const {
+        return "this->" + member + "[" + index + "]" + (isBoolean ? "[0]" : "");
+    }
 };
 
 void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternatives,
@@ -417,9 +422,23 @@ void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternativ
         for (const std::string qualifier : {"", " const"}) {
             out << "    " << alt.type << qualifier << "& value(const " << alt.tag << "&, " << vertex << " v)" << qualifier << " {\n"
                 << "        if (!holds<" << alt.tag << ">(v)) throw std::bad_variant_access{};\n"
-                << "        return this->" << alt.member << "[this->" << handles << "[v].index]"
-                << (alt.type == "bool" ? "[0]" : "") << ";\n    }\n";
+                << "        return " << alt.element("this->" + handles + "[v].index") << ";\n    }\n";
         }
+    }
+    const auto visitorType = vertex == "Visitor" ? "ObjectVisitor" : "Visitor";
+    const auto othersType = vertex == "Others" ? "OtherVisitors" : "Others";
+    for (const std::string qualifier : {"", " const"}) {
+        out << "\n    template<class " << visitorType << ", class... " << othersType << ">\n"
+            << "    decltype(auto) visit_object(" << vertex << " v, " << visitorType << "&& visitor, " << othersType << "&&... others)" << qualifier << " {\n"
+            << "        if constexpr (sizeof...(others) > 0) {\n"
+            << "            auto handlers = ::cc::overloaded{std::forward<" << visitorType << ">(visitor), std::forward<" << othersType << ">(others)...};\n"
+            << "            return this->visit_object(v, handlers);\n"
+            << "        } else {\n            const auto& handle = this->" << handles << ".at(v);\n"
+            << "            switch (handle.kind) {\n";
+        for (const auto& alt : alternatives)
+            out << "            case Kind::" << alt.kind << ": return std::forward<" << visitorType
+                << ">(visitor)(" << alt.element("handle.index") << ");\n";
+        out << "            }\n            throw std::bad_variant_access{};\n        }\n    }\n";
     }
 }
 
@@ -589,16 +608,19 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         const auto& payload = graph.node(alt.valueType);
         if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data))
             throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires an object type");
-        alternatives.push_back({"::" + tag.qualifiedName, alt.publicName, columnType(alt), alt.name});
+        const auto* aliasType = std::get_if<AliasType>(&payload.data);
+        const bool isBoolean = (aliasType ? graph.node(aliasType->target) : payload).qualifiedName == "bool";
+        alternatives.push_back({"::" + tag.qualifiedName, alt.publicName, columnType(alt), alt.name, isBoolean});
         members.insert(alt.name);
     }
+    std::set<std::string> api{"allocator_type", "get_allocator", "swapStorage"};
     if (!alternatives.empty()) {
-        for (const auto* symbol : {"Kind", "kind", "holds", "value", "kindOf", "VertexHandle", "addVertexImpl"}) {
+        for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_object", "kindOf", "VertexHandle", "addVertexImpl"}) {
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": polymorphic graph member name collision: " + symbol);
+            api.insert(symbol);
         }
     }
-    std::set<std::string> api{"allocator_type", "get_allocator", "swapStorage"};
     std::string nameSetter;
     if (model.nameIndex) {
         const auto& component = model.components.at(*model.nameComponentIndex);
@@ -639,7 +661,6 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         "adjacent_vertices", "num_edges", "edge", "has_link", "EdgeIterator", "edges"});
     if (model.parentGraph) api.insert("locate_child");
     if (model.addressableGraph) api.insert({"locate", "path", "exists"});
-    if (!alternatives.empty()) api.insert({"Kind", "kind", "holds", "value", "kindOf", "VertexHandle", "addVertexImpl"});
     for (const auto& c : model.components) {
         api.insert("get");
         api.insert("get" + c.publicName);
@@ -762,7 +783,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         }
     }
     if (!alternatives.empty()) {
-        headers.insert({"cstdint", "variant"});
+        headers.insert({"cstdint", "variant", "cocos/base/TemplateUtils.h"});
         payloadAccess(out, alternatives, vertex, handles);
     }
     out << "\nprivate:\n";
@@ -789,8 +810,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         for (const auto& alt : alternatives) {
             out << "    static constexpr Kind kindOf(" << alt.tag << "*) noexcept { return Kind::" << alt.kind << "; }\n";
             // Keep value() addressable even when the C++ container specializes vector<bool>.
-            if (alt.type == "bool") headers.insert("array");
-            out << "    ccstd::pmr::" << (dequeColumns.contains(alt.member) ? "deque" : "vector") << "<" << (alt.type == "bool" ? "std::array<bool, 1>" : alt.type)
+            if (alt.isBoolean) headers.insert("array");
+            out << "    ccstd::pmr::" << (dequeColumns.contains(alt.member) ? "deque" : "vector") << "<" << (alt.isBoolean ? "std::array<bool, 1>" : alt.type)
                 << "> " << alt.member << ";\n";
         }
         if (model.mutableGraph) {

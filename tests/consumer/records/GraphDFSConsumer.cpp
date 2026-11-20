@@ -67,6 +67,23 @@ private:
     std::vector<std::string> events;
 };
 
+struct RenderActions : cc::graph::DefaultDfsVisitor {
+    explicit RenderActions(const cc::render::RenderGraph& graph) : graph(graph) {}
+    const cc::render::RenderGraph& graph;
+    std::vector<std::string> events;
+
+    void record(const char* action, Vertex v) {
+        using namespace cc::render;
+        graph.visit_object(v,
+            [&](const RasterPass&) { events.emplace_back(std::string(action) + "Pass"); },
+            [&](const RenderQueue&) { events.emplace_back(std::string(action) + "Queue"); },
+            [&](const SceneData&) { events.emplace_back(std::string(action) + "Scene"); },
+            [](const auto&) { throw std::runtime_error("Unexpected render action"); });
+    }
+    template<class G> void discoverVertex(Vertex v, const G&) { record("begin", v); }
+    template<class G> void finishVertex(Vertex v, const G&) { record("end", v); }
+};
+
 void checkRenderGraphViews(cc::render::OutputArchive& samples, boost::container::pmr::memory_resource* scratch) {
     using namespace cc::render;
     RenderGraph graph{scratch};
@@ -82,6 +99,12 @@ void checkRenderGraphViews(cc::render::OutputArchive& samples, boost::container:
     ccstd::pmr::vector<DfsFrame<decltype(refs)>> stack{scratch};
     depthFirstVisit(refs, pass, trace, colors, stack);
     trace.write(samples);
+
+    RenderActions actions{graph};
+    std::fill(colors.begin(), colors.end(), GraphColor::WHITE);
+    depthFirstVisit(refs, pass, actions, colors, stack);
+    if (actions.events != std::vector<std::string>{"beginPass", "beginQueue", "beginScene", "endScene", "endQueue", "endPass"})
+        throw std::runtime_error("Unexpected payload dispatch order");
 
     const auto alternate = graph.add_vertex(Queue_{}, "alternate", pass);
     graph.add_reference(alternate, scene);

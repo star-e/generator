@@ -73,6 +73,7 @@ namespace cc {
         hierarchy_graph { storage: shared_edges; }
         component Count_: uint32_t { member: counts; }
     }
+    using ToggleFlag = bool;
     graph Toggles {
         vertex_descriptor Index = uint32_t;
         vertex_storage: indexed;
@@ -80,7 +81,7 @@ namespace cc {
         mutable_graph;
         polymorphic_graph {
             Count_: bool { member: handles_; }
-            render::ComputeTag: bool { member: flags; }
+            render::ComputeTag: ToggleFlag { member: flags; }
             Layout_: render::LayoutGraph { member: layouts; }
         }
     }
