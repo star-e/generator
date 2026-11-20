@@ -19,7 +19,7 @@ std::vector<Column> bindColumns(const TypeGraph& graph, const TypeNode& owner,
         while (const auto* alias = std::get_if<AliasType>(&graph.node(id).data)) id = alias->target;
         const auto& value = graph.node(id);
         const auto context = owner.qualifiedName + "." + column.name;
-        if (value.module != owner.module && value.typescriptModule.empty() &&
+        if (value.module != owner.module && value.typescriptModule.empty() && !value.typescriptNumber &&
             (std::holds_alternative<RecordType>(value.data) || std::holds_alternative<GraphType>(value.data)))
             throw std::runtime_error(context + ": missing TypeScript import mapping for " + value.qualifiedName);
         result.push_back({componentAccessorSuffix(graph.node(column.tag).name),

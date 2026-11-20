@@ -52,6 +52,7 @@ struct FieldInfo {
     bool isReadonly = false;
     bool isNullable = false;
     bool transient = false;
+    std::string typescriptInitializer;
 };
 
 struct Enumerator {
@@ -198,6 +199,7 @@ struct TypeNode {
     std::string typescriptArchiveModule;
     ContainerKind typescriptContainer = ContainerKind::None;
     bool typescriptJsonMapKey = false;
+    bool typescriptNumber = false;
     std::vector<TypeId> templateParameters;
 };
 

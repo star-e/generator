@@ -24,6 +24,7 @@ namespace cc {
     @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
     @serialize struct ArrayArchiveProbe { readonly rows: ccstd::vector<ccstd::vector<bool>>; }
     struct UniformIDProbe { id: render::UniformID = 0xFFFFFFFF; local: LocalUniformID = 0; }
+    struct LocalIDProbe { id: render::NameLocalID; values: ccstd::map<render::NameLocalID, render::NameLocalID>; }
     using LocalUniformID = UniformWord;
     using UniformWord = render::UniformID;
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
@@ -90,6 +91,7 @@ if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
     message(FATAL_ERROR "Explicit TS binding on an owning string was lost")
 endif()
 foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []"
+                          "values: Map<number, number>"
                           "tables: Map<LayoutType, UniformBlock[]>[] = []"
                           "passes: Set<RenderPassType>[] = []"
                           "keyed: Map<string, DescriptorBlockIndex>[] = []"
@@ -175,8 +177,8 @@ file(READ "${ENGINE}/cocos/rendering/custom/serialization.ts" codec)
 source_between(codec "export function saveUniform (" "export function saveDescriptorSetLayoutBinding (" uniformCodec)
 file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n${uniformCodec}")
-source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorData " legacyGraph)
-source_between(layout "export function saveDescriptor (" "export function saveDescriptorData (" legacyArchive)
+source_between(layout "export const enum DescriptorTypeOrder" "export class DescriptorBlockData " legacyGraph)
+source_between(layout "export function saveDescriptor (" "export function saveDescriptorBlockData (" legacyArchive)
 string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
 file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency } from './types';\n"
     "import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"

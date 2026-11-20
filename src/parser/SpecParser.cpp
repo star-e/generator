@@ -214,6 +214,14 @@ private:
                 auto name = identifier();
                 expect("renamedFrom");
                 if (!rule.renamedFrom.emplace(name, identifier()).second) fail("duplicate field binding " + name);
+            } else if (rule.kind == BindingTarget::classType && key == "field") {
+                const auto field = identifier();
+                expect("default");
+                const bool negative = accept("-");
+                if (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))) fail("expected a numeric default");
+                if (!rule.fieldDefaults.emplace(field, (negative ? "-" : "") + std::string(token)).second)
+                    fail("duplicate field default " + field);
+                advance();
             } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
                 expect("json");
                 rule.jsonMapKey = true;
@@ -252,7 +260,11 @@ private:
             }
             rule.target = token == "\"" ? quotedString("TypeScript type") : identifier();
             if (rule.target.empty()) fail("empty TypeScript type binding");
-            if (accept("from")) {
+            if (rule.target == "number" && accept("(")) {
+                rule.kind = BindingTarget::numberField;
+                rule.numberField = identifier();
+                expect(")");
+            } else if (accept("from")) {
                 if (!identifierStart(rule.target.front()) || !std::ranges::all_of(rule.target, [](char c) {
                         return identifierStart(c) || std::isdigit(static_cast<unsigned char>(c));
                     })) fail("expected a named TypeScript import");

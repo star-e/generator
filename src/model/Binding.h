@@ -17,7 +17,7 @@ struct PoolBinding {
     std::set<std::string> keepOnReset;
 };
 
-enum class BindingTarget { type, interfaceType, classType, enumeration, constEnum };
+enum class BindingTarget { type, interfaceType, classType, enumeration, constEnum, numberField };
 enum class ResetBinding { constructor, defaults };
 
 struct TypeScriptBinding {
@@ -28,6 +28,8 @@ struct TypeScriptBinding {
     std::filesystem::path archiveFrom;
     std::map<std::string, std::string> methods;
     std::map<std::string, std::string> renamedFrom;
+    std::string numberField;
+    std::map<std::string, std::string> fieldDefaults;
     std::optional<PoolBinding> pool;
     std::optional<ResetBinding> reset;
     bool jsonMapKey{};

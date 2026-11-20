@@ -1,5 +1,6 @@
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphSerialization.h"
+#include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <fstream>
 #include <string_view>
@@ -9,6 +10,23 @@ namespace {
 using namespace cc::render;
 static_assert(std::is_same_v<UniformID, uint32_t>);
 static_assert(!std::is_default_constructible_v<UniformBlockData>);
+static_assert(std::is_aggregate_v<NameLocalID> && !std::is_convertible_v<uint32_t, NameLocalID>);
+static_assert(std::is_convertible_v<NameLocalID, DescriptorData>);
+
+bool checkDescriptorData() {
+    using cc::gfx::Type;
+    const NameLocalID id{23};
+    ccstd::hash_t expectedHash = 0;
+    ccstd::hash_combine(expectedHash, id.value);
+    const DescriptorData empty;
+    const DescriptorData one(id);
+    const DescriptorData two(id, Type::FLOAT4);
+    return id == NameLocalID{23} && id != NameLocalID{} && id < NameLocalID{} &&
+           ccstd::hash<NameLocalID>{}(id) == expectedHash &&
+           empty.descriptorID.value == UINT32_MAX && empty.type == Type::UNKNOWN && empty.count == 1 &&
+           one.descriptorID == id && one.type == Type::UNKNOWN && one.count == 1 &&
+           two.descriptorID == id && two.type == Type::FLOAT4 && two.count == 1;
+}
 
 void populate(LayoutGraph& g) {
     const auto pass = g.add_vertex("main");
@@ -114,14 +132,20 @@ bool exchangeLayoutArchive(std::string_view mode, const char* path) {
 }
 
 bool exchangeBlockArchives(bool writing, const char* path) {
+    if (!checkDescriptorData()) return false;
     boost::container::pmr::monotonic_buffer_resource arena;
     constexpr uint32_t sizes[] = {0, 2, 1, 0};
+    constexpr uint32_t ids[] = {0, 23, UINT32_MAX};
     if (writing) {
         std::ofstream file(path, std::ios::binary);
         BinaryOutputArchive archive(file, &arena);
         for (auto size : sizes) {
             save(archive, flattened(size));
             save(archive, uniformBlock(size, &arena));
+        }
+        for (auto id : ids) {
+            save(archive, NameLocalID{id});
+            save(archive, DescriptorData{NameLocalID{id}, cc::gfx::Type::FLOAT4, 3});
         }
         file.close();
         return !file.fail();
@@ -158,6 +182,13 @@ bool exchangeBlockArchives(bool writing, const char* path) {
             const auto& last = block.uniforms.back();
             if (last.uniformID != 0x80000009U || last.uniformType != cc::gfx::Type::FLOAT4 || last.offset != 32 || last.size != 16) return false;
         }
+    }
+    DescriptorData descriptor;
+    NameLocalID name;
+    for (auto id : ids) {
+        load(archive, name);
+        load(archive, descriptor);
+        if (name.value != id || descriptor.descriptorID != name || descriptor.type != cc::gfx::Type::FLOAT4 || descriptor.count != 3) return false;
     }
     return file.peek() == std::char_traits<char>::eof();
 }

@@ -21,6 +21,7 @@ const std::string& archiveMethod(const TypeNode& api, const std::string& method)
 
 std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
     const auto& node = graph.node(id);
+    if (node.typescriptNumber) return "Number";
     if (const auto* alias = std::get_if<AliasType>(&node.data)) return archivePrimitive(graph, alias->target);
     if (node.qualifiedName == "bool") return "Bool";
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) return "String";
@@ -34,7 +35,7 @@ std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
 
 void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context) {
     const auto& node = graph.node(id);
-    if (!archivePrimitive(graph, id).empty() || !node.typescriptArchiveModule.empty()) return;
+    if ((!node.typescriptNumber && !archivePrimitive(graph, id).empty()) || !node.typescriptArchiveModule.empty()) return;
     if (const auto* record = std::get_if<RecordType>(&node.data); record && record->serializable && node.module == owner) return;
     if (node.typescriptContainer != ContainerKind::None) {
         needsReadSize = true;

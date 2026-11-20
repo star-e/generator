@@ -382,6 +382,11 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                     reject("expected a built-in ES2015 TypedArray target without an import");
                 node.typescriptContainer = ContainerKind::None;
                 node.typescriptName = rule.target;
+            } else if (rule.kind == BindingTarget::numberField) {
+                if (!isRecord) reject("number(field) requires a record");
+                node.typescriptNumber = true;
+                node.typescriptName = "number";
+                node.typescriptModule.clear();
             } else if (rule.kind == BindingTarget::type) {
                 if (!std::holds_alternative<BuiltinType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data) &&
                     !(isEnum && input.modelOnly)) reject("expected an external type");
@@ -637,6 +642,30 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 const auto names = bindings.find(id.value);
                 auto payload = resolveInterface(graph, decl, names == bindings.end() ? noRenames : names->second, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);
+            }
+        }
+    }
+    // Numeric record bindings refer to resolved fields and may be used by other modules.
+    for (const auto& input : inputs) {
+        const auto owner = moduleNames.at(input.syntax.name);
+        for (const auto& rule : input.syntax.bindings.typescript) {
+            if (rule.kind != BindingTarget::numberField && rule.fieldDefaults.empty()) continue;
+            const auto& at = rule.source.location;
+            const auto id = resolveName(graph, rule.source.name, at, scopes[owner.value], owner);
+            auto& fields = std::get<RecordType>(graph.getNode(id.value).data).fields;
+            if (rule.kind == BindingTarget::numberField) {
+                if (fields.size() != 1 || fields.front().name != rule.numberField ||
+                    fields.front().transient || fields.front().isNullable)
+                    throw std::runtime_error(at.describe() + ": number(field) requires a single non-transient numeric field named " + rule.numberField);
+                const auto& target = graph.node(canonicalType(graph, fields.front().type));
+                if (target.typescriptName != "number" || (!integerRanges().contains(target.qualifiedName) &&
+                    target.qualifiedName != "float" && target.qualifiedName != "double"))
+                    throw std::runtime_error(at.describe() + ": expected a numeric field for " + rule.source.name + "." + rule.numberField);
+            }
+            for (const auto& [name, initial] : rule.fieldDefaults) {
+                const auto field = std::ranges::find(fields, name, &FieldInfo::name);
+                if (field == fields.end()) throw std::runtime_error(at.describe() + ": unknown field " + rule.source.name + "." + name);
+                field->typescriptInitializer = initial;
             }
         }
     }

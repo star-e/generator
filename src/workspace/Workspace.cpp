@@ -87,7 +87,8 @@ SettingsBinding settingsBinding(const Module& module) {
     for (const auto& rule : module.bindings.typescript) {
         if (rule.kind == BindingTarget::type) continue;
         const auto name = bindingName(rule.source.name);
-        if (rule.kind == BindingTarget::constEnum || rule.kind == BindingTarget::classType || rule.names || !rule.methods.empty())
+        if (rule.kind == BindingTarget::constEnum || rule.kind == BindingTarget::classType ||
+            rule.kind == BindingTarget::numberField || rule.names || !rule.methods.empty())
             invalidBinding(rule, "settings");
         if (rule.kind == BindingTarget::interfaceType && !rule.helpers) result.interfaceOnly.insert(name);
         if (rule.registerEnum) result.registerEnums.insert(name);

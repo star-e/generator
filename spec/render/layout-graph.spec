@@ -122,6 +122,20 @@ namespace cc::render {
         bufferSize: uint32_t = 0;
         readonly uniforms: ccstd::pmr::vector<UniformData>;
     }
+
+    @serialize @comparison("==", "<") @hash struct NameLocalID {
+        value: uint32_t = 0xFFFFFFFF;
+    }
+
+    @serialize struct DescriptorData {
+        descriptorID: NameLocalID;
+        type: gfx::Type = gfx::Type::UNKNOWN;
+        count: uint32_t = 1;
+
+        constructor(descriptorID, type, count);
+        constructor(descriptorID, type);
+        constructor(descriptorID);
+    }
 }
 
 binding typescript {
@@ -137,4 +151,6 @@ binding typescript {
     RenderPhase => class { reset defaults; };
     UniformData => class { reset constructor; };
     UniformBlockData => class { reset defaults; };
+    NameLocalID => number(value);
+    DescriptorData => class { field descriptorID default 0; reset constructor; };
 }

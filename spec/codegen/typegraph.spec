@@ -30,6 +30,7 @@ namespace codegen {
         isReadonly: bool = false;
         isNullable: bool = false;
         transient: bool = false;
+        typescriptInitializer: std::string;
     }
     struct Enumerator {
         name: std::string;
@@ -104,6 +105,7 @@ namespace codegen {
         typescriptArchiveModule: std::string;
         typescriptContainer: ContainerKind = ContainerKind::None;
         typescriptJsonMapKey: bool = false;
+        typescriptNumber: bool = false;
         templateParameters: std::vector<TypeId>;
     }
     struct TypeModule {

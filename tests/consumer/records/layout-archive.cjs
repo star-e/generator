@@ -123,11 +123,16 @@ function uniformBlock(api, size) {
 }
 
 const sizes = [0, 2, 1, 0];
+const ids = [0, 23, 0xFFFFFFFF];
 function encodeBlocks(api) {
     const output = new BinaryOutputArchive();
     for (const size of sizes) {
         api.saveDescriptorBlockFlattened(output, flattened(api, size));
         api.saveUniformBlockData(output, uniformBlock(api, size));
+    }
+    for (const id of ids) {
+        output.n(id);
+        api.saveDescriptorData(output, new api.DescriptorData(id, Type.FLOAT4, 3));
     }
     return Buffer.from(output.data);
 }
@@ -146,6 +151,12 @@ function verifyBlocks(api, bytes) {
         api.loadUniformBlockData(archive, block);
         assert.strictEqual(block.uniforms, uniforms);
         assert.deepEqual(block, uniformBlock(api, size));
+    }
+    const descriptor = new api.DescriptorData();
+    for (const id of ids) {
+        assert.equal(archive.n(), id);
+        api.loadDescriptorData(archive, descriptor);
+        assert.deepEqual(descriptor, new api.DescriptorData(id, Type.FLOAT4, 3));
     }
     assert.equal(archive.offset, bytes.length);
 }
@@ -167,3 +178,16 @@ assert.deepEqual(member, new current.UniformData(7, Type.SAMPLER2D, 12));
 resetBlock.reset();
 assert.strictEqual(resetBlock.uniforms, uniforms);
 assert.deepEqual(resetBlock, new current.UniformBlockData());
+
+assert.equal(current.NameLocalID, undefined);
+assert.equal(current.saveNameLocalID, undefined);
+assert.equal(current.loadNameLocalID, undefined);
+const descriptor = new current.DescriptorData();
+assert.deepEqual([descriptor.descriptorID, descriptor.type, descriptor.count], [0, Type.UNKNOWN, 1]);
+descriptor.reset(0xFFFFFFFF, Type.SAMPLER2D, 7);
+assert.deepEqual([descriptor.descriptorID, descriptor.type, descriptor.count], [0xFFFFFFFF, Type.SAMPLER2D, 7]);
+const { LocalIDProbe } = require(path.join(jsDir, 'shift-probe.js'));
+const local = new LocalIDProbe();
+assert.equal(local.id, 0xFFFFFFFF);
+local.values.set(23, 0);
+assert.equal(local.values.get(23), 0);

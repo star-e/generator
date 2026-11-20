@@ -34,10 +34,13 @@ struct Member {
     std::string tsDefault;
     std::string comment;
     bool move{};
+    bool byConstReference{};
     bool readonly{};
     bool usesAllocator{};
     bool checkDefaultConstruction{};
     std::string_view tsClear;
+
+    std::string parameterType() const { return byConstReference ? "const " + cpp + "&" : cpp; }
 };
 
 std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
@@ -123,13 +126,24 @@ Member bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& field
         }
         return m;
     }
-    if (std::holds_alternative<RecordType>(node.data) && !field.isNullable && field.initializer.empty()) {
+    if (const auto* record = std::get_if<RecordType>(&node.data); record && !field.isNullable && field.initializer.empty()) {
         m.cpp = nativeType(graph, module, field.type.type, deps);
         std::set<uint32_t> visited;
         m.usesAllocator = hasPmrStorage(graph, field.type.type, visited);
         m.checkDefaultConstruction = true;
-        m.move = true;
+        // Pass copyable, single-scalar value records by reference in native constructors.
+        if (!record->moveOnly && record->fields.size() == 1) {
+            const auto inner = record->fields.front().type.type;
+            const auto primitive = archivePrimitive(graph, inner);
+            m.byConstReference = !std::holds_alternative<RecordType>(graph.node(inner).data) && (primitive == "Number" || primitive == "Bool");
+        }
+        m.move = !m.byConstReference;
         if (emitTs) {
+            if (node.typescriptNumber) {
+                m.ts = "number";
+                m.tsDefault = record->fields.front().initializer;
+                return m;
+            }
             if (node.module != owner && node.typescriptModule.empty()) invalid(field, "missing external record mapping");
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.valueImports);
             m.tsDefault = "new " + m.ts + "()";
@@ -253,7 +267,7 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
         for (size_t i = 0; i < ctor.size(); ++i) {
             const auto& m = members.at(ctor[i]);
             if (i) out << ", ";
-            out << m.cpp << " " << m.name << "In";
+            out << m.parameterType() << " " << m.name << "In";
         }
         out << (ctor.size() == 1 ? ") noexcept // NOLINT\n" : ") noexcept\n");
         bool first = true;
@@ -320,7 +334,7 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
         std::string params;
         for (auto index : order) {
             const auto& m = members.at(index);
-            params += m.cpp + " " + m.name + "In, ";
+            params += m.parameterType() + " " + m.name + "In, ";
         }
         header << "    " << name << "(" << params << allocParameter << ");\n";
         source << constructor << params << alloc << ") // NOLINT";
@@ -775,19 +789,30 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto* record = std::get_if<RecordType>(&node.data);
         if (!record) throw std::runtime_error("expected record or enum: " + node.qualifiedName);
         std::vector<Member> members;
-        for (const auto& field : record->fields) members.push_back(bindMember(graph, owner, field, deps, output.typescript.has_value()));
+        for (const auto& field : record->fields) {
+            auto member = bindMember(graph, owner, field, deps, output.typescript.has_value());
+            if (!field.typescriptInitializer.empty()) {
+                auto id = field.type.type;
+                if (graph.node(id).typescriptNumber) id = std::get<RecordType>(graph.node(id).data).fields.front().type.type;
+                if (const auto* alias = std::get_if<AliasType>(&graph.node(id).data)) id = alias->target;
+                if (member.ts != "number" || !numericDefault(graph.node(id).qualifiedName, field.typescriptInitializer))
+                    invalid(field, "invalid TypeScript numeric default " + field.typescriptInitializer);
+                member.tsDefault = field.typescriptInitializer;
+            }
+            members.push_back(std::move(member));
+        }
         cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable) {
             if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements);
-            archives.add(graph, archive->module, node, fields, output.typescript.has_value(), deps.valueImports);
+            archives.add(graph, archive->module, node, fields, output.typescript.has_value() && !node.typescriptNumber, deps.valueImports);
         }
         if (record->hashable) cppHash(hashDeclarations, hashDefinitions, node, members);
         if (record->compareEqual || record->compareLess) {
             deps.headers.insert("tuple");
             cppComparisons(cpp, node.name, members, *record);
         }
-        if (!output.typescript) continue;
+        if (!output.typescript || node.typescriptNumber) continue;
         Order order(members.size());
         std::iota(order.begin(), order.end(), 0U);
         if (!record->constructors.empty()) {

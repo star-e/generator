@@ -24,7 +24,7 @@
 
 ## 运行第一批实现
 
-默认工作区暂存 23 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h` 和 `graph-dfs.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 24 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h` 和 `graph-dfs.ts`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -216,6 +216,8 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 `DescriptorBlockFlattened` 按声明顺序写入四个数组，再写 `capacity` 和 `count`。每个数组先写长度，再依次写元素。TS 加载时保留原数组引用，并按本次读到的长度覆盖或截短数组。互操作测试用旧引擎的 TS 写入器核对字节，并让 C++ 和 TS 依次读入空数组、两个元素、一个元素和空数组。[布局声明](../spec/render/layout-graph.spec) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
 `UniformData` 在 C++ 中用 `using UniformID = uint32_t` 表示编号，在 TS 中沿用底层类型的 `number` 绑定。默认编号是 `0xFFFFFFFF`，归档依次写入编号、类型、偏移和大小。`UniformBlockData` 先写 `bufferSize`，再写 `uniforms`。C++ 加载到调用方提供内存资源的 PMR vector，TS 重用目标对象的 `uniforms` 数组。[布局声明](../spec/render/layout-graph.spec) · [原生互读测试](../tests/consumer/records/LayoutArchiveConsumer.cpp)
+
+`NameLocalID => number(value)` 将 C++ 结构体的唯一数值字段绑定为 TS 的 `number`。用作字段、Map 键或 Map 值时均可直接传数值。默认值继承自 `value`。`DescriptorData` 在类绑定中用 `field descriptorID default 0;` 保留 TS 构造默认值，C++ 默认构造仍使用 `0xFFFFFFFF`。两端按编号、类型、数量的顺序归档。[布局声明](../spec/render/layout-graph.spec) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 

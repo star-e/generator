@@ -15,7 +15,7 @@ using TypeImports = std::map<std::string, std::set<std::string>>;
 template<class Visitor>
 void visitTypeScriptImportSources(const TypeGraph& graph, const TypeNode& node, const Visitor& visit) {
     if (node.typescriptContainer == ContainerKind::None) {
-        visit(node);
+        if (!node.typescriptNumber) visit(node);
         return;
     }
     const auto& arguments = std::get<TemplateInstanceType>(node.data).arguments;
