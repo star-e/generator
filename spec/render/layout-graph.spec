@@ -248,14 +248,12 @@ binding typescript {
     NameLocalID => number(value);
     DescriptorData => class { pool dd1; field descriptorID default 0; };
     PipelineLayoutData => class {
-        methods R"ts(
-    getSets (): Map<UpdateFrequency, DescriptorSetData> {
-        return (COCOS_RUNTIME || HTML5) && Layout.isWebGPU ? this.descriptorGroups : this.descriptorSets;
-    }
+        getSets (): Map<UpdateFrequency, DescriptorSetData> {
+            return (COCOS_RUNTIME || HTML5) && Layout.isWebGPU ? this.descriptorGroups : this.descriptorSets;
+        }
 
-    getSet (frequency: UpdateFrequency): DescriptorSetData | undefined {
-        return this.getSets().get(frequency);
-    }
-)ts";
+        getSet (frequency: UpdateFrequency): DescriptorSetData | undefined {
+            return this.getSets().get(frequency);
+        }
     };
 }

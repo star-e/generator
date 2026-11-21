@@ -152,7 +152,7 @@ binding typescript {
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | 枚举和 `flags` 默认生成 TS `const enum`。`QueueHint => enum;` 保留运行时枚举对象。`DescriptorTypeOrder => const enum { names; };` 为常量枚举生成名称查询。`BloomType => enum { register; };` 将运行时枚举注册到编辑器。 |
 | 对象池和重置 | 模块中入池的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。按值持有的 `Int8Array`、`Uint8Array`、`Int16Array`、`Uint16Array`、`Int32Array`、`Uint32Array` 在复用时自动保留原数组和内容，并从 `reset` 和池工厂的参数中省略。其他需要保留的字段可用 `keep(...)` 指定。 |
-| 手写 TS 方法 | 在 `binding typescript` 的 `Type => class { ... };` 中写 `methods R"ts(...)ts";`。原始字符串包含一个或多个完整的 TS 方法，保留函数签名、方法体和缩进。可更换首尾的 `ts` 分隔符。作用域外的依赖在绑定块中用 `import { Name } from "模块";` 或 `import type { Name } from "模块";` 引入，路径遵循生成文件的 TS 导入语义。由 TypeScript 编译器检查方法语法、类型及重名。 |
+| 手写 TS 方法 | 在 `binding typescript` 的 `Type => class { ... };` 中直接写方法，例如 `getSet (frequency: UpdateFrequency): DescriptorSetData \| undefined { ... }`。生成器解析方法名、具名参数和返回类型，支持可选参数、泛型类型、数组和联合类型。方法体由 TypeScript 编译器检查。作用域外的依赖继续用绑定块的 `import` 或 `import type` 引入。已有的 `methods R"ts(...)ts";` 仍可读取。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 

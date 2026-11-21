@@ -300,10 +300,75 @@ private:
         return result;
     }
 
+    // These names belong to TypeScript, including names supplied by binding imports.
+    std::string tsMethodType() {
+        std::string type;
+        for (;;) {
+            if (accept("(")) {
+                type += "(" + tsMethodType() + ")";
+                expect(")");
+            } else {
+                type += identifier();
+                while (accept(".")) type += "." + identifier();
+                if (accept("<")) {
+                    type += "<" + tsMethodType();
+                    while (accept(",")) type += ", " + tsMethodType();
+                    expect(">");
+                    type += '>';
+                }
+            }
+            while (accept("[")) {
+                expect("]");
+                type += "[]";
+            }
+            if (token != "|" && token != "&") return type;
+            type += token == "|" ? " | " : " & ";
+            advance();
+        }
+    }
+
+    TypeScriptClassMethod tsClassMethod(std::string name, std::string_view indent) {
+        TypeScriptClassMethod method{.name = std::move(name)};
+        expect("(");
+        std::set<std::string> parameters;
+        if (!accept(")")) {
+            do {
+                auto paramName = uniqueName(parameters);
+                const bool optional = accept("?");
+                if (!optional && !method.parameters.empty() && method.parameters.back().optional)
+                    fail("required TypeScript parameter after an optional parameter");
+                expect(":");
+                method.parameters.push_back({std::move(paramName), tsMethodType(), optional});
+            } while (accept(",") && token != ")");
+            expect(")");
+        }
+        expect(":");
+        method.result = tsMethodType();
+        if (token != "{") fail("expected a TypeScript method body");
+        method.body = tsMethodBody(indent);
+        accept(";");
+        return method;
+    }
+
+    bool atTsMethodSignature() const {
+        auto next = *this;
+        if (!next.accept("(")) return false;
+        if (next.accept(")")) return next.token == ":";
+        // A field-list option such as keep(source) has no parameter types.
+        return !next.token.empty() && identifierStart(next.token.front()) && (next.followedBy(":") || next.followedBy("?"));
+    }
+
     void bindingOptions(TypeScriptBinding& rule) {
         std::set<std::string> options;
+        std::set<std::string> methodNames;
         while (!accept("}")) {
+            const auto indent = std::string_view(token.data() - (location.column - 1), location.column - 1);
             const auto key = identifier();
+            if (rule.kind == BindingTarget::classType && key != "constructor" && atTsMethodSignature()) {
+                if (!methodNames.insert(key).second) fail("duplicate TypeScript method " + key);
+                rule.classMethods.emplace_back(tsClassMethod(key, indent));
+                continue;
+            }
             if (key != "method" && key != "getter" && key != "field" && key != "callback" && !options.insert(key).second) fail("duplicate binding option " + key);
             if (rule.kind == BindingTarget::interfaceType && (key == "method" || key == "getter")) {
                 const auto name = identifier();
@@ -343,8 +408,8 @@ private:
                 rule.base = bindingImport();
             } else if (rule.kind == BindingTarget::classType && key == "methods") {
                 if (token != "R" || !remaining.starts_with('"')) fail("expected a raw string for TypeScript methods");
-                rule.classMethods = rawStringBody("TypeScript");
-                if (!rule.classMethods.empty() && !rule.classMethods.ends_with('\n')) rule.classMethods += '\n';
+                auto raw = rawStringBody("TypeScript");
+                if (!raw.empty()) rule.classMethods.emplace_back(std::string(raw));
                 advance();
             } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
                 if (accept("json")) rule.mapKey = MapKeyKind::Json;
@@ -904,7 +969,7 @@ private:
         }
         if (token == "\"") {
             const char* begin = token.data();
-            finishCppLiteral('"');
+            finishLiteral('"', "unterminated C++ literal");
             std::string literal(begin, remaining.data());
             advance();
             return literal;
@@ -973,17 +1038,17 @@ private:
         return body;
     }
 
-    void finishCppLiteral(char quote) {
+    void finishLiteral(char quote, const char* diagnostic) {
         while (!remaining.empty() && remaining.front() != quote) {
-            if (remaining.front() == '\n' || remaining.front() == '\r') fail("unterminated C++ literal");
+            if (remaining.front() == '\n' || remaining.front() == '\r') fail(diagnostic);
             if (remaining.front() == '\\') {
                 consume(1);
-                if (remaining.empty()) break;
+                if (remaining.empty()) fail(diagnostic);
                 if (remaining.starts_with("\r\n")) consume(1);
             }
             consume(1);
         }
-        if (remaining.empty()) fail("unterminated C++ literal");
+        if (remaining.empty()) fail(diagnostic);
         consume(1);
     }
 
@@ -1010,7 +1075,7 @@ private:
                 skipCppWord();
             } else if (ch == '"' || ch == '\'') {
                 consume(1);
-                finishCppLiteral(ch);
+                finishLiteral(ch, "unterminated C++ literal");
             } else {
                 consume(1);
                 if (ch == '{') ++depth;
@@ -1023,6 +1088,145 @@ private:
         }
         location = opening;
         fail("unterminated C++ method body");
+    }
+
+    void tsRegexLiteral() {
+        consume(1);
+        bool inClass = false;
+        while (!remaining.empty()) {
+            const char ch = remaining.front();
+            if (ch == '\n' || ch == '\r') break;
+            consume(1);
+            if (ch == '\\' && !remaining.empty()) consume(1);
+            else if (ch == '[') inClass = true;
+            else if (ch == ']') inClass = false;
+            else if (ch == '/' && !inClass) {
+                while (!remaining.empty() && identifierStart(remaining.front())) consume(1);
+                return;
+            }
+        }
+        fail("unterminated TypeScript regular expression");
+    }
+
+    void tsTemplateLiteral() {
+        consume(1);
+        while (!remaining.empty()) {
+            const char ch = remaining.front();
+            consume(1);
+            if (ch == '`') return;
+            if (ch == '\\' && !remaining.empty()) consume(1);
+            else if (ch == '$' && remaining.starts_with('{')) {
+                consume(1);
+                tsBracedBody(nullptr);
+            }
+        }
+        fail("unterminated TypeScript template literal");
+    }
+
+    // Locate the closing brace without interpreting statements. Only code lines are
+    // reindented when moving the method from its binding block into a generated class.
+    void tsBracedBody(std::vector<const char*>* codeLines) {
+        const auto opening = location;
+        bool expressionStart = true;
+        bool statementStart = codeLines != nullptr; // A template substitution starts with an expression.
+        bool controlKeyword = false;
+        bool propertyName = false;
+        std::vector<bool> controlParens;
+        std::vector<bool> statementBraces;
+        while (!remaining.empty()) {
+            location = position;
+            const char ch = remaining.front();
+            if (std::isspace(static_cast<unsigned char>(ch))) {
+                consume(1);
+                if (ch == '\n' && codeLines) codeLines->push_back(remaining.data());
+                continue;
+            }
+            if (remaining.starts_with("//")) {
+                consume(remaining.substr(0, remaining.find('\n')).size());
+                continue;
+            }
+            if (remaining.starts_with("/*")) {
+                const auto end = remaining.find("*/", 2);
+                if (end == remaining.npos) fail("unterminated TypeScript block comment");
+                consume(end + 2);
+                continue;
+            }
+            if (identifierStart(ch) || ch == '$' || std::isdigit(static_cast<unsigned char>(ch))) {
+                size_t length = 1;
+                while (length < remaining.size() && (identifierStart(remaining[length]) || remaining[length] == '$' ||
+                       std::isdigit(static_cast<unsigned char>(remaining[length])))) ++length;
+                const auto word = remaining.substr(0, length);
+                consume(length);
+                controlKeyword = !propertyName && (word == "if" || word == "while" || word == "for" || word == "with" || word == "switch" || word == "catch");
+                statementStart = !propertyName && (word == "else" || word == "do" || word == "try" || word == "finally" || word == "catch");
+                expressionStart = statementStart || (!propertyName && (word == "return" || word == "throw" || word == "case" ||
+                    word == "delete" || word == "typeof" || word == "void" || word == "yield" || word == "await" ||
+                    word == "in" || word == "instanceof" || word == "of"));
+                propertyName = false;
+                continue;
+            }
+            const bool startsStatementBlock = statementStart;
+            statementStart = false;
+            propertyName = false;
+            if (ch == '\'' || ch == '"') {
+                consume(1);
+                finishLiteral(ch, "unterminated TypeScript string literal");
+                expressionStart = false;
+            } else if (ch == '`') {
+                tsTemplateLiteral();
+                expressionStart = false;
+            } else if (ch == '/' && expressionStart) {
+                tsRegexLiteral();
+                expressionStart = false;
+            } else if (ch == '!' && !remaining.starts_with("!=")) {
+                consume(1); // Both prefix negation and a postfix non-null assertion preserve the expression context.
+            } else if (remaining.starts_with("++") || remaining.starts_with("--")) {
+                consume(2); // Prefix and postfix operators preserve the prior expression context.
+            } else if (remaining.starts_with("...")) {
+                consume(3);
+                expressionStart = true;
+            } else {
+                consume(1);
+                if (ch == '(') controlParens.push_back(controlKeyword);
+                if (ch == '{') {
+                    statementBraces.push_back(startsStatementBlock);
+                    statementStart = expressionStart = true;
+                } else if (ch == '}') {
+                    if (statementBraces.empty()) return;
+                    statementStart = expressionStart = statementBraces.back();
+                    statementBraces.pop_back();
+                } else if (ch == ')' && !controlParens.empty()) {
+                    statementStart = expressionStart = controlParens.back();
+                    controlParens.pop_back();
+                } else {
+                    propertyName = ch == '.';
+                    statementStart = ch == ';';
+                    expressionStart = ch != ')' && ch != ']' && !propertyName;
+                }
+            }
+            controlKeyword = false;
+        }
+        location = opening;
+        fail("unterminated TypeScript method body");
+    }
+
+    std::string tsMethodBody(std::string_view indent) {
+        const char* start = token.data();
+        std::vector<const char*> codeLines;
+        tsBracedBody(&codeLines);
+        std::string body;
+        if (indent.find_first_not_of(" \t") == indent.npos) {
+            for (const auto* line : codeLines) {
+                const std::string_view rest(line, remaining.data());
+                if (!rest.starts_with(indent) || rest.empty() || rest.front() == '\n' || rest.front() == '\r') continue;
+                body.append(start, line);
+                body += "    ";
+                start = line + indent.size();
+            }
+        }
+        body.append(start, remaining.data());
+        advance();
+        return body;
     }
 
     Method method(std::set<std::string>& names, const std::vector<Method>& methods, bool inInterface = false) {

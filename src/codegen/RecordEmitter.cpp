@@ -1093,6 +1093,26 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     out << cppMemberFunctions(graph, module, record.methods, deps, currentPrivate) << "};\n";
 }
 
+std::string tsClassMethods(const TypeScriptClassMethods& methods) {
+    std::ostringstream out;
+    for (const auto& entry : methods) {
+        if (const auto* raw = std::get_if<std::string>(&entry)) {
+            out << *raw;
+            if (!raw->ends_with('\n')) out << '\n';
+            continue;
+        }
+        const auto& method = std::get<TypeScriptClassMethod>(entry);
+        out << "\n    " << method.name << " (";
+        for (size_t i = 0; i < method.parameters.size(); ++i) {
+            const auto& param = method.parameters[i];
+            if (i) out << ", ";
+            out << param.name << (param.optional ? "?: " : ": ") << param.type;
+        }
+        out << "): " << method.result << ' ' << method.body << '\n';
+    }
+    return out.str();
+}
+
 bool inferTsType(const BoundField& m) {
     return m.ts == "number" || m.ts == "boolean" || m.ts == "string";
 }
@@ -1378,7 +1398,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         previousTag = false;
         const auto entry = output.pools.find(node.name);
         const auto methods = output.classMethods.find(node.name);
-        const std::string_view classMethods = methods == output.classMethods.end() ? std::string_view{} : methods->second;
+        const auto classMethods = methods == output.classMethods.end() ? std::string{} : tsClassMethods(methods->second);
         if (std::holds_alternative<InterfaceType>(node.data)) {
             if (emitTs && standaloneInterfaces && !ts.view().empty()) ts << '\n';
             emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, emitTs ? &ts : nullptr, deps.typeImports, output.interfaceBindings);

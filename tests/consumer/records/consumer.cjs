@@ -410,6 +410,9 @@ for (const [name, expected] of fixtures) {
 const { StaticProbe, saveStaticProbe, loadStaticProbe, TextProbe, loadTextProbe, saveTextProbe, VectorProbe, TinyNames,
     ArrayArchiveProbe, loadArrayArchiveProbe, saveArrayArchiveProbe } = require(path.join(jsDir, 'shift-probe.js'));
 assert.equal(new TinyNames().describe('value}', 2), 'value)ts":2');
+assert.equal(new TinyNames().format(new Map([['x', [8]]])), 'first\n            literal 4:true');
+assert.equal(new TinyNames().format(), 'first\n            literal 0:true');
+assert.equal(new TinyNames().legacy(), 1);
 assert.deepEqual([StaticProbe.epoch, StaticProbe.kind, StaticProbe.nested.value], [7, 1, 3]);
 assert.equal('nativeFlag' in StaticProbe, false);
 assert.throws(() => { StaticProbe.epoch = -1; }, RangeError);

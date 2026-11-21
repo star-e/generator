@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace cc::codegen {
@@ -60,6 +61,22 @@ struct Callback {
     bool optionalResult{};
 };
 
+struct TypeScriptMethodParameter {
+    std::string name;
+    std::string type;
+    bool optional{};
+};
+
+struct TypeScriptClassMethod {
+    std::string name;
+    std::vector<TypeScriptMethodParameter> parameters;
+    std::string result;
+    std::string body;
+};
+
+// A raw methods block from an older spec occupies its original position in the class.
+using TypeScriptClassMethods = std::vector<std::variant<TypeScriptClassMethod, std::string>>;
+
 struct TypeScriptBinding {
     TypeRef source;
     BindingTarget kind{};
@@ -74,7 +91,7 @@ struct TypeScriptBinding {
     std::string numberField;
     std::map<std::string, std::string> fieldDefaults;
     std::optional<TypeScriptImport> base;
-    std::string classMethods;
+    TypeScriptClassMethods classMethods;
     std::optional<PoolBinding> pool;
     std::optional<std::vector<std::string>> constructor;
     bool requiredConstructor{};

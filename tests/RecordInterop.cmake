@@ -195,12 +195,21 @@ binding typescript {
     import { RecyclePool } from "../../core/memop";
     import type { InputArchive } from "./archive";
     TinyNames => class {
-        methods R"body(
-    describe (text: string, rate: UpdateFrequency): string {
-        // A brace } or a different raw delimiter )ts" belongs to this method.
-        return `${text.replace(/}/g, ')ts"')}:${rate}`;
-    }
-)body";
+        describe (text: string, rate: UpdateFrequency): string {
+            // } and )ts" belong to the method, as do braces in regular expressions.
+            if (rate < 0) { return text; }
+            /}/.test(text) && (text = text.replace(/}/g, ')ts"'));
+            return `${text}:${rate}`;
+        }
+        format (values?: Map<string, (number | undefined)[]>): string {
+            const n = (values && values.get('x') || [0])[0];
+            const half = n! / 2; /* } */
+            return `first
+            literal ${`${half}:${/[}]/.test('}')}`}`;
+        }
+        methods R"ts(
+    legacy (): number { return 1; }
+)ts";
     };
 }
 ]=])
