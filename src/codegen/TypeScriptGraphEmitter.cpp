@@ -1,3 +1,4 @@
+#include "codegen/Documentation.h"
 #include "codegen/GraphEmitter.h"
 #include "model/TypeGraphBuilder.h"
 
@@ -223,7 +224,9 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     const auto limit = std::min<uint64_t>(indexedVertexLimit(graph.node(model.vertexType).qualifiedName).value(), UINT32_MAX);
     if (model.serializable) out << "\nconst cc$adopt" << node.name << " = Symbol();\n";
     const auto storage = model.serializable ? "private " : "private readonly ";
-    out << "\nexport class " << node.name << " {\n    readonly N = " << limit << ";\n"
+    out << '\n';
+    writeDocumentation(out, node.documentation);
+    out << "export class " << node.name << " {\n    readonly N = " << limit << ";\n"
         << "    " << storage << "vertices: {\n";
     if (!alternatives.empty())
         out << "        readonly id: " << kinds << ";\n        readonly object: " << node.name << "Object;\n";
@@ -238,6 +241,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (model.parentGraph) out << "    " << storage << "roots: OutE[] = [];\n";
     std::string initializers;
     for (const auto& f : fields) {
+        writeDocumentation(out, f.documentation, "    ");
         out << "    " << (f.safeUnsignedInteger ? "declare " : "") << (f.readonly ? "readonly " : "") << f.name << ": " << f.ts;
         if (f.safeUnsignedInteger) initializers += "        " + f.tsUint64Initializer(f.tsDefault) + ";\n";
         else out << " = " << f.tsDefault;

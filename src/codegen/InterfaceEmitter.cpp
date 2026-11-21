@@ -1,3 +1,4 @@
+#include "codegen/Documentation.h"
 #include "codegen/InterfaceEmitter.h"
 #include "codegen/RecordEmitter.h"
 #include "codegen/TypeScriptImports.h"
@@ -51,6 +52,7 @@ void cppParameters(std::ostream& out, const TypeGraph& graph, const MethodInfo& 
 }
 
 void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers) {
+    writeDocumentation(out, method.documentation, "    ");
     out << "    " << (method.isPureVirtual ? "virtual " : method.isStatic ? "static " : "");
     if (method.isExplicitConversion) out << "explicit operator ";
     cppDeclarator(out, graph, method.result, method.isExplicitConversion ? "" : method.name, owner, headers);
@@ -104,6 +106,7 @@ void cppForwardingOverloads(std::ostream& out, const TypeGraph& graph, const Typ
 
 void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, std::set<std::string>& headers) {
     const auto& name = decl.name;
+    writeDocumentation(out, decl.documentation);
     out << "class " << name;
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
     for (auto base : bases) {
@@ -149,6 +152,7 @@ std::string tsCallbackType(const TypeGraph& graph, const CallbackTypeInfo& type,
 }
 
 void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, TypeImports& imports, const InterfaceBindings& bindings) {
+    writeDocumentation(out, decl.documentation);
     out << "export interface " << decl.name;
     const auto& iface = std::get<InterfaceType>(decl.data);
     bool firstBase = true;
@@ -177,12 +181,15 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
             });
             if (setter != methods.end() && tsSignatureType(graph, setter->parameters.front().type, decl.module, imports) != result)
                 throw std::runtime_error(context + ": setter " + setter->name + " must return void and accept the property type");
+            const auto& doc = method.documentation.empty() && setter != methods.end() ? setter->documentation : method.documentation;
+            writeDocumentation(out, doc, "    ");
             out << (setter == methods.end() ? "    readonly " : "    ") << *method.typescriptName << ": " << result << suffix;
             continue;
         }
         if (binding.optional.size() > method.parameters.size()) throw std::runtime_error(context + ": unknown optional parameter");
         const size_t firstExplicit = method.parameters.size() - binding.optional.size();
         const size_t firstOptional = std::min(firstExplicit, requiredParameterCount(method));
+        writeDocumentation(out, method.documentation, "    ");
         out << "    " << *method.typescriptName << (method.optionalMethod ? "? (" : " (");
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
@@ -194,6 +201,7 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         out << "): " << result << suffix;
     }
     for (const auto& callback : iface.typescriptCallbacks) {
+        writeDocumentation(out, callback.documentation, "    ");
         out << "    " << callback.name << (callback.optional ? "? (" : " (");
         for (size_t i = 0; i < callback.parameters.size(); ++i) {
             if (i) out << ", ";

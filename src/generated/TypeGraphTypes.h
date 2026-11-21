@@ -67,6 +67,7 @@ struct MethodInfo {
     bool optionalMethod = false;
     ResultPresence resultPresence = ResultPresence::Required;
     bool cppPrivate = false;
+    std::string documentation;
 };
 
 struct FieldInfo {
@@ -81,6 +82,7 @@ struct FieldInfo {
     bool notElement = false;
     bool isMutable = false;
     bool cppPrivate = false;
+    std::string documentation;
 };
 
 struct Enumerator {
@@ -88,6 +90,7 @@ struct Enumerator {
     std::string initializer;
     std::variant<int64_t, uint64_t> value;
     std::optional<std::string> deprecationMessage;
+    std::string documentation;
 };
 
 struct NamespaceType {};
@@ -128,6 +131,7 @@ struct ConstructorInfo {
     bool custom = false;
     bool isNoexcept = false;
     bool cppPrivate = false;
+    std::string documentation;
 };
 
 struct RecordType {
@@ -150,6 +154,7 @@ struct RecordType {
     std::vector<FieldInfo> fields;
     std::vector<FieldInfo> staticFields;
     std::vector<MethodInfo> methods;
+    std::string destructorDocumentation;
 };
 
 struct CallbackTypeInfo {
@@ -170,6 +175,7 @@ struct CallbackInfo {
     std::vector<CallbackParameterInfo> parameters;
     CallbackTypeInfo result;
     bool optionalResult = false;
+    std::string documentation;
 };
 
 struct InterfaceType {
@@ -286,6 +292,7 @@ struct TypeNode {
     bool typescriptTypeOnly = false;
     bool cppOnly = false;
     std::vector<TypeId> templateParameters;
+    std::string documentation;
 };
 
 struct TypeModule {

@@ -1,3 +1,4 @@
+#include "codegen/Documentation.h"
 #include "codegen/SettingsEmitter.h"
 #include "codegen/EnumEmitter.h"
 #include "codegen/TypeScriptImports.h"
@@ -139,6 +140,7 @@ void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node,
     out << "export interface " << node.name << " {\n";
     for (const auto& field : fields) {
         if (field.cppOnly) continue;
+        writeDocumentation(out, field.documentation, "    ");
         const auto p = bindField(graph, field, imports);
         out << "    ";
         if (p.kind == FieldKind::resource) out << "/* refcount */ ";
@@ -200,6 +202,7 @@ std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsB
         const auto& node = graph.node(id);
         if (!node.typescriptName || std::holds_alternative<AliasType>(node.data)) continue;
         body << '\n';
+        writeDocumentation(body, node.documentation);
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             writeTypeScriptEnum(body, node.name, *enumeration, rules.runtimeEnums.contains(node.name));
             if (rules.registerEnums.contains(node.name)) {

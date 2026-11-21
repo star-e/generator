@@ -34,6 +34,7 @@ struct Method {
     bool optionalMethod{};
     ResultPresence resultPresence{};
     bool cppPrivate{};
+    std::string documentation;
 };
 
 enum class ArchiveRole { none, input, output };
@@ -55,6 +56,7 @@ struct Field {
     bool notElement{};
     bool isMutable{};
     bool cppPrivate{};
+    std::string documentation;
 };
 
 struct Constructor {
@@ -65,6 +67,7 @@ struct Constructor {
     bool custom{};
     bool isNoexcept{};
     bool cppPrivate{};
+    std::string documentation;
 };
 
 struct Record {
@@ -84,6 +87,7 @@ struct Record {
     std::vector<Field> staticFields;
     std::vector<Constructor> constructors;
     std::vector<Method> methods;
+    std::string destructorDocumentation;
 };
 
 struct LeftShift {
@@ -97,6 +101,7 @@ struct EnumMember {
     SourceLocation initializerLocation;
     std::optional<LeftShift> leftShift;
     std::optional<std::string> deprecationMessage;
+    std::string documentation;
 };
 
 struct Enum {
@@ -156,6 +161,7 @@ struct Declaration {
     std::string externalScope;
     std::string cppHeader;
     bool cppOnly{};
+    std::string documentation;
 };
 
 struct ModuleImport {

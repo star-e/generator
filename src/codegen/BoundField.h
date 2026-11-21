@@ -11,6 +11,7 @@ struct BoundField {
     std::string cppDefault;
     std::string tsDefault;
     std::string comment;
+    std::string documentation;
     bool move{};
     bool byConstReference{};
     bool referenceMember{};

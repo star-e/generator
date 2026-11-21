@@ -36,6 +36,7 @@ namespace codegen {
         optionalMethod: bool = false;
         resultPresence: ResultPresence = ResultPresence::Required;
         cppPrivate: bool = false;
+        documentation: std::string;
     }
     struct FieldInfo {
         type: TypeUse;
@@ -49,12 +50,14 @@ namespace codegen {
         notElement: bool = false;
         isMutable: bool = false;
         cppPrivate: bool = false;
+        documentation: std::string;
     }
     struct Enumerator {
         name: std::string;
         initializer: std::string;
         value: std::variant<int64_t, uint64_t>;
         deprecationMessage: std::optional<std::string>;
+        documentation: std::string;
     }
 
     struct NamespaceType {}
@@ -77,6 +80,7 @@ namespace codegen {
         custom: bool = false;
         isNoexcept: bool = false;
         cppPrivate: bool = false;
+        documentation: std::string;
     }
     struct RecordType {
         moveOnly: bool = false;
@@ -98,6 +102,7 @@ namespace codegen {
         fields: std::vector<FieldInfo>;
         staticFields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;
+        destructorDocumentation: std::string;
     }
     struct CallbackTypeInfo {
         declaration: TypeUse;
@@ -115,6 +120,7 @@ namespace codegen {
         parameters: std::vector<CallbackParameterInfo>;
         result: CallbackTypeInfo;
         optionalResult: bool = false;
+        documentation: std::string;
     }
     struct InterfaceType {
         bases: std::vector<TypeId>;
@@ -175,6 +181,7 @@ namespace codegen {
         typescriptTypeOnly: bool = false;
         cppOnly: bool = false;
         templateParameters: std::vector<TypeId>;
+        documentation: std::string;
     }
     struct TypeModule {
         name: std::string;

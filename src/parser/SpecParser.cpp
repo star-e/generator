@@ -119,6 +119,7 @@ private:
     }
 
     Declaration externalDeclaration(std::set<std::string>& names) {
+        auto doc = documentation();
         ExternalDeclaration decl;
         while (accept("@")) {
             const auto annotation = identifier();
@@ -157,13 +158,41 @@ private:
         const auto start = location;
         auto name = uniqueName(names);
         expect(";");
-        return {std::move(name), start, std::move(decl)};
+        return {.name = std::move(name), .location = start, .data = std::move(decl), .documentation = std::move(doc)};
     }
 
     std::string_view remaining;
     SourceLocation position;
     SourceLocation location;
     std::string_view token;
+    // Trivia belongs to the next token, including when a lookahead parser is copied.
+    std::string_view leadingDoc;
+    size_t docIndent{};
+
+    std::string documentation() const {
+        auto rest = leadingDoc;
+        std::string text;
+        bool first = true;
+        while (!rest.empty()) {
+            const auto end = rest.find('\n');
+            auto line = rest.substr(0, end);
+            const auto margin = line.substr(0, line.find_first_not_of(" \t")).size();
+            if (!first && line.substr(margin).starts_with('*')) {
+                line.remove_prefix(margin + 1);
+                if (line.starts_with(' ')) line.remove_prefix(1);
+            } else {
+                line.remove_prefix(std::min(margin, first ? size_t{1} : docIndent));
+            }
+            line = line.substr(0, line.find_last_not_of(" \t\r") + 1);
+            if (!text.empty()) text += '\n';
+            text += line;
+            if (end == rest.npos) break;
+            rest.remove_prefix(end + 1);
+            first = false;
+        }
+        text.erase(text.find_last_not_of('\n') + 1);
+        return text;
+    }
 
     void consume(size_t count) {
         for (char ch : remaining.substr(0, count)) {
@@ -178,11 +207,21 @@ private:
     }
 
     void advance() {
+        leadingDoc = {};
         while (!remaining.empty()) {
             if (std::isspace(static_cast<unsigned char>(remaining.front()))) {
                 consume(1);
             } else if (remaining.starts_with("//")) {
                 consume(remaining.substr(0, remaining.find('\n')).size());
+            } else if (remaining.starts_with("/*")) {
+                const auto end = remaining.find("*/", 2);
+                if (end == remaining.npos)
+                    throw std::runtime_error(position.describe() + ": unterminated block comment");
+                if (remaining.starts_with("/**")) {
+                    leadingDoc = end > 2 ? remaining.substr(3, end - 3) : std::string_view{};
+                    docIndent = position.column - 1;
+                }
+                consume(end + 2);
             } else {
                 break;
             }
@@ -363,10 +402,13 @@ private:
         std::set<std::string> methodNames;
         while (!accept("}")) {
             const auto indent = std::string_view(token.data() - (location.column - 1), location.column - 1);
+            auto doc = documentation();
             const auto key = identifier();
             if (rule.kind == BindingTarget::classType && key != "constructor" && atTsMethodSignature()) {
                 if (!methodNames.insert(key).second) fail("duplicate TypeScript method " + key);
-                rule.classMethods.emplace_back(tsClassMethod(key, indent));
+                auto method = tsClassMethod(key, indent);
+                method.documentation = std::move(doc);
+                rule.classMethods.emplace_back(std::move(method));
                 continue;
             }
             if (key != "method" && key != "getter" && key != "field" && key != "callback" && !options.insert(key).second) fail("duplicate binding option " + key);
@@ -389,6 +431,7 @@ private:
                 method.nullable = accept("nullable");
             } else if (rule.kind == BindingTarget::interfaceType && key == "callback") {
                 rule.callbacks.push_back(callback());
+                rule.callbacks.back().documentation = std::move(doc);
             } else if (rule.kind == BindingTarget::interfaceType && key == "helpers") {
                 rule.helpers = true;
             } else if (rule.kind == BindingTarget::interfaceType && key == "field") {
@@ -588,6 +631,7 @@ private:
 
     Declaration declaration(std::set<std::string>& names) {
         Declaration result;
+        result.documentation = documentation();
         if (token == "@" && followedBy("cppOnly")) {
             advance();
             expect("cppOnly");
@@ -680,6 +724,7 @@ private:
                     expect(":");
                 } else if (atConstructor()) {
                     Constructor ctor{start};
+                    ctor.documentation = documentation();
                     ctor.cppPrivate = cppPrivate;
                     if (accept("@")) {
                         expect("cppOnly");
@@ -699,7 +744,9 @@ private:
                     if (ctor.custom && ctor.defaults) fail("custom constructors cannot use defaults");
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
-                } else if (accept("~")) {
+                } else if (token == "~") {
+                    record->destructorDocumentation = documentation();
+                    advance();
                     if (record->destructorNoexcept.has_value()) fail("duplicate destructor for " + result.name);
                     if (token != result.name) fail("expected destructor name '" + result.name + "'");
                     advance();
@@ -724,8 +771,11 @@ private:
                         record->cppMembers += '\n';
                         if (cppPrivate) record->cppMembers += "public:\n";
                     }
-                } else if (accept("mutable")) {
+                } else if (token == "mutable") {
+                    auto doc = documentation();
+                    advance();
                     auto member = field(members, true);
+                    member.documentation = std::move(doc);
                     member.isMutable = true;
                     member.cppPrivate = cppPrivate;
                     record->fields.push_back(std::move(member));
@@ -907,9 +957,10 @@ private:
     }
 
     EnumMember enumMember(std::set<std::string>& members) {
+        auto doc = documentation();
         auto message = deprecationMessage();
         const auto start = location;
-        EnumMember member{.name = uniqueName(members), .initializerLocation = start, .deprecationMessage = std::move(message)};
+        EnumMember member{.name = uniqueName(members), .initializerLocation = start, .deprecationMessage = std::move(message), .documentation = std::move(doc)};
         if (!accept("=")) return member;
         member.initializerLocation = location;
         const bool negative = accept("-");
@@ -947,6 +998,7 @@ private:
 
     Field field(std::set<std::string>& names, bool record = false, bool* isStatic = nullptr) {
         Field result;
+        result.documentation = documentation();
         while (accept("@")) {
             if (record && accept("cppOnly")) {
                 if (result.cppOnly) fail("duplicate @cppOnly");
@@ -1252,6 +1304,7 @@ private:
 
     Method method(std::set<std::string>& names, const std::vector<Method>& methods, bool inInterface = false) {
         Method result;
+        result.documentation = documentation();
         bool cppOnly = false;
         while (accept("@")) {
             const auto annotation = identifier();

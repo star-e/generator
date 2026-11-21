@@ -3,6 +3,9 @@ target_link_libraries(CocosTypeGraphTest PRIVATE CocosCodegenModel)
 add_test(NAME cocos.typegraph COMMAND CocosTypeGraphTest
     "${PROJECT_SOURCE_DIR}/spec")
 
+add_test(NAME cocos.spec.documentation COMMAND "${CMAKE_COMMAND}"
+    "-DTOOL=$<TARGET_FILE:CocosCodegen>" -P "${CMAKE_CURRENT_SOURCE_DIR}/DocumentationTest.cmake")
+
 add_test(NAME cocos.modules.imports COMMAND "${CMAKE_COMMAND}"
     "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/ModuleImports.cmake")

@@ -113,7 +113,7 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
                       .cppBody = method.cppBody, .isStatic = method.isStatic, .isPureVirtual = method.isPureVirtual,
                       .isExplicitConversion = method.isExplicitConversion, .explicitCppOnly = method.explicitCppOnly,
                       .accessor = method.accessor,
-                      .optionalMethod = method.optionalMethod, .resultPresence = method.resultPresence, .cppPrivate = method.cppPrivate};
+                      .optionalMethod = method.optionalMethod, .resultPresence = method.resultPresence, .cppPrivate = method.cppPrivate, .documentation = method.documentation};
     if (member.isExplicitConversion) {
         // Match overloads by their resolved target, including aliases inside references and pointers.
         member.name = "operator " + formatTypeName(graph, member.result.type, [&](const TypeNode& part) {
@@ -180,7 +180,7 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
         if (field.isMutable && (std::holds_alternative<ReferenceType>(graph.node(use.type).data) ||
             std::holds_alternative<QualifiedType>(graph.node(use.type).data)))
             throw std::runtime_error(use.location.describe() + ": mutable requires a non-const value field");
-        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement, field.isMutable, field.cppPrivate});
+        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement, field.isMutable, field.cppPrivate, field.documentation});
     }
     return result;
 }
@@ -228,6 +228,7 @@ RecordType resolveRecord(TypeGraph& graph, TypeId id, const Record& syntax, cons
     result.isFinal = syntax.isFinal;
     result.destructorNoexcept = syntax.destructorNoexcept;
     result.destructorPrivate = syntax.destructorPrivate;
+    result.destructorDocumentation = syntax.destructorDocumentation;
     result.cppMembers = syntax.cppMembers;
     for (const auto& base : syntax.bases) {
         const auto target = resolve(graph, base, scope, owner).type;
@@ -267,7 +268,7 @@ RecordType resolveRecord(TypeGraph& graph, TypeId id, const Record& syntax, cons
         if (!signatures.insert(std::move(signature)).second) {
             throw std::runtime_error(ctor.location.describe() + ": duplicate constructor signature");
         }
-        result.constructors.push_back({std::move(members), ctor.defaults, ctor.cppOnly, ctor.custom, ctor.isNoexcept, ctor.cppPrivate});
+        result.constructors.push_back({std::move(members), ctor.defaults, ctor.cppOnly, ctor.custom, ctor.isNoexcept, ctor.cppPrivate, ctor.documentation});
     }
     for (uint32_t i = 0; i < result.fields.size(); ++i) {
         const auto& field = result.fields[i];
@@ -296,7 +297,7 @@ TypeData declare(const Declaration& decl) {
         EnumType enumeration{.isFlags = syntax->isFlags};
         for (const auto& value : syntax->values) {
             auto& member = enumeration.values.emplace_back(Enumerator{.name = value.name, .initializer = value.initializer,
-                                                                      .deprecationMessage = value.deprecationMessage});
+                                                                      .deprecationMessage = value.deprecationMessage, .documentation = value.documentation});
             if (value.leftShift) member.initializer += " << " + value.leftShift->count;
         }
         return enumeration;
@@ -781,7 +782,7 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
         if (visibleNames.contains(callback.name) || !callbackNames.insert(callback.name).second)
             throw std::runtime_error(callback.result.location.describe() + ": duplicate TypeScript member " + decl.name + "." + callback.name);
         CallbackInfo info{.name = callback.name, .optional = callback.optional,
-                          .result = resolveCallbackType(graph, callback.result, scope, module), .optionalResult = callback.optionalResult};
+                          .result = resolveCallbackType(graph, callback.result, scope, module), .optionalResult = callback.optionalResult, .documentation = callback.documentation};
         for (const auto& param : callback.parameters) {
             info.parameters.push_back({param.name, param.optional, resolveCallbackType(graph, param.type, scope, module)});
         }
@@ -911,7 +912,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             }
             const auto* external = std::get_if<ExternalDeclaration>(&decl.data);
             TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl),
-                          .cppHeader = decl.cppHeader};
+                          .cppHeader = decl.cppHeader, .documentation = decl.documentation};
             if (const auto it = input.externalTypes.find(decl.name); it != input.externalTypes.end()) {
                 if (!it->second.header.empty()) {
                     if (!node.cppHeader.empty())

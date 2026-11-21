@@ -1,3 +1,4 @@
+#include "codegen/Documentation.h"
 #include "codegen/RecordEmitter.h"
 #include "codegen/ArchiveEmitter.h"
 #include "codegen/EnumEmitter.h"
@@ -140,7 +141,8 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
                      bool emitTs, bool typeOnly) {
     const auto& module = graph.modules.at(owner.value);
     const auto& node = graph.node(field.type.type);
-    BoundField m{.name = field.name, .cppDefault = field.initializer, .readonly = field.isReadonly, .transient = field.transient};
+    BoundField m{.name = field.name, .cppDefault = field.initializer, .documentation = field.documentation,
+                 .readonly = field.isReadonly, .transient = field.transient};
     auto scalarType = field.type.type;
     while (const auto* alias = std::get_if<AliasType>(&graph.node(scalarType).data)) scalarType = alias->target;
     if (std::holds_alternative<ReferenceType>(graph.node(scalarType).data)) {
@@ -676,6 +678,7 @@ void inlineConstructors(std::ostream& out, const TypeGraph& graph, const std::st
     const auto empty = std::ranges::find_if(record.constructors, [](const auto& c) { return c.fields.empty(); });
     if (prefix.types.empty() && (empty != record.constructors.end() || (record.constructors.empty() && specialMembers))) {
         memberAccess(out, currentPrivate, empty != record.constructors.end() && empty->cppPrivate);
+        if (empty != record.constructors.end()) writeDocumentation(out, empty->documentation, "    ");
         if (empty != record.constructors.end() && empty->custom)
             out << "    " << name << "()" << (empty->isNoexcept ? " noexcept" : "") << ";\n";
         else out << "    " << name << "() = default;\n";
@@ -684,6 +687,7 @@ void inlineConstructors(std::ostream& out, const TypeGraph& graph, const std::st
         const auto& ctor = declaration.fields;
         if (ctor.empty() && prefix.types.empty()) return;
         memberAccess(out, currentPrivate, declaration.cppPrivate);
+        writeDocumentation(out, declaration.documentation, "    ");
         out << "    " << name << "(" << prefix.parameters;
         for (size_t i = 0; i < ctor.size(); ++i) {
             const auto& m = members.at(ctor[i]);
@@ -761,6 +765,7 @@ void pmrFieldConstructors(std::ostream& header, std::ostream& source, const Type
     const auto constructor = "\n" + name + "::" + name + "(";
     auto writeConstructor = [&](const Order& order, const std::string& declaration, const std::string& params, const ConstructorInfo* ctor = nullptr) {
         memberAccess(header, currentPrivate, ctor && ctor->cppPrivate);
+        if (ctor) writeDocumentation(header, ctor->documentation, "    ");
         header << "    " << name << "(" << declaration << ")" << (ctor && ctor->isNoexcept ? " noexcept" : "")
                << ";" << (params == alloc ? " // NOLINT\n" : "\n");
         if (ctor && ctor->custom) return;
@@ -880,7 +885,9 @@ void writeScalarAliases(std::ostream& out, const TypeGraph& graph, const TypeMod
         if (!alias) continue;
         const auto& target = graph.node(alias->target);
         collectCppHeader(graph, module, target, includes);
-        out << "\nusing " << node.name << " = " << cppName(graph, target, module) << ";\n";
+        out << '\n';
+        writeDocumentation(out, node.documentation);
+        out << "using " << node.name << " = " << cppName(graph, target, module) << ";\n";
     }
 }
 
@@ -953,6 +960,7 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
     std::ostringstream out;
     for (const auto& method : methods) {
         memberAccess(out, currentPrivate, method.cppPrivate);
+        writeDocumentation(out, method.documentation, "    ");
         const auto type = methodType(graph, module, method.result.type, deps);
         if (method.isExplicitConversion) out << "    explicit operator " << type;
         else out << "    " << (method.isStatic ? "static " : "") << type << " " << method.name;
@@ -1004,6 +1012,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         if (!immovable && !moveOnly && members[i].containsGraph && hasMoveOnlyValue(graph, field.type.type))
             invalid(field, "a record containing a move-only graph must declare @moveOnly");
     }
+    writeDocumentation(out, node.documentation);
     out << (record.isClass ? "class " : "struct ") << node.name;
     if (record.isFinal) out << " final";
     for (auto base : record.bases)
@@ -1017,6 +1026,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         const auto& [member, forwardEnum] = statics[i];
         const auto& field = record.staticFields[i];
         memberAccess(out, currentPrivate, field.cppPrivate);
+        writeDocumentation(out, field.documentation, "    ");
         const auto& type = graph.node(field.type.type);
         if (member.cppDefault.empty() && !hasNativeValueDefault(graph, field.type.type, staticDefaults))
             invalid(field, "no C++ default for static field of type " + type.qualifiedName);
@@ -1073,6 +1083,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     }
     if (record.destructorNoexcept.has_value()) {
         memberAccess(out, currentPrivate, record.destructorPrivate);
+        writeDocumentation(out, record.destructorDocumentation, "    ");
         out << "    ~" << node.name << "()" << (*record.destructorNoexcept ? " noexcept" : "") << ";\n";
     }
     if (!record.bases.empty() || record.implements) {
@@ -1084,6 +1095,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     for (size_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
         memberAccess(out, currentPrivate, record.fields[i].cppPrivate);
+        writeDocumentation(out, m.documentation, "    ");
         out << "    ";
         if (record.fields[i].isMutable) out << "mutable ";
         out << m.cpp << " " << m.name;
@@ -1102,7 +1114,9 @@ std::string tsClassMethods(const TypeScriptClassMethods& methods) {
             continue;
         }
         const auto& method = std::get<TypeScriptClassMethod>(entry);
-        out << "\n    " << method.name << " (";
+        out << '\n';
+        writeDocumentation(out, method.documentation, "    ");
+        out << "    " << method.name << " (";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
             if (i) out << ", ";
@@ -1192,12 +1206,14 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& memb
 void tsRecord(std::ostream& ts, std::ostream& staticInitializers, const TypeNode& node, const std::vector<BoundField>& members,
               const std::vector<StaticField>& statics, const Order& order,
               const Order* reset, const std::set<std::string>& keepOnReset, const std::string& base,
-              bool declaredConstructor, bool defaults, std::string_view classMethods) {
+              const std::optional<ConstructorInfo>& constructor, std::string_view classMethods) {
+    writeDocumentation(ts, node.documentation);
     ts << "export class " << node.name;
     if (!base.empty()) ts << " extends " << base;
     ts << " {\n";
     for (const auto& [field, forwardEnum] : statics) {
         if (field.ts.empty()) continue; // Native-only field.
+        writeDocumentation(ts, field.documentation, "    ");
         const auto declaration = std::string(field.readonly ? "static readonly " : "static ") + field.name + ": " + field.ts;
         if (field.safeUnsignedInteger) {
             ts << "    declare " << declaration << ";\n";
@@ -1210,11 +1226,13 @@ void tsRecord(std::ostream& ts, std::ostream& staticInitializers, const TypeNode
             ts << "    " << declaration << " = " << field.tsDefault << ";\n";
         }
     }
-    const bool emitConstructor = declaredConstructor || std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
-    tsConstructorAndReset(ts, members, order, reset, keepOnReset, !base.empty(), emitConstructor, defaults);
+    const bool emitConstructor = constructor.has_value() || std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
+    if (constructor) writeDocumentation(ts, constructor->documentation, "    ");
+    tsConstructorAndReset(ts, members, order, reset, keepOnReset, !base.empty(), emitConstructor, constructor && constructor->defaults);
     ts << classMethods;
     for (uint32_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
+        writeDocumentation(ts, m.documentation, "    ");
         if (m.safeUnsignedInteger) {
             ts << "    declare " << (m.readonly ? "readonly " : "") << m.name << ": number;\n";
             continue;
@@ -1391,6 +1409,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (std::holds_alternative<AliasType>(node.data)) continue;
         if (std::holds_alternative<TagType>(node.data)) {
             if (!previousTag) cpp << '\n';
+            writeDocumentation(cpp, node.documentation);
             cpp << "struct " << node.name << " {};\n";
             previousTag = true;
             continue;
@@ -1445,6 +1464,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         cpp << '\n';
         if (emitTs) ts << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
+            writeDocumentation(cpp, node.documentation);
             cpp << "enum class " << node.name;
             std::string baseName = "int";
             if (enumeration->underlying != TypeId{}) {
@@ -1455,7 +1475,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             cpp << (enumeration->isFlags ? " { // NOLINT(performance-enum-size)\n" : " {\n");
             writeEnumMembers(cpp, *enumeration, EnumTarget::cpp);
-            if (emitTs) writeTypeScriptEnum(ts, node.name, *enumeration, output.runtimeEnums.contains(node.name));
+            if (emitTs) {
+                writeDocumentation(ts, node.documentation);
+                writeTypeScriptEnum(ts, node.name, *enumeration, output.runtimeEnums.contains(node.name));
+            }
             cpp << "};\n";
             if (enumeration->isFlags) {
                 deps.headers.insert("type_traits");
@@ -1546,7 +1569,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
         usesUint64Field |= std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
         tsRecord(ts, staticInitializers, node, members, statics, order, reset ? &*reset : nullptr, retained,
-                 base == output.bases.end() ? "" : base->second.name, selected.has_value(), constructor.defaults, classMethods);
+                 base == output.bases.end() ? "" : base->second.name, selected, classMethods);
     }
     if (pool.count != output.pools.size()) throw std::runtime_error("unknown pool type in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);

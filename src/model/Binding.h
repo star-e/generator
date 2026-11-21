@@ -59,6 +59,7 @@ struct Callback {
     std::vector<CallbackParameter> parameters;
     TypeRef result;
     bool optionalResult{};
+    std::string documentation;
 };
 
 struct TypeScriptMethodParameter {
@@ -72,6 +73,7 @@ struct TypeScriptClassMethod {
     std::vector<TypeScriptMethodParameter> parameters;
     std::string result;
     std::string body;
+    std::string documentation;
 };
 
 // A raw methods block from an older spec occupies its original position in the class.

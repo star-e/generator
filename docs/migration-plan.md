@@ -66,7 +66,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 | 旧模块 | 当前可生成的内容 | 后续接管条件 |
 | --- | --- | --- |
-| RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。`render.i` 按 C++ 方法的 `@getter`、`@setter`、`@cppOnly` 生成属性和忽略项。`binding swig` 中的 `macro` 引用属性或方法，`releaseInGC` 指定由 JS GC 释放返回对象的方法。 | 切换引擎公开入口时还需迁移 API 文档。 |
+| RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。`render.i` 按 C++ 方法的 `@getter`、`@setter`、`@cppOnly` 生成属性和忽略项。`binding swig` 中的 `macro` 引用属性或方法，`releaseInGC` 指定由 JS GC 释放返回对象的方法。 | 公开 API 的中英文说明随声明输出到 C++ 和 TS，包括方法绑定成的 TS 属性。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 原生与 Web 消费测试覆盖这些类型。 |
@@ -92,6 +92,14 @@ C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一
 归档模块在同一份 `.spec` 中用 `@archive(output)` 标记写接口，用 `@archive(input)` 标记读接口，每个角色各有一个接口。生成 `@serialize` 记录或图的模块直接 `import` 这个模块。生成器从直接依赖中选择唯一提供这对角色的模块，通过 TypeGraph 中的类型引用生成 `save` 和 `load` 的参数，并按提供方在工作区中配置的输出路径生成 C++ 和 TS 导入。[归档角色声明](../spec/render/archive.spec) · [模块导入测试](../tests/ModuleImports.cmake)
 
 ### 在模块中声明方法
+
+在声明及其标注之前用 `/** ... */` 编写公开文档。`//`、`///` 和 `/* ... */` 用于维护备注。文档可以是单行或多行，正文按原顺序保留段落和 `@en`、`@zh`、`@param` 等标签。C++ 方法和 TS 方法共用同一份说明。TS 将 getter 和 setter 绑定为一个属性时优先采用 getter 的文档，getter 缺少文档时采用 setter 的说明。每个显式重载可写自己的文档。
+
+```cpp
+// C++ 采用引擎的 getter 命名。
+/** @zh 渲染管线使用的图形设备。 */
+@getter virtual gfx::Device* getDevice() const = 0;
+```
 
 在接口的 C++ 风格声明上写 `@getter virtual ccstd::string getName() const = 0;`，TS 会生成只读属性 `readonly name: string`。同一接口再声明 `@setter virtual void setName(const ccstd::string& name) = 0;`，属性就可写。生成器按属性名配对，声明顺序不限。`getURLValue` 对应 `urlValue`。getter 须为无参数、返回值非 `void` 的 `const` 方法。setter 须为非 `const` 方法，返回 `void`，唯一参数与属性的 TS 类型一致。未标注的纯虚方法仍生成普通 TS 方法。已有的 `binding typescript` 属性规则也可继续使用。[管线接口](../spec/render/render-interface.spec) · [只读属性](../spec/render/private-interface.spec)
 

@@ -1,3 +1,4 @@
+#include "codegen/Documentation.h"
 #include "codegen/GraphEmitter.h"
 #include "model/TypeName.h"
 
@@ -849,7 +850,9 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         headers.insert({"cocos/base/std/container/map.h", "cocos/base/std/container/string.h", "functional", "limits", "stdexcept", "string_view"});
     }
 
-    out << "\nstruct " << name << " {\n"
+    out << '\n';
+    writeDocumentation(out, node.documentation);
+    out << "struct " << name << " {\n"
         << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
     graphConstructors(out, source, name, allStorage, moveOnlyColumns, dequeColumns, fields, model);
@@ -1001,8 +1004,10 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             << ")" << (fields.empty() ? " noexcept" : "") << ";\n";
     if (!inputArchive.empty()) out << "    friend void load(" << inputArchive << "&, " << name << "&);\n";
     if (!fields.empty()) out << "\npublic:\n";
-    for (const auto& f : fields)
+    for (const auto& f : fields) {
+        writeDocumentation(out, f.documentation, "    ");
         out << "    " << f.cpp << " " << f.name << (f.cppDefault.empty() ? "" : "{" + f.cppDefault + "}") << ";\n";
+    }
     out << "};\n";
 }
 
