@@ -465,7 +465,6 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
     }
 }
 
-using MethodBindings = std::map<std::string, std::string>;
 using InterfaceBindings = std::map<uint32_t, MethodBindings>;
 
 void bindTypeScriptExports(TypeGraph& graph, ModuleId owner, const Module& syntax) {
@@ -561,8 +560,12 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 const auto& members = std::get<Interface>(decl->data).methods;
                 for (const auto& [name, target] : rule.methods) {
                     if (std::ranges::find(members, name, &Method::name) == members.end()) reject("unknown method " + name);
-                    if (std::ranges::none_of(members, [&](const Method& member) { return member.name == name && !member.cppOnly; }))
+                    const auto visible = std::ranges::count_if(members, [&](const Method& member) { return member.name == name && !member.cppOnly; });
+                    if (visible == 0)
                         reject("cannot assign a TS name to @cppOnly method " + node.name + "." + name);
+                    const auto options = rule.methodOptions.find(name);
+                    if (visible > 1 && (!target || (options != rule.methodOptions.end() && options->second.getter)))
+                        reject("ambiguous property accessor " + name);
                 }
                 methods.emplace(id.value, rule.methods);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {

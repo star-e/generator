@@ -62,7 +62,7 @@ ctest --test-dir build/host --output-on-failure
 
 | 旧模块 | 当前可生成的内容 | 后续接管条件 |
 | --- | --- | --- |
-| RenderInterface | `render-interface.spec` 统一声明原生接口、`Factory` 和管线能力类型，生成 `RenderInterfaceFwd.h` 和 `RenderInterfaceTypes.h/.cpp`。暂存的 `pipeline.ts` 导出 `PipelineType`、`SubpassCapabilities`、`PipelineCapabilities` 和 `RenderingModule`。 | 引擎完整的 `pipeline.ts` 还含可写属性、可选回调及仅 Web 端存在的签名。切换公开入口时也要保留 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
+| RenderInterface | `render-interface.spec` 统一声明原生接口、`Factory` 和管线能力类型。生成的 `pipeline.ts` 导出旧版 22 个类型中的 9 个，包括 `RenderNode`、`Setter`、`SceneBuilder`、`RenderQueueBuilder` 和 `ComputeQueueBuilder`。 | 剩余 13 个接口涉及运行时、pass、subpass 和管线构建器，包括可选回调和 Web 专用签名。切换公开入口时也要保留 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
@@ -82,6 +82,8 @@ C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一
 归档模块在同一份 `.spec` 中用 `@archive(output)` 标记写接口，用 `@archive(input)` 标记读接口，每个角色各有一个接口。生成 `@serialize` 记录或图的模块直接 `import` 这个模块。生成器从直接依赖中选择唯一提供这对角色的模块，通过 TypeGraph 中的类型引用生成 `save` 和 `load` 的参数，并按提供方在工作区中配置的输出路径生成 C++ 和 TS 导入。[归档角色声明](../spec/render/archive.spec) · [模块导入测试](../tests/ModuleImports.cmake)
 
 ### 在模块中声明方法
+
+在 `binding typescript` 的接口规则中，`getter getName => name;` 生成只读属性。`getter getName => name setter setName;` 将一对原生方法绑定成同一个可写属性 `name: string`。读取方法须为无参数的 `const` 方法，写入方法须返回 `void`，唯一参数与属性的 TS 类型一致。普通方法的尾部可选参数使用 `method useLightFrustum optional(csmLevel, optCamera);`。[管线接口绑定](../spec/render/render-interface.spec)
 
 `interface` 中的 `virtual void writeBool(bool value) = 0;` 由 C++ 派生类实现，默认也生成 TS 接口方法。需要只在原生侧公开时写 `@cppOnly virtual ... = 0;`。普通成员采用 `ReturnType name(Type arg)`，支持 `static`、`const`、`noexcept`。以分号结尾会生成 C++ 声明，以花括号提供的 C++ 函数体会随头文件输出。普通成员在 `interface`、`struct`、`graph` 中均只生成 C++；字段和构造器继续使用各自的声明语法。[归档接口](../spec/render/archive.spec) · [原生转发重载](../spec/render/private-interface.spec)
 

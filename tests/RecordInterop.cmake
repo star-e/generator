@@ -295,6 +295,24 @@ else()
     file(WRITE "${window}" "export declare class RenderWindow { private window: void; }\n")
     file(WRITE "${scene}/reflection-probe.d.ts" "export declare class ReflectionProbe { private probe: void; }\n")
 endif()
+set(mathApi "${stage}/cocos/core/math/index.d.ts")
+file(MAKE_DIRECTORY "${stage}/cocos/core/math")
+if(EXISTS "${engineAPI}")
+    file(WRITE "${mathApi}" "export { Mat4, Quat, Vec2, Vec4 } from 'cc';\n")
+else()
+    foreach(type IN ITEMS Mat4 Quat Vec2 Vec4)
+        file(APPEND "${mathApi}" "export declare class ${type} { private brand${type}: void; }\n")
+    endforeach()
+endif()
+foreach(type IN ITEMS DirectionalLight SphereLight SpotLight PointLight RangedDirectionalLight)
+    string(REGEX REPLACE "([a-z])([A-Z])" "\\1-\\2" filename "${type}")
+    string(TOLOWER "${filename}" filename)
+    if(EXISTS "${engineAPI}")
+        file(WRITE "${scene}/${filename}.d.ts" "import { renderer } from 'cc'; export import ${type} = renderer.scene.${type};\n")
+    else()
+        file(WRITE "${scene}/${filename}.d.ts" "import { Light } from './index'; export declare class ${type} extends Light { private brand${type}: void; }\n")
+    endif()
+endforeach()
 find_program(node node REQUIRED)
 # The engine allows implicit any in MutableGraph.addVertex(...args). Compile its runtime
 # with that option, then check consumers against its declarations with full strictness.
@@ -331,6 +349,7 @@ file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}"
     "export interface Attribute { name: string; } export interface ShaderInfo { name: string; }\n"
     "export interface Shader { readonly name: string; } export interface Device { readonly id: number; } export interface PipelineState {}\n"
     "export interface Sampler {}\n"
+    "export interface BufferInfo {} export interface TextureInfo {} export interface CommandBuffer {}\n"
     "export declare class Buffer { private buffer: void; }\n"
     "export declare class Texture { private texture: void; }\n"
     "export declare class Framebuffer { private framebuffer: void; }\n"
@@ -356,6 +375,10 @@ file(WRITE "${stage}/cocos/render-scene/core/program-lib.d.ts" "export interface
 file(APPEND "${material}" "export interface EffectAsset { readonly name: string; }\n")
 file(WRITE "${stage}/cocos/render-scene/core/pass-utils.d.ts" "export type MacroRecord = Record<string, string | number | boolean>;\n")
 configure_file("${ENGINE}/cocos/rendering/custom/private.ts" "${custom}/legacy-private.ts" COPYONLY)
+configure_file("${ENGINE}/cocos/rendering/custom/pipeline.ts" "${custom}/legacy-pipeline.ts" COPYONLY)
+file(WRITE "${stage}/cocos/rendering/geometry-renderer.d.ts" "export interface GeometryRenderer {}\n")
+file(WRITE "${stage}/cocos/rendering/global-descriptor-set-manager.d.ts" "export interface GlobalDSManager {}\n")
+file(WRITE "${stage}/cocos/rendering/pipeline-scene-data.d.ts" "export interface PipelineSceneData {}\n")
 configure_file("${ENGINE}/cocos/rendering/custom/web-types.ts" "${custom}/legacy-web-types.ts" COPYONLY)
 configure_file("${SOURCE}/tests/consumer/records/program-consumer.ts" "${custom}/program-consumer.ts" COPYONLY)
 file(READ "${ENGINE}/cocos/rendering/custom/serialization.ts" codec)

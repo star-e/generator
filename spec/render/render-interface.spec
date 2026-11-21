@@ -331,6 +331,27 @@ namespace cc::render {
 }
 
 binding typescript {
-    export { PipelineType, SubpassCapabilities, PipelineCapabilities, RenderingModule };
+    export { PipelineType, SubpassCapabilities, PipelineCapabilities, RenderNode, Setter, SceneBuilder,
+             RenderQueueBuilder, ComputeQueueBuilder, RenderingModule };
     PipelineCapabilities => class { constructor(); };
+    RenderNode => interface {
+        getter getName => name setter setName;
+    };
+    Setter => interface {
+        method setBuiltinDirectionalLightFrustumConstants optional(csmLevel);
+    };
+    SceneBuilder => interface {
+        method useLightFrustum optional(csmLevel, optCamera);
+    };
+    RenderQueueBuilder => interface {
+        method addSceneOfCamera optional(sceneFlags);
+        method addScene optional(light, scene);
+        method addFullscreenQuad optional(sceneFlags);
+        method addCameraQuad optional(sceneFlags);
+        method addDraw3D optional(sceneFlags);
+        method clearRenderTarget optional(color);
+    };
+    ComputeQueueBuilder => interface {
+        method addDispatch optional(material, passID);
+    };
 }

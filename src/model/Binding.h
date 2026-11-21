@@ -38,10 +38,13 @@ struct TypeScriptImport {
 
 struct InterfaceMethodBinding {
     bool getter{};
+    std::string setter;
     bool nullable{};
     std::vector<std::string> optional;
 };
 using InterfaceBindings = std::map<std::pair<std::string, std::string>, InterfaceMethodBinding>;
+// A setter paired with a getter has no separate TypeScript method name.
+using MethodBindings = std::map<std::string, std::optional<std::string>>;
 
 struct TypeScriptBinding {
     TypeRef source;
@@ -50,7 +53,7 @@ struct TypeScriptBinding {
     std::filesystem::path from;
     std::filesystem::path archiveFrom;
     bool externalTarget{};
-    std::map<std::string, std::string> methods;
+    MethodBindings methods;
     std::map<std::string, InterfaceMethodBinding> methodOptions;
     std::map<std::string, std::string> renamedFrom;
     std::string numberField;

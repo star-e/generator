@@ -7,7 +7,7 @@ namespace std {
     }
 
     header "vector" {
-        template<T> class vector;
+        @container("array") template<T> class vector;
     }
 }
 

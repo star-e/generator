@@ -4,6 +4,7 @@
 #include "generated/TypeGraphTypes.h"
 #include "model/TypeName.h"
 
+#include <algorithm>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -96,7 +97,8 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         firstBase = false;
     }
     out << " {\n";
-    for (const auto& method : std::get<InterfaceType>(decl.data).methods) {
+    const auto& methods = std::get<InterfaceType>(decl.data).methods;
+    for (const auto& method : methods) {
         if (!method.typescriptName) continue;
         const InterfaceMethodBinding defaults;
         const auto it = bindings.find({decl.name, method.name});
@@ -109,7 +111,14 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         if (binding.getter) {
             if (!method.isConst || !method.parameters.empty() || result == "void" || !binding.optional.empty())
                 throw std::runtime_error(context + ": getter requires a const nullary value method");
-            out << "    readonly " << *method.typescriptName << ": " << result << suffix;
+            if (!binding.setter.empty()) {
+                const auto setter = std::ranges::find_if(methods, [&](const MethodInfo& m) { return !m.cppOnly && m.name == binding.setter; });
+                if (setter == methods.end() || setter->isConst || setter->parameters.size() != 1 ||
+                    graph.node(setter->result.type).qualifiedName != "void" ||
+                    tsSignatureType(graph, setter->parameters.front().type, decl.module, imports) != result)
+                    throw std::runtime_error(context + ": setter " + binding.setter + " must return void and accept the property type");
+            }
+            out << (binding.setter.empty() ? "    readonly " : "    ") << *method.typescriptName << ": " << result << suffix;
             continue;
         }
         if (binding.optional.size() > method.parameters.size()) throw std::runtime_error(context + ": unknown optional parameter");

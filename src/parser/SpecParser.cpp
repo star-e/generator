@@ -279,6 +279,10 @@ private:
                 const auto target = accept("=>") ? identifier() : name;
                 if (!rule.methods.emplace(name, target).second) fail("duplicate method binding " + name);
                 InterfaceMethodBinding options{.getter = key == "getter"};
+                if (options.getter && accept("setter")) {
+                    options.setter = identifier();
+                    if (!rule.methods.emplace(options.setter, std::nullopt).second) fail("duplicate method binding " + options.setter);
+                }
                 if (accept("optional")) options.optional = bindingFields();
                 options.nullable = accept("nullable");
                 if (options.getter || options.nullable || !options.optional.empty()) rule.methodOptions.emplace(name, std::move(options));

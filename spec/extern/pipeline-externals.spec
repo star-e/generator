@@ -29,6 +29,11 @@ namespace cc {
 }
 
 binding typescript {
+    ArrayBuffer => "ArrayBuffer";
+    Mat4 => Mat4 from "cocos/core/math";
+    Quaternion => Quat from "cocos/core/math";
+    Vec2 => Vec2 from "cocos/core/math";
+    Vec4 => Vec4 from "cocos/core/math";
     EffectAsset => EffectAsset from "cocos/asset/assets";
     MacroRecord => MacroRecord from "cocos/render-scene/core/pass-utils";
     IProgramInfo => IProgramInfo from "cocos/render-scene/core/program-lib";
