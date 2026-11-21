@@ -253,11 +253,34 @@ namespace cc::render {
         virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name) const = 0;
     }
 
-    @cppOnly struct Factory {
+    @cppOnly class Factory {
         static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<uint8_t>& bufferIn);
         static void destroy(RenderingModule* renderingModule) noexcept;
         static Pipeline* createPipeline();
     }
+}
+
+binding swig {
+    include "bindings/auto/jsb_scene_auto.h";
+    include "bindings/auto/jsb_gfx_auto.h";
+    include "bindings/auto/jsb_assets_auto.h";
+    include "renderer/pipeline/GeometryRenderer.h";
+    include "renderer/pipeline/GlobalDescriptorSetManager.h";
+
+    macro CC_USE_GEOMETRY_RENDERER PipelineRuntime.geometryRenderer;
+
+    releaseInGC BasicRenderPassBuilder.addQueue;
+    releaseInGC BasicPipeline.addRenderPass;
+    releaseInGC BasicPipeline.addMultisampleRenderPass;
+    releaseInGC RenderSubpassBuilder.addQueue;
+    releaseInGC ComputeSubpassBuilder.addQueue;
+    releaseInGC RenderPassBuilder.addRenderSubpass;
+    releaseInGC RenderPassBuilder.addMultisampleRenderSubpass;
+    releaseInGC RenderPassBuilder.addComputeSubpass;
+    releaseInGC ComputePassBuilder.addQueue;
+    releaseInGC RenderQueueBuilder.addScene;
+    releaseInGC Pipeline.addRenderPass;
+    releaseInGC Pipeline.addComputePass;
 }
 
 binding typescript {

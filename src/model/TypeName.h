@@ -6,6 +6,15 @@
 
 namespace cc::codegen {
 
+inline TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
+    std::set<uint32_t> visited;
+    while (const auto* alias = std::get_if<AliasType>(&graph.node(use.type).data)) {
+        if (!visited.insert(use.type.value).second) throw std::runtime_error(use.location.describe() + ": cyclic type alias");
+        use.type = alias->target;
+    }
+    return use.type;
+}
+
 inline size_t requiredParameterCount(const MethodInfo& method) {
     auto count = method.parameters.size();
     while (count && !method.parameters[count - 1].defaultValue.empty()) --count;

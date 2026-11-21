@@ -551,7 +551,28 @@ private:
                 }
                 expect(";");
             }
-        } else fail("expected binding target typescript or jsb");
+        } else if (accept("swig")) {
+            if (module.external || rules.swig) fail("expected one SWIG binding block on a generated module");
+            auto& swig = rules.swig.emplace();
+            expect("{");
+            while (!accept("}")) {
+                if (accept("include")) {
+                    auto path = bindingPath();
+                    if (std::ranges::find(swig.includes, path) != swig.includes.end()) fail("duplicate SWIG include");
+                    swig.includes.push_back(std::move(path));
+                } else {
+                    const bool macro = accept("macro");
+                    if (!macro) expect("releaseInGC");
+                    auto condition = macro ? identifier() : std::string{};
+                    SwigMember member{location, identifier()};
+                    expect(".");
+                    member.name = identifier();
+                    if (macro) swig.macros.emplace_back(std::move(member), std::move(condition));
+                    else swig.releaseInGC.push_back(std::move(member));
+                }
+                expect(";");
+            }
+        } else fail("expected binding target typescript, jsb or swig");
         accept(";");
     }
 
@@ -1242,6 +1263,7 @@ private:
             else if (annotation == "optionalResult" && result.resultPresence == ResultPresence::Required) result.resultPresence = ResultPresence::Optional;
             else fail("unknown or duplicate method annotation @" + annotation);
         }
+        result.explicitCppOnly = cppOnly;
         result.isPureVirtual = accept("virtual");
         result.isStatic = accept("static");
         if (result.isPureVirtual && !inInterface) fail("pure virtual methods require an interface");

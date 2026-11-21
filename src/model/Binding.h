@@ -111,6 +111,18 @@ inline bool isTypedArrayName(std::string_view name) {
     return isUnclampedIntegerTypedArrayName(name) || name == "Uint8ClampedArray" || name == "Float32Array" || name == "Float64Array";
 }
 
+struct SwigMember {
+    SourceLocation location;
+    std::string owner;
+    std::string name;
+};
+
+struct SwigBindings {
+    std::vector<std::filesystem::path> includes;
+    std::vector<std::pair<SwigMember, std::string>> macros;
+    std::vector<SwigMember> releaseInGC;
+};
+
 struct ModuleBindings {
     std::vector<TypeScriptBinding> typescript;
     std::vector<TypeScriptNamedImport> typescriptImports;
@@ -121,6 +133,7 @@ struct ModuleBindings {
     std::optional<SourceLocation> jsb;
     std::map<std::string, SourceLocation> jsbRecords;
     std::set<std::filesystem::path> jsbIncludes;
+    std::optional<SwigBindings> swig;
 };
 
 } // namespace cc::codegen

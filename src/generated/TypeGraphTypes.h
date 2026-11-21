@@ -61,6 +61,8 @@ struct MethodInfo {
     bool isStatic = false;
     bool isPureVirtual = false;
     bool isExplicitConversion = false;
+    bool explicitCppOnly = false;
+    std::string declaredProperty;
     AccessorKind accessor = AccessorKind::None;
     bool optionalMethod = false;
     ResultPresence resultPresence = ResultPresence::Required;

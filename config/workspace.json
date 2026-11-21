@@ -70,7 +70,7 @@
     { "spec": "../spec/extern/pipeline-externals.spec" },
     {
       "spec": "../spec/render/render-interface.spec",
-      "cpp": {},
+      "cpp": { "swig": "tools/swig-config/render.i" },
       "typescript": "cocos/rendering/custom/pipeline.ts"
     },
     {

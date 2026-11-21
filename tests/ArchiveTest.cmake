@@ -19,6 +19,7 @@ set(baselineFiles
     native/cocos/renderer/pipeline/custom/CustomTypes.cpp
     native/cocos/renderer/pipeline/custom/PrivateTypes.cpp
     native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.cpp
+    native/tools/swig-config/render.i
     native/cocos/renderer/pipeline/custom/ArchiveFwd.h
     native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp
     native/cocos/renderer/pipeline/custom/ArchiveTypes.h

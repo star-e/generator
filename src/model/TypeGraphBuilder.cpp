@@ -105,22 +105,14 @@ TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, 
     return {id, use.location};
 }
 
-TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
-    std::set<uint32_t> visited;
-    while (const auto* alias = std::get_if<AliasType>(&graph.node(use.type).data)) {
-        if (!visited.insert(use.type.value).second) throw std::runtime_error(use.location.describe() + ": cyclic type alias");
-        use.type = alias->target;
-    }
-    return use.type;
-}
-
 std::string parameterDefault(const TypeGraph& graph, const Parameter& parameter, TypeUse type, const std::string& scope, ModuleId owner);
 
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
                       .cppBody = method.cppBody, .isStatic = method.isStatic, .isPureVirtual = method.isPureVirtual,
-                      .isExplicitConversion = method.isExplicitConversion, .accessor = method.accessor,
+                      .isExplicitConversion = method.isExplicitConversion, .explicitCppOnly = method.explicitCppOnly,
+                      .accessor = method.accessor,
                       .optionalMethod = method.optionalMethod, .resultPresence = method.resultPresence, .cppPrivate = method.cppPrivate};
     if (member.isExplicitConversion) {
         // Match overloads by their resolved target, including aliases inside references and pointers.
@@ -745,7 +737,8 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
     result.methods = resolveMemberFunctions(graph, std::get<Interface>(decl.data).methods, scope, module);
     for (auto& member : result.methods) {
         if (member.cppOnly) continue;
-        auto name = member.accessor == AccessorKind::None ? member.name : accessorName(member);
+        if (member.accessor != AccessorKind::None) member.declaredProperty = accessorName(member);
+        auto name = member.declaredProperty.empty() ? member.name : member.declaredProperty;
         if (const auto it = rule.methods.find(member.name); it != rule.methods.end()) {
             const auto& binding = it->second;
             if (!binding.target.empty()) name = binding.target;

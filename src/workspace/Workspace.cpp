@@ -2,6 +2,7 @@
 #include "codegen/InterfaceEmitter.h"
 #include "codegen/RecordEmitter.h"
 #include "codegen/SettingsEmitter.h"
+#include "codegen/SwigEmitter.h"
 #include "parser/SpecParser.h"
 #include "model/TypeGraphBuilder.h"
 
@@ -188,7 +189,7 @@ InterfaceBindings interfaceBindings(const Module& module) {
 
 void loadCppOutput(RecordOutput& output, const Json& cpp, const Json& defaults, const Module& module) {
     checkKeys(cpp, {"root", "dir", "prefix", "header", "forward", "names", "serialization", "jsb",
-                    "forwardIncludes"}, "cpp");
+                    "swig", "forwardIncludes"}, "cpp");
     output.nativeRoot = outputPath(cpp.value("root", defaults.value("root", std::string{"."})));
     const auto dir = outputPath(cpp.value("dir", defaults.value("dir", std::string{"."})));
     const auto prefix = cpp.value("prefix", module.name);
@@ -211,6 +212,12 @@ void loadCppOutput(RecordOutput& output, const Json& cpp, const Json& defaults, 
     output.namesHeader = optionalHeader("names", "Names.h");
     output.serializationHeader = optionalHeader("serialization", "Serialization.h");
     output.jsbHeader = optionalHeader("jsb", "Jsb.h");
+    if (cpp.contains("swig")) {
+        auto path = outputPath(cpp.at("swig"));
+        if (path.extension() != ".i" || !identifier(path.stem().string()))
+            throw std::runtime_error("expected a named .i SWIG output: " + path.generic_string());
+        output.swigFile = output.nativeRoot / path;
+    }
     if (cpp.contains("forwardIncludes")) {
         if (!cpp.at("forwardIncludes").is_array())
             throw std::runtime_error("forwardIncludes requires an array of include paths");
@@ -426,6 +433,15 @@ Files plan(const Json& settings, const fs::path& base) {
         if (!inputs[i].modelOnly) bindRecordOutput(outputs, syntax, graph, owner);
         if (output.settingsFile)
             addFile(*output.settingsFile, emitSettings(graph, owner, settingsBinding(syntax), *output.settingsFile, preamble));
+        if (records.swigFile) {
+            std::vector<fs::path> jsbHeaders;
+            for (auto imported : module.imports) {
+                const auto& header = outputs.at(imported.value).types.jsbHeader;
+                if (header) jsbHeaders.push_back(*header);
+            }
+            addFile(*records.swigFile, emitSwig(graph, module, records.swigFile->stem().string(), records.header,
+                                               syntax.bindings.swig.value_or(SwigBindings{}), jsbHeaders));
+        }
         if (!records.header.empty() || records.typescript) {
             for (auto imported : module.imports) {
                 const auto& dependency = outputs.at(imported.value).types;

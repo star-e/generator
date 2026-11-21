@@ -15,6 +15,9 @@ add_test(NAME cocos.archive.generate COMMAND "${CMAKE_COMMAND}"
     "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/ArchiveTest.cmake")
 
+add_test(NAME cocos.swig.generate COMMAND "${CMAKE_COMMAND}"
+    "-DTOOL=$<TARGET_FILE:CocosCodegen>" -P "${CMAKE_CURRENT_SOURCE_DIR}/SwigTest.cmake")
+
 add_test(NAME cocos.settings.generate COMMAND "${CMAKE_COMMAND}"
     "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/SettingsTest.cmake")
@@ -33,6 +36,9 @@ add_test(NAME cocos.selfhost COMMAND "${CMAKE_COMMAND}"
     "-DENGINE=${COCOS_CODEGEN_ENGINE_ROOT}" "-DCONFIG=$<CONFIG>" -P "${CMAKE_CURRENT_SOURCE_DIR}/SelfHost.cmake")
 
 if(COCOS_CODEGEN_ENGINE_ROOT)
+    add_test(NAME cocos.swig.interop COMMAND "${CMAKE_COMMAND}"
+        "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
+        "-DENGINE=${COCOS_CODEGEN_ENGINE_ROOT}" -P "${CMAKE_CURRENT_SOURCE_DIR}/SwigInterop.cmake")
     add_test(NAME cocos.baseline COMMAND "${CMAKE_COMMAND}"
         "-DENGINE=${COCOS_CODEGEN_ENGINE_ROOT}" "-DSOURCE=${PROJECT_SOURCE_DIR}"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/Baseline.cmake")

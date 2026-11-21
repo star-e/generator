@@ -35,6 +35,7 @@ add_executable(CocosCodegen
     src/codegen/JsbEmitter.cpp
     src/codegen/RecordEmitter.cpp
     src/codegen/SettingsEmitter.cpp
+    src/codegen/SwigEmitter.cpp
     src/workspace/Workspace.cpp)
 target_compile_features(CocosCodegen PRIVATE cxx_std_20)
 target_link_libraries(CocosCodegen PRIVATE CocosCodegenModel nlohmann_json::nlohmann_json)

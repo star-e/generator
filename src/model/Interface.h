@@ -29,6 +29,7 @@ struct Method {
     bool isStatic{};
     bool isPureVirtual{};
     bool isExplicitConversion{};
+    bool explicitCppOnly{};
     AccessorKind accessor{};
     bool optionalMethod{};
     ResultPresence resultPresence{};

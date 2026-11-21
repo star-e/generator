@@ -30,6 +30,8 @@ namespace codegen {
         isStatic: bool = false;
         isPureVirtual: bool = false;
         isExplicitConversion: bool = false;
+        explicitCppOnly: bool = false;
+        declaredProperty: std::string;
         accessor: AccessorKind = AccessorKind::None;
         optionalMethod: bool = false;
         resultPresence: ResultPresence = ResultPresence::Required;

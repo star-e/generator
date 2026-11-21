@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 58 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 59 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -66,7 +66,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 | 旧模块 | 当前可生成的内容 | 后续接管条件 |
 | --- | --- | --- |
-| RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。 | 切换引擎公开入口时还需迁移 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
+| RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。`render.i` 按 C++ 方法的 `@getter`、`@setter`、`@cppOnly` 生成属性和忽略项。`binding swig` 中的 `macro` 引用属性或方法，`releaseInGC` 指定由 JS GC 释放返回对象的方法。 | 切换引擎公开入口时还需迁移 API 文档。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 原生与 Web 消费测试覆盖这些类型。 |
@@ -85,7 +85,7 @@ C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一
 
 ## 生成流程
 
-`cocos-codegen` 的构建、自举、代码生成和 `--check` 均独立于 V8、Node.js 和 .NET。引擎工作区生成 C++17、Web 和编辑器所用的 TypeScript，以及 Cocos JSB 的 `se::Value` 转换。SWIG 输入 `render.i` 仍由旧入口提供。引擎的 SWIG 步骤处理 `render.i`。Node.js/npm 用于 `cocos4` 侧的 Web 打包、TypeScript 检查和测试。生成器自身的工作区复用同一套 `.spec` 语法、解析器和 C++ 后端，产物编入 C++20 宿主工具，只使用 `generator` 声明的依赖。[引擎绑定入口](../../cocos4/native/tools/swig-config/render.i) · [引擎构建与测试脚本](../../cocos4/package.json)
+`cocos-codegen` 的构建、自举、代码生成和 `--check` 均独立于 V8、Node.js 和 .NET。引擎工作区生成 C++17、Web 和编辑器所用的 TypeScript，以及 Cocos JSB 的 `se::Value` 转换。`RenderInterface` 的 `cpp.swig` 指定相对于原生输出根目录的 `.i` 路径。引擎的 SWIG 步骤读取 `render.i` 和生成的 C++ 头，产生 `jsb_render_auto.h/.cpp`。Node.js/npm 用于 `cocos4` 侧的 Web 打包、TypeScript 检查和测试。生成器自身的工作区复用同一套 `.spec` 语法、解析器和 C++ 后端，产物编入 C++20 宿主工具，只使用 `generator` 声明的依赖。[引擎绑定入口](../../cocos4/native/tools/swig-config/render.i) · [引擎构建与测试脚本](../../cocos4/package.json)
 
 以 `ArchiveInterface` 为例，一份声明描述 `OutputArchive` 和 `InputArchive` 的八个 C++ 方法。类型图记录签名，语言绑定把布尔值、数值、字符串的读写方法分别映射成 TS 接口上的 `b`、`n`、`s`，两个 `scratch()` 在接口声明中标注 `@cppOnly`，由 TypeGraph 记录其原生可见性。文件计划为这个模块列出三个原生文件和一个 TS 文件。后端分别按引擎的 C++17 和 `target: es6` 配置生成。[旧模块声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [原生接口](../../cocos4/native/cocos/renderer/pipeline/custom/ArchiveTypes.h) · [TS 接口](../../cocos4/cocos/rendering/custom/archive.ts) · [引擎 C++ 配置](../../cocos4/native/cmake/predefine.cmake) · [引擎 TS 配置](../../cocos4/tsconfig.json)
 
@@ -130,7 +130,7 @@ PMR 的 `constructor(a, b) defaults;` 生成两组构造。`T(alloc)` 按字段�
 
 在 `module` 和 `import` 之后，把 `binding typescript` 或 `binding jsb` 写在命名空间外。一个文件可以包含多个绑定块。类型规则以分号结束。声明所属模块可以使用短名、限定名或从根命名空间开始的 `::` 名称。每个原生类型只能有一条 TS 绑定，同一类型的选项写在同一个规则内。
 
-模块默认导出所有支持的 TS 类型，顺序沿用声明顺序。原生专用类型在声明上标记，例如 `@cppOnly struct Factory`。已有的 `binding typescript { export { ... }; }` 仍可用来选择部分类型。[RenderInterface 声明](../spec/render/render-interface.spec)
+模块默认导出所有支持的 TS 类型，顺序沿用声明顺序。原生专用类型在声明上标记，例如 `@cppOnly class Factory`。已有的 `binding typescript { export { ... }; }` 仍可用来选择部分类型。[RenderInterface 声明](../spec/render/render-interface.spec)
 
 在纯虚方法上，`@optionalMethod` 允许 Web 实现省略该方法，`@optionalResult` 和 `@nullable` 分别将指针返回值绑定为 `T | undefined` 和 `T | null`。仅在 Web 侧存在的接口成员写在 `binding typescript` 的接口规则中，例如 `callback setup?(...): BasicRenderPassBuilder | undefined;`。回调中的本地和导入类型通过 TypeGraph 解析，可在参数上使用 `?`，也可用 `Readonly` 和 `Record` 描述配置对象。[管线构建器](../spec/render/render-interface.spec) · [程序库接口](../spec/render/private-interface.spec)
 

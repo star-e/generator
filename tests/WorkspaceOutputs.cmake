@@ -40,6 +40,7 @@ foreach(path IN ITEMS native/cocos/renderer/pipeline/custom/RenderSettingsTypes.
                       native/cocos/renderer/pipeline/custom/RenderSettingsFwd.h
                       editor/assets/default_renderpipeline/builtin-pipeline-types.ts
                       native/cocos/renderer/pipeline/custom/RenderCommonJsb.cpp
+                      native/tools/swig-config/render.i
                       cocos/rendering/custom/layout-graph-names.ts)
     if(NOT path IN_LIST all)
         message(FATAL_ERROR "Missing selected output ${path}")
@@ -48,7 +49,7 @@ endforeach()
 foreach(language IN ITEMS cpp typescript)
     if(language STREQUAL "cpp")
         set(remove typescript)
-        set(extension "[.](cpp|h)$")
+        set(extension "[.](cpp|h|i)$")
     else()
         set(remove cpp)
         set(extension "[.]ts$")
