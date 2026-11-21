@@ -140,11 +140,17 @@ void checkContainerBindings() {
             "set did not follow the explicit element binding");
 }
 
-void checkArchive(const std::filesystem::path& spec) {
-    const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}},
-                          {"double", {.builtin = true}}, {"std::string_view", {"string_view", "string"}},
+void checkArchive(const std::filesystem::path& specs) {
+    const auto spec = specs / "render/archive.spec";
+    const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}}, {"double", {.builtin = true}},
+                          {"uint8_t", {}}, {"uint32_t", {}}, {"cc::Material", {}}, {"cc::Texture2D", {}},
                           {"boost::container::pmr::memory_resource", {"boost/container/pmr/memory_resource.hpp", {}}}};
-    const auto graph = buildTypeGraph({{readModule(spec), {}}}, types);
+    const auto graph = buildTypeGraph({{readModule(spec), {}}, {readModule(specs / "extern/types.spec"), {}, true},
+                                       {readModule(specs / "extern/containers.spec"), {}, true}}, types);
+    const auto& view = graph.node(graph.findType("std::string_view"));
+    require(graph.modules.at(view.module.value).name == "EngineTypes" && view.cppHeader == "string_view" &&
+            view.typescriptName == "string" && !std::get<ExternalTypeNode>(view.data).isString,
+            "lost borrowed string view declaration or binding");
     const auto input = graph.findType("cc::render::InputArchive");
     const auto output = graph.findType("cc::render::OutputArchive");
     const auto& first = scratch(graph, input);
@@ -208,7 +214,8 @@ void checkImports(const std::filesystem::path& specs) {
                                     {readModule(specs / "extern/gfx.spec", "cocos/gfx"), {}, true},
                                     {readModule(specs / "extern/strings.spec"), {}, true},
                                     {readModule(specs / "extern/containers.spec"), {}, true},
-                                    {readModule(specs / "render/archive.spec"), {}}};
+                                    {readModule(specs / "render/archive.spec"), {}},
+                                    {readModule(specs / "extern/types.spec"), {}, true}};
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
         import RenderCommon;
@@ -243,7 +250,7 @@ void checkImports(const std::filesystem::path& specs) {
     )"), {}});
     const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
                           {"void", {}}, {"double", {}},
-                          {"std::string_view", {}}, {"boost::container::pmr::memory_resource", {}}};
+                          {"cc::Material", {}}, {"cc::Texture2D", {}}, {"boost::container::pmr::memory_resource", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
         const auto& info = graph.node(infoId);
@@ -391,7 +398,7 @@ int main(int argc, char** argv) {
         checkScalarBindings();
         checkTemplateBindings();
         checkContainerBindings();
-        checkArchive(specs / "render/archive.spec");
+        checkArchive(specs);
         checkSettings(specs / "render/render-settings.spec");
         checkImports(specs);
         checkTypes();

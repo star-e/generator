@@ -1,4 +1,5 @@
 module ArchiveInterface;
+import EngineTypes;
 namespace cc::render {
     @archive(output) interface OutputArchive {
         virtual void writeBool(bool value) = 0;

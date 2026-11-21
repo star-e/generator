@@ -14,6 +14,5 @@
   "cc::Material": { "header": "cocos/core/assets/Material.h" },
   "cc::Texture2D": { "header": "cocos/core/assets/Texture2D.h" },
   "cc::IntrusivePtr": { "header": "cocos/base/Ptr.h" },
-  "std::string_view": { "header": "string_view" },
   "boost::container::pmr::memory_resource": { "header": "boost/container/pmr/memory_resource.hpp" }
 }

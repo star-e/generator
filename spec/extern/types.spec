@@ -6,6 +6,10 @@ namespace std {
         @string class string;
     }
 
+    header "string_view" {
+        struct string_view;
+    }
+
     header "memory" {
         template<T> class shared_ptr;
     }

@@ -147,7 +147,7 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 
 外部模块的默认 TS 来源取自工作区，路径从输出根目录算起。可以写目录入口 `cocos/gfx`，也可以写具体的 `.ts` 或 `.d.ts` 文件，消费方的导入省略该后缀。旧 `.spec` 中的 `module Gfx from "...";` 在工作区未指定路径时仍然有效。同一模块内的普通非模板类、结构体、枚举和标志枚举按声明名绑定，消费方用到才导入。`Type => extern enum DeviceType;` 沿用默认来源并改用导出名 `DeviceType`。逐类型的 `from` 可覆盖来源。归档字段使用外部对象时，生成器默认从消费方 `.ts` 文件同目录的 `./serialization` 导入 `save<导出名>` 和 `load<导出名>`。放在其他目录的函数可用 `UniformBlock archive from "cocos/codecs/uniform";` 覆盖路径。TypeScript 编译会检查所需函数是否已导出。[Gfx 声明](../spec/extern/gfx.spec)
 
-在 `extern module` 的无定义 `class` 或 `struct` 上用 `@string` 声明拥有 UTF-8 文本的原生类型。字段默认绑定为 TS `string`，初值为 `''`，序列化使用字符串读写接口。显式 TS 绑定可以指定兼容的字符串别名及其导入路径。需要传递内存资源的字符串另加 `@pmr`。例如 `ccstd::pmr::string` 同时声明这两个注解，`std::string_view` 作为借用视图只声明 TS 绑定。[原生字符串声明](../spec/extern/strings.spec) · [借用视图绑定](../spec/extern/types.spec)
+在 `extern module` 的无定义 `class` 或 `struct` 上用 `@string` 声明拥有 UTF-8 文本的原生类型。字段默认绑定为 TS `string`，初值为 `''`，序列化使用字符串读写接口。显式 TS 绑定可以指定兼容的字符串别名及其导入路径。需要传递内存资源的字符串另加 `@pmr`。例如 `ccstd::pmr::string` 同时声明这两个注解。借用视图 `std::string_view` 在 `EngineTypes` 的 `header "string_view"` 块中声明，使用方直接导入该模块。它通过显式绑定映射为 TS `string`。[原生字符串声明](../spec/extern/strings.spec) · [借用视图声明与绑定](../spec/extern/types.spec)
 
 外部模块的声明共用一个 C++ 头文件时，在模块的 `import` 之后写一次 `cpp { header "..."; }`。一个模块涉及多个头文件时，在 `namespace` 内用 `header "..." { ... }` 包住相关声明。固定路径供整组共用，路径中的 `{name}` 替换为声明的非限定名，保留大小写。例如 `GFX{name}.h` 将 `Buffer` 映射到 `GFXBuffer.h`。组内路径优先于模块默认值，组外声明继续使用模块默认值。消费方按模块名导入，TS 默认路径由工作区提供，逐类型例外写在 `binding typescript` 中。[Gfx 默认头文件与分组](../spec/extern/gfx.spec) · [Scene 命名模板](../spec/extern/scene.spec)
 
