@@ -10,7 +10,7 @@ void emitRecordJsb(Files& files, const TypeGraph& graph, const TypeModule& modul
                    const RecordOutput& output, const std::string& preamble) {
     std::ostringstream header, source, toNativeDeclarations, toNativeDefinitions;
     header << preamble << "// clang-format off\n#pragma once\n#include \"cocos/bindings/manual/jsb_conversions.h\"\n"
-           << "#include \"" << output.forwardHeader.value_or(output.header).generic_string() << "\"\n";
+           << "#include \"" << output.forwardHeader.generic_string() << "\"\n";
     source << preamble << "// clang-format off\n";
     auto includes = output.jsbIncludes;
     includes.insert(*output.jsbHeader);

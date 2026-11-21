@@ -13,7 +13,7 @@ namespace cc::codegen {
 struct RecordOutput {
     std::filesystem::path nativeRoot;
     std::filesystem::path header;
-    std::optional<std::filesystem::path> forwardHeader;
+    std::filesystem::path forwardHeader;
     std::set<std::string> forwardIncludes;
     std::optional<std::filesystem::path> namesHeader;
     std::vector<std::filesystem::path> importedNamesHeaders;

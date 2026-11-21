@@ -6,7 +6,7 @@
   "modules": [
     {
       "spec": "../spec/codegen/source-location.spec",
-      "cpp": { "header": "generated/SourceLocation.h", "forward": false }
+      "cpp": { "dir": "generated", "header": "SourceLocation.h" }
     }
   ]
 }

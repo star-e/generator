@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <string>
+#include "SourceLocationFwd.h"
 
 namespace cc {
 

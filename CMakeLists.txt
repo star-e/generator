@@ -17,6 +17,7 @@ set(COCOS_CODEGEN_SELF_HOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/src" CACHE PATH
 add_library(CocosCodegenModel STATIC
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.cpp"
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.h"
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocationFwd.h"
     src/generated/TypeGraphTypes.cpp
     src/model/TypeGraph.cpp
     src/model/TypeGraphBuilder.cpp

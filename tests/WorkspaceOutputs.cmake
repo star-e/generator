@@ -89,8 +89,9 @@ expect_failure(2 "unknown option foward" ${generate})
 file(WRITE "${workspace}" "${config}")
 run(${generate})
 run(${generate} --check --diff)
-# Both historical spellings of the removed switch use the same source-file plan.
+# Legacy switches still produce the source and forward header. Explicit filenames are preserved.
 string(JSON legacy SET "${config}" modules 0 cpp emitEmptySource false)
+string(JSON legacy SET "${legacy}" modules 0 cpp forward false)
 string(JSON legacy SET "${legacy}" modules 1 [=[
     {"backend":"records","spec":"../spec/use.spec","nativeRoot":"native",
      "header":"cocos/renderer/pipeline/custom/UseTypes.h","forwardHeader":"cocos/renderer/pipeline/custom/UseFwd.h",

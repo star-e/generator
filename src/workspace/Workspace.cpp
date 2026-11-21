@@ -99,7 +99,6 @@ Json moduleConfig(Json config) {
                 config.erase("includeDir");
             } else {
                 cpp["header"] = config.at("header");
-                cpp["forward"] = false; // Legacy records opted in with forwardHeader.
                 config.erase("header");
             }
             for (const auto& [oldKey, key] : {std::pair{"nativeRoot", "root"}, {"forwardHeader", "forward"},
@@ -121,8 +120,12 @@ Json moduleConfig(Json config) {
         } else {
             throw std::runtime_error("unknown backend " + backend);
         }
-    } else if (auto cpp = config.find("cpp"); cpp != config.end() && cpp->is_object()) {
+    }
+    if (auto cpp = config.find("cpp"); cpp != config.end() && cpp->is_object()) {
         cpp->erase("emitEmptySource");
+        // Older workspaces used booleans to toggle the forward header, or a string to name it.
+        const auto forward = cpp->find("forward");
+        if (forward != cpp->end() && forward->is_boolean()) cpp->erase(forward);
     }
     checkKeys(config, {"spec", "cpp", "typescript", "types", "runtimeFiles"}, "module");
     return config;
@@ -176,19 +179,19 @@ void loadCppOutput(RecordOutput& output, const Json& cpp, const Json& defaults, 
         return path;
     };
     output.header = header(cpp.value("header", prefix + "Types.h"));
-    const auto optionalHeader = [&](const char* key, const char* suffix, bool enabledByDefault = false) -> std::optional<fs::path> {
-        const auto value = cpp.value(key, Json(enabledByDefault));
+    output.forwardHeader = header(cpp.value("forward", prefix + "Fwd.h"));
+    const auto optionalHeader = [&](const char* key, const char* suffix) -> std::optional<fs::path> {
+        const auto value = cpp.value(key, Json(false));
         if (!value.is_boolean()) return header(value);
         if (value.get<bool>()) return header(prefix + suffix);
         return {};
     };
-    output.forwardHeader = optionalHeader("forward", "Fwd.h", true);
     output.namesHeader = optionalHeader("names", "Names.h");
     output.serializationHeader = optionalHeader("serialization", "Serialization.h");
     output.jsbHeader = optionalHeader("jsb", "Jsb.h");
     if (cpp.contains("forwardIncludes")) {
-        if (!output.forwardHeader || !cpp.at("forwardIncludes").is_array())
-            throw std::runtime_error("forwardIncludes requires a forward header and an array of include paths");
+        if (!cpp.at("forwardIncludes").is_array())
+            throw std::runtime_error("forwardIncludes requires an array of include paths");
         for (const auto& include : cpp.at("forwardIncludes")) {
             auto path = outputPath(include);
             if (path.extension() != ".h" || path == output.header || path == output.forwardHeader)
@@ -306,7 +309,7 @@ Files plan(const Json& settings, const fs::path& base) {
         TypeTable mappings;
         for (const auto& decl : module.declarations) {
             if (std::holds_alternative<AliasDeclaration>(decl.data)) {
-                mappings.emplace(decl.name, ExternalType{.header = typesOutput.forwardHeader.value_or(typesOutput.header).generic_string()});
+                mappings.emplace(decl.name, ExternalType{.header = typesOutput.forwardHeader.generic_string()});
             } else if (std::holds_alternative<TagDeclaration>(decl.data)) {
                 mappings.emplace(decl.name, ExternalType{.header = typesOutput.header.generic_string()});
             } else {

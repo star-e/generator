@@ -36,6 +36,7 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     native/cocos/renderer/pipeline/custom/Array4.h
     native/cocos/renderer/pipeline/custom/CustomFwd.h
     native/cocos/renderer/pipeline/custom/CustomTypes.h
+    native/cocos/renderer/pipeline/custom/FGDispatcherFwd.h
     native/cocos/renderer/pipeline/custom/FGDispatcherTypes.cpp
     native/cocos/renderer/pipeline/custom/FGDispatcherTypes.h
     native/cocos/renderer/pipeline/custom/NativeFwd.h

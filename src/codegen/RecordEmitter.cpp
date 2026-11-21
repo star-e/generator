@@ -885,7 +885,7 @@ struct RecordArchives {
         const auto archiveHeader = archive.output.header.generic_string();
         std::ostringstream header, source;
         header << preamble << "#pragma once\n#include \"" << archiveHeader << "\"\n#include \""
-               << output.forwardHeader.value_or(output.header).generic_string() << "\"\n";
+               << output.forwardHeader.generic_string() << "\"\n";
         writeNamespace(header, module, declarations);
         source << preamble << "// NOLINTBEGIN(misc-include-cleaner)\n// clang-format off\n";
         cppIncludes(source, {archiveHeader, path.generic_string(), output.header.generic_string(),
@@ -963,7 +963,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     bool usesGraphRuntime = false;
     bool usesUint64Field = false;
     const std::set<std::string> keepNone;
-    if (deps.emitCpp && !output.forwardHeader) writeScalarAliases(cpp, graph, module, deps.headers);
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
         const bool emitTs = output.typescript && node.typescriptName;
@@ -987,7 +986,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (deps.emitCpp) {
                 std::string inputArchive;
                 if (output.serializationHeader && model->serializable && (!fields.empty() || model->nameIndex || model->keyComponentIndex) && archive) {
-                    deps.headers.insert(archive->output.forwardHeader.value_or(archive->output.header).generic_string());
+                    deps.headers.insert(archive->output.forwardHeader.generic_string());
                     inputArchive = "::" + archiveInterface(graph, archive->module, "InputArchive").qualifiedName;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, deps);
@@ -1141,28 +1140,22 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     Files files;
     if (deps.emitCpp) {
         deps.headers.erase(output.header.generic_string());
-        if (output.forwardHeader) deps.headers.erase(output.forwardHeader->generic_string());
-        if (standaloneInterfaces && output.forwardHeader && output.forwardIncludes.empty()) {
+        deps.headers.erase(output.forwardHeader.generic_string());
+        if (standaloneInterfaces && output.forwardIncludes.empty()) {
             emitInterfaceHeaders(files, graph, module, output, cpp.view(), deps.headers, preamble);
         } else {
             std::ostringstream header;
             header << preamble << "#pragma once\n";
-            if (!output.forwardHeader && !hashDefinitions.view().empty()) deps.headers.insert("cocos/base/std/hash/hash.h");
             cppIncludes(header, deps.headers);
-            if (output.forwardHeader) {
-                const auto include = output.forwardHeader->lexically_relative(output.header.parent_path());
-                header << "#include \"" << include.generic_string() << "\"\n";
-            }
+            const auto include = output.forwardHeader.lexically_relative(output.header.parent_path());
+            header << "#include \"" << include.generic_string() << "\"\n";
             for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
             writeNamespace(header, module, cpp);
             if (!hashDefinitions.view().empty()) {
-                header << "\nnamespace ccstd {\n";
-                if (!output.forwardHeader) header << hashDeclarations.str();
-                header << hashDefinitions.str() << "\n} // namespace ccstd\n";
+                header << "\nnamespace ccstd {\n" << hashDefinitions.str() << "\n} // namespace ccstd\n";
             }
             files.emplace(output.nativeRoot / output.header, header.str());
-            if (output.forwardHeader)
-                files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble, output.forwardIncludes));
+            files.emplace(output.nativeRoot / output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble, output.forwardIncludes));
         }
         auto path = output.header;
         path.replace_extension(".cpp");

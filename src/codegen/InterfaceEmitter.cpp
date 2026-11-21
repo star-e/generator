@@ -151,7 +151,7 @@ void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule
     fwd << preamble << "#pragma once\n// clang-format off\n";
     header << preamble << "// clang-format off\n" << lintBegin << "#pragma once\n";
     for (const auto& include : headers) header << "#include <" << include << ">\n";
-    header << "#include \"" << output.forwardHeader->generic_string() << "\"\n";
+    header << "#include \"" << output.forwardHeader.generic_string() << "\"\n";
     for (auto* out : {&fwd, &header}) {
         for (const auto& name : module.namespaces) *out << "\nnamespace " << name << " {\n";
         *out << '\n';
@@ -166,7 +166,7 @@ void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule
         if (out != &fwd) *out << lintEnd;
         *out << "// clang-format on\n";
     }
-    files.emplace(output.nativeRoot / *output.forwardHeader, fwd.str());
+    files.emplace(output.nativeRoot / output.forwardHeader, fwd.str());
     files.emplace(output.nativeRoot / output.header, header.str());
 }
 
