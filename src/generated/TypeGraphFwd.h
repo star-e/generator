@@ -22,6 +22,7 @@ enum class ContainerKind : uint32_t;
 enum class MapKeyKind : uint32_t;
 struct ExternalTypeNode;
 struct EnumType;
+struct ConstructorInfo;
 struct RecordType;
 struct CallbackTypeInfo;
 struct CallbackParameterInfo;

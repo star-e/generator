@@ -65,6 +65,10 @@ namespace codegen {
         container: ContainerKind = ContainerKind::None;
     }
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
+    struct ConstructorInfo {
+        fields: std::vector<uint32_t>;
+        required: bool = false;
+    }
     struct RecordType {
         moveOnly: bool = false;
         immovable: bool = false;
@@ -74,7 +78,7 @@ namespace codegen {
         compareLess: bool = false;
         compareGreater: bool = false;
         hashable: bool = false;
-        constructors: std::vector<std::vector<uint32_t>>;
+        constructors: std::vector<ConstructorInfo>;
         bases: std::vector<TypeId>;
         fields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;

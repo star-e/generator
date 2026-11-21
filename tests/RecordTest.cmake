@@ -87,7 +87,7 @@ check_resource_error("bidirectional_graph { in_edges: vector; }" "hierarchy_grap
 string(REPLACE "constructor(swapchain, isDepthStencil);" [=[
     @cppOnly nativeFence: uint64_t = 18446744073709551615;
     constructor(swapchain, isDepthStencil);
-    constructor(swapchain, nativeFence);
+    constructor(swapchain, nativeFence) required;
 ]=] changed "${resource}")
 file(WRITE "${resourceSpec}" "${changed}")
 run(${generate})
@@ -103,6 +103,13 @@ endif()
 if(NOT nativeResource MATCHES "nativeFence[{]18446744073709551615ULL[}]" OR webResource MATCHES "nativeFence" OR
    NOT webResource MATCHES "constructor [(]swapchain: Swapchain [|] null = null, isDepthStencil = false[)]")
     message(FATAL_ERROR "RenderSwapchain must retain the native uint64_t and bind the visible constructor fields")
+endif()
+string(REPLACE "pool rs; reset constructor;" "constructor(swapchain);" selected "${changed}")
+file(WRITE "${resourceSpec}" "${selected}")
+run(${generate})
+file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" webResource)
+if(NOT webResource MATCHES "constructor [(]swapchain: Swapchain [|] null[)]" OR webResource MATCHES "nativeFence")
+    message(FATAL_ERROR "TypeScript must inherit required from the selected visible overload")
 endif()
 file(WRITE "${resourceSpec}" "${resource}")
 

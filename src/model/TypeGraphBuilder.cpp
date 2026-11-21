@@ -212,7 +212,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         if (!signatures.insert(std::move(signature)).second) {
             throw std::runtime_error(ctor.location.describe() + ": duplicate constructor signature");
         }
-        result.constructors.push_back(std::move(members));
+        result.constructors.push_back({std::move(members), ctor.required});
     }
     for (uint32_t i = 0; i < result.fields.size(); ++i) {
         const auto& field = result.fields[i];
@@ -220,8 +220,8 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
             const auto context = field.type.location.describe() + ": " + field.name;
             if (field.isNullable || !field.initializer.empty())
                 throw std::runtime_error(context + ": reference fields cannot have a null or default initializer");
-            if (result.constructors.empty() || std::ranges::any_of(result.constructors, [i](const auto& order) {
-                    return std::ranges::find(order, i) == order.end();
+            if (result.constructors.empty() || std::ranges::any_of(result.constructors, [i](const ConstructorInfo& ctor) {
+                    return std::ranges::find(ctor.fields, i) == ctor.fields.end();
                 })) throw std::runtime_error(context + ": every constructor must initialize the reference field");
             if (syntax.serializable && !field.transient)
                 throw std::runtime_error(context + ": serializing a borrowed reference requires @transient");

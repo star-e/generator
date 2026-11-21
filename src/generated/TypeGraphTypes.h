@@ -116,6 +116,11 @@ struct EnumType {
     bool isFlags = false;
 };
 
+struct ConstructorInfo {
+    std::vector<uint32_t> fields;
+    bool required = false;
+};
+
 struct RecordType {
     bool moveOnly = false;
     bool immovable = false;
@@ -125,7 +130,7 @@ struct RecordType {
     bool compareLess = false;
     bool compareGreater = false;
     bool hashable = false;
-    std::vector<std::vector<uint32_t>> constructors;
+    std::vector<ConstructorInfo> constructors;
     std::vector<TypeId> bases;
     std::vector<FieldInfo> fields;
     std::vector<MethodInfo> methods;

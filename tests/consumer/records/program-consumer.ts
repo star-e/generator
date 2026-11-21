@@ -39,7 +39,7 @@ if (group.programInfos.get('p') !== program || program.handleMap !== args[4] || 
 }
 if (false) {
     // @ts-expect-error All five engine constructor arguments are required.
-    new ProgramInfo();
+    new ProgramInfo(args[0], args[1], args[2], args[3]);
 }
 const moduleIds: RenderingModule = { getPassID: () => 2, getSubpassID: (pass) => pass + 1, getPhaseID: (pass) => pass + 2 };
 const caps = new PipelineCapabilities();

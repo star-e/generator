@@ -576,6 +576,7 @@ private:
                         do { ctor.fields.push_back(identifier()); } while (accept(","));
                         expect(")");
                     }
+                    ctor.required = accept("required");
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
                 } else if (atField()) {

@@ -56,6 +56,7 @@ struct Field {
 struct Constructor {
     SourceLocation location;
     std::vector<std::string> fields;
+    bool required{};
 };
 
 struct Record {

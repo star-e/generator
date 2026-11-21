@@ -65,7 +65,7 @@ ctest --test-dir build/host --output-on-failure
 | RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。 | 切换引擎公开入口时还需迁移 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
-| PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
+| PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 在结构体的 `constructor(...) required;` 声明中列出五个字段，TS 继承所选构造重载的必填参数。`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
 | FGDispatcher | `FGDispatcherFwd.h` 提供前置声明，`FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
 | NativePipeline | `NativePipelineTypes.h/.cpp` 及 `NativePipelineFwd.h`覆盖 28 个记录，包括绘制队列、实例化队列、组合队列和设备渲染数据。原生消费测试使用引擎排序实现核对不透明和透明绘制顺序。 | 剩余记录和实现类涉及构造限制、自定义析构、多重继承和私有状态。 |
 

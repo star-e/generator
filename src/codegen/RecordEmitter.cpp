@@ -281,7 +281,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
 
 std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner, const std::vector<FieldInfo>& fields,
                                    Dependencies& deps, bool emitTs, const NestedResets& nestedResets,
-                                   const std::vector<std::string>& requiredFields = {}) {
+                                   const std::vector<uint32_t>& requiredFields = {}) {
     const auto* ownerRecord = std::get_if<RecordType>(&owner.data);
     const bool immovable = ownerRecord ? ownerRecord->immovable : std::get<GraphType>(owner.data).immovable;
     std::vector<BoundField> result;
@@ -292,12 +292,12 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner
         if ((nestedGraph && nestedGraph->immovable) || (nestedRecord && nestedRecord->immovable)) {
             if (!immovable)
                 invalid(field, std::string("cannot use an @immovable ") + (nestedGraph ? "graph" : "record") + " as a value field of a movable owner");
-            if (ownerRecord && std::ranges::any_of(ownerRecord->constructors, [&](const auto& order) {
-                    return std::ranges::find(order, result.size()) != order.end();
+            if (ownerRecord && std::ranges::any_of(ownerRecord->constructors, [&](const ConstructorInfo& ctor) {
+                    return std::ranges::find(ctor.fields, result.size()) != ctor.fields.end();
                 })) invalid(field, "an @immovable value field must be constructed in place");
         }
         auto member = bindMember(graph, owner.module, field, deps, emitTs && !field.cppOnly,
-                                 std::ranges::find(requiredFields, field.name) != requiredFields.end());
+                                 std::ranges::find(requiredFields, result.size()) != requiredFields.end());
         if (emitTs && !field.cppOnly && field.isReadonly) {
             const auto childReset = nestedResets.find(field.type.type.value);
             if (childReset != nestedResets.end()) {
@@ -332,41 +332,50 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner
 
 using Order = std::vector<uint32_t>;
 
-Order bindTypeScriptConstructor(const TypeNode& node, const RecordType& record, std::vector<BoundField>& fields,
-                                const RecordOutput& output) {
+ConstructorInfo selectTypeScriptConstructor(const TypeNode& node, const RecordType& record, const RecordOutput& output) {
     auto constructors = record.constructors;
-    if (std::ranges::any_of(record.fields, &FieldInfo::cppOnly)) {
-        Order indices(fields.size());
-        std::vector<BoundField> visible;
-        for (uint32_t i = 0; i < fields.size(); ++i) {
-            if (record.fields[i].cppOnly) continue;
-            indices[i] = static_cast<uint32_t>(visible.size());
-            visible.push_back(std::move(fields[i]));
-        }
-        fields = std::move(visible);
-        for (auto& ctor : constructors) {
-            std::erase_if(ctor, [&](auto index) { return record.fields[index].cppOnly; });
-            for (auto& index : ctor) index = indices[index];
-        }
-    }
     if (constructors.empty()) {
-        Order order(fields.size());
+        auto& order = constructors.emplace_back().fields;
+        order.resize(record.fields.size());
         std::iota(order.begin(), order.end(), 0U);
-        constructors.push_back(std::move(order));
     }
+    const auto visible = static_cast<size_t>(std::ranges::count(record.fields, false, &FieldInfo::cppOnly));
+    if (visible < record.fields.size()) {
+        for (auto& ctor : constructors) std::erase_if(ctor.fields, [&](auto i) { return record.fields[i].cppOnly; });
+    }
+
+    const ConstructorInfo* chosen;
     if (const auto selected = output.constructors.find(node.name); selected != output.constructors.end()) {
         if (selected->second.empty() && record.constructors.empty()) return {};
-        for (const auto& candidate : constructors) {
-            if (std::ranges::equal(candidate, selected->second, {}, [&](auto i) -> std::string_view { return fields[i].name; }))
-                return candidate;
-        }
-        throw std::runtime_error(node.qualifiedName + ": TypeScript constructor does not match a declared constructor");
+        const auto it = std::ranges::find_if(constructors, [&](const ConstructorInfo& ctor) {
+            return std::ranges::equal(ctor.fields, selected->second, {}, [&](auto i) -> std::string_view { return record.fields[i].name; });
+        });
+        if (it == constructors.end()) throw std::runtime_error(node.qualifiedName + ": TypeScript constructor does not match a declared constructor");
+        chosen = &*it;
+    } else {
+        chosen = &*std::ranges::max_element(constructors, {}, [](const ConstructorInfo& ctor) { return ctor.fields.size(); });
+        if (chosen->fields.size() < visible && std::ranges::any_of(constructors, [&](const ConstructorInfo& other) {
+                return other.fields.size() == chosen->fields.size() && other.fields != chosen->fields;
+            })) throw std::runtime_error(node.qualifiedName + ": ambiguous partial TypeScript constructor");
     }
-    const auto& order = *std::ranges::max_element(constructors, {}, &Order::size);
-    if (order.size() < fields.size() && std::ranges::any_of(constructors, [&](const Order& other) {
-            return other.size() == order.size() && other != order;
-        })) throw std::runtime_error(node.qualifiedName + ": ambiguous partial TypeScript constructor");
-    return order;
+    if (output.requiredConstructors.contains(node.name)) return {chosen->fields, true};
+    if (!chosen->fields.empty() && std::ranges::any_of(constructors, [&](const ConstructorInfo& other) {
+            return other.fields == chosen->fields && other.required != chosen->required;
+        })) throw std::runtime_error(node.qualifiedName + ": conflicting required flags on the same TypeScript constructor");
+    return *chosen;
+}
+
+void removeCppOnlyFields(const RecordType& record, std::vector<BoundField>& members, Order& order) {
+    if (std::ranges::none_of(record.fields, &FieldInfo::cppOnly)) return;
+    Order indices(members.size());
+    std::vector<BoundField> visible;
+    for (uint32_t i = 0; i < members.size(); ++i) {
+        if (record.fields[i].cppOnly) continue;
+        indices[i] = static_cast<uint32_t>(visible.size());
+        visible.push_back(std::move(members[i]));
+    }
+    members = std::move(visible);
+    for (auto& i : order) i = indices[i];
 }
 
 void cppFlagOperators(std::ostream& out, const std::string& name, const std::string& base) {
@@ -406,7 +415,8 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
     if ((!record.constructors.empty() || record.moveOnly || record.immovable) &&
         !std::ranges::any_of(members, &BoundField::referenceMember))
         out << "    " << name << "() = default;\n";
-    for (const auto& ctor : record.constructors) {
+    for (const auto& declaration : record.constructors) {
+        const auto& ctor = declaration.fields;
         if (ctor.empty()) continue;
         out << "    " << name << "(";
         for (size_t i = 0; i < ctor.size(); ++i) {
@@ -489,7 +499,8 @@ void pmrConstructors(std::ostream& header, std::ostream& source, const std::stri
         source << constructor << alloc << ")" << exceptionSpec;
         pmrInitializers(source, members, CtorArgs::defaults);
     }
-    for (const auto& order : record.constructors) {
+    for (const auto& ctor : record.constructors) {
+        const auto& order = ctor.fields;
         if (order.empty()) continue;
         std::string params;
         for (auto index : order) {
@@ -1056,10 +1067,13 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         const auto* record = std::get_if<RecordType>(&node.data);
         if (!record) throw std::runtime_error("expected record or enum: " + node.qualifiedName);
-        const bool requiredConstructor = output.requiredConstructors.contains(node.name);
-        const std::vector<std::string> noFields;
-        const auto& requiredFields = requiredConstructor && !output.pools.contains(node.name) && !output.resets.contains(node.name)
-            ? output.constructors.at(node.name) : noFields;
+        const bool emitTsClass = emitTs && !node.typescriptNumber && !output.externalClasses.contains(node.name);
+        auto constructor = emitTsClass ? selectTypeScriptConstructor(node, *record, output) : ConstructorInfo{};
+        if (constructor.required && !constructor.fields.empty() && entry != output.pools.end())
+            throw std::runtime_error(node.qualifiedName + ": pool requires a TypeScript constructor callable without arguments");
+        const Order noFields;
+        const auto& requiredFields = constructor.required && entry == output.pools.end() && !output.resets.contains(node.name)
+            ? constructor.fields : noFields;
         auto members = bindFields(graph, node, record->fields, deps, emitTs, nestedResets, requiredFields);
         if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable && (output.serializationHeader || emitTs)) {
@@ -1089,7 +1103,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             continue;
         }
-        const Order order = bindTypeScriptConstructor(node, *record, members, output);
+        auto& order = constructor.fields;
+        removeCppOnlyFields(*record, members, order);
         const auto rule = pendingResets.extract(node.name);
         const ResetBinding constructorReset;
         const auto& binding = rule.empty() ? constructorReset : rule.mapped();
@@ -1133,7 +1148,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
         usesUint64Field |= std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
         tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained,
-                 base == output.bases.end() ? "" : base->second.name, requiredConstructor);
+                 base == output.bases.end() ? "" : base->second.name, constructor.required);
     }
     if (pool.count != output.pools.size()) throw std::runtime_error("unknown pool type in " + module.name);
     if (!pendingResets.empty()) throw std::runtime_error("unknown reset record " + pendingResets.begin()->first + " in " + module.name);
