@@ -1,4 +1,5 @@
 module PrivateTypes;
+import LayoutGraph;
 import PrivateInterface;
 import PipelineExternals;
 import Containers;

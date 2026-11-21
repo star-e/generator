@@ -357,6 +357,8 @@ Files plan(const Json& settings, const fs::path& base) {
             std::optional<ArchiveOutput> archive;
             for (auto imported : module.imports) {
                 const auto& dependency = outputs.at(imported.value).types;
+                if (!records.forwardHeader.empty() && !dependency.forwardHeader.empty())
+                    records.forwardIncludes.insert(dependency.forwardHeader.generic_string());
                 if (records.namesHeader && dependency.namesHeader)
                     records.importedNamesHeaders.push_back(*dependency.namesHeader);
                 if (graph.modules.at(imported.value).name == "ArchiveInterface")

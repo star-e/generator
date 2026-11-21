@@ -572,8 +572,9 @@ void writeScalarAliases(std::ostream& out, const TypeGraph& graph, const TypeMod
 }
 
 std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, const std::ostringstream& hashes,
-                          const std::string& preamble, std::set<std::string> includes) {
+                          const std::string& preamble, const std::set<std::string>& forwardIncludes) {
     std::ostringstream header, body;
+    std::set<std::string> includes;
     std::optional<bool> previousEnum;
     writeScalarAliases(body, graph, module, includes);
     for (auto id : module.declarations) {
@@ -596,6 +597,10 @@ std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, cons
         includes.erase("cstdint"); // The engine hash header already supplies the fixed-width integer types.
     }
     header << preamble << "#pragma once\n// clang-format off\n";
+    for (const auto& include : forwardIncludes) {
+        header << "#include \"" << include << "\"\n";
+        includes.erase(include);
+    }
     cppIncludes(header, includes);
     writeNamespace(header, module, body);
     if (!hashes.view().empty()) header << "\nnamespace ccstd {\n" << hashes.str() << "\n} // namespace ccstd\n";

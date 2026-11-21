@@ -66,11 +66,13 @@ endforeach()
 
 # A consumer must be able to include or import the provider in its selected language.
 file(WRITE "${work}/spec/provider.spec" "module Provider; namespace cc { struct Item {} }")
-file(WRITE "${work}/spec/use.spec" "module Use; import Provider; namespace cc { struct UseItem { item: Item; } }")
+file(WRITE "${work}/spec/web.spec" "module Web; namespace cc { struct WebItem {} }")
+file(WRITE "${work}/spec/use.spec" "module Use; import Provider; import Web; namespace cc { struct UseItem { item: Item; } }")
 string(JSON config SET "${config}" modules [=[
 [
     {"spec":"../spec/provider.spec","typescript":"provider.ts"},
-    {"spec":"../spec/use.spec","cpp":{},"typescript":"use.ts"}
+    {"spec":"../spec/use.spec","cpp":{},"typescript":"use.ts"},
+    {"spec":"../spec/web.spec","typescript":"web.ts"}
 ]
 ]=])
 set(generate "${TOOL}" generate --workspace "${workspace}" --output "${work}/mixed")
@@ -89,12 +91,17 @@ expect_failure(2 "unknown option foward" ${generate})
 file(WRITE "${workspace}" "${config}")
 run(${generate})
 run(${generate} --check --diff)
+file(STRINGS "${work}/mixed/native/cocos/renderer/pipeline/custom/UseFwd.h" includes REGEX "^#include")
+if(NOT includes STREQUAL [[#include "cocos/renderer/pipeline/custom/ProviderFwd.h"]])
+    message(FATAL_ERROR "Unexpected forward includes for mixed-language imports: ${includes}")
+endif()
 # Legacy switches still produce the source and forward header. Explicit filenames are preserved.
 string(JSON legacy SET "${config}" modules 0 cpp emitEmptySource false)
 string(JSON legacy SET "${legacy}" modules 0 cpp forward false)
 string(JSON legacy SET "${legacy}" modules 1 [=[
     {"backend":"records","spec":"../spec/use.spec","nativeRoot":"native",
      "header":"cocos/renderer/pipeline/custom/UseTypes.h","forwardHeader":"cocos/renderer/pipeline/custom/UseFwd.h",
+     "forwardIncludes":["cocos/renderer/pipeline/custom/ProviderFwd.h"],
      "typescript":"use.ts","emitEmptySource":false}
 ]=])
 file(WRITE "${workspace}" "${legacy}")

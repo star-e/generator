@@ -72,31 +72,17 @@
     { "spec": "../spec/extern/pipeline-externals.spec" },
     {
       "spec": "../spec/render/render-interface.spec",
-      "cpp": {
-        "forwardIncludes": [
-          "cocos/renderer/pipeline/custom/RenderCommonFwd.h"
-        ]
-      },
+      "cpp": {},
       "typescript": "cocos/rendering/custom/pipeline.ts"
     },
     {
       "spec": "../spec/render/private-interface.spec",
-      "cpp": {
-        "prefix": "Private",
-        "forwardIncludes": [
-          "cocos/renderer/pipeline/custom/RenderInterfaceFwd.h"
-        ]
-      },
+      "cpp": { "prefix": "Private" },
       "typescript": "cocos/rendering/custom/private.ts"
     },
     {
       "spec": "../spec/render/customization.spec",
-      "cpp": {
-        "prefix": "Custom",
-        "forwardIncludes": [
-          "cocos/renderer/pipeline/custom/RenderGraphFwd.h"
-        ]
-      }
+      "cpp": { "prefix": "Custom" }
     },
     {
       "spec": "../spec/render/fg-dispatcher.spec",
@@ -104,13 +90,7 @@
     },
     {
       "spec": "../spec/render/private-types.spec",
-      "cpp": {
-        "prefix": "Native",
-        "forwardIncludes": [
-          "cocos/renderer/pipeline/custom/LayoutGraphFwd.h",
-          "cocos/renderer/pipeline/custom/PrivateFwd.h"
-        ]
-      },
+      "cpp": { "prefix": "Native" },
       "typescript": "cocos/rendering/custom/web-types.ts"
     },
     {

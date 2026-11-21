@@ -1,4 +1,5 @@
 module PrivateInterface;
+import RenderInterface;
 import EngineTypes;
 import Containers;
 import Strings;
