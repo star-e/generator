@@ -465,6 +465,14 @@ private:
             if (accept("tag")) {
                 expect("struct");
                 result.data = TagDeclaration{};
+            } else if (accept("archive")) {
+                expect("(");
+                auto& role = std::get<Interface>(result.data).archiveRole;
+                if (accept("input")) role = ArchiveRole::input;
+                else if (accept("output")) role = ArchiveRole::output;
+                else fail("expected input or output archive role");
+                expect(")");
+                expect("interface");
             } else {
                 Record record;
                 do {

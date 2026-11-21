@@ -156,11 +156,20 @@ set(gfx "${work}/spec/extern/gfx.spec")
 file(READ "${gfx}" originalGfx)
 file(READ "${layout}" originalLayout)
 
-# Import the graph and record codecs beside their consumer even when the archive API lives elsewhere.
+# Rename the archive module and both role interfaces, and move its TS output away from the consumer's codecs.
+set(common "${work}/spec/render/render-common.spec")
+file(READ "${common}" original)
+string(REPLACE "ArchiveInterface" "Streams" renamedArchive "${originalArchive}")
+string(REPLACE "InputArchive" "Reader" renamedArchive "${renamedArchive}")
+string(REPLACE "OutputArchive" "Writer" renamedArchive "${renamedArchive}")
+file(WRITE "${archive}" "${renamedArchive}")
+string(REPLACE "import ArchiveInterface;" "import Streams;" renamedCommon "${original}")
+file(WRITE "${common}" "${renamedCommon}")
 string(JSON relocated SET "${config}" modules ${layoutModule} typescript [["cocos/client/layout.ts"]])
 string(JSON relocated SET "${relocated}" modules ${archiveModule} typescript [["cocos/io/archive-api.ts"]])
 file(WRITE "${workspace}" "${relocated}")
-string(REPLACE "@serialize graph LayoutGraph {" "@serialize graph LayoutGraph {\n        archivedColor: gfx::Color;" probe "${originalLayout}")
+string(REPLACE "import ArchiveInterface;" "import Streams;" probe "${originalLayout}")
+string(REPLACE "@serialize graph LayoutGraph {" "@serialize graph LayoutGraph {\n        archivedColor: gfx::Color;\n        readonly bits: ccstd::vector<bool>;" probe "${probe}")
 file(WRITE "${layout}" "${probe}")
 file(APPEND "${gfx}" [[binding typescript { UniformBlock archive from "cocos/codecs/uniform"; }]])
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/codecs")
@@ -168,7 +177,12 @@ file(READ "${work}/codecs/cocos/client/layout.ts" script)
 foreach(fragment IN ITEMS
         [[import { loadColor, loadDescriptorSetLayoutInfo, saveColor, saveDescriptorSetLayoutInfo } from './serialization';]]
         [[import { loadUniformBlock, saveUniformBlock } from '../codecs/uniform';]]
-        [[import type { OutputArchive, InputArchive } from '../io/archive-api';]]
+        [[import type { Writer, Reader } from '../io/archive-api';]]
+        [[function saveDescriptor (a: Writer, v: Descriptor)]]
+        [[function loadDescriptor (a: Reader, v: Descriptor)]]
+        [[function saveLayoutGraph (a: Writer, g: LayoutGraph)]]
+        [[function loadLayoutGraph (a: Reader, g: LayoutGraph)]]
+        [[function cc$readSize (a: Reader)]]
         [[saveColor(a, g.archivedColor);]]
         [[loadColor(a, decoded.archivedColor);]])
     string(FIND "${script}" "${fragment}" at)
@@ -176,6 +190,17 @@ foreach(fragment IN ITEMS
         message(FATAL_ERROR "Missing relocated archive import or call: ${fragment}")
     endif()
 endforeach()
+set(native "${work}/codecs/native/cocos/renderer/pipeline/custom")
+file(READ "${native}/LayoutGraphSerialization.h" header)
+file(READ "${native}/LayoutGraphSerialization.cpp" source)
+file(READ "${native}/LayoutGraphTypes.h" graphHeader)
+if(NOT header MATCHES "save[(]Writer& ar, const Descriptor& v[)]" OR NOT header MATCHES "load[(]Reader& ar, LayoutGraph& g[)]"
+   OR NOT source MATCHES "load[(]Reader& ar, std::vector<bool, Allocator>& bits[)]"
+   OR NOT graphHeader MATCHES "friend void load[(]::cc::render::Reader&, LayoutGraphData&[)]")
+    message(FATAL_ERROR "Native record, graph or packed bool archive did not follow the declared roles")
+endif()
+file(WRITE "${archive}" "${originalArchive}")
+file(WRITE "${common}" "${original}")
 file(WRITE "${layout}" "${originalLayout}")
 file(WRITE "${gfx}" "${originalGfx}")
 
@@ -227,8 +252,6 @@ file(WRITE "${layout}" "${missing}")
 expect_failure(2 "cc::render::UpdateFrequency requires import RenderCommon in module LayoutGraph" ${generate})
 file(WRITE "${layout}" "${originalLayout}")
 
-set(common "${work}/spec/render/render-common.spec")
-file(READ "${common}" original)
 file(STRINGS "${common}" commonLines)
 list(FIND commonLines "        nullable light: IntrusivePtr<scene::Light>;" lightIndex)
 list(FIND commonLines "        nullable probe: scene::ReflectionProbe* = nullptr;" probeIndex)
@@ -241,8 +264,29 @@ endfunction()
 
 change_imports("import Gfx;" "")
 expect_failure(2 "render-common.spec:[0-9]+:[0-9]+: cc::gfx::ResolveMode requires import Gfx in module RenderCommon" ${generate})
+set(missingArchive "serialization requires a direct import providing @archive[(]input[)] and @archive[(]output[)]")
 change_imports("import ArchiveInterface;" "")
-expect_failure(2 "serialization requires import ArchiveInterface" ${generate})
+expect_failure(2 "${missingArchive}" ${generate})
+file(WRITE "${common}" "${original}")
+string(REGEX REPLACE "@archive[(](input|output)[)] " "" unmarked "${originalArchive}")
+file(WRITE "${archive}" "${unmarked}")
+expect_failure(2 "${missingArchive}" ${generate})
+string(REPLACE "@archive(input)" "" incomplete "${originalArchive}")
+file(WRITE "${archive}" "${incomplete}")
+expect_failure(2 "ArchiveInterface: missing @archive[(]input[)] interface" ${generate})
+string(REPLACE "@archive(input)" "@archive(output)" duplicate "${originalArchive}")
+file(WRITE "${archive}" "${duplicate}")
+expect_failure(2 "archive[.]spec:[0-9]+:[0-9]+: duplicate @archive[(]output[)]" ${generate})
+string(REPLACE "@archive(input)" "@archive(read)" invalid "${originalArchive}")
+file(WRITE "${archive}" "${invalid}")
+expect_failure(2 "archive[.]spec:[0-9]+:[0-9]+: expected input or output archive role" ${generate})
+file(WRITE "${archive}" "${originalArchive}")
+file(WRITE "${work}/spec/render/streams.spec" "${renamedArchive}")
+string(JSON ambiguous SET "${config}" modules ${count} [[{"spec":"../spec/render/streams.spec"}]])
+file(WRITE "${workspace}" "${ambiguous}")
+change_imports("import ArchiveInterface;" "import ArchiveInterface; import Streams;")
+expect_failure(2 "RenderCommon: ambiguous archive providers ArchiveInterface and Streams" ${generate})
+file(WRITE "${workspace}" "${config}")
 change_imports("import ReflectionProbe;" "")
 expect_failure(2 "render-common.spec:${probeLine}:25: cc::scene::ReflectionProbe requires import ReflectionProbe in module RenderCommon" ${generate})
 change_imports("import Light;" "")

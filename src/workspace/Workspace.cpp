@@ -73,6 +73,34 @@ struct ModuleOutput {
     std::optional<fs::path> settingsFile;
 };
 
+std::optional<ArchiveOutput> resolveArchive(const TypeGraph& graph, ModuleId owner, const std::vector<ModuleOutput>& outputs) {
+    const auto& module = graph.modules.at(owner.value);
+    const auto& output = outputs.at(owner.value).types;
+    const auto emitsTypeScriptArchive = [&](TypeId id) {
+        const auto& node = graph.node(id);
+        if (!node.typescriptName) return false;
+        if (const auto* record = std::get_if<RecordType>(&node.data)) return record->serializable;
+        if (const auto* g = std::get_if<GraphType>(&node.data)) return g->serializable;
+        return false;
+    };
+    if (!output.serializationHeader && !(output.typescript && std::ranges::any_of(module.declarations, emitsTypeScriptArchive)))
+        return std::nullopt;
+
+    std::optional<ArchiveOutput> archive;
+    for (auto imported : module.imports) {
+        const auto& provider = graph.modules.at(imported.value);
+        if (provider.inputArchive == TypeId{}) continue;
+        if (archive)
+            throw std::runtime_error(module.name + ": ambiguous archive providers " + archive->module.name + " and " + provider.name);
+        archive.emplace(outputs.at(imported.value).types, provider);
+    }
+    if (!archive)
+        throw std::runtime_error(module.name + ": serialization requires a direct import providing @archive(input) and @archive(output)");
+    if (output.serializationHeader && archive->output.header.empty())
+        throw std::runtime_error(module.name + ": serialization requires C++ output from " + archive->module.name);
+    return archive;
+}
+
 void checkKeys(const Json& object, std::initializer_list<std::string_view> keys, std::string_view context) {
     if (!object.is_object()) throw std::runtime_error(std::string(context) + ": expected an object");
     for (const auto& [key, value] : object.items()) {
@@ -359,19 +387,14 @@ Files plan(const Json& settings, const fs::path& base) {
                     records.poolDependencies.emplace_back(member, TypeScriptImport{name + "ObjectPool", from.replace_extension()});
                 }
             }
-            std::optional<ArchiveOutput> archive;
             for (auto imported : module.imports) {
                 const auto& dependency = outputs.at(imported.value).types;
                 if (!records.forwardHeader.empty() && !dependency.forwardHeader.empty())
                     records.forwardIncludes.insert(dependency.forwardHeader.generic_string());
                 if (records.namesHeader && dependency.namesHeader)
                     records.importedNamesHeaders.push_back(*dependency.namesHeader);
-                if (graph.modules.at(imported.value).name == "ArchiveInterface")
-                    archive.emplace(dependency, graph.modules.at(imported.value));
             }
-            if (records.serializationHeader && (!archive || archive->output.header.empty()))
-                throw std::runtime_error(module.name + ": serialization requires import ArchiveInterface with C++ output");
-            const auto emitted = emitRecords(graph, owner, records, archive, preamble, nestedResets);
+            const auto emitted = emitRecords(graph, owner, records, resolveArchive(graph, owner, outputs), preamble, nestedResets);
             for (const auto& [path, content] : emitted) addFile(path, content);
         }
         if (modules[i].contains("runtimeFiles")) {

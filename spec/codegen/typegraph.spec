@@ -133,6 +133,8 @@ namespace codegen {
         namespaces: std::vector<std::string>;
         declarations: std::vector<TypeId>;
         imports: std::vector<ModuleId>;
+        inputArchive: TypeId;
+        outputArchive: TypeId;
     }
 
     @tag struct Node_ {}

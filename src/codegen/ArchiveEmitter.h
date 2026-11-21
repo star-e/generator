@@ -11,7 +11,6 @@ struct ArchiveRequirements {
 
     void checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context, bool emitTs);
 };
-const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& module, std::string_view name);
 const std::string& archiveMethod(const TypeNode& api, const std::string& method);
 
 struct ArchiveImports {

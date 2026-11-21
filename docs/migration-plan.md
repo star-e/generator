@@ -79,6 +79,8 @@ C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一
 
 以 `ArchiveInterface` 为例，一份声明描述 `OutputArchive` 和 `InputArchive` 的八个 C++ 方法。类型图记录签名，语言绑定把布尔值、数值、字符串的读写方法分别映射成 TS 接口上的 `b`、`n`、`s`，两个 `scratch()` 在接口声明中标注 `@cppOnly`，由 TypeGraph 记录其原生可见性。文件计划为这个模块列出三个原生文件和一个 TS 文件。后端分别按引擎的 C++17 和 `target: es6` 配置生成。[旧模块声明](../../cocos-engine-generator/Cocos/CocosBuilder/RenderInterface.cpp) · [原生接口](../../cocos4/native/cocos/renderer/pipeline/custom/ArchiveTypes.h) · [TS 接口](../../cocos4/cocos/rendering/custom/archive.ts) · [引擎 C++ 配置](../../cocos4/native/cmake/predefine.cmake) · [引擎 TS 配置](../../cocos4/tsconfig.json)
 
+归档模块在同一份 `.spec` 中用 `@archive(output)` 标记写接口，用 `@archive(input)` 标记读接口，每个角色各有一个接口。生成 `@serialize` 记录或图的模块直接 `import` 这个模块。生成器从直接依赖中选择唯一提供这对角色的模块，通过 TypeGraph 中的类型引用生成 `save` 和 `load` 的参数，并按提供方在工作区中配置的输出路径生成 C++ 和 TS 导入。[归档角色声明](../spec/render/archive.spec) · [模块导入测试](../tests/ModuleImports.cmake)
+
 ### 在模块中声明方法
 
 `interface` 中的 `virtual void writeBool(bool value) = 0;` 由 C++ 派生类实现，默认也生成 TS 接口方法。需要只在原生侧公开时写 `@cppOnly virtual ... = 0;`。普通成员采用 `ReturnType name(Type arg)`，支持 `static`、`const`、`noexcept`。以分号结尾会生成 C++ 声明，以花括号提供的 C++ 函数体会随头文件输出。普通成员在 `interface`、`struct`、`graph` 中均只生成 C++；字段和构造器继续使用各自的声明语法。[归档接口](../spec/render/archive.spec) · [原生转发重载](../spec/render/private-interface.spec)

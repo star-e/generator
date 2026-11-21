@@ -31,9 +31,12 @@ struct Method {
     bool isExplicitConversion{};
 };
 
+enum class ArchiveRole { none, input, output };
+
 struct Interface {
     std::vector<Method> methods;
     std::vector<TypeRef> bases;
+    ArchiveRole archiveRole{};
 };
 
 struct Field {

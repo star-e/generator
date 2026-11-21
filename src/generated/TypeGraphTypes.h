@@ -234,6 +234,8 @@ struct TypeModule {
     std::vector<std::string> namespaces;
     std::vector<TypeId> declarations;
     std::vector<ModuleId> imports;
+    TypeId inputArchive;
+    TypeId outputArchive;
 };
 
 struct Node_ {};

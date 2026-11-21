@@ -765,6 +765,14 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             }
             auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
+            if (const auto* iface = std::get_if<Interface>(&decl.data); iface && iface->archiveRole != ArchiveRole::none) {
+                const bool inputRole = iface->archiveRole == ArchiveRole::input;
+                auto& endpoint = inputRole ? entry.inputArchive : entry.outputArchive;
+                if (endpoint != TypeId{})
+                    throw std::runtime_error(decl.location.describe() + ": duplicate @archive(" + (inputRole ? "input" : "output")
+                                             + ") in " + module.name + ", already declared by " + graph.node(endpoint).qualifiedName);
+                endpoint = id;
+            }
             if (external) {
                 for (uint32_t p = 0; p < external->templateParameters.size(); ++p) {
                     auto param = graph.appendNode(TypeNode{.name = external->templateParameters[p], .module = owner,
@@ -776,6 +784,10 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 graph.appendNode(TypeNode{.name = g->vertexAlias, .qualifiedName = qualify(graph.node(id).qualifiedName, g->vertexAlias),
                                           .module = owner, .data = AliasType{}, .cppHeader = graph.node(id).cppHeader}, id);
             }
+        }
+        if ((entry.inputArchive == TypeId{}) != (entry.outputArchive == TypeId{})) {
+            const auto missing = entry.inputArchive == TypeId{} ? "input" : "output";
+            throw std::runtime_error(module.name + ": missing @archive(" + missing + ") interface");
         }
         for (const auto& [name, mapping] : input.externalTypes) {
             const auto it = std::ranges::find(module.declarations, name, &Declaration::name);

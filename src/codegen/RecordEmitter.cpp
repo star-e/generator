@@ -863,7 +863,7 @@ struct RecordArchives {
         declarations << '\n';
         for (bool save : {true, false}) {
             const std::string op = save ? "save" : "load";
-            const auto& api = archiveInterface(graph, archive, save ? "OutputArchive" : "InputArchive");
+            const auto& api = graph.node(save ? archive.outputArchive : archive.inputArchive);
             const auto archiveName = cppName(graph, api, graph.modules.at(record.module.value));
             const auto signature = "void " + op + "(" + archiveName + "& ar, " + (save ? "const " : "") + name + "& v)";
             declarations << signature << ";\n";
@@ -884,7 +884,7 @@ struct RecordArchives {
         }
     }
 
-    void emitNative(Files& files, const TypeModule& module, const RecordOutput& output,
+    void emitNative(Files& files, const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
                     const ArchiveOutput& archive, const std::string& preamble) const {
         const auto& path = *output.serializationHeader;
         const auto archiveHeader = archive.output.header.generic_string();
@@ -899,9 +899,8 @@ struct RecordArchives {
         // The engine's generic vector loader needs a T&. Packed bools expose a proxy.
         if (requirements.needsBoolVectorLoad) {
             std::ostringstream packed;
-            packed << R"(
-template<class Allocator>
-inline void load(InputArchive& ar, std::vector<bool, Allocator>& bits) {
+            packed << "\ntemplate<class Allocator>\ninline void load(" << graph.node(archive.module.inputArchive).name
+                   << R"(& ar, std::vector<bool, Allocator>& bits) {
     uint32_t size{};
     load(ar, size);
     bits.resize(size);
@@ -993,7 +992,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 std::string inputArchive;
                 if (output.serializationHeader && model->serializable && (!fields.empty() || model->nameIndex || model->keyComponentIndex) && archive) {
                     deps.headers.insert(archive->output.forwardHeader.generic_string());
-                    inputArchive = "::" + archiveInterface(graph, archive->module, "InputArchive").qualifiedName;
+                    inputArchive = "::" + graph.node(archive->module.inputArchive).qualifiedName;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, deps);
                 emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, methods, inputArchive);
@@ -1020,7 +1019,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 if (model->hierarchy || model->incidence) usesGraphRuntime = true;
             }
             if (model->serializable && (output.serializationHeader || emitTs)) {
-                if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
                 emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
                                  emitTs ? &archives.script : nullptr, archiveImports, archives.requirements);
             }
@@ -1065,7 +1063,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         auto members = bindFields(graph, node, record->fields, deps, emitTs, nestedResets, requiredFields);
         if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable && (output.serializationHeader || emitTs)) {
-            if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
             const bool emitTsArchive = emitTs && !node.typescriptNumber;
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements, emitTsArchive);
             archives.add(graph, archive->module, node, fields, emitTsArchive, archiveImports);
@@ -1175,7 +1172,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
     }
     if (output.jsbHeader) emitRecordJsb(files, graph, module, output, preamble);
-    if (output.serializationHeader) archives.emitNative(files, module, output, *archive, preamble);
+    if (output.serializationHeader) archives.emitNative(files, graph, module, output, *archive, preamble);
     if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output, preamble));
     if (!output.typescript) return files;
     std::ostringstream script;
@@ -1210,13 +1207,16 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         ts << pool.fields.str() << "}\n";
     }
     if (!archives.script.view().empty()) {
-        if (!archive->output.typescript) throw std::runtime_error(module.name + ": serialization requires ArchiveInterface TypeScript output");
-        for (const auto name : {"OutputArchive", "InputArchive"}) {
-            if (!archiveInterface(graph, archive->module, name).typescriptName)
-                throw std::runtime_error(module.name + ": serialization requires ArchiveInterface TypeScript export " + name);
+        if (!archive->output.typescript) throw std::runtime_error(module.name + ": serialization requires TypeScript output from " + archive->module.name);
+        const auto& writer = graph.node(archive->module.outputArchive);
+        const auto& reader = graph.node(archive->module.inputArchive);
+        for (const auto* api : {&writer, &reader}) {
+            if (!api->typescriptName)
+                throw std::runtime_error(module.name + ": serialization requires TypeScript export " + api->qualifiedName);
         }
         auto path = *archive->output.typescript;
-        script << "import type { OutputArchive, InputArchive } from '" << modulePath(path.replace_extension(), *output.typescript) << "';\n";
+        script << "import type { " << writer.name << ", " << reader.name << " } from '"
+               << modulePath(path.replace_extension(), *output.typescript) << "';\n";
     }
     script << ts.str();
     if (usesUint64Field) {
@@ -1233,8 +1233,8 @@ function cc$defineUint64 (target: object, key: string, initial: number): void {
 )";
     }
     if (archives.requirements.needsReadSize) {
-        const auto& input = archiveInterface(graph, archive->module, "InputArchive");
-        script << "\nfunction cc$readSize (a: InputArchive): number {\n"
+        const auto& input = graph.node(archive->module.inputArchive);
+        script << "\nfunction cc$readSize (a: " << input.name << "): number {\n"
                << "    const n = a." << archiveMethod(input, "readNumber") << "();\n"
                << "    if (!Number.isInteger(n) || n < 0 || n > 0xFFFFFFFF) throw new RangeError('Invalid archive size');\n"
                << "    return n;\n}\n";

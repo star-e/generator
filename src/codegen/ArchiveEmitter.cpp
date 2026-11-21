@@ -3,14 +3,6 @@
 
 namespace cc::codegen {
 
-const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& module, std::string_view name) {
-    for (auto id : module.declarations) {
-        const auto& type = graph.node(id);
-        if (type.name == name && std::holds_alternative<InterfaceType>(type.data)) return type;
-    }
-    throw std::runtime_error(module.name + ": missing archive interface " + std::string(name));
-}
-
 const std::string& archiveMethod(const TypeNode& api, const std::string& method) {
     const auto& methods = std::get<InterfaceType>(api.data).methods;
     for (const auto& member : methods) {
@@ -127,12 +119,13 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     }
     const auto tag = [&](const ComponentInfo& column) { return "::" + graph.node(column.tag).qualifiedName + "{}"; };
     const auto count = model.alternatives.size();
-    const auto archiveName = [&](std::string_view type) {
-        const auto& api = archiveInterface(graph, archive, type);
+    const auto& output = graph.node(archive.outputArchive);
+    const auto& input = graph.node(archive.inputArchive);
+    const auto archiveName = [&](const TypeNode& api) {
         return graph.modules.at(node.module.value).namespaces == archive.namespaces ? api.name : "::" + api.qualifiedName;
     };
-    const std::string save = "void save(" + archiveName("OutputArchive") + "& ar, const " + name + "& g)";
-    const std::string load = "void load(" + archiveName("InputArchive") + "& ar, " + name + "& g)";
+    const std::string save = "void save(" + archiveName(output) + "& ar, const " + name + "& g)";
+    const std::string load = "void load(" + archiveName(input) + "& ar, " + name + "& g)";
     const bool takesName = model.nameComponentIndex || (!model.components.empty() &&
         graph.node(model.components.front().valueType).qualifiedName == "ccstd::pmr::string");
     declarations << '\n' << save << ";\n" << load << ";\n";
@@ -193,11 +186,11 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     cpp << "}\n";
     if (!ts) return;
 
-    const ArchiveScript writer{graph, archiveInterface(graph, archive, "OutputArchive"), imports, true};
-    const ArchiveScript reader{graph, archiveInterface(graph, archive, "InputArchive"), imports, false};
+    const ArchiveScript writer{graph, output, imports, true};
+    const ArchiveScript reader{graph, input, imports, false};
     const auto number = "a." + archiveMethod(writer.api, "writeNumber");
     const auto kinds = name + "Value.";
-    *ts << "\nexport function save" << name << " (a: OutputArchive, g: " << name << "): void {\n"
+    *ts << "\nexport function save" << name << " (a: " << output.name << ", g: " << name << "): void {\n"
         << "    const counts = new Array<number>(" << count << ").fill(0);\n"
         << "    for (const v of g.v()) ++counts[g.w(v)];\n"
         << "    " << number << "(g.nv());\n    " << number << "(g.ne());\n    for (const n of counts) " << number << "(n);\n"
@@ -212,7 +205,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     }
     *ts << "        }\n    }\n";
     for (const auto& f : model.fields) if (!f.transient) writer.value(*ts, f.type.type, "g." + f.name, "    ");
-    *ts << "}\n\nexport function load" << name << " (a: InputArchive, g: " << name << "): void {\n"
+    *ts << "}\n\nexport function load" << name << " (a: " << input.name << ", g: " << name << "): void {\n"
         << "    const decoded = new " << name << "();\n    const size = cc$readSize(a);\n    let edges = cc$readSize(a);\n"
         << "    const counts = Array.from({ length: " << count << " }, () => cc$readSize(a));\n"
         << "    for (let i = 0; i < size; ++i) {\n        const kind = cc$readSize(a);\n        const parent = cc$readSize(a);\n"
