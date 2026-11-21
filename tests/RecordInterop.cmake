@@ -13,6 +13,11 @@ namespace cc {
     interface ConversionProbe {
         explicit operator uint32_t() const noexcept { return 17; }
         virtual explicit operator bool() const = 0;
+        virtual bool enabled(bool value = true) const = 0;
+        static bool defaultsMatch(ShiftProbe flag = ShiftProbe::HIGH, float factor = 0.5,
+            const uint32_t* ptr = nullptr, uint64_t mask = 18446744073709551615) {
+            return flag == ShiftProbe::HIGH && factor == 0.5F && ptr == nullptr && mask == UINT64_MAX;
+        }
     }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
     struct AllocatorCtorProbe {
@@ -144,7 +149,7 @@ string(FIND "${script}" [[import type { Caption } from './caption';]] captionImp
 if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
     message(FATAL_ERROR "Explicit TS binding on an owning string was lost")
 endif()
-foreach(expected IN ITEMS "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []"
+foreach(expected IN ITEMS "enabled (value: boolean): boolean;" "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []"
                           "values: Map<number, number>"
                           "tables: Map<LayoutType, UniformBlock[]>[] = []"
                           "passes: Set<RenderPassType>[] = []"
@@ -171,6 +176,17 @@ function(source_between source start stop result)
     string(SUBSTRING "${tail}" 0 ${length} body)
     set(${result} "${body}" PARENT_SCOPE)
 endfunction()
+# Run the engine's sort routines against the generated queue types.
+file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeRenderQueue.cpp" nativeQueues)
+source_between(nativeQueues "void RenderDrawQueue::sortOpaqueOrCutout()" "void RenderDrawQueue::recordCommandBuffer(" drawSort)
+source_between(nativeQueues "void RenderInstancingQueue::sort()" "void RenderInstancingQueue::uploadBuffers(" instanceSort)
+source_between(nativeQueues "void NativeRenderQueue::sort()" "void NativeRenderQueue::recordCommands(" queueSort)
+file(WRITE "${stage}/NativeQueueSort.cpp" [[
+#include "cocos/renderer/pipeline/custom/NativePipelineRecords.h"
+#include <algorithm>
+#include <tuple>
+namespace cc::render {
+]] "${drawSort}\n${instanceSort}\n${queueSort}\n}\n")
 # Compile the engine's texture-view query with the generated descriptor and visitor member.
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp" nativeResourceGraph)
 source_between(nativeResourceGraph "bool ResourceGraph::isTextureView(" "gfx::Buffer* ResourceGraph::getBuffer(" textureViewQuery)

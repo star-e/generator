@@ -1,5 +1,5 @@
 #include "model/TypeGraphBuilder.h"
-#include "model/IntegerLiteral.h"
+#include "model/NumericLiteral.h"
 #include "model/TypeName.h"
 
 #include <algorithm>
@@ -114,6 +114,8 @@ TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
     return use.type;
 }
 
+std::string parameterDefault(const TypeGraph& graph, const Parameter& parameter, TypeUse type, const std::string& scope, ModuleId owner);
+
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
@@ -128,7 +130,8 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
         });
     }
     for (const auto& parameter : method.parameters) {
-        member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name, parameter.byConstReference});
+        const auto type = resolve(graph, parameter.type, scope, owner);
+        member.parameters.push_back({type, parameter.name, parameter.byConstReference, parameterDefault(graph, parameter, type, scope, owner)});
     }
     return member;
 }
@@ -148,6 +151,17 @@ std::vector<MethodInfo> resolveMemberFunctions(TypeGraph& graph, const std::vect
     return result;
 }
 
+TypeId enumDefaultType(const TypeGraph& graph, TypeUse use, const std::string& literal, const std::string& scope, ModuleId owner) {
+    const auto pos = literal.rfind("::");
+    const auto type = resolveName(graph, literal.substr(0, pos), use.location, scope, owner);
+    const auto& data = graph.node(type).data;
+    const auto* enumeration = std::get_if<EnumType>(&data);
+    if (type != use.type || (!enumeration && !std::holds_alternative<ExternalTypeNode>(data)) ||
+        (enumeration && std::ranges::find(enumeration->values, literal.substr(pos + 2), &Enumerator::name) == enumeration->values.end()))
+        throw std::runtime_error(use.location.describe() + ": invalid enum default " + literal);
+    return type;
+}
+
 std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>& fields, const std::string& scope, ModuleId owner) {
     std::vector<FieldInfo> result;
     for (const auto& field : fields) {
@@ -160,17 +174,7 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
             throw std::runtime_error(use.location.describe() + ": " + field.name + ": invalid " + typeName +
                                      " default " + field.initializer);
         }
-        const auto pos = field.initializer.rfind("::");
-        if (pos != std::string::npos) {
-            const auto type = resolveName(graph, field.initializer.substr(0, pos), use.location, scope, owner);
-            const auto& data = graph.node(type).data;
-            const auto* enumeration = std::get_if<EnumType>(&data);
-            if (type != use.type || (!enumeration && !std::holds_alternative<ExternalTypeNode>(data)) ||
-                (enumeration && std::ranges::find(enumeration->values, field.initializer.substr(pos + 2),
-                                                  &Enumerator::name) == enumeration->values.end())) {
-                throw std::runtime_error(use.location.describe() + ": invalid enum default " + field.initializer);
-            }
-        }
+        if (field.initializer.find("::") != std::string::npos) enumDefaultType(graph, use, field.initializer, scope, owner);
         result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement});
     }
     return result;
@@ -298,6 +302,39 @@ const std::map<std::string, IntegerRange>& integerRanges() {
         {"int32_t", integerRange<int32_t>()}, {"uint32_t", integerRange<uint32_t>()},
         {"int64_t", integerRange<int64_t>()}, {"uint64_t", integerRange<uint64_t>()}};
     return ranges;
+}
+
+std::string parameterDefault(const TypeGraph& graph, const Parameter& parameter, TypeUse use, const std::string& scope, ModuleId owner) {
+    const auto& value = parameter.defaultValue;
+    if (value.empty()) return {};
+    const auto& type = graph.node(canonicalType(graph, use));
+    const auto& name = type.qualifiedName;
+    if (const auto pos = value.rfind("::"); pos != std::string::npos && std::holds_alternative<EnumType>(type.data)) {
+        const auto enumeration = enumDefaultType(graph, use, value, scope, owner);
+        return "::" + graph.node(enumeration).qualifiedName + value.substr(pos);
+    }
+    if (name == "bool" && (value == "true" || value == "false")) return value;
+    if (std::holds_alternative<PointerType>(type.data) && value == "nullptr") return value;
+    if ((name == "float" || name == "double") && validFloatingDefault(name, value)) {
+        const auto decimal = value.find('.') == std::string::npos ? value + ".0" : value;
+        return name == "float" ? decimal + "F" : decimal;
+    }
+    const auto& ranges = integerRanges();
+    if (const auto it = ranges.find(name); it != ranges.end() && name != "bool") {
+        std::string_view digits = value;
+        const bool negative = digits.starts_with('-');
+        if (negative) digits.remove_prefix(1);
+        uint64_t magnitude{};
+        const auto range = it->second;
+        const auto limit = negative ? uint64_t{0} - static_cast<uint64_t>(range.min) : range.max;
+        if ((!negative || range.min < 0) && parseMagnitude(digits, magnitude) == std::errc{} && magnitude <= limit) {
+            if (negative && magnitude == (uint64_t{1} << 63)) return "(-9223372036854775807LL - 1)";
+            if (negative && hasHexPrefix(digits)) return "-" + std::to_string(magnitude);
+            return name == "uint64_t" ? value + "ULL" : value;
+        }
+    }
+    throw std::runtime_error(use.location.describe() + ": " + parameter.name + ": invalid default " + value +
+                             " for " + qualifiedTypeName(graph, use.type));
 }
 
 GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const std::string& scope, ModuleId owner) {

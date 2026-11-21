@@ -36,6 +36,8 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/DispatcherQueries.cpp"
     DispatcherGraphConsumer.cpp
     MigrationConsumer.cpp
+    RenderQueueConsumer.cpp
+    "${STAGING}/NativeQueueSort.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativeTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/FGDispatcherRecords.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativePipelineRecords.cpp"

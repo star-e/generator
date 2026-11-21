@@ -2,7 +2,7 @@
 #include "codegen/EnumEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
-#include "model/IntegerLiteral.h"
+#include "model/NumericLiteral.h"
 #include "model/TypeName.h"
 
 #include <algorithm>

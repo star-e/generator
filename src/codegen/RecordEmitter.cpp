@@ -4,12 +4,11 @@
 #include "codegen/GraphEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
-#include "model/IntegerLiteral.h"
+#include "model/NumericLiteral.h"
 #include "model/TypeName.h"
 
 #include <algorithm>
 #include <iterator>
-#include <locale>
 #include <numeric>
 #include <set>
 #include <sstream>
@@ -44,18 +43,7 @@ std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModu
 bool numericDefault(const std::string& type, const std::string& literal) {
     if (type == "uint64_t") return safeUnsignedNumber(literal);
     if (type != "float" && type != "double") return validUnsignedFieldDefault(type, literal);
-    if (literal.empty()) return false;
-    const auto first = literal.front() == '-' ? 1U : 0U;
-    if (first == literal.size() || literal[first] < '0' || literal[first] > '9') return false;
-    if (literal[first] == '0' && first + 1 < literal.size() && literal[first + 1] != '.') return false;
-    std::istringstream in(literal);
-    in.imbue(std::locale::classic());
-    if (type == "float") {
-        float value{};
-        return (in >> value) && in.eof();
-    }
-    double value{};
-    return (in >> value) && in.eof();
+    return validFloatingDefault(type, literal);
 }
 
 std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
@@ -652,6 +640,7 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
             const auto& p = method.parameters[i];
             if (p.byConstReference) out << "const ";
             out << methodType(graph, module, p.type.type, deps) << (p.byConstReference ? "& " : " ") << p.name;
+            if (!p.defaultValue.empty()) out << " = " << p.defaultValue;
         }
         out << ")";
         if (method.isConst) out << " const";

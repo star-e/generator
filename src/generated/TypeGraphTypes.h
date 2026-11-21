@@ -34,6 +34,7 @@ struct ParameterInfo {
     TypeUse type;
     std::string name;
     bool byConstReference = false;
+    std::string defaultValue;
 };
 
 struct MethodInfo {

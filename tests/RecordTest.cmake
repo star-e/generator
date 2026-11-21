@@ -42,6 +42,12 @@ check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
     "subpassGraph: a record containing a move-only graph must declare @moveOnly")
 check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
     "subpassGraph: cannot use an @immovable graph as a value field")
+check_resource_error("void validateSwapchains()" "void validateSwapchains(Vertex from = 0, Vertex to)"
+    "parameters after a default argument must also have defaults")
+check_resource_error("void validateSwapchains()" "void validateSwapchains(Vertex from = 0x100000000)"
+    "from: invalid default 0x100000000")
+check_resource_error("void validateSwapchains()" "void validateSwapchains(SceneFlags flags = SceneFlags::MISSING)"
+    "invalid enum default SceneFlags::MISSING")
 check_resource_error("void validateSwapchains()" "explicit operator bool(bool value) const" "a conversion operator cannot take parameters")
 check_resource_error("void validateSwapchains()" "static explicit operator bool()"
     "a conversion operator cannot be static")

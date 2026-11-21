@@ -14,6 +14,7 @@ namespace codegen {
         type: TypeUse;
         name: std::string;
         byConstReference: bool = false;
+        defaultValue: std::string;
     }
     struct MethodInfo {
         result: TypeUse;

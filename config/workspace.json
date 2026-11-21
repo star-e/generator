@@ -152,6 +152,7 @@
         "SpotLight": { "header": "cocos/scene/SpotLight.h" },
         "PointLight": { "header": "cocos/scene/PointLight.h" },
         "RangedDirectionalLight": { "header": "cocos/scene/RangedDirectionalLight.h" },
+        "Pass": { "header": "cocos/scene/Pass.h" },
         "SubModel": { "header": "cocos/scene/SubModel.h" },
         "Camera": { "header": "cocos/scene/Camera.h" },
         "RenderScene": { "header": "cocos/scene/RenderScene.h" },

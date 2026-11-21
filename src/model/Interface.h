@@ -15,6 +15,7 @@ struct Parameter {
     TypeRef type;
     std::string name;
     bool byConstReference{};
+    std::string defaultValue;
 };
 
 struct Method {

@@ -675,20 +675,21 @@ private:
         result.name = uniqueName(names);
         expect(":");
         result.type = type(nullptr, record);
-        if (accept("=")) {
-            const bool negative = accept("-");
-            if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
-                if (negative) result.initializer = "-";
-                result.initializer += token;
-                advance();
-            } else {
-                if (negative) fail("expected numeric default");
-                result.initializer = identifier();
-                while (accept("::")) result.initializer += "::" + identifier();
-            }
-        }
+        if (accept("=")) result.initializer = defaultValue();
         expect(";");
         return result;
+    }
+
+    std::string defaultValue() {
+        const bool negative = accept("-");
+        if (!token.empty() && std::isdigit(static_cast<unsigned char>(token.front()))) {
+            std::string literal = negative ? "-" : "";
+            literal += token;
+            advance();
+            return literal;
+        }
+        if (negative) fail("expected numeric default");
+        return qualifiedTypeName();
     }
 
     TypeRef type(bool* byConstReference = nullptr, bool allowReference = false) {
@@ -814,8 +815,11 @@ private:
             if (result.isExplicitConversion) fail("a conversion operator cannot take parameters");
             do {
                 bool byConstReference = false;
-                auto parameter = type(&byConstReference, true);
-                result.parameters.push_back({std::move(parameter), uniqueName(parameters), byConstReference});
+                Parameter parameter{type(&byConstReference, true), uniqueName(parameters), byConstReference};
+                if (accept("=")) parameter.defaultValue = defaultValue();
+                else if (!result.parameters.empty() && !result.parameters.back().defaultValue.empty())
+                    fail("parameters after a default argument must also have defaults");
+                result.parameters.push_back(std::move(parameter));
             } while (accept(","));
             expect(")");
         }

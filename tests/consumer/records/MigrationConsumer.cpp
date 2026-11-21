@@ -57,6 +57,7 @@ bool checkCullingIndices() {
 } // namespace
 
 bool checkDispatcherGraphs();
+bool checkRenderQueues();
 
 bool checkMigratedModules() {
     boost::container::pmr::monotonic_buffer_resource memory;
@@ -67,7 +68,7 @@ bool checkMigratedModules() {
     FGRenderPassInfo copy(pass, &memory);
     Barrier barrier;
     CustomRenderGraphContext context;
-    return checkDispatcherGraphs() && checkCullingIndices() && programs.programInfos.empty() && customization.contexts.empty() && context.renderGraph == nullptr &&
+    return checkDispatcherGraphs() && checkRenderQueues() && checkCullingIndices() && programs.programInfos.empty() && customization.contexts.empty() && context.renderGraph == nullptr &&
            copy.orderedViews == pass.orderedViews && copy.get_allocator().resource() == &memory &&
            barrier.type == cc::gfx::BarrierType::FULL && PipelineCapabilities{}.subpass == SubpassCapabilities::NONE;
 }

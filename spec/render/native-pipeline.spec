@@ -1,6 +1,7 @@
 module NativePipeline;
 import Customization;
 import LayoutGraph;
+import RenderCommon;
 import Scene;
 import Light;
 import ReflectionProbe;
@@ -30,6 +31,46 @@ namespace cc::render {
         void removeMacro() const;
         static int32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::Vertex phaseLayoutId);
         void applyMacro(const LayoutGraphData& lg, const scene::Model& model, LayoutGraphData::Vertex probeLayoutId);
+    }
+
+    @requireAllocator struct RenderInstancingQueue {
+        sortedBatches: ccstd::pmr::vector<pipeline::InstancedBuffer*>;
+        passInstances: PmrUnorderedMap<const scene::Pass*, uint32_t>;
+        instanceBuffers: ccstd::pmr::vector<IntrusivePtr<pipeline::InstancedBuffer>>;
+
+        bool empty() const noexcept;
+        void clear();
+        void add(const scene::Pass& pass, scene::SubModel& submodel, uint32_t passID);
+        void sort();
+        void uploadBuffers(gfx::CommandBuffer* cmdBuffer) const;
+        void recordCommandBuffer(gfx::RenderPass* renderPass, uint32_t subpassIndex,
+            gfx::CommandBuffer* cmdBuffer, uint32_t lightByteOffset = 0xFFFFFFFF) const;
+    }
+
+    @requireAllocator struct RenderDrawQueue {
+        instances: ccstd::pmr::vector<DrawInstance>;
+
+        void add(const scene::Model& model, float depth, uint32_t subModelIdx, uint32_t passIdx);
+        void sortOpaqueOrCutout();
+        void sortTransparent();
+        void recordCommandBuffer(gfx::RenderPass* renderPass, uint32_t subpassIndex,
+            gfx::CommandBuffer* cmdBuffer, uint32_t lightByteOffset = 0xFFFFFFFF) const;
+    }
+
+    @requireAllocator @moveOnly struct NativeRenderQueue {
+        opaqueQueue: RenderDrawQueue;
+        transparentQueue: RenderDrawQueue;
+        probeQueue: ProbeHelperQueue;
+        opaqueInstancingQueue: RenderInstancingQueue;
+        transparentInstancingQueue: RenderInstancingQueue;
+        nullable camera: const scene::Camera*;
+        sceneFlags: SceneFlags = SceneFlags::NONE;
+        lightByteOffset: uint32_t = 0xFFFFFFFF;
+
+        void sort();
+        void clear() noexcept;
+        bool empty() const noexcept;
+        void recordCommands(gfx::CommandBuffer* cmdBuffer, gfx::RenderPass* renderPass, uint32_t subpassIndex, SceneFlags sceneFlags) const;
     }
 
     @requireAllocator @moveOnly struct BufferPool {
@@ -150,6 +191,25 @@ namespace cc::render {
     struct TextureWithAccessFlags {
         nullable texture: IntrusivePtr<gfx::Texture>;
         accessFlags: gfx::AccessFlagBit = gfx::AccessFlagBit::NONE;
+    }
+
+    @requireAllocator @moveOnly struct DeviceRenderData {
+        hasConstants: bool = false;
+        required: bool = false;
+        buffers: PmrFlatMap<NameLocalID, IntrusivePtr<gfx::Buffer>>;
+        textures: PmrFlatMap<NameLocalID, TextureWithAccessFlags>;
+        samplers: PmrFlatMap<NameLocalID, gfx::Sampler*>;
+
+        void clear() noexcept {
+            hasConstants = false;
+            required = false;
+            buffers.clear();
+            textures.clear();
+            samplers.clear();
+        }
+        bool hasNoData() const noexcept {
+            return !hasConstants && buffers.empty() && textures.empty() && samplers.empty();
+        }
     }
 
     @requireAllocator struct PipelineCustomization {

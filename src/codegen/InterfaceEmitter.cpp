@@ -43,6 +43,7 @@ void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& meth
         if (i) out << ", ";
         if (param.byConstReference) out << "const ";
         cppDeclarator(out, graph, param.type, (param.byConstReference ? "&" : "") + param.name, owner, headers);
+        if (!param.defaultValue.empty()) out << " = " << param.defaultValue;
     }
     out << ')';
     if (method.isConst) out << " const";

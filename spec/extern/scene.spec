@@ -9,6 +9,7 @@ namespace cc::scene {
     class PointLight;
     class RangedDirectionalLight;
     class SubModel;
+    class Pass;
 }
 
 binding typescript {
