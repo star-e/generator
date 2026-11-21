@@ -25,8 +25,6 @@ struct RecordOutput {
     std::set<std::string> namedEnums;
     std::set<std::string> constEnums;
     InterfaceBindings interfaceBindings;
-    std::map<std::string, ResetBinding> resets;
-    std::map<std::string, std::map<std::string, TypeScriptImport>> fieldResets;
     std::map<std::string, TypeScriptImport> bases;
     std::map<std::string, std::filesystem::path> externalClasses;
     std::filesystem::path poolModule;

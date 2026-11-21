@@ -327,24 +327,13 @@ private:
                 if (!rule.renamedFrom.emplace(name, identifier()).second) fail("duplicate field binding " + name);
             } else if (rule.kind == BindingTarget::classType && key == "field") {
                 const auto field = identifier();
-                if (accept("reset")) {
-                    expect("with");
-                    TypeScriptImport hook{identifier(), {}};
-                    if (accept("(")) expect(")");
-                    else {
-                        expect("from");
-                        hook.from = bindingPath();
-                    }
-                    if (!rule.fieldResets.emplace(field, std::move(hook)).second) fail("duplicate field reset " + field);
-                } else {
-                    expect("default");
-                    const bool negative = accept("-");
-                    if ((negative || token != "null") && (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))))
-                        fail("expected a numeric default or null");
-                    if (!rule.fieldDefaults.emplace(field, (negative ? "-" : "") + std::string(token)).second)
-                        fail("duplicate field default " + field);
-                    advance();
-                }
+                expect("default");
+                const bool negative = accept("-");
+                if ((negative || token != "null") && (token.empty() || !std::isdigit(static_cast<unsigned char>(token.front()))))
+                    fail("expected a numeric default or null");
+                if (!rule.fieldDefaults.emplace(field, (negative ? "-" : "") + std::string(token)).second)
+                    fail("duplicate field default " + field);
+                advance();
             } else if (rule.kind == BindingTarget::classType && key == "extends") {
                 rule.base = bindingImport();
             } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
@@ -354,16 +343,6 @@ private:
             } else if (rule.kind == BindingTarget::classType && key == "constructor") {
                 rule.constructor = bindingFields();
                 rule.requiredConstructor = accept("required");
-            } else if (rule.kind == BindingTarget::classType && key == "reset") {
-                auto& reset = rule.reset.emplace();
-                if (token == "(") {
-                    reset.kind = ResetBinding::Kind::fields;
-                    reset.fields = bindingFields();
-                } else if (accept("defaults")) {
-                    reset.kind = ResetBinding::Kind::defaults;
-                } else {
-                    expect("constructor");
-                }
             } else if (rule.kind == BindingTarget::classType && key == "pool") {
                 auto& pool = rule.pool.emplace();
                 pool.member = identifier();

@@ -25,11 +25,6 @@ struct PoolDependency {
 };
 
 enum class BindingTarget { type, interfaceType, classType, enumeration, constEnum, numberField };
-struct ResetBinding {
-    enum class Kind { constructor, defaults, fields };
-    Kind kind{Kind::constructor};
-    std::vector<std::string> fields;
-};
 
 struct TypeScriptImport {
     std::string name;
@@ -72,12 +67,10 @@ struct TypeScriptBinding {
     std::map<std::string, std::string> renamedFrom;
     std::string numberField;
     std::map<std::string, std::string> fieldDefaults;
-    std::map<std::string, TypeScriptImport> fieldResets;
     std::optional<TypeScriptImport> base;
     std::optional<PoolBinding> pool;
     std::optional<std::vector<std::string>> constructor;
     bool requiredConstructor{};
-    std::optional<ResetBinding> reset;
     MapKeyKind mapKey{};
     bool names{};
     bool registerEnum{};

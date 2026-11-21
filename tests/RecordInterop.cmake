@@ -547,8 +547,6 @@ configure_file("${SOURCE}/tests/consumer/records/render-graph-consumer.ts" "${re
 set(commonSpec "${work}/spec/render/render-common.spec")
 file(READ "${commonSpec}" common)
 string(REPLACE "numRenderPasses: uint32_t = 0" "numRenderPasses: uint32_t = 7" common "${common}")
-# Also compile a default-reset pool for a record with explicit constructors.
-string(REPLACE "pool li;" "pool li; reset defaults;" common "${common}")
 file(WRITE "${commonSpec}" "${common}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/variant")
 set(variant "${stage}/cocos/rendering/custom/types-variant.ts")

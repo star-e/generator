@@ -633,8 +633,8 @@ TypeScriptRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inpu
                 }
                 rules.emplace(id.value, &rule);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {
-                if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.constructor || rule.reset || rule.base ||
-                    !rule.from.empty() || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() || rule.mapKey != MapKeyKind::Native)
+                if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.constructor || rule.base ||
+                    !rule.from.empty() || !rule.fieldDefaults.empty() || rule.mapKey != MapKeyKind::Native)
                     reject("expected a graph pool binding");
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
                 if (!isRecord || !rule.methods.empty() || !rule.callbacks.empty()) reject("expected a record binding");

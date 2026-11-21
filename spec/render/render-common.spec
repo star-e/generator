@@ -239,7 +239,7 @@ binding typescript {
     CopyPair => class { pool cp; };
     UploadPair => class { pool up keep(source); };
     MovePair => class { pool mp; };
-    PipelineStatistics => class { pool ps; reset defaults; };
+    PipelineStatistics => class { pool ps; };
 }
 
 binding jsb {

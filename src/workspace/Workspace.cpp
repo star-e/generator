@@ -238,21 +238,13 @@ void bindRecordOutput(RecordOutput& output, const Module& module) {
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
-        if (rule.reset) output.resets.emplace(name, *rule.reset);
-        if (!rule.fieldResets.empty()) {
-            if (!rule.reset && !rule.pool)
-                throw std::runtime_error(rule.source.location.describe() + ": field reset requires a reset method on " + name);
-            output.fieldResets.emplace(name, rule.fieldResets);
-        }
         if (rule.base) output.bases.emplace(name, *rule.base);
         if (rule.kind == BindingTarget::classType && !rule.from.empty()) {
-            if (rule.base || rule.constructor || rule.reset || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() ||
+            if (rule.base || rule.constructor || !rule.fieldDefaults.empty() ||
                 (rule.pool && (rule.pool->assignFields || !rule.pool->keepOnReset.empty()))) invalidBinding(rule, "externally implemented class");
             output.externalClasses.emplace(name, rule.from);
         }
         if (rule.pool) {
-            if (rule.pool->assignFields && (rule.reset || !rule.fieldResets.empty()))
-                throw std::runtime_error(rule.source.location.describe() + ": pool assign conflicts with reset");
             if (output.poolModule.empty()) throw std::runtime_error(rule.source.location.describe() + ": pool binding requires poolModule");
             if (!poolMembers.insert(rule.pool->member).second)
                 throw std::runtime_error(rule.source.location.describe() + ": duplicate pool member " + rule.pool->member);

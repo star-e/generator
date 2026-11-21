@@ -138,10 +138,10 @@ binding typescript {
 | 具体模板实例 | `ccstd::vector<uint8_t> => Uint8Array;` 只匹配该模板和这组类型实参。`ccstd::vector<uint32_t>` 可以单独绑定到 `Uint32Array`。目标使用 ES2015 内置 TypedArray 名称，字段默认值为相应类型的零长度新数组。 |
 | 普通数组 | 在外部类型声明上写 `@container("array") template<T> class vector;`。TypeGraph 递归解析元素的 TS 类型，字段使用 `T[]` 和独立的空数组。具体实例的显式绑定优先，例如 `ccstd::vector<ccstd::vector<uint8_t>>` 对应 `Uint8Array[]`。 |
 | Map | 在外部类型声明上写 `@container("map") template<K, V> class map;`。TypeGraph 按键、值各自的绑定生成 `Map<K, V>`，从两侧递归收集导入。每个字段用 `new Map<K, V>()` 初始化。 |
-| Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，`reset defaults;` 通过 `.clear()` 原地清空。 |
+| Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，池化重置时调用 `.clear()` 原地清空。 |
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
-| 对象池和重置 | 使用 `pool rv;` 的记录默认按 TS 构造参数的顺序选取可写字段。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。`keep(...)` 保留指定字段。`reset(slot, capacity);` 显式指定重置参数及顺序。 |
+| 对象池和重置 | 使用 `pool rv;` 的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。`keep(...)` 保留指定字段并将其排除在参数之外。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 
@@ -153,7 +153,7 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 
 外部模块的声明共用一个 C++ 头文件时，在模块的 `import` 之后写一次 `cpp { header "..."; }`。一个模块涉及多个头文件时，在 `namespace` 内用 `header "..." { ... }` 包住相关声明。固定路径供整组共用，路径中的 `{name}` 替换为声明的非限定名，保留大小写。例如 `GFX{name}.h` 将 `Buffer` 映射到 `GFXBuffer.h`。组内路径优先于模块默认值，组外声明继续使用模块默认值。消费方按模块名导入，TS 默认路径由工作区提供，逐类型例外写在 `binding typescript` 中。[Gfx 默认头文件与分组](../spec/extern/gfx.spec) · [Scene 命名模板](../spec/extern/scene.spec)
 
-`DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型都声明 `reset defaults;`，通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
+`DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型的池化 `reset()` 通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
 `DescriptorDB` 的 `blocks` 和 `groupBlocks` 在 C++ 中分别以 `DescriptorBlockIndex`、`DescriptorGroupBlockIndex` 为键，在 TS 中都绑定为 `Map<string, DescriptorBlock>`。其规格省略构造声明，C++ 调用方通过 `DescriptorDB(alloc)` 传入资源。两个 PMR map 都使用传入的资源，带 allocator 的复制和移动构造使用目标资源。[PMR 容器声明](../spec/extern/pmr-containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
@@ -282,11 +282,11 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 
-`PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。TS 绑定通过 `reset defaults;` 生成无参 `reset()`。配合 `pool` 后，`RenderCommonObjectPool.createPipelineStatistics()` 每次从池中取出对象时都调用该方法。消费测试用引擎的 `RecyclePool` 核对对象复用和全部计数器，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建和复用的对象都采用声明值。[声明](../spec/render/render-common.spec)
+`PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。该类型没有构造参数，`pool ps;` 自动生成无参 `reset()`。`RenderCommonObjectPool.createPipelineStatistics()` 每次从池中取出对象时都调用该方法。消费测试用引擎的 `RecyclePool` 核对对象复用和全部计数器，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建和复用的对象都采用声明值。[声明](../spec/render/render-common.spec)
 
 ### 引擎模块和产物
 
-`LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`reset constructor;` 使 TS 的 `reset(type)` 更新类型，并把 `count` 恢复为声明值。TS 名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec)
+`LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`pool d;` 据此推导出 TS 的 `reset(type)`，更新类型并把 `count` 恢复为声明值。TS 名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec)
 
 `DescriptorBlockIndex` 从 `RenderCommon` 引入 `UpdateFrequency` 和 `ParameterType`，从 `Gfx` 引入 `ShaderStageFlagBit`。生成模块之间的枚举引用使用提供方配置的头文件和 TS 输出路径。声明上的 `@comparison("<")` 让 C++ 后端按字段声明顺序生成 `operator<`。该键依次比较 `updateFrequency`、`parameterType`、`descriptorType`、`visibility`。`DescriptorGroupBlockIndex` 在这四项之后依次比较 `accessType`、`viewDimension`、`sampleType`、`format`。两个索引的 TS 构造函数以相同顺序写入字段，保留引擎用 `JSON.stringify(index)` 查表时的键字符串。[C++ 键测试](../tests/consumer/records/RecordConsumer.cpp) · [TS 键测试](../tests/consumer/records/consumer.cjs)
 
