@@ -17,16 +17,21 @@ add_custom_command(OUTPUT "${wrapper}.cpp" "${wrapper}.h"
     COMMAND ${swig} -o "${wrapper}.cpp" "${config}"
     DEPENDS "${config}" "${records}/RenderInterfaceTypes.h"
     VERBATIM)
-# Both consumers link to the engine's native record implementations. The record
-# interop target separately builds RenderCommonTypes.cpp from staging.
-add_executable(JsbConsumer JsbConsumer.cpp "${records}/RenderCommonJsb.cpp")
-add_executable(RenderNodeConsumer RenderNodeConsumer.cpp "${wrapper}.cpp" "${wrapper}.h" "${records}/RenderCommonJsb.cpp")
-foreach(consumer IN ITEMS JsbConsumer RenderNodeConsumer)
-    target_include_directories(${consumer} BEFORE PRIVATE "${stagedNative}" "${stagedNative}/cocos")
-    target_link_libraries(${consumer} PRIVATE cocos_engine)
-    add_dependencies(${consumer} genbindings)
-endforeach()
-target_include_directories(RenderNodeConsumer BEFORE PRIVATE "${bindings}")
+# The test factory supplies the Pipeline observed from JS. The engine's GPU
+# factory would pull in native graph code built against the old PMR constructors.
+get_target_property(engineSources cocos_engine SOURCES)
+list(FILTER engineSources EXCLUDE REGEX "/(renderer/pipeline/custom/(NativeFactory|RenderCommonTypes|RenderCommonJsb)|bindings/auto/jsb_render_auto)[.]cpp$")
+set_property(TARGET cocos_engine PROPERTY SOURCES "${engineSources}")
+
+add_library(TestRenderBindings OBJECT PassConsumer.cpp "${wrapper}.cpp"
+    "${records}/RenderCommonTypes.cpp" "${records}/RenderCommonJsb.cpp")
+target_include_directories(TestRenderBindings BEFORE PUBLIC "${bindings}" "${stagedNative}" "${stagedNative}/cocos")
+target_link_libraries(TestRenderBindings PUBLIC cocos_engine)
+add_dependencies(TestRenderBindings genbindings)
+add_executable(JsbConsumer JsbConsumer.cpp)
+add_executable(RenderNodeConsumer RenderNodeConsumer.cpp "${wrapper}.h")
+target_link_libraries(JsbConsumer PRIVATE TestRenderBindings)
+target_link_libraries(RenderNodeConsumer PRIVATE TestRenderBindings)
 
 if(WIN32)
     set(dlls ${WINDOWS_DLLS})

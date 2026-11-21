@@ -3,6 +3,10 @@
 #include <deque>
 #include <iostream>
 
+namespace cc::render {
+bool checkPassArrays(se::ScriptEngine& engine);
+}
+
 namespace {
 
 template<class Interface>
@@ -144,6 +148,10 @@ int cocos_main(int, const char**) {
             std::cerr << "ComputePassBuilder.addQueue or ComputeQueueBuilder.addDispatch arguments differ\n";
             return 1;
         }
+        if (!cc::render::checkPassArrays(engine)) {
+            std::cerr << "Pipeline JSB pass array conversion failed\n";
+            return 1;
+        }
     }
     if (!checkQueueCollection(engine, pass)) {
         std::cerr << "ComputeQueueBuilder GC lifetime differs\n";
@@ -151,6 +159,7 @@ int cocos_main(int, const char**) {
     }
     std::cout << "RenderNode.name = shadow (1 native write, 1 native read)\n";
     std::cout << "addQueue(0/1/2 arguments), addDispatch(3/4/5 arguments), 3 queues collected once each\n";
+    std::cout << "Copy, resolve, move and upload each received [] and two PMR records\n";
     return 0;
 }
 

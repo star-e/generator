@@ -359,7 +359,9 @@ MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中�
 
 JSB 绑定的 `record` 单独选择 `LightInfo`、`ResolvePair`、`CopyPair`、`UploadPair` 和 `MovePair`。`RenderCommonJsb.h/.cpp` 按声明顺序转换所选记录的所有字段，包括 `LightInfo.light` 和 `probe`。JS 写入 C++ 时，缺失、`null` 或 `undefined` 的属性保留 C++ 原值。独立的引擎消费测试还验证 `UploadPair.source` 从 `Uint8Array` 子视图读入字节并转回 JS。[模块绑定](../spec/render/render-common.spec) · [JSB 消费测试](../tests/consumer/jsb/JsbConsumer.cpp)
 
-生成默认暂存文件后，可在原生引擎的构建环境中运行两个 JSB 消费测试。一个验证记录与 JS 值的转换，另一个用暂存的 `render.i` 和 C++ 头文件生成并编译 `jsb_render_auto.cpp`。后者通过 JS 读写 `RenderNode.name`，调用 `ComputePassBuilder.addQueue` 和 `ComputeQueueBuilder.addDispatch` 的各个重载，核对原生方法收到的实参及默认值。测试还分别在 JS 持有和释放队列后触发 GC，检查每个原生队列的析构次数。测试链接引擎提供的原生记录实现。`ENGINE` 和 `STAGING` 分别指向引擎和暂存根目录。
+生成默认暂存文件后，可在原生引擎的构建环境中运行两个 JSB 消费测试。一个验证记录与 JS 值的转换，另一个用暂存的 `render.i` 和 C++ 头文件生成并编译 `jsb_render_auto.cpp`。后者通过 JS 读写 `RenderNode.name`，调用 `ComputePassBuilder.addQueue` 和 `ComputeQueueBuilder.addDispatch` 的各个重载，核对原生方法收到的实参及默认值。测试还分别在 JS 持有和释放队列后触发 GC，检查每个原生队列的析构次数。两个程序都编译并链接暂存的 `RenderCommonTypes.cpp` 和 `RenderCommonJsb.cpp`。`ENGINE` 和 `STAGING` 分别指向引擎和暂存根目录。
+
+绑定测试中的 `render.Factory.createPipeline()` 返回测试用的 C++ `Pipeline`。JS 分别向 `addCopyPass`、`addResolvePass`、`addMovePass` 和 `addUploadPass` 传入空数组和两条记录。原生方法核对调用次数、记录顺序、字段默认值和 PMR 资源，并检查上传字节是否与 `Uint8Array` 子视图一致。接入引擎原生管线时，还需验证 `NativeRenderGraph.cpp` 构造 `ResolvePair` 和 `FrameGraphDispatcher.cpp` 构造 `CopyPair` 的代码。这两个翻译单元用旧头文件编译后，仍引用分配器后置的构造符号。[数组绑定测试](../tests/consumer/jsb/PassConsumer.cpp)
 
 ```sh
 cmake -S tests/consumer/jsb -B build/jsb -DENGINE=<engine-root> -DSTAGING=<staging-root> -DCMAKE_BUILD_TYPE=Release
