@@ -108,6 +108,9 @@ static_assert(static_cast<uint32_t>(ResolveFlags::DEPTH) == 2 && static_cast<uin
 constexpr auto depthStencil = ResolveFlags::DEPTH | ResolveFlags::STENCIL;
 static_assert(static_cast<uint32_t>(depthStencil) == 6 && !any(depthStencil & ResolveFlags::COLOR));
 static_assert(noexcept(static_cast<uint32_t>(std::declval<const cc::ConversionProbe&>())));
+static_assert(std::is_invocable_r_v<bool, const cc::ConversionProbe&>);
+static_assert(std::is_nothrow_invocable_v<const cc::CallProbe&>);
+uint32_t cc::CallProbe::operator()() const noexcept { return value; }
 static_assert(std::is_abstract_v<cc::ConversionProbe> && !std::is_convertible_v<const cc::ConversionProbe&, bool>);
 struct Dispatch final : cc::DispatchProbe {
     uint32_t apply(cc::MoveProbe packet, const int* marker, uint32_t scale) const override {
@@ -507,6 +510,8 @@ int main(int argc, char** argv) {
     Layout::type = LayoutType::VULKAN;
     Layout::isWebGPU = false;
     const cc::StaticProbe staticProbe{31};
+    cc::CallProbe callProbe;
+    if (std::as_const(callProbe)() != 7 || callProbe() != 8 || std::as_const(callProbe)() != 8) return 1;
     const auto hash = ccstd::hash<cc::StaticProbe>{}(staticProbe);
     if (cc::StaticProbe::epoch != 7 || cc::StaticProbe::kind != cc::LaterKind::ONE ||
         cc::StaticProbe::nested.value != 3 || cc::StaticProbe::nativeFlag) return 1;

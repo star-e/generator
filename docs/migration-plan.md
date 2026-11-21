@@ -103,6 +103,8 @@ C++ 方法可为尾部参数声明默认值，例如 `uint32_t lightByteOffset =
 
 原生 ID 可以直接声明 `explicit operator uint32_t() const { return value; }`。TypeGraph 记录目标类型，C++ 调用方使用 `static_cast<uint32_t>(id)` 取得数值，TypeScript 绑定跳过该操作。三个 ID 均沿用引擎的 `0xFFFFFFFF` 无效值。[裁剪与渲染队列声明](../spec/render/native-pipeline.spec)
 
+`RenderGraphFilter` 在 `.spec` 中直接定义 `bool operator()(RenderGraph::Vertex pass) const`，C++ 调用方用 `filter(pass)` 查询对应的 pass。调用运算符沿用成员函数的参数、重载和函数体规则，仅参与 C++ 生成。[过滤器声明](../spec/render/native-pipeline.spec)
+
 原生记录可以声明 `T&` 或 `const T&` 字段，每个 `constructor(...)` 都必须列出这些字段。生成的构造器直接绑定调用方提供的对象。生成器也会省去无参构造器和只接收分配器的构造器。`@immovable` 删除记录的复制、移动及赋值操作。`FrameGraphDispatcher` 通过引用借用资源图、渲染图和布局图，以调用方的分配器原位构造 `resourceAccessGraph` 和 `relationGraph`。[调度器声明](../spec/render/fg-dispatcher.spec) · [消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
 ### 记录构造函数

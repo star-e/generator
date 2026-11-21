@@ -1048,6 +1048,18 @@ private:
             if (result.isStatic) fail("a conversion operator cannot be static");
             expect("operator");
         }
+        result.result = type(nullptr, true);
+        if (!result.isExplicitConversion) {
+            if (accept("operator")) {
+                if (result.isStatic) fail("a call operator cannot be static in C++17");
+                expect("(");
+                expect(")");
+                result.name = "operator()";
+                cppOnly = true;
+            } else {
+                result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
+            }
+        }
         result.cppOnly = cppOnly || result.isExplicitConversion || !result.isPureVirtual;
         if (result.accessor != AccessorKind::None && result.cppOnly)
             fail("@getter and @setter require a TypeScript-visible pure virtual method");
@@ -1055,9 +1067,6 @@ private:
             fail("TypeScript optionality requires a visible pure virtual method");
         if (result.optionalMethod && result.accessor != AccessorKind::None)
             fail("@optionalMethod requires a regular method");
-        result.result = type(nullptr, true);
-        if (!result.isExplicitConversion)
-            result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
         expect("(");
         std::set<std::string> parameters;
         if (!accept(")")) {

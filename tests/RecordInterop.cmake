@@ -17,6 +17,7 @@ namespace cc {
     interface ConversionProbe {
         explicit operator uint32_t() const noexcept { return 17; }
         virtual explicit operator bool() const = 0;
+        virtual bool operator()(bool value = true) const = 0;
         virtual bool enabled(bool value = true) const = 0;
         static bool defaultsMatch(ShiftProbe flag = ShiftProbe::HIGH, float factor = 0.5,
             const uint32_t* ptr = nullptr, uint64_t mask = 18446744073709551615) {
@@ -24,6 +25,11 @@ namespace cc {
         }
     }
     struct ImplicitCtor { count: uint32_t = 7; }
+    struct CallProbe {
+        value: uint32_t = 7;
+        uint32_t operator()() { return ++value; }
+        uint32_t operator()() const noexcept;
+    }
     struct EmptyCtor { count: uint32_t = 7; constructor(); }
     @serialize @comparison(\"==\") @hash struct StaticProbe {
         static epoch: uint64_t = 7;

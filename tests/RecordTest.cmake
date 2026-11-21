@@ -120,6 +120,10 @@ check_resource_error("void validateSwapchains()" "void validateSwapchains(SceneF
 check_resource_error("void validateSwapchains()" "explicit operator bool(bool value) const" "a conversion operator cannot take parameters")
 check_resource_error("void validateSwapchains()" "static explicit operator bool()"
     "a conversion operator cannot be static")
+check_resource_error("void validateSwapchains()" "static bool operator()(Vertex v)"
+    "a call operator cannot be static")
+check_resource_error("void validateSwapchains()" "bool operator()(Vertex v) const; int operator()(uint32_t alias) const"
+    "duplicate method signature operator[(][)]")
 check_resource_error("void validateSwapchains()" "explicit operator Vertex() const; explicit operator uint32_t() const noexcept"
     "duplicate method signature operator uint32_t")
 check_resource_error("void validateSwapchains()" "explicit operator const Vertex&() const; explicit operator const uint32_t&() const"

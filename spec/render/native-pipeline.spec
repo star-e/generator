@@ -22,9 +22,7 @@ import Sets;
 namespace cc::render {
     struct RenderGraphFilter {
         nullable validPasses: const ccstd::pmr::vector<bool>*;
-        cpp {
-            bool operator()(RenderGraph::Vertex pass) const { return (*validPasses)[pass]; }
-        }
+        bool operator()(RenderGraph::Vertex pass) const { return (*validPasses)[pass]; }
     }
 
     class NativeRenderNode implements RenderNode {
