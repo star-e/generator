@@ -371,6 +371,10 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 引擎的 JSB 数组转换用 `vector::resize` 增加元素。`ResolvePair`、`CopyPair`、`UploadPair` 和 `MovePair` 在 `.spec` 中声明 `@cppOnly constructor() defaults;`，无参构造时使用 `boost::container::pmr::get_default_resource()`。带字段的构造声明继续生成分配器前置的 C++ 重载，以及带默认字段参数的 TS 构造。
 
+2026-11-22 在 `cocos4`（`9e96ddbc1e`）的隔离副本中完成了 `RenderCommon` 整模块验证。副本仅替换本模块的 11 个产物，逐文件核对了与生成器（`0b4fe4a`）输出的 SHA-256。Windows Release 从源码构建引擎，归档用例链接原生 `NativeFactory`。数组用例通过引擎生成的 `jsb_render_auto.cpp` 调用四个 pass 入口，由测试用 `Pipeline` 核对实参。此构建沿用已有 SWIG 测试环境，其中跳过了缺少 `RenderSceneInterfaceTypes.h` 的 `render-scene.i`。
+
+引擎的 `tsc --noEmit` 覆盖了 `web-pipeline.ts`、`render-graph.ts`、`layout-graph.ts` 及本模块的两个 TS 文件。Jest 使用引擎的 `RecyclePool` 验证六类记录重用同一对象并恢复默认字段。C++ 用 `BinaryOutputArchive` 写入 `LightInfo`、`ResolvePair`、`CopyPair`、`MovePair` 和 `PipelineStatistics`，TS 核对字段、修改值并回写，C++ 再核对新值和归档末尾。
+
 旧版 52 个文件作为历史基线。按这 11 个模块的新版计划，退役四个图头后生成 **48 个文件**，其中原生 C++ 文件为 37 个。C++ 默认目录是 `native/cocos/renderer/pipeline/custom/`，引擎 TS 默认目录是 `cocos/rendering/custom/`。模块名与文件前缀分别配置，尤其注意 `PrivateInterface → Private` 和 `PrivateTypes → Native`。
 
 | 阶段 | 模块 | 旧文件数 | 目标文件数 | 优先验证的产物或行为 |
