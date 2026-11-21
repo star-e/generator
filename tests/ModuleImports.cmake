@@ -121,8 +121,9 @@ file(WRITE "${workspace}" "${config}")
 run(${generate} --check --diff)
 
 # Imports follow the generated enum provider's output paths.
-string(JSON relocated SET "${config}" modules ${commonModule} header [["moved/Common.h"]])
-string(JSON relocated SET "${relocated}" modules ${commonModule} namesHeader [["moved/CommonLookup.h"]])
+string(JSON relocated SET "${config}" modules ${commonModule} cpp dir [["."]])
+string(JSON relocated SET "${relocated}" modules ${commonModule} cpp header [["moved/Common.h"]])
+string(JSON relocated SET "${relocated}" modules ${commonModule} cpp names [["moved/CommonLookup.h"]])
 string(JSON relocated SET "${relocated}" modules ${commonModule} typescript [["cocos/rendering/moved/common.ts"]])
 file(WRITE "${workspace}" "${relocated}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/moved")

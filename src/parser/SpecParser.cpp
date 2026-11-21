@@ -29,7 +29,7 @@ public:
 
     Module parse() {
         Module module;
-        const bool external = accept("extern");
+        module.external = accept("extern");
         expect("module");
         module.name = identifier();
         expect(";");
@@ -38,7 +38,7 @@ public:
             expect(";");
         }
         if (accept("cpp")) {
-            if (!external) fail("cpp.header requires an extern module");
+            if (!module.external) fail("cpp.header requires an extern module");
             expect("{");
             expect("header");
             module.cppHeader = headerPath(false);
@@ -51,14 +51,14 @@ public:
                 binding(module.bindings);
                 continue;
             }
-            if ((hasNamespace && !external) || !accept("namespace")) fail("expected namespace or binding block");
+            if ((hasNamespace && !module.external) || !accept("namespace")) fail("expected namespace or binding block");
             const auto parts = qualifiedName();
             if (!hasNamespace) module.namespaces = parts;
             else if (module.namespaces != parts) module.namespaces.clear();
             hasNamespace = true;
             expect("{");
             std::set<std::string> names;
-            if (external) {
+            if (module.external) {
                 std::string scope;
                 for (const auto& part : parts) scope += (scope.empty() ? "" : "::") + part;
                 parseExternalDeclarations(module, scope, names);

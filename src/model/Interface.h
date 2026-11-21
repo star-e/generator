@@ -147,6 +147,7 @@ struct Module {
     std::vector<ModuleImport> imports;
     ModuleBindings bindings;
     std::string cppHeader;
+    bool external{};
 };
 
 struct ExternalType {

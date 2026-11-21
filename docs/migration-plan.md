@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 61 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 63 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -37,6 +37,24 @@ ctest --test-dir build/host --output-on-failure
 使用 clangd 时，在 `generator` 根目录运行 `cmake --preset clangd`。CMake 会在同一个 `build/host` 目录导出 `compile_commands.json`，供 clangd 读取项目的 C++20 编译选项和头文件路径。
 
 默认暂存目录为 `build/staging/cocos4/`。可用 `--output DIR` 指定另一处专用目录。`--check` 只读，退出码 0 表示与计划相符，1 表示文件缺失、变化或多出，2 表示输入或执行出错。生成器使用固定版本的 JSON 库，CMake 可使用已安装的包或按 SHA-256 下载源码。[工作区](../config/workspace.json) · [模块声明](../spec/render/archive.spec)
+
+### 按模块选择输出
+
+`modules` 中的每一项引用一个 `.spec`。`extern module` 只需填写 `spec`，它的声明和绑定进入 TypeGraph，供其他模块导入。普通模块可以单独或同时配置 `cpp` 和 `typescript`。例如，`RenderCommon` 的生成配置为
+
+```json
+{
+  "spec": "../spec/render/render-common.spec",
+  "cpp": { "names": true, "serialization": true, "jsb": true },
+  "typescript": "cocos/rendering/custom/types.ts"
+}
+```
+
+`"cpp": {}` 默认生成 `<模块名>Types.h` 和前置声明头 `<模块名>Fwd.h`。`"forward": false` 关闭前置声明头，也可以用字符串指定文件名。`names`、`serialization`、`jsb` 分别启用 `Names.h`、`Serialization.h`、`Jsb.h`，后两项也生成相应的 `.cpp`。每项都可以直接写文件名。`prefix` 覆盖命名前缀，`header` 覆盖主头文件名。文件写到 `<outputRoot>/<root>/<dir>/`，其中 `dir` 是头文件的 include 路径前缀。工作区的 `cppDefaults` 可统一设置 `root` 和 `dir`，单个模块可覆盖它们。`forwardIncludes` 填写要在前置声明头中包含的完整 include 路径。
+
+启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
+
+`typescript` 通常只写文件路径。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。枚举注册、对象池、JSB 导出类型等规则仍写在 `.spec` 的绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。[工作区输出测试](../tests/WorkspaceOutputs.cmake)
 
 独立构建运行 `cocos.typegraph`、`cocos.modules.imports`、`cocos.archive.generate`、`cocos.settings.generate`、`cocos.records.generate` 和 `cocos.selfhost`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线、归档互读、编辑器设置和 RenderCommon 消费测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake) · [编辑器消费测试](../tests/SettingsInterop.cmake)
 
@@ -146,7 +164,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
 
-首个自举类型是 `SourceLocation`。`config/self-host.json` 选择 C++ 头文件输出，三个字段和 `describe() const` 的声明来自 `.spec`，诊断文本的实现仍在 `SpecParser.cpp`。日常构建使用 `src/generated/SourceLocation.h` 快照。运行 `build/host/cocos-codegen generate --workspace config/self-host.json` 会将头文件写入 `build/self-host/generated/`。[模型声明](../spec/codegen/source-location.spec) · [自举配置](../config/self-host.json) · [生成快照](../src/generated/SourceLocation.h)
+首个自举类型是 `SourceLocation`。三个字段和 `describe() const` 的声明来自 `.spec`，诊断文本的实现仍在 `SpecParser.cpp`。日常构建使用 `src/generated/` 中的 `SourceLocation.h` 和 `SourceLocation.cpp` 快照。运行 `build/host/cocos-codegen generate --workspace config/self-host.json` 会将这两个文件写入 `build/self-host/generated/`。[模型声明](../spec/codegen/source-location.spec) · [自举配置](../config/self-host.json) · [生成快照](../src/generated/SourceLocation.h)
 
 1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在独立的空目录生成第一轮，检查产物清单、LF 换行和快照字节。
 2. 测试在新的构建目录编译同一个 `CocosCodegen` 目标，并将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮的输出根目录。解析器和 TypeGraph 通过原有的 `model/SourceLocation.h` 入口包含这份生成声明。
@@ -221,7 +239,7 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `ResolveFlags` 的三个低位在 C++ 和 TS 中均保留 `1 << n`。例如 `DEPTH | STENCIL` 等于 `6`。对于 `uint32_t` 的 `1 << 31`，两端输出求值后的整数 `2147483648`，避免 TS 按有符号 32 位整数移位得到负数。TS 输出仍检查安全整数范围。
 
-`LightInfo` 的模型记录字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，工作区指定原生头文件，外部模块的 TS 绑定指定导入路径。
+`LightInfo` 的模型记录字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，它们的 `.spec` 指定原生头文件和 TS 导入路径。
 
 `ResolvePair` 的两个 PMR 字符串在构造、带分配器的复制和移动时都使用目标内存资源。后端将这些构造函数写入暂存目录的 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp`，并按声明上的 `@comparison("==")`生成五个字段的相等比较。TS 从引擎的 gfx 模块导入 `ResolveMode` 作为运行时值，供构造函数和 `createResolvePair()` 的默认参数使用。消费测试逐段对照引擎实现，验证两个 C++ 内存资源之间的复制与移动，以及 TS 对象池复用后五个字段的默认值。[Gfx 声明](../spec/extern/gfx.spec) · [消费测试](../tests/RecordInterop.cmake)
 
@@ -239,7 +257,7 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `DescriptorBlockIndex` 从 `RenderCommon` 引入 `UpdateFrequency` 和 `ParameterType`，从 `Gfx` 引入 `ShaderStageFlagBit`。生成模块之间的枚举引用使用提供方配置的头文件和 TS 输出路径。声明上的 `@comparison("<")` 让 C++ 后端按字段声明顺序生成 `operator<`。该键依次比较 `updateFrequency`、`parameterType`、`descriptorType`、`visibility`。`DescriptorGroupBlockIndex` 在这四项之后依次比较 `accessType`、`viewDimension`、`sampleType`、`format`。两个索引的 TS 构造函数以相同顺序写入字段，保留引擎用 `JSON.stringify(index)` 查表时的键字符串。[C++ 键测试](../tests/consumer/records/RecordConsumer.cpp) · [TS 键测试](../tests/consumer/records/consumer.cjs)
 
-记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。同一模块的绑定块声明 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。工作区 JSON 指定后端、原生头文件和输出位置。
+记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。同一模块的绑定块声明 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。工作区 JSON 选择 C++ 和 TS 产物及其输出路径。
 
 C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 PMR deque，追加元素时已有对象保留原位。标量、层级索引和载荷索引使用 PMR vector。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。跨资源移动将嵌套数据放入目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。带 allocator 的复制、移动和赋值使用目标资源。插入失败时回滚本次已追加的组件，成功后才更新父子关系。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
@@ -289,11 +307,11 @@ MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中�
 
 `RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 
-记录模块可以用 `namesHeader` 指定 C++ 名称查询头，原生头文件路径相对于 `nativeRoot`。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)
+记录模块可以用 `cpp.names` 为 C++ 名称查询头选择默认名或指定相对于模块输出目录的文件名。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)
 
-`LayoutGraphNames.h` 包含布局类型头，以及直接导入模块所生成的名称查询头。C++17 调用方只需包含它，就能查询布局枚举、`RenderStage_`、`RenderPhase_`、两种布局图以及来自 `RenderCommon` 的 `UpdateFrequency`。导入头的路径随依赖模块的 `namesHeader` 配置变化。[单头消费测试](../tests/consumer/records/LayoutNamesConsumer.cpp) · [导入路径测试](../tests/ModuleImports.cmake)
+`LayoutGraphNames.h` 包含布局类型头，以及直接导入模块所生成的名称查询头。C++17 调用方只需包含它，就能查询布局枚举、`RenderStage_`、`RenderPhase_`、两种布局图以及来自 `RenderCommon` 的 `UpdateFrequency`。导入头的路径随依赖模块的 `cpp.names` 配置变化。[单头消费测试](../tests/consumer/records/LayoutNamesConsumer.cpp) · [导入路径测试](../tests/ModuleImports.cmake)
 
-记录用 `@serialize` 参与归档，用 `@transient` 标记加载时应保留原值的字段。记录模块直接导入 `ArchiveInterface`，用 `serializationHeader` 指定 C++ 头路径。C++ 的 `save/load` 和 TS 的 `save类型名/load类型名` 共用 TypeGraph 中的字段顺序。`RenderCommon` 包含五组归档函数，其中 `LightInfo` 只读写 `level` 和 `culledByLight`。消费测试用引擎的 `BinaryArchive` 在两种语言间双向读写五种记录并逐字节比较。[声明](../spec/render/render-common.spec) · [互读测试](../tests/RecordInterop.cmake)
+记录用 `@serialize` 参与归档，用 `@transient` 标记加载时应保留原值的字段。记录模块直接导入 `ArchiveInterface`，用 `cpp.serialization` 指定 C++ 头路径。C++ 的 `save/load` 和 TS 的 `save类型名/load类型名` 共用 TypeGraph 中的字段顺序。`RenderCommon` 包含五组归档函数，其中 `LightInfo` 只读写 `level` 和 `culledByLight`。消费测试用引擎的 `BinaryArchive` 在两种语言间双向读写五种记录并逐字节比较。[声明](../spec/render/render-common.spec) · [互读测试](../tests/RecordInterop.cmake)
 
 JSB 绑定的 `record` 单独选择 `LightInfo`、`ResolvePair`、`CopyPair`、`UploadPair` 和 `MovePair`。`RenderCommonJsb.h/.cpp` 按声明顺序转换所选记录的所有字段，包括 `LightInfo.light` 和 `probe`。JS 写入 C++ 时，缺失、`null` 或 `undefined` 的属性保留 C++ 原值。独立的引擎消费测试还验证 `UploadPair.source` 从 `Uint8Array` 子视图读入字节并转回 JS。[模块绑定](../spec/render/render-common.spec) · [JSB 消费测试](../tests/consumer/jsb/JsbConsumer.cpp)
 

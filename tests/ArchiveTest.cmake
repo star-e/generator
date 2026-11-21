@@ -34,6 +34,7 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     cocos/rendering/custom/pipeline-capabilities.ts
     cocos/rendering/custom/web-types.ts
     native/cocos/renderer/pipeline/custom/PipelineCapabilities.h
+    native/cocos/renderer/pipeline/custom/PipelineCapabilities.cpp
     native/cocos/renderer/pipeline/custom/Array4.h
     native/cocos/renderer/pipeline/custom/CustomFwd.h
     native/cocos/renderer/pipeline/custom/CustomTypes.h
@@ -50,6 +51,7 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     native/cocos/renderer/pipeline/custom/RenderInterfaceFwd.h
     native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.h
     native/cocos/renderer/pipeline/custom/GraphTags.h
+    native/cocos/renderer/pipeline/custom/GraphTags.cpp
     native/cocos/renderer/pipeline/custom/GraphTagNames.h
     native/cocos/renderer/pipeline/custom/RenderGraphFwd.h
     native/cocos/renderer/pipeline/custom/RenderGraphTypes.h native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp
@@ -119,9 +121,10 @@ string(JSON old SET "${config}" modules 0 projection [["unused.json"]])
 file(WRITE "${workspace}" "${old}")
 expect_failure(2 "move JSON projection rules into .spec binding blocks" ${generate})
 file(WRITE "${workspace}" "${config}")
-string(REPLACE "namespace cc::render {" "binding jsb {};\nnamespace cc::render {" invalid "${original}")
-file(WRITE "${spec}" "${invalid}")
-expect_failure(2 "JSB and poolModule bindings require the records backend" ${generate})
+string(JSON invalid SET "${config}" modules 0 cpp "{}")
+file(WRITE "${workspace}" "${invalid}")
+expect_failure(2 "extern module cannot declare generated outputs" ${generate})
+file(WRITE "${workspace}" "${config}")
 string(REPLACE "method writeBool => b;" "method scratch => s;" conflict "${original}")
 file(WRITE "${spec}" "${conflict}")
 expect_failure(2 "archive[.]spec:[0-9]+:[0-9]+: cannot assign a TS name to @cppOnly method OutputArchive[.]scratch" ${generate})

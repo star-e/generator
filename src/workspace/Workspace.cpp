@@ -68,18 +68,73 @@ TypeTable loadTypes(const Json& json) {
     return types;
 }
 
-struct SettingsOutput {
-    fs::path typescript;
-    SettingsBinding binding;
+struct ModuleOutput {
+    RecordOutput types;
+    std::optional<fs::path> settingsFile;
 };
+
+void checkKeys(const Json& object, std::initializer_list<std::string_view> keys, std::string_view context) {
+    if (!object.is_object()) throw std::runtime_error(std::string(context) + ": expected an object");
+    for (const auto& [key, value] : object.items()) {
+        if (std::ranges::find(keys, key) == keys.end())
+            throw std::runtime_error(std::string(context) + ": unknown option " + key);
+    }
+}
+
+// Translate existing workspaces before resolving file names and registering module imports.
+Json moduleConfig(Json config) {
+    if (config.contains("projection"))
+        throw std::runtime_error("move JSON projection rules into .spec binding blocks");
+    if (config.contains("backend") || config.contains("includeDir") || config.contains("header")) {
+        if (config.contains("cpp")) throw std::runtime_error("cannot mix cpp and legacy output options");
+        const auto backend = config.value("backend", std::string{"interfaces"});
+        config.erase("backend");
+        Json cpp = Json::object();
+        if (backend == "interfaces" || backend == "records") {
+            config.erase("emitEmptySource"); // A C++ output always includes its source file.
+            if (backend == "interfaces") {
+                cpp["prefix"] = config.at("prefix");
+                cpp["dir"] = config.at("includeDir");
+                config.erase("prefix");
+                config.erase("includeDir");
+            } else {
+                cpp["header"] = config.at("header");
+                cpp["forward"] = false; // Legacy records opted in with forwardHeader.
+                config.erase("header");
+            }
+            for (const auto& [oldKey, key] : {std::pair{"nativeRoot", "root"}, {"forwardHeader", "forward"},
+                     {"namesHeader", "names"}, {"serializationHeader", "serialization"}, {"jsbHeader", "jsb"},
+                     {"forwardIncludes", "forwardIncludes"}}) {
+                if (config.contains(oldKey)) {
+                    cpp[key] = config.at(oldKey);
+                    config.erase(oldKey);
+                }
+            }
+            // Legacy paths are relative to the output root, independent of workspace defaults.
+            if (!cpp.contains("root")) cpp["root"] = ".";
+            if (!cpp.contains("dir")) cpp["dir"] = ".";
+            config["cpp"] = std::move(cpp);
+        } else if (backend == "settings") {
+            config["typescript"] = Json{{"file", config.at("typescript")}, {"format", "settings"}};
+        } else if (backend == "model") {
+            if (config.contains("typescript")) throw std::runtime_error("model backend cannot request TypeScript output");
+        } else {
+            throw std::runtime_error("unknown backend " + backend);
+        }
+    } else if (auto cpp = config.find("cpp"); cpp != config.end() && cpp->is_object()) {
+        cpp->erase("emitEmptySource");
+    }
+    checkKeys(config, {"spec", "cpp", "typescript", "types", "runtimeFiles"}, "module");
+    return config;
+}
 
 std::string bindingName(const std::string& qualified) {
     const auto pos = qualified.rfind("::");
     return pos == std::string::npos ? qualified : qualified.substr(pos + 2);
 }
 
-[[noreturn]] void invalidBinding(const TypeScriptBinding& rule, std::string_view backend) {
-    throw std::runtime_error(rule.source.location.describe() + ": unsupported " + std::string(backend) + " binding for " + rule.source.name);
+[[noreturn]] void invalidBinding(const TypeScriptBinding& rule, std::string_view format) {
+    throw std::runtime_error(rule.source.location.describe() + ": unsupported " + std::string(format) + " binding for " + rule.source.name);
 }
 
 SettingsBinding settingsBinding(const Module& module) {
@@ -97,12 +152,6 @@ SettingsBinding settingsBinding(const Module& module) {
     return result;
 }
 
-fs::path typescriptOutput(const Json& config) {
-    auto ts = outputPath(config.at("typescript"));
-    if (ts.extension() != ".ts") throw std::runtime_error("expected .ts output");
-    return ts;
-}
-
 InterfaceBindings interfaceBindings(const Module& module) {
     InterfaceBindings result;
     for (const auto& rule : module.bindings.typescript) {
@@ -112,55 +161,57 @@ InterfaceBindings interfaceBindings(const Module& module) {
     return result;
 }
 
-RecordOutput loadRecordOutput(const Json& config, const Module& module) {
-    RecordOutput output{.header = outputPath(config.at("header")), .emitEmptySource = config.value("emitEmptySource", false)};
-    if (config.contains("nativeRoot")) output.nativeRoot = outputPath(config.at("nativeRoot"));
-    if (output.header.extension() != ".h") throw std::runtime_error("expected .h output");
-    if (config.contains("forwardHeader")) {
-        output.forwardHeader = outputPath(config.at("forwardHeader"));
-        if (output.forwardHeader->extension() != ".h" || *output.forwardHeader == output.header)
-            throw std::runtime_error("expected a distinct .h forwardHeader");
-    }
-    if (config.contains("forwardIncludes")) {
-        if (!output.forwardHeader) throw std::runtime_error("forwardIncludes requires forwardHeader");
-        for (const auto& include : config.at("forwardIncludes")) {
-            const auto path = outputPath(include);
+void loadCppOutput(RecordOutput& output, const Json& cpp, const Json& defaults, const Module& module) {
+    checkKeys(cpp, {"root", "dir", "prefix", "header", "forward", "names", "serialization", "jsb",
+                    "forwardIncludes"}, "cpp");
+    output.nativeRoot = outputPath(cpp.value("root", defaults.value("root", std::string{"."})));
+    const auto dir = outputPath(cpp.value("dir", defaults.value("dir", std::string{"."})));
+    const auto prefix = cpp.value("prefix", module.name);
+    if (!identifier(prefix)) throw std::runtime_error("invalid file prefix " + prefix);
+    std::set<fs::path> paths;
+    const auto header = [&](const Json& filename) {
+        auto path = (dir / outputPath(filename)).lexically_normal();
+        if (path.extension() != ".h" || !paths.insert(path).second)
+            throw std::runtime_error("expected a distinct .h output: " + path.generic_string());
+        return path;
+    };
+    output.header = header(cpp.value("header", prefix + "Types.h"));
+    const auto optionalHeader = [&](const char* key, const char* suffix, bool enabledByDefault = false) -> std::optional<fs::path> {
+        const auto value = cpp.value(key, Json(enabledByDefault));
+        if (!value.is_boolean()) return header(value);
+        if (value.get<bool>()) return header(prefix + suffix);
+        return {};
+    };
+    output.forwardHeader = optionalHeader("forward", "Fwd.h", true);
+    output.namesHeader = optionalHeader("names", "Names.h");
+    output.serializationHeader = optionalHeader("serialization", "Serialization.h");
+    output.jsbHeader = optionalHeader("jsb", "Jsb.h");
+    if (cpp.contains("forwardIncludes")) {
+        if (!output.forwardHeader || !cpp.at("forwardIncludes").is_array())
+            throw std::runtime_error("forwardIncludes requires a forward header and an array of include paths");
+        for (const auto& include : cpp.at("forwardIncludes")) {
+            auto path = outputPath(include);
             if (path.extension() != ".h" || path == output.header || path == output.forwardHeader)
                 throw std::runtime_error("expected a distinct .h forward include");
             output.forwardIncludes.insert(path.generic_string());
         }
     }
-    if (config.contains("namesHeader")) {
-        output.namesHeader = outputPath(config.at("namesHeader"));
-        if (output.namesHeader->extension() != ".h" || *output.namesHeader == output.header || output.namesHeader == output.forwardHeader)
-            throw std::runtime_error("expected a distinct .h namesHeader");
-    }
-    if (config.contains("serializationHeader")) {
-        const auto path = outputPath(config.at("serializationHeader"));
-        if (path.extension() != ".h" || path == output.header || path == output.namesHeader || path == output.forwardHeader)
-            throw std::runtime_error("expected a distinct .h serializationHeader");
-        output.serializationHeader = path;
-    }
-    if (config.contains("jsbHeader")) {
-        const auto path = outputPath(config.at("jsbHeader"));
-        if (path.extension() != ".h" || path == output.header || path == output.namesHeader ||
-            path == output.forwardHeader || path == output.serializationHeader)
-            throw std::runtime_error("expected a distinct .h jsbHeader");
-        output.jsbHeader = path;
-    }
-    if (config.contains("typescript")) output.typescript = typescriptOutput(config);
+}
+
+void bindRecordOutput(RecordOutput& output, const Module& module) {
     const auto& bindings = module.bindings;
-    if (output.jsbHeader.has_value() != bindings.jsb.has_value())
-        throw std::runtime_error(module.name + ": configure jsbHeader and binding jsb together");
+    if (output.jsbHeader && !bindings.jsb)
+        throw std::runtime_error(module.name + ": cpp.jsb requires a .spec binding jsb block");
     output.jsbIncludes = bindings.jsbIncludes;
     for (const auto& [source, location] : bindings.jsbRecords) output.jsbRecords.insert(bindingName(source));
+    if (!output.typescript) return;
     output.poolModule = bindings.poolModule;
     output.interfaceBindings = interfaceBindings(module);
     std::set<std::string> poolMembers;
     for (const auto& rule : bindings.typescript) {
         if (rule.kind == BindingTarget::type) continue;
         const auto name = bindingName(rule.source.name);
-        if (!output.typescript || rule.registerEnum || rule.helpers || !rule.renamedFrom.empty())
+        if (rule.registerEnum || rule.helpers || !rule.renamedFrom.empty())
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
@@ -196,7 +247,6 @@ RecordOutput loadRecordOutput(const Json& config, const Module& module) {
         if (poolMembers.contains(name)) throw std::runtime_error(module.name + ": conflicting pool member " + name);
     for (const auto& [name, pool] : output.pools)
         if (poolMembers.contains("create" + name)) throw std::runtime_error(module.name + ": conflicting pool member create" + name);
-    return output;
 }
 
 std::string normalizeLines(const std::string& input, bool crlf) {
@@ -216,68 +266,58 @@ Files plan(const Json& settings, const fs::path& base) {
     if (eol != "crlf" && eol != "lf") throw std::runtime_error("lineEnding must be lf or crlf");
     const auto& modules = settings.at("modules");
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
+    const auto defaults = settings.value("cppDefaults", Json::object());
+    checkKeys(defaults, {"root", "dir"}, "cppDefaults");
     std::vector<ModuleInput> inputs;
-    std::vector<std::variant<std::monostate, OutputLayout, SettingsOutput, RecordOutput>> layouts;
-    for (const auto& config : modules) {
-        const auto spec = base / config.at("spec").get<std::string>();
+    std::vector<ModuleOutput> outputs;
+    for (const auto& entry : modules) {
+        const auto spec = base / entry.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
-        const auto backend = config.value("backend", std::string{"interfaces"});
-        if (backend != "model" && (!module.cppHeader.empty() ||
-            std::ranges::any_of(module.declarations, [](const Declaration& decl) { return !decl.cppHeader.empty(); })))
-            throw std::runtime_error(spec.string() + ": external C++ headers require the model backend");
-        if (config.contains("projection"))
-            throw std::runtime_error(spec.string() + ": move JSON projection rules into .spec binding blocks");
-        if (backend != "records" && (module.bindings.jsb || !module.bindings.poolModule.empty() || !module.bindings.poolDependencies.empty()))
-            throw std::runtime_error(spec.string() + ": JSB and poolModule bindings require the records backend");
-        if (backend == "model" || backend == "interfaces") {
-            for (const auto& rule : module.bindings.typescript)
-                if (rule.kind != BindingTarget::type && !(backend == "interfaces" && rule.kind == BindingTarget::interfaceType))
-                    invalidBinding(rule, backend);
-        }
-        if (backend == "model") {
-            layouts.emplace_back(std::monostate{});
+        const auto config = moduleConfig(entry);
+        auto& output = outputs.emplace_back();
+        auto& typesOutput = output.types;
+        const bool generateFiles = config.contains("cpp") || config.contains("typescript");
+        if (module.external && generateFiles)
+            throw std::runtime_error(spec.string() + ": extern module cannot declare generated outputs");
+        if (!generateFiles) {
+            if (module.external) {
+                for (const auto& rule : module.bindings.typescript)
+                    if (rule.kind != BindingTarget::type) invalidBinding(rule, "extern module");
+            }
             inputs.push_back({std::move(module), loadTypes(config.value("types", Json::object())), true});
             continue;
         }
-        if (backend == "records") {
-            auto output = loadRecordOutput(config, module);
-            auto tsModule = output.typescript.value_or(fs::path{});
+        if (config.contains("types")) throw std::runtime_error(spec.string() + ": types mappings require a model-only module");
+        if (config.contains("cpp")) loadCppOutput(typesOutput, config.at("cpp"), defaults, module);
+        fs::path tsModule;
+        if (config.contains("typescript")) {
+            const auto& ts = config.at("typescript");
+            if (!ts.is_string()) checkKeys(ts, {"file", "format"}, "typescript");
+            const auto path = outputPath(ts.is_string() ? ts : ts.at("file"));
+            if (path.extension() != ".ts") throw std::runtime_error("expected .ts output");
+            const auto format = ts.is_string() ? "types" : ts.value("format", std::string{"types"});
+            if (format == "settings") output.settingsFile = path;
+            else if (format == "types") typesOutput.typescript = path;
+            else throw std::runtime_error("unknown TypeScript format " + format);
+            tsModule = path;
             tsModule.replace_extension();
-            TypeTable mappings;
-            for (const auto& decl : module.declarations) {
-                if (std::holds_alternative<AliasDeclaration>(decl.data)) {
-                    mappings.emplace(decl.name, ExternalType{.header = output.forwardHeader.value_or(output.header).generic_string()});
-                } else if (std::holds_alternative<TagDeclaration>(decl.data)) {
-                    mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string()});
-                } else if (std::holds_alternative<Enum>(decl.data) || std::holds_alternative<Interface>(decl.data) || std::holds_alternative<Record>(decl.data) ||
-                    std::holds_alternative<GraphDeclaration>(decl.data)) {
-                    mappings.emplace(decl.name, ExternalType{.header = output.header.generic_string(),
-                        .typescript = decl.name, .typescriptModule = tsModule.generic_string()});
-                }
+        }
+        bindRecordOutput(typesOutput, module);
+        TypeTable mappings;
+        for (const auto& decl : module.declarations) {
+            if (std::holds_alternative<AliasDeclaration>(decl.data)) {
+                mappings.emplace(decl.name, ExternalType{.header = typesOutput.forwardHeader.value_or(typesOutput.header).generic_string()});
+            } else if (std::holds_alternative<TagDeclaration>(decl.data)) {
+                mappings.emplace(decl.name, ExternalType{.header = typesOutput.header.generic_string()});
+            } else {
+                // Settings records export interfaces and factories, while ordinary records export constructors.
+                const bool settingsRecord = output.settingsFile && std::holds_alternative<Record>(decl.data);
+                mappings.emplace(decl.name, ExternalType{.header = typesOutput.header.generic_string(),
+                    .typescript = tsModule.empty() ? std::nullopt : std::optional{decl.name},
+                    .typescriptModule = settingsRecord ? std::string{} : tsModule.generic_string()});
             }
-            layouts.emplace_back(std::move(output));
-            inputs.push_back({std::move(module), std::move(mappings)});
-            continue;
         }
-        const auto ts = typescriptOutput(config);
-        if (backend == "settings") {
-            layouts.emplace_back(SettingsOutput{ts, settingsBinding(module)});
-            inputs.push_back({std::move(module), {}});
-        } else if (backend == "interfaces") {
-            OutputLayout layout{outputPath(config.at("nativeRoot")), outputPath(config.at("includeDir")),
-                                config.at("prefix").get<std::string>(), ts, interfaceBindings(module)};
-            if (!identifier(layout.prefix)) throw std::runtime_error("invalid file prefix " + layout.prefix);
-            const auto header = (layout.includeDir / (layout.prefix + "Types.h")).generic_string();
-            auto tsModule = ts;
-            tsModule.replace_extension();
-            TypeTable mappings;
-            for (const auto& decl : module.declarations)
-                mappings.emplace(decl.name, ExternalType{.header = header, .typescript = decl.name, .typescriptModule = tsModule.generic_string()});
-            layouts.emplace_back(std::move(layout));
-            inputs.push_back({std::move(module), std::move(mappings)});
-        } else {
-            throw std::runtime_error("unknown backend " + backend);
-        }
+        inputs.push_back({std::move(module), std::move(mappings)});
     }
     std::vector<ModuleId> dependencyOrder;
     const auto graph = buildTypeGraph(inputs, types, &dependencyOrder);
@@ -293,38 +333,37 @@ Files plan(const Json& settings, const fs::path& base) {
     NestedResets nestedResets;
     for (const auto owner : dependencyOrder) {
         const auto i = owner.value;
-        if (std::holds_alternative<std::monostate>(layouts[i])) continue;
-        Files emitted;
-        if (const auto* settingsOutput = std::get_if<SettingsOutput>(&layouts[i])) {
-            emitted.emplace(settingsOutput->typescript, emitSettings(graph, owner, settingsOutput->binding, settingsOutput->typescript, preamble));
-        } else if (auto* records = std::get_if<RecordOutput>(&layouts[i])) {
-            const auto& module = graph.modules.at(i);
-            for (const auto& [member, name] : inputs[i].syntax.bindings.poolDependencies) {
-                const auto found = std::ranges::find_if(module.imports, [&](ModuleId id) { return graph.modules.at(id.value).name == name; });
-                if (found == module.imports.end()) throw std::runtime_error(module.name + ": poolDependency requires import " + name);
-                const auto* dependency = std::get_if<RecordOutput>(&layouts.at(found->value));
-                if (!dependency || dependency->pools.empty() || !dependency->typescript)
-                    throw std::runtime_error(module.name + ": imported module has no object pool: " + name);
-                auto from = *dependency->typescript;
-                records->poolDependencies.emplace_back(member, TypeScriptImport{name + "ObjectPool", from.replace_extension()});
+        const auto& syntax = inputs[i].syntax;
+        const auto& module = graph.modules.at(i);
+        auto& output = outputs[i];
+        auto& records = output.types;
+        if (output.settingsFile)
+            addFile(*output.settingsFile, emitSettings(graph, owner, settingsBinding(syntax), *output.settingsFile, preamble));
+        if (!records.header.empty() || records.typescript) {
+            if (records.typescript) {
+                for (const auto& [member, name] : syntax.bindings.poolDependencies) {
+                    const auto found = std::ranges::find_if(module.imports, [&](ModuleId id) { return graph.modules.at(id.value).name == name; });
+                    if (found == module.imports.end()) throw std::runtime_error(module.name + ": poolDependency requires import " + name);
+                    const auto& dependency = outputs.at(found->value).types;
+                    if (dependency.pools.empty() || !dependency.typescript)
+                        throw std::runtime_error(module.name + ": imported module has no object pool: " + name);
+                    auto from = *dependency.typescript;
+                    records.poolDependencies.emplace_back(member, TypeScriptImport{name + "ObjectPool", from.replace_extension()});
+                }
             }
             std::optional<ArchiveOutput> archive;
             for (auto imported : module.imports) {
-                const auto& layout = layouts.at(imported.value);
-                if (const auto* dependency = std::get_if<RecordOutput>(&layout); records->namesHeader && dependency && dependency->namesHeader)
-                    records->importedNamesHeaders.push_back(*dependency->namesHeader);
-                if (records->serializationHeader && graph.modules.at(imported.value).name == "ArchiveInterface") {
-                    if (const auto* interfaces = std::get_if<OutputLayout>(&layout))
-                        archive.emplace(*interfaces, graph.modules.at(imported.value));
-                }
+                const auto& dependency = outputs.at(imported.value).types;
+                if (records.namesHeader && dependency.namesHeader)
+                    records.importedNamesHeaders.push_back(*dependency.namesHeader);
+                if (graph.modules.at(imported.value).name == "ArchiveInterface")
+                    archive.emplace(dependency, graph.modules.at(imported.value));
             }
-            if (records->serializationHeader && !archive)
-                throw std::runtime_error(module.name + ": serialization requires import ArchiveInterface with interface output");
-            emitted = emitRecords(graph, owner, *records, archive, preamble, nestedResets);
-        } else {
-            emitted = emitInterfaces(graph, owner, std::get<OutputLayout>(layouts[i]), preamble);
+            if (records.serializationHeader && (!archive || archive->output.header.empty()))
+                throw std::runtime_error(module.name + ": serialization requires import ArchiveInterface with C++ output");
+            const auto emitted = emitRecords(graph, owner, records, archive, preamble, nestedResets);
+            for (const auto& [path, content] : emitted) addFile(path, content);
         }
-        for (const auto& [path, content] : emitted) addFile(path, content);
         if (modules[i].contains("runtimeFiles")) {
             const auto& runtime = modules[i].at("runtimeFiles");
             if (!runtime.is_object()) throw std::runtime_error("expected runtimeFiles output-to-source mapping");

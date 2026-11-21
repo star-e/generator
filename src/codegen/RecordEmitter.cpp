@@ -19,6 +19,7 @@ namespace cc::codegen {
 namespace {
 
 struct Dependencies {
+    bool emitCpp{};
     std::set<std::string> headers;
     std::set<std::string> forwardDeclarations;
     TypeImports typeImports;
@@ -48,7 +49,7 @@ bool numericDefault(const std::string& type, const std::string& literal) {
 
 std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
     return formatTypeName(graph, id, [&](const TypeNode& type) {
-        if (!type.cppHeader.empty()) deps.headers.insert(type.cppHeader);
+        if (deps.emitCpp) collectCppHeader(graph, module, type, deps.headers);
         return cppName(graph, type, module);
     });
 }
@@ -115,7 +116,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
                (std::holds_alternative<ExternalTypeNode>(node.data) && (scalar == "uint64_t" || archivePrimitive(graph, field.type.type) == "Number"));
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {
         if (field.isNullable || !field.initializer.empty()) invalid(field, "expected a default-constructed owning string");
-        if (node.cppHeader.empty()) invalid(field, "missing native header for " + node.qualifiedName);
+        if (deps.emitCpp && node.cppHeader.empty()) invalid(field, "missing native header for " + node.qualifiedName);
         m.cpp = nativeType(graph, module, field.type.type, deps);
         if (emitTs) {
             m.ts = node.typescriptName.value();
@@ -219,7 +220,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
             const auto& wrapper = graph.node(instance->declaration);
             if (wrapper.qualifiedName != "cc::IntrusivePtr" || instance->arguments.size() != 1 ||
                 !std::holds_alternative<TypeId>(instance->arguments[0])) invalid(field, "unsupported resource type");
-            if (wrapper.cppHeader.empty()) invalid(field, "missing native header for " + wrapper.qualifiedName);
+            if (deps.emitCpp && wrapper.cppHeader.empty()) invalid(field, "missing native header for " + wrapper.qualifiedName);
             deps.headers.insert(wrapper.cppHeader);
             deps.headers.insert("utility");
             target = std::get<TypeId>(instance->arguments[0]);
@@ -240,7 +241,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
             m.cppDefault = "nullptr";
             m.comment = "/*pointer*/ ";
         } else {
-            if (resource.cppHeader.empty()) invalid(field, "missing native header for " + resource.qualifiedName);
+            if (deps.emitCpp && resource.cppHeader.empty()) invalid(field, "missing native header for " + resource.qualifiedName);
             deps.headers.insert(resource.cppHeader);
             m.cpp = cppName(graph, graph.node(instance->declaration), module) + "<" + name + ">";
             m.cppDefault.clear();
@@ -261,7 +262,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         m.cppDefault = m.cpp + "::" + member;
         m.tsDefault = m.ts + "." + member;
         if (node.module != owner) {
-            if (node.cppHeader.empty() || node.typescriptModule.empty()) invalid(field, "missing external enum mapping");
+            if ((deps.emitCpp && node.cppHeader.empty()) || node.typescriptModule.empty()) invalid(field, "missing external enum mapping");
             deps.valueImports[node.typescriptModule].insert(m.ts);
         }
         return m;
@@ -313,10 +314,10 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner
                 member.tsReset = "this." + member.name + ".reset(" + args + ")";
             }
         }
-        if (field.typescriptInitializer == "null") {
+        if (emitTs && field.typescriptInitializer == "null") {
             if (field.cppOnly || member.tsDefault != "null" || field.isNullable || field.isReadonly)
                 invalid(field, "TypeScript default null requires a writable value object field");
-        } else if (!field.typescriptInitializer.empty()) {
+        } else if (emitTs && !field.typescriptInitializer.empty()) {
             auto id = field.type.type;
             if (graph.node(id).typescriptNumber) id = std::get<RecordType>(graph.node(id).data).fields.front().type.type;
             if (const auto* alias = std::get_if<AliasType>(&graph.node(id).data)) id = alias->target;
@@ -565,7 +566,7 @@ void writeScalarAliases(std::ostream& out, const TypeGraph& graph, const TypeMod
         const auto* alias = std::get_if<AliasType>(&node.data);
         if (!alias) continue;
         const auto& target = graph.node(alias->target);
-        if (!target.cppHeader.empty()) includes.insert(target.cppHeader);
+        collectCppHeader(graph, module, target, includes);
         out << "\nusing " << node.name << " = " << cppName(graph, target, module) << ";\n";
     }
 }
@@ -585,7 +586,7 @@ std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, cons
         body << (isEnum ? "enum class " : std::holds_alternative<InterfaceType>(node.data) ? "class " : "struct ") << node.name;
         if (enumeration && enumeration->underlying != TypeId{}) {
             const auto& base = graph.node(enumeration->underlying);
-            if (!base.cppHeader.empty()) includes.insert(base.cppHeader);
+            collectCppHeader(graph, module, base, includes);
             body << " : " << cppName(graph, base, module);
         }
         body << ";\n";
@@ -881,14 +882,14 @@ struct RecordArchives {
     void emitNative(Files& files, const TypeModule& module, const RecordOutput& output,
                     const ArchiveOutput& archive, const std::string& preamble) const {
         const auto& path = *output.serializationHeader;
-        const auto archiveHeader = (archive.layout.includeDir / (archive.layout.prefix + "Types.h")).generic_string();
+        const auto archiveHeader = archive.output.header.generic_string();
         std::ostringstream header, source;
         header << preamble << "#pragma once\n#include \"" << archiveHeader << "\"\n#include \""
                << output.forwardHeader.value_or(output.header).generic_string() << "\"\n";
         writeNamespace(header, module, declarations);
         source << preamble << "// NOLINTBEGIN(misc-include-cleaner)\n// clang-format off\n";
         cppIncludes(source, {archiveHeader, path.generic_string(), output.header.generic_string(),
-                             (archive.layout.includeDir / "details/SerializationUtils.h").generic_string()});
+                             (archive.output.header.parent_path() / "details/SerializationUtils.h").generic_string()});
         source << "// clang-format on\n";
         // The engine's generic vector loader needs a T&. Packed bools expose a proxy.
         if (requirements.needsBoolVectorLoad) {
@@ -946,7 +947,11 @@ struct Pool {
 Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, std::optional<ArchiveOutput> archive,
                   const std::string& preamble, NestedResets& nestedResets) {
     const auto& module = graph.modules.at(owner.value);
-    Dependencies deps;
+    const bool standaloneInterfaces = !module.declarations.empty() && std::ranges::all_of(module.declarations, [&](TypeId id) {
+        const auto* interfaceType = std::get_if<InterfaceType>(&graph.node(id).data);
+        return interfaceType && interfaceType->bases.empty();
+    });
+    Dependencies deps{.emitCpp = !output.header.empty()};
     Pool pool;
     RecordArchives archives;
     std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, nameFunctions;
@@ -958,7 +963,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     bool usesGraphRuntime = false;
     bool usesUint64Field = false;
     const std::set<std::string> keepNone;
-    if (!output.forwardHeader) writeScalarAliases(cpp, graph, module, deps.headers);
+    if (deps.emitCpp && !output.forwardHeader) writeScalarAliases(cpp, graph, module, deps.headers);
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
         if (std::holds_alternative<AliasType>(node.data)) continue;
@@ -971,28 +976,31 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         previousTag = false;
         const auto entry = output.pools.find(node.name);
         if (std::holds_alternative<InterfaceType>(node.data)) {
-            emitInterface(graph, node, cpp, deps.headers, output.typescript ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
+            if (standaloneInterfaces && id != module.declarations.front()) ts << '\n';
+            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, output.typescript ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
             continue;
         }
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
             const auto fields = bindFields(graph, node, model->fields, deps, output.typescript.has_value(), nestedResets);
-            std::string inputArchive;
-            if (model->serializable && (!fields.empty() || model->nameIndex || model->keyComponentIndex) && archive) {
-                deps.headers.insert((archive->layout.includeDir / (archive->layout.prefix + "Fwd.h")).generic_string());
-                inputArchive = "::" + archiveInterface(graph, archive->module, "InputArchive").qualifiedName;
-            }
-            const auto methods = cppMemberFunctions(graph, module, model->methods, deps);
-            emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, methods, inputArchive);
-            if (model->compareEqual || model->compareLess || model->hashable) {
-                std::vector<std::string_view> elements;
-                for (const auto& component : model->components) elements.push_back(component.name);
-                for (const auto& field : model->fields) {
-                    if (!field.notElement) elements.push_back(field.name);
+            if (deps.emitCpp) {
+                std::string inputArchive;
+                if (output.serializationHeader && model->serializable && (!fields.empty() || model->nameIndex || model->keyComponentIndex) && archive) {
+                    deps.headers.insert(archive->output.forwardHeader.value_or(archive->output.header).generic_string());
+                    inputArchive = "::" + archiveInterface(graph, archive->module, "InputArchive").qualifiedName;
                 }
-                if (model->hashable) cppHash(hashDeclarations, hashDefinitions, node, elements);
-                if (model->compareEqual || model->compareLess) {
-                    deps.headers.insert("tuple");
-                    cppComparisons(cpp, node.name, elements, *model);
+                const auto methods = cppMemberFunctions(graph, module, model->methods, deps);
+                emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, methods, inputArchive);
+                if (model->compareEqual || model->compareLess || model->hashable) {
+                    std::vector<std::string_view> elements;
+                    for (const auto& component : model->components) elements.push_back(component.name);
+                    for (const auto& field : model->fields) {
+                        if (!field.notElement) elements.push_back(field.name);
+                    }
+                    if (model->hashable) cppHash(hashDeclarations, hashDefinitions, node, elements);
+                    if (model->compareEqual || model->compareLess) {
+                        deps.headers.insert("tuple");
+                        cppComparisons(cpp, node.name, elements, *model);
+                    }
                 }
             }
             if (output.typescript) {
@@ -1004,8 +1012,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 }
                 if (model->hierarchy || model->incidence) usesGraphRuntime = true;
             }
-            if (model->serializable) {
-                if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
+            if (model->serializable && (output.serializationHeader || output.typescript)) {
+                if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
                 emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
                                  output.typescript ? &archives.script : nullptr, deps.valueImports, archives.requirements);
             }
@@ -1018,7 +1026,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             std::string baseName = "int";
             if (enumeration->underlying != TypeId{}) {
                 const auto& base = graph.node(enumeration->underlying);
-                if (!base.cppHeader.empty()) deps.headers.insert(base.cppHeader);
+                if (deps.emitCpp) collectCppHeader(graph, module, base, deps.headers);
                 baseName = cppName(graph, base, module);
                 cpp << " : " << baseName;
             }
@@ -1046,13 +1054,13 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto& requiredFields = requiredConstructor && !output.pools.contains(node.name) && !output.resets.contains(node.name)
             ? output.constructors.at(node.name) : noFields;
         auto members = bindFields(graph, node, record->fields, deps, output.typescript.has_value(), nestedResets, requiredFields);
-        cppRecord(cpp, definitions, graph, module, node, members, deps);
-        if (record->serializable) {
-            if (!archive) throw std::runtime_error(node.qualifiedName + ": @serialize requires serializationHeader");
+        if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, deps);
+        if (record->serializable && (output.serializationHeader || output.typescript)) {
+            if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements);
             archives.add(graph, archive->module, node, fields, output.typescript.has_value() && !node.typescriptNumber, deps.valueImports);
         }
-        if (record->hashable || record->compareEqual || record->compareLess) {
+        if (deps.emitCpp && (record->hashable || record->compareEqual || record->compareLess)) {
             std::vector<std::string_view> elements;
             for (const auto& field : record->fields) {
                 if (!field.notElement) elements.push_back(field.name);
@@ -1125,42 +1133,48 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
     if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
 
-    std::ostringstream header, script;
-    header << preamble << "#pragma once\n";
-    if (!output.forwardHeader && !hashDefinitions.view().empty()) deps.headers.insert("cocos/base/std/hash/hash.h");
-    deps.headers.erase(output.header.generic_string());
-    if (output.forwardHeader) deps.headers.erase(output.forwardHeader->generic_string());
-    cppIncludes(header, deps.headers);
-    if (output.forwardHeader) {
-        const auto include = output.forwardHeader->lexically_relative(output.header.parent_path());
-        header << "#include \"" << include.generic_string() << "\"\n";
+    Files files;
+    if (deps.emitCpp) {
+        deps.headers.erase(output.header.generic_string());
+        if (output.forwardHeader) deps.headers.erase(output.forwardHeader->generic_string());
+        if (standaloneInterfaces && output.forwardHeader && output.forwardIncludes.empty()) {
+            emitInterfaceHeaders(files, graph, module, output, cpp.view(), deps.headers, preamble);
+        } else {
+            std::ostringstream header;
+            header << preamble << "#pragma once\n";
+            if (!output.forwardHeader && !hashDefinitions.view().empty()) deps.headers.insert("cocos/base/std/hash/hash.h");
+            cppIncludes(header, deps.headers);
+            if (output.forwardHeader) {
+                const auto include = output.forwardHeader->lexically_relative(output.header.parent_path());
+                header << "#include \"" << include.generic_string() << "\"\n";
+            }
+            for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
+            writeNamespace(header, module, cpp);
+            if (!hashDefinitions.view().empty()) {
+                header << "\nnamespace ccstd {\n";
+                if (!output.forwardHeader) header << hashDeclarations.str();
+                header << hashDefinitions.str() << "\n} // namespace ccstd\n";
+            }
+            files.emplace(output.nativeRoot / output.header, header.str());
+            if (output.forwardHeader)
+                files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble, output.forwardIncludes));
+        }
+        auto path = output.header;
+        path.replace_extension(".cpp");
+        if (definitions.view().empty()) {
+            files.emplace(output.nativeRoot / path, emitHeaderSource(module, output.header, preamble));
+        } else {
+            std::ostringstream source;
+            source << preamble << "#include \"" << output.header.filename().generic_string() << "\"\n#include <utility>\n";
+            writeNamespace(source, module, definitions);
+            files.emplace(output.nativeRoot / path, source.str());
+        }
     }
-    for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
-    writeNamespace(header, module, cpp);
-    if (!hashDefinitions.view().empty()) {
-        header << "\nnamespace ccstd {\n";
-        if (!output.forwardHeader) header << hashDeclarations.str();
-        header << hashDefinitions.str() << "\n} // namespace ccstd\n";
-    }
-
-    Files files{{output.nativeRoot / output.header, header.str()}};
     if (output.jsbHeader) emitRecordJsb(files, graph, module, output, preamble);
-    if (archive) archives.emitNative(files, module, output, *archive, preamble);
-    if (output.forwardHeader) files.emplace(output.nativeRoot / *output.forwardHeader, forwardHeader(graph, module, hashDeclarations, preamble, output.forwardIncludes));
+    if (output.serializationHeader) archives.emitNative(files, module, output, *archive, preamble);
     if (output.namesHeader) files.emplace(output.nativeRoot / *output.namesHeader, namesHeader(graph, module, output, preamble));
-    if (!definitions.view().empty()) {
-        auto path = output.header;
-        path.replace_extension(".cpp");
-        std::ostringstream source;
-        source << preamble << "#include \"" << output.header.filename().generic_string() << "\"\n#include <utility>\n";
-        writeNamespace(source, module, definitions);
-        files.emplace(output.nativeRoot / path, source.str());
-    } else if (output.emitEmptySource) {
-        auto path = output.header;
-        path.replace_extension(".cpp");
-        files.emplace(output.nativeRoot / path, emitHeaderSource(module, output.header, preamble));
-    }
     if (!output.typescript) return files;
+    std::ostringstream script;
     script << preamble << "/* eslint-disable max-len */\n";
     // '$' cannot occur in a spec identifier, including declarations named ED, OutE or OutEI.
     if (usesGraphRuntime) script << "import * as cc$graph from '" << modulePath("cocos/rendering/custom/graph", *output.typescript) << "';\n";
@@ -1174,6 +1188,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (it->second.empty()) deps.typeImports.erase(it);
     }
     writeImports(script, deps.typeImports, *output.typescript, true);
+    if (standaloneInterfaces && !deps.typeImports.empty()) script << '\n';
     if (pool.count) {
         script << "import { RecyclePool } from '" << modulePath(output.poolModule, *output.typescript) << "';\n";
         ts << "\nfunction createPool<T> (Constructor: new() => T): RecyclePool<T> {\n"
@@ -1191,7 +1206,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         ts << pool.fields.str() << "}\n";
     }
     if (!archives.script.view().empty()) {
-        auto path = archive->layout.typescript;
+        if (!archive->output.typescript) throw std::runtime_error(module.name + ": serialization requires ArchiveInterface TypeScript output");
+        auto path = *archive->output.typescript;
         script << "import type { OutputArchive, InputArchive } from '" << modulePath(path.replace_extension(), *output.typescript) << "';\n";
     }
     script << ts.str();

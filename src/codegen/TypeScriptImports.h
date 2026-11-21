@@ -32,7 +32,7 @@ inline const std::string& boundTypeScriptName(const TypeGraph& graph, TypeId id,
     visitTypeScriptImportSources(graph, node, [&](const TypeNode& source) {
         if (source.module == owner) return;
         if (!source.typescriptModule.empty()) imports[source.typescriptModule].insert(*source.typescriptName);
-        else if (node.typescriptContainer != ContainerKind::None && source.module != ModuleId{} &&
+        else if (source.module != ModuleId{} &&
                  (std::holds_alternative<RecordType>(source.data) || std::holds_alternative<EnumType>(source.data) ||
                   std::holds_alternative<InterfaceType>(source.data) || std::holds_alternative<GraphType>(source.data))) {
             throw std::runtime_error(context + ": missing TypeScript import mapping for " + source.qualifiedName);

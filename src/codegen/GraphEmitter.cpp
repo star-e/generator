@@ -721,7 +721,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             forwards.insert(ns == std::string::npos ? declaration : "namespace " + tag.qualifiedName.substr(0, ns) + " { " + declaration + " }");
         }
         return formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
-            if (!type.cppHeader.empty()) headers.insert(type.cppHeader);
+            collectCppHeader(graph, graph.modules.at(node.module.value), type, headers);
             return type.qualifiedName;
         });
     };

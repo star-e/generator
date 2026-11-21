@@ -6,24 +6,21 @@
 
 #include <filesystem>
 #include <map>
+#include <ostream>
+#include <set>
 #include <string>
+#include <string_view>
 
 namespace cc::codegen {
 
 using Files = std::map<std::filesystem::path, std::string>;
 
-struct OutputLayout {
-    std::filesystem::path nativeRoot;
-    std::filesystem::path includeDir;
-    std::string prefix;
-    std::filesystem::path typescript;
-    InterfaceBindings interfaceBindings;
-};
+struct RecordOutput;
 
 std::string emitHeaderSource(const TypeModule& module, const std::filesystem::path& header, const std::string& preamble);
-Files emitInterfaces(const TypeGraph& graph, ModuleId module, const OutputLayout& layout,
-                     const std::string& preamble);
-void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream& cpp, std::set<std::string>& headers,
+void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
+                          std::string_view body, const std::set<std::string>& headers, const std::string& preamble);
+void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream* cpp, std::set<std::string>& headers,
                    std::ostream* script, TypeImports& imports, const InterfaceBindings& bindings);
 
 } // namespace cc::codegen

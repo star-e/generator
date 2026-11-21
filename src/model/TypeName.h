@@ -1,8 +1,22 @@
 #pragma once
 
 #include "generated/TypeGraphTypes.h"
+#include <set>
+#include <stdexcept>
 
 namespace cc::codegen {
+
+inline void collectCppHeader(const TypeGraph& graph, const TypeModule& consumer, const TypeNode& type,
+                             std::set<std::string>& headers) {
+    if (!type.cppHeader.empty()) {
+        headers.insert(type.cppHeader);
+    } else if (type.module != ModuleId{} && &graph.modules.at(type.module.value) != &consumer &&
+               (std::holds_alternative<RecordType>(type.data) || std::holds_alternative<InterfaceType>(type.data) ||
+                std::holds_alternative<GraphType>(type.data) || std::holds_alternative<AliasType>(type.data) ||
+                std::holds_alternative<EnumType>(type.data))) {
+        throw std::runtime_error(consumer.name + ": missing C++ header for imported type " + type.qualifiedName);
+    }
+}
 
 inline bool isAssociativeContainer(ContainerKind kind) {
     return kind == ContainerKind::Map || kind == ContainerKind::Set;

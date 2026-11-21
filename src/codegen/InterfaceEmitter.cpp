@@ -1,4 +1,5 @@
 #include "codegen/InterfaceEmitter.h"
+#include "codegen/RecordEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
 #include "model/TypeName.h"
@@ -59,7 +60,7 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
     for (auto base : bases) {
         const auto& type = graph.node(base);
-        if (!type.cppHeader.empty()) headers.insert(type.cppHeader);
+        collectCppHeader(graph, graph.modules.at(decl.module.value), type, headers);
         out << (base == bases.front() ? " : public " : ", public ") << qualifyIfShadowed(graph, type, graph.modules.at(decl.module.value), type.qualifiedName);
     }
     out << " {\npublic:\n"
@@ -128,9 +129,9 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
 
 } // namespace
 
-void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream& cpp, std::set<std::string>& headers,
+void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream* cpp, std::set<std::string>& headers,
                    std::ostream* script, TypeImports& imports, const InterfaceBindings& bindings) {
-    cppInterface(cpp, graph, node, headers);
+    if (cpp) cppInterface(*cpp, graph, node, headers);
     if (script) tsInterface(*script, graph, node, imports, bindings);
 }
 
@@ -144,37 +145,19 @@ std::string emitHeaderSource(const TypeModule& module, const std::filesystem::pa
     return out.str();
 }
 
-Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout& layout,
-                     const std::string& preamble) {
-    const auto& module = graph.modules.at(owner.value);
-    std::set<std::string> headers;
-    TypeImports typeImports;
-    std::ostringstream cppBody, tsBody;
-    for (auto id : module.declarations) {
-        const auto& decl = graph.node(id);
-        if (!std::holds_alternative<InterfaceType>(decl.data)) throw std::runtime_error("expected an interface declaration for " + decl.qualifiedName);
-        if (id != module.declarations.front()) tsBody << '\n';
-        emitInterface(graph, decl, cppBody, headers, &tsBody, typeImports, layout.interfaceBindings);
-    }
-
-    std::ostringstream fwd, header, ts;
-    const auto fwdName = layout.prefix + "Fwd.h";
-    const auto typeName = layout.prefix + "Types.h";
+void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
+                          std::string_view body, const std::set<std::string>& headers, const std::string& preamble) {
+    std::ostringstream fwd, header;
     fwd << preamble << "#pragma once\n// clang-format off\n";
     header << preamble << "// clang-format off\n" << lintBegin << "#pragma once\n";
-    headers.erase((layout.includeDir / typeName).generic_string());
     for (const auto& include : headers) header << "#include <" << include << ">\n";
-    header << "#include \"" << (layout.includeDir / fwdName).generic_string() << "\"\n";
-    ts << preamble << "/* eslint-disable max-len */\n";
-    writeImports(ts, typeImports, layout.typescript, true);
-    if (!typeImports.empty()) ts << '\n';
+    header << "#include \"" << output.forwardHeader->generic_string() << "\"\n";
     for (auto* out : {&fwd, &header}) {
         for (const auto& name : module.namespaces) *out << "\nnamespace " << name << " {\n";
         *out << '\n';
     }
     for (auto id : module.declarations) fwd << "class " << graph.node(id).name << ";\n";
-    header << cppBody.view();
-    ts << tsBody.view();
+    header << body;
     fwd << '\n';
     for (auto* out : {&fwd, &header}) {
         for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) {
@@ -183,9 +166,8 @@ Files emitInterfaces(const TypeGraph& graph, ModuleId owner, const OutputLayout&
         if (out != &fwd) *out << lintEnd;
         *out << "// clang-format on\n";
     }
-    const auto dir = layout.nativeRoot / layout.includeDir;
-    return {{dir / fwdName, fwd.str()}, {dir / typeName, header.str()},
-            {dir / (layout.prefix + "Types.cpp"), emitHeaderSource(module, typeName, preamble)}, {layout.typescript, ts.str()}};
+    files.emplace(output.nativeRoot / *output.forwardHeader, fwd.str());
+    files.emplace(output.nativeRoot / output.header, header.str());
 }
 
 } // namespace cc::codegen

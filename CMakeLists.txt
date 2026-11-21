@@ -12,9 +12,10 @@ if(NOT nlohmann_json_FOUND)
 endif()
 
 set(COCOS_CODEGEN_SELF_HOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/src" CACHE PATH
-    "Include root containing the generated self-hosted model headers")
+    "Root containing the generated self-hosted model files")
 
 add_library(CocosCodegenModel STATIC
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.cpp"
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.h"
     src/generated/TypeGraphTypes.cpp
     src/model/TypeGraph.cpp

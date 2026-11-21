@@ -5,9 +5,8 @@
   "types": "../spec/codegen/host-types.json",
   "modules": [
     {
-      "backend": "records",
       "spec": "../spec/codegen/source-location.spec",
-      "header": "generated/SourceLocation.h"
+      "cpp": { "header": "generated/SourceLocation.h", "forward": false }
     }
   ]
 }

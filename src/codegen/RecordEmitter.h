@@ -13,7 +13,6 @@ namespace cc::codegen {
 struct RecordOutput {
     std::filesystem::path nativeRoot;
     std::filesystem::path header;
-    bool emitEmptySource{};
     std::optional<std::filesystem::path> forwardHeader;
     std::set<std::string> forwardIncludes;
     std::optional<std::filesystem::path> namesHeader;
@@ -38,7 +37,7 @@ struct RecordOutput {
 };
 
 struct ArchiveOutput {
-    const OutputLayout& layout;
+    const RecordOutput& output;
     const TypeModule& module;
 };
 
