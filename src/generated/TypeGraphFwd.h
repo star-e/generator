@@ -6,9 +6,6 @@ namespace cc {
 
 namespace codegen {
 
-struct TypeId;
-struct ModuleId;
-struct TypeUse;
 struct ParameterInfo;
 enum class AccessorKind : uint32_t;
 enum class ResultPresence : uint32_t;

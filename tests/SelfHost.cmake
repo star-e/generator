@@ -6,7 +6,9 @@ set(second "${work}/second")
 set(build "${work}/build")
 
 run("${TOOL}" generate --workspace "${workspace}" --output "${first}")
-set(expectedFiles generated/SourceLocation.cpp generated/SourceLocation.h generated/SourceLocationFwd.h)
+set(expectedFiles
+    generated/SourceLocation.cpp generated/SourceLocation.h generated/SourceLocationFwd.h
+    generated/TypeGraphCore.cpp generated/TypeGraphCore.h generated/TypeGraphCoreFwd.h)
 file(GLOB_RECURSE firstFiles RELATIVE "${first}" "${first}/*")
 if(NOT firstFiles STREQUAL expectedFiles)
     message(FATAL_ERROR "Unexpected self-host outputs: ${firstFiles}")

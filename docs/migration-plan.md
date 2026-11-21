@@ -212,14 +212,14 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `CocosCodegenModel` 编译 `src/generated/` 中的类型图种子。解析器保留语法和源位置，建图器先登记作用域与声明，再绑定字段和方法签名中的类型。Archive 的 C++、TS 后端和 RenderSettings 的 TS 后端消费同一张只读图。作用域边从父指向子，字段和签名通过 `TypeId` 引用其类型，模块按声明顺序保存输出列表。[类型图声明](../spec/codegen/typegraph.spec) · [生成源码](../src/generated/TypeGraphTypes.h) · [建图器](../src/model/TypeGraphBuilder.cpp)
 
-`config/seed-project.json` 引用的 `typegraph.spec` 和 `model-support.spec` 采用一次性种子工具的语法，其中图的方法仍使用 `fn`。日常自举使用的 `source-location.spec` 由当前解析器读取。
+`config/seed-project.json` 引用的 `typegraph.spec` 和 `model-support.spec` 采用一次性种子工具的语法，其中图的方法仍使用 `fn`。种子将 `TypeId`、`ModuleId`、`TypeUse` 作为外部类型引用，三者的字段定义由当前生成器读取。
 
 首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
 
-首个自举类型是 `SourceLocation`。三个字段和 `describe() const` 的声明来自 `.spec`，诊断文本的实现仍在 `SpecParser.cpp`。日常构建使用 `src/generated/` 中的 `SourceLocationFwd.h`、`SourceLocation.h` 和 `SourceLocation.cpp` 快照。运行 `build/host/cocos-codegen generate --workspace config/self-host.json` 会将这三个文件写入 `build/self-host/generated/`。[模型声明](../spec/codegen/source-location.spec) · [自举配置](../config/self-host.json) · [生成快照](../src/generated/SourceLocation.h)
+当前自举生成四个类型。`SourceLocation` 描述源文件和行列，诊断文本的实现位于 `SpecParser.cpp`。`TypeId` 和 `ModuleId` 使用 32 位无符号值，默认值 `0xFFFFFFFF` 表示无效编号。`TypeUse` 将类型编号和使用位置保存在一起。运行 `cocos-codegen generate --workspace config/self-host.json` 会为两个模块分别生成前置头、主头和源文件，写入 `build/self-host/generated/`。日常构建使用 `src/generated/` 中对应的快照。[源位置声明](../spec/codegen/source-location.spec) · [类型图基础声明](../spec/codegen/typegraph-core.spec) · [自举配置](../config/self-host.json)
 
 1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在独立的空目录生成第一轮，检查产物清单、LF 换行和快照字节。
-2. 测试在新的构建目录编译同一个 `CocosCodegen` 目标，并将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮的输出根目录。解析器和 TypeGraph 通过原有的 `model/SourceLocation.h` 入口包含这份生成声明。
+2. 测试在新的构建目录编译同一个 `CocosCodegen` 目标，并将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮的输出根目录。解析器和 TypeGraph 使用这一轮生成的两个模块。
 3. 候选工具在第二个空目录生成同一份声明。测试逐文件比较两轮结果，再用候选构建运行当前配置的所有非自举回归，包含源位置的聚合初始化、缺失导入的文件名和行列，以及已启用的引擎消费者。完整 TypeGraph 的接管仍按相同流程扩展。[自举测试](../tests/SelfHost.cmake)
 
 自身声明或生成规则变更时，重新生成受影响的快照，将输入改动和源码差异一并审查。如果新声明依赖新增语法，先让可构建的工具支持该语法，再用它刷新种子。
@@ -287,7 +287,7 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `RenderCommon` 的全部十三个枚举和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。`.spec` 支持十进制、十六进制整数初值、两个非负整数字面量的左移，以及对同一枚举中先前成员的引用。TypeGraph 保存初值表达式和求值结果，检查移位量与底层类型的取值范围。`ResourceFlags`、`SceneFlags` 和 `ResolveFlags` 共用 C++ 位运算符和 `any()` 的生成逻辑。`ResolveFlags` 按默认规则生成 TS 常量枚举。`ResourceFlags` 和 `SceneFlags` 显式绑定为 `enum`，供 JavaScript 在运行时访问。`names;` 单独控制名称查询。[模块声明](../spec/render/render-common.spec) · [模块绑定](../spec/render/render-common.spec)
 
-`SceneFlags` 的成员可以用 `@deprecated("Please use OPAQUE.")` 声明弃用原因。TypeGraph 将说明绑定到该成员，C++ 和 TS 后端生成相同的文档注释。TS 运行时保留旧别名的反向映射，例如 `SceneFlags[1]` 返回 `"OPAQUE_OBJECT"`。
+`SceneFlags` 用 `/** @deprecated Please use OPAQUE. */` 在枚举项上说明弃用原因，和方法使用相同的文档语法。C++ 和 TS 都保留这条说明。TS 运行时保留旧别名的反向映射，例如 `SceneFlags[1]` 返回 `"OPAQUE_OBJECT"`。
 
 `ResolveFlags` 的三个低位在 C++ 和 TS 中均保留 `1 << n`。例如 `DEPTH | STENCIL` 等于 `6`。对于 `uint32_t` 的 `1 << 31`，两端输出求值后的整数 `2147483648`，避免 TS 按有符号 32 位整数移位得到负数。TS 输出仍检查安全整数范围。
 

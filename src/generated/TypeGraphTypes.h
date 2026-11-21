@@ -9,27 +9,6 @@ namespace cc {
 
 namespace codegen {
 
-struct TypeId {
-    bool operator==(const TypeId& rhs) const noexcept {
-        return std::tie(value) == std::tie(rhs.value);
-    }
-
-    uint32_t value = ~0U;
-};
-
-struct ModuleId {
-    bool operator==(const ModuleId& rhs) const noexcept {
-        return std::tie(value) == std::tie(rhs.value);
-    }
-
-    uint32_t value = ~0U;
-};
-
-struct TypeUse {
-    TypeId type;
-    SourceLocation location;
-};
-
 struct ParameterInfo {
     TypeUse type;
     std::string name;
@@ -89,7 +68,6 @@ struct Enumerator {
     std::string name;
     std::string initializer;
     std::variant<int64_t, uint64_t> value;
-    std::optional<std::string> deprecationMessage;
     std::string documentation;
 };
 

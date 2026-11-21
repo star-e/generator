@@ -100,7 +100,6 @@ struct EnumMember {
     std::string initializer;
     SourceLocation initializerLocation;
     std::optional<LeftShift> leftShift;
-    std::optional<std::string> deprecationMessage;
     std::string documentation;
 };
 

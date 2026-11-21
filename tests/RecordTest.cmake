@@ -472,7 +472,7 @@ file(WRITE "${archiveSpec}" "${archiveRules}")
 
 # Change the schema to distinguish generated values, overloads and enum members from a template snapshot.
 string(REPLACE "uint8_t {" "uint32_t {" changed "${original}")
-string(REPLACE "READ_WRITE," [=[@deprecated("Use \"READ\" for */.") MODIFY = 0x10, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE,]=] changed "${changed}")
+string(REPLACE "READ_WRITE," [=[/** @deprecated Use "READ" for *&#47;. */ MODIFY = 0x10, CHANGE = MODIFY, LEGACY_CHANGE = CHANGE,]=] changed "${changed}")
 string(REPLACE "level: uint32_t = 0" "level: uint32_t = 11" changed "${changed}")
 string(REPLACE "sourceFirstSlice: uint32_t = 0" "sourceFirstSlice: uint8_t = 0XfF" changed "${changed}")
 string(REPLACE "gfx::ResolveMode::SAMPLE_ZERO" "gfx::ResolveMode::AVERAGE" changed "${changed}")
@@ -591,9 +591,9 @@ string(REPLACE "gfx::ResolveMode::SAMPLE_ZERO" "gfx::ResolveMode::MISSING" broke
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "invalid enum default gfx::ResolveMode::MISSING" ${generate})
 
-string(REPLACE [=["Please use OPAQUE."]=] [=["Please use OPAQUE.]=] broken "${original}")
+string(REPLACE "/** @deprecated Please use OPAQUE. */" [=[@deprecated("Please use OPAQUE.")]=] broken "${original}")
 file(WRITE "${spec}" "${broken}")
-expect_failure(2 "render-common[.]spec:[0-9]+:[0-9]+: unterminated deprecation message" ${generate})
+expect_failure(2 "render-common[.]spec:[0-9]+:[0-9]+: expected identifier" ${generate})
 
 foreach(target IN ITEMS MISSING ALIAS LATER FOREIGN)
     file(WRITE "${spec}" "module RenderCommon;

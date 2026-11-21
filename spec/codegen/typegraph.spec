@@ -3,13 +3,6 @@ import CocosModelSupport;
 
 namespace cc {
 namespace codegen {
-    @comparison("==") struct TypeId { value: uint32_t = ~0U; }
-    @comparison("==") struct ModuleId { value: uint32_t = ~0U; }
-
-    struct TypeUse {
-        type: TypeId;
-        location: SourceLocation;
-    }
     struct ParameterInfo {
         type: TypeUse;
         name: std::string;
@@ -56,7 +49,6 @@ namespace codegen {
         name: std::string;
         initializer: std::string;
         value: std::variant<int64_t, uint64_t>;
-        deprecationMessage: std::optional<std::string>;
         documentation: std::string;
     }
 

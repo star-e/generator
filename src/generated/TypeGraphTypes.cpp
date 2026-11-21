@@ -30,29 +30,6 @@ auto TypeGraph::edge(Vertex u, Vertex v) const noexcept -> std::pair<Edge, bool>
 namespace {
 constexpr bool validateFixedLayout_CocosTypeGraph() {
     {
-        using CheckedType = ::cc::codegen::TypeId;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::TypeId");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::TypeId");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::TypeId");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::TypeId");
-        static_assert(offsetof(CheckedType, value) == 0ULL, "fixed layout offset value: ::cc::codegen::TypeId");
-    }
-    {
-        using CheckedType = ::uint32_t;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::uint32_t");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::uint32_t");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::uint32_t");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::uint32_t");
-    }
-    {
-        using CheckedType = ::cc::codegen::ModuleId;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::ModuleId");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::ModuleId");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::ModuleId");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::ModuleId");
-        static_assert(offsetof(CheckedType, value) == 0ULL, "fixed layout offset value: ::cc::codegen::ModuleId");
-    }
-    {
         using CheckedType = bool;
         static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: bool");
         static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: bool");
@@ -65,6 +42,13 @@ constexpr bool validateFixedLayout_CocosTypeGraph() {
         static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::AccessorKind");
         static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::AccessorKind");
         static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::AccessorKind");
+    }
+    {
+        using CheckedType = ::uint32_t;
+        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::uint32_t");
+        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::uint32_t");
+        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::uint32_t");
+        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::uint32_t");
     }
     {
         using CheckedType = ::cc::codegen::ResultPresence;
@@ -121,6 +105,13 @@ constexpr bool validateFixedLayout_CocosTypeGraph() {
         static_assert(offsetof(CheckedType, container) == 4ULL, "fixed layout offset container: ::cc::codegen::ExternalTypeNode");
     }
     {
+        using CheckedType = ::cc::codegen::TypeId;
+        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::TypeId");
+        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::TypeId");
+        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::TypeId");
+        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::TypeId");
+    }
+    {
         using CheckedType = ::cc::codegen::AliasType;
         static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::AliasType");
         static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::AliasType");
@@ -163,6 +154,13 @@ constexpr bool validateFixedLayout_CocosTypeGraph() {
         static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::TemplateParameterType");
         static_assert(offsetof(CheckedType, owner) == 0ULL, "fixed layout offset owner: ::cc::codegen::TemplateParameterType");
         static_assert(offsetof(CheckedType, index) == 4ULL, "fixed layout offset index: ::cc::codegen::TemplateParameterType");
+    }
+    {
+        using CheckedType = ::cc::codegen::ModuleId;
+        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::ModuleId");
+        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::ModuleId");
+        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::ModuleId");
+        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::ModuleId");
     }
     return true;
 }

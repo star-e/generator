@@ -2,6 +2,8 @@
 #include "parser/SpecParser.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -24,6 +26,16 @@ void checkSourceLocation() {
     require(empty.file.empty() && empty.line == 0 && empty.column == 0, "source location defaults changed");
     const SourceLocation loc{"input.spec", 12, 7};
     require(loc.describe() == "input.spec:12:7", "source location format changed");
+}
+
+void checkTypeGraphCore() {
+    static_assert(std::is_aggregate_v<TypeId> && std::is_aggregate_v<ModuleId> && std::is_aggregate_v<TypeUse>);
+    static_assert(offsetof(TypeId, value) == 0 && offsetof(ModuleId, value) == 0);
+    static_assert(TypeId{}.value == UINT32_MAX && ModuleId{}.value == UINT32_MAX);
+    require(TypeId{1} == TypeId{1} && TypeId{1} != TypeId{}, "type ID comparison changed");
+    require(ModuleId{1} == ModuleId{1} && ModuleId{1} != ModuleId{}, "module ID comparison changed");
+    const TypeUse use{TypeId{7}, {"example.spec", 2, 3}};
+    require(use.type.value == 7 && use.location.describe() == "example.spec:2:3", "type use lost its location");
 }
 
 const MethodInfo& scratch(const TypeGraph& graph, TypeId owner) {
@@ -393,6 +405,7 @@ int main(int argc, char** argv) {
         if (argc != 2) throw std::runtime_error("expected spec directory");
         const std::filesystem::path specs = argv[1];
         checkSourceLocation();
+        checkTypeGraphCore();
         checkScalarBindings();
         checkTemplateBindings();
         checkContainerBindings();

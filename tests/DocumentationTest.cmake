@@ -12,7 +12,11 @@ namespace cc {
        @en also a private-note */
     /** A setting. */
     enum class Mode {
-        /** First value. */ @deprecated("Use B.") A, B
+        /**
+         * First value.
+         * @deprecated Use B.
+         */
+        A, B
     }
     /** Storage. */
     struct Data {

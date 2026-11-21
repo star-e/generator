@@ -18,6 +18,9 @@ add_library(CocosCodegenModel STATIC
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.cpp"
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.h"
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocationFwd.h"
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphCore.cpp"
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphCore.h"
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphCoreFwd.h"
     src/generated/TypeGraphTypes.cpp
     src/model/TypeGraph.cpp
     src/model/TypeGraphBuilder.cpp

@@ -11,6 +11,8 @@ namespace std {
 }
 namespace cc {
     namespace codegen {
-        struct SourceLocation;
+        @comparison("==") @fixed_layout(size=4, alignment=4) struct TypeId;
+        @comparison("==") @fixed_layout(size=4, alignment=4) struct ModuleId;
+        struct TypeUse;
     }
 }

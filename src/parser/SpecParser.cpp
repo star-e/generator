@@ -947,20 +947,10 @@ private:
         fail("unterminated " + description);
     }
 
-    std::optional<std::string> deprecationMessage() {
-        if (!accept("@")) return std::nullopt;
-        expect("deprecated");
-        expect("(");
-        auto message = quotedString("deprecation message");
-        expect(")");
-        return message;
-    }
-
     EnumMember enumMember(std::set<std::string>& members) {
         auto doc = documentation();
-        auto message = deprecationMessage();
         const auto start = location;
-        EnumMember member{.name = uniqueName(members), .initializerLocation = start, .deprecationMessage = std::move(message), .documentation = std::move(doc)};
+        EnumMember member{.name = uniqueName(members), .initializerLocation = start, .documentation = std::move(doc)};
         if (!accept("=")) return member;
         member.initializerLocation = location;
         const bool negative = accept("-");

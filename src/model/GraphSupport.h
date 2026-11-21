@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model/SourceLocation.h"
+#include <generated/TypeGraphCore.h>
 
 #include <cstdint>
 #include <iterator>
