@@ -138,11 +138,20 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
 
 std::vector<MethodInfo> resolveMemberFunctions(TypeGraph& graph, const std::vector<Method>& methods, const std::string& scope, ModuleId owner) {
     std::vector<MethodInfo> result;
+    const auto generatesOverloads = [](const MethodInfo& method) {
+        return method.isPureVirtual && !method.parameters.empty() && !method.parameters.back().defaultValue.empty();
+    };
     for (const auto& method : methods) {
         auto resolved = resolveMethod(graph, method, scope, owner);
         for (const auto& other : result) {
             if (other.name != resolved.name || (!other.isStatic && !resolved.isStatic && other.isConst != resolved.isConst)) continue;
-            if (std::ranges::equal(other.parameters, resolved.parameters, [&](const auto& a, const auto& b) {
+            size_t count = resolved.parameters.size();
+            if (generatesOverloads(other) || generatesOverloads(resolved)) {
+                // Each defaulted suffix creates a callable prefix, including the zero-argument overload.
+                count = std::max(requiredParameterCount(other), requiredParameterCount(resolved));
+                if (count > std::min(other.parameters.size(), resolved.parameters.size())) continue;
+            } else if (count != other.parameters.size()) continue;
+            if (std::equal(other.parameters.begin(), other.parameters.begin() + count, resolved.parameters.begin(), [&](const auto& a, const auto& b) {
                     return a.byConstReference == b.byConstReference && canonicalType(graph, a.type) == canonicalType(graph, b.type);
                 })) throw std::runtime_error(method.result.location.describe() + ": duplicate method signature " + resolved.name);
         }
@@ -309,9 +318,27 @@ std::string parameterDefault(const TypeGraph& graph, const Parameter& parameter,
     if (value.empty()) return {};
     const auto& type = graph.node(canonicalType(graph, use));
     const auto& name = type.qualifiedName;
-    if (const auto pos = value.rfind("::"); pos != std::string::npos && std::holds_alternative<EnumType>(type.data)) {
-        const auto enumeration = enumDefaultType(graph, use, value, scope, owner);
-        return "::" + graph.node(enumeration).qualifiedName + value.substr(pos);
+    if (value == "{}" && name != "void" && !std::holds_alternative<ReferenceType>(type.data) &&
+        !std::holds_alternative<InterfaceType>(type.data)) return value;
+    if (value.front() == '"') {
+        const auto* external = std::get_if<ExternalTypeNode>(&type.data);
+        if ((external && external->isString) || name == "std::string" || name == "std::string_view" ||
+            qualifiedTypeName(graph, use.type) == "const char*") return value;
+    }
+    if (const auto* enumeration = std::get_if<EnumType>(&type.data); enumeration && value.find("::") != value.npos) {
+        std::string expression;
+        size_t start = 0;
+        for (;;) {
+            const auto end = value.find(" | ", start);
+            const auto literal = value.substr(start, end - start);
+            if (literal.rfind("::") == literal.npos || (end != value.npos && !enumeration->isFlags))
+                throw std::runtime_error(use.location.describe() + ": invalid enum default " + value);
+            const auto id = enumDefaultType(graph, use, literal, scope, owner);
+            expression += "::" + graph.node(id).qualifiedName + literal.substr(literal.rfind("::"));
+            if (end == value.npos) return expression;
+            expression += " | ";
+            start = end + 3;
+        }
     }
     if (name == "bool" && (value == "true" || value == "false")) return value;
     if (std::holds_alternative<PointerType>(type.data) && value == "nullptr") return value;
@@ -587,7 +614,7 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
             const auto id = graph.modules[i].declarations[j];
             const auto targetId = canonicalType(graph, {id, alias->target.location});
             const auto& target = graph.node(targetId);
-            if (!integerRanges().contains(target.qualifiedName) && target.qualifiedName != "float" && target.qualifiedName != "double")
+            if (!isArithmeticType(target.qualifiedName))
                 throw std::runtime_error(alias->target.location.describe() + ": expected a numeric or boolean alias target");
             auto& node = graph.getNode(id.value);
             node.data = AliasType{targetId};
@@ -718,6 +745,10 @@ void checkRecordCycles(const TypeGraph& graph) {
 }
 
 } // namespace
+
+bool isArithmeticType(const std::string& type) {
+    return type == "float" || type == "double" || integerRanges().contains(type);
+}
 
 std::optional<uint64_t> indexedVertexLimit(const std::string& type) {
     const auto& ranges = integerRanges();
@@ -857,8 +888,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                     fields.front().transient || fields.front().isNullable || fields.front().cppOnly)
                     throw std::runtime_error(at.describe() + ": number(field) requires a single non-transient numeric field named " + rule.numberField);
                 const auto& target = graph.node(canonicalType(graph, fields.front().type));
-                if (target.typescriptName != "number" || (!integerRanges().contains(target.qualifiedName) &&
-                    target.qualifiedName != "float" && target.qualifiedName != "double"))
+                if (target.typescriptName != "number" || !isArithmeticType(target.qualifiedName))
                     throw std::runtime_error(at.describe() + ": expected a numeric field for " + rule.source.name + "." + rule.numberField);
             }
             for (const auto& [name, initial] : rule.fieldDefaults) {

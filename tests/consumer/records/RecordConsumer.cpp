@@ -104,6 +104,26 @@ constexpr auto depthStencil = ResolveFlags::DEPTH | ResolveFlags::STENCIL;
 static_assert(static_cast<uint32_t>(depthStencil) == 6 && !any(depthStencil & ResolveFlags::COLOR));
 static_assert(noexcept(static_cast<uint32_t>(std::declval<const cc::ConversionProbe&>())));
 static_assert(std::is_abstract_v<cc::ConversionProbe> && !std::is_convertible_v<const cc::ConversionProbe&, bool>);
+struct Dispatch final : cc::DispatchProbe {
+    uint32_t apply(cc::MoveProbe packet, const int* marker, uint32_t scale) const override {
+        return packet.value * scale + (marker ? *marker : 0);
+    }
+    uint32_t apply(cc::MoveProbe, const bool*, uint32_t) const override { return 0; }
+    bool matches(const ccstd::string& name, const ccstd::string& label, cc::gfx::ShaderStageFlagBit stages) const override {
+        using Stage = cc::gfx::ShaderStageFlagBit;
+        return name == "default" && label.empty() && stages == (Stage::VERTEX | Stage::FRAGMENT);
+    }
+};
+
+bool checkDefaultDispatch() {
+    const Dispatch impl;
+    const cc::DispatchProbe& api = impl;
+    cc::MoveProbe first, second, third;
+    first.value = second.value = third.value = 7;
+    const int extra = 4;
+    return api.apply(std::move(first)) == 21 && api.apply(std::move(second), &extra) == 25 &&
+           api.apply(std::move(third), &extra, 2) == 18 && api.matches() && !api.matches("explicit");
+}
 static_assert(static_cast<uint32_t>(cc::ShiftProbe::HIGH) == 0x80000000U);
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
@@ -423,7 +443,7 @@ int main(int argc, char** argv) {
     if (argc == 3 && !writePathCases) return exchangeRecords(argv[1], argv[2]);
     if (argc != 1 && !writePathCases) return 2;
     if (!checkLayoutGraph(writePathCases ? argv[2] : nullptr)) return 9;
-    if (!cc::ConversionProbe::defaultsMatch() || !checkMigratedModules()) return 48;
+    if (!cc::ConversionProbe::defaultsMatch() || !checkDefaultDispatch() || !checkMigratedModules()) return 48;
     if (!checkLayoutNames()) return 17;
     if (!checkResourceGraph()) return 18;
     if (!checkSubpassGraph()) return 19;

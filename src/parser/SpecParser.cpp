@@ -779,6 +779,23 @@ private:
         return qualifiedTypeName();
     }
 
+    std::string parameterDefault() {
+        if (accept("{")) {
+            expect("}");
+            return "{}";
+        }
+        if (token == "\"") {
+            const char* begin = token.data();
+            finishCppLiteral('"');
+            std::string literal(begin, remaining.data());
+            advance();
+            return literal;
+        }
+        auto value = defaultValue();
+        while (accept("|")) value += " | " + qualifiedTypeName();
+        return value;
+    }
+
     TypeRef type(bool* byConstReference = nullptr, bool allowReference = false) {
         const auto at = location;
         const bool isConst = accept("const");
@@ -826,8 +843,7 @@ private:
         consume(end + delimiter.size() + 2);
     }
 
-    void skipCppLiteral(char quote) {
-        consume(1);
+    void finishCppLiteral(char quote) {
         while (!remaining.empty() && remaining.front() != quote) {
             if (remaining.front() == '\n' || remaining.front() == '\r') fail("unterminated C++ literal");
             if (remaining.front() == '\\') {
@@ -863,7 +879,8 @@ private:
             } else if (identifierStart(ch) || std::isdigit(static_cast<unsigned char>(ch))) {
                 skipCppWord();
             } else if (ch == '"' || ch == '\'') {
-                skipCppLiteral(ch);
+                consume(1);
+                finishCppLiteral(ch);
             } else {
                 consume(1);
                 if (ch == '{') ++depth;
@@ -903,7 +920,7 @@ private:
             do {
                 bool byConstReference = false;
                 Parameter parameter{type(&byConstReference, true), uniqueName(parameters), byConstReference};
-                if (accept("=")) parameter.defaultValue = defaultValue();
+                if (accept("=")) parameter.defaultValue = parameterDefault();
                 else if (!result.parameters.empty() && !result.parameters.back().defaultValue.empty())
                     fail("parameters after a default argument must also have defaults");
                 result.parameters.push_back(std::move(parameter));

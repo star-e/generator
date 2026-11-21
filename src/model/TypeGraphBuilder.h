@@ -16,6 +16,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                          std::vector<ModuleId>* dependencyOrder = nullptr);
 
 std::string componentAccessorSuffix(std::string tagName);
+bool isArithmeticType(const std::string& type);
 std::optional<uint64_t> indexedVertexLimit(const std::string& type);
 
 } // namespace cc::codegen

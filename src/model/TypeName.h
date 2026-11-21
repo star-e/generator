@@ -6,6 +6,12 @@
 
 namespace cc::codegen {
 
+inline size_t requiredParameterCount(const MethodInfo& method) {
+    auto count = method.parameters.size();
+    while (count && !method.parameters[count - 1].defaultValue.empty()) --count;
+    return count;
+}
+
 inline void collectCppHeader(const TypeGraph& graph, const TypeModule& consumer, const TypeNode& type,
                              std::set<std::string>& headers) {
     if (!type.cppHeader.empty()) {

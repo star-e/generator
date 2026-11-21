@@ -2,6 +2,7 @@
 #include "codegen/RecordEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
+#include "model/TypeGraphBuilder.h"
 #include "model/TypeName.h"
 
 #include <algorithm>
@@ -35,24 +36,66 @@ void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use
     if (pointers || !name.empty()) out << ' ' << std::string(pointers, '*') << name;
 }
 
+void cppParameters(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, size_t count, bool named,
+                   ModuleId owner, std::set<std::string>& headers) {
+    out << '(';
+    for (size_t i = 0; i < count; ++i) {
+        const auto& param = method.parameters[i];
+        if (i) out << ", ";
+        if (param.byConstReference) out << "const ";
+        cppDeclarator(out, graph, param.type, (param.byConstReference ? "&" : "") + (named ? param.name : ""), owner, headers);
+        if (!method.isPureVirtual && !param.defaultValue.empty()) out << " = " << param.defaultValue;
+    }
+    out << ')';
+    if (method.isConst) out << " const";
+}
+
 void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers) {
     out << "    " << (method.isPureVirtual ? "virtual " : method.isStatic ? "static " : "");
     if (method.isExplicitConversion) out << "explicit operator ";
     cppDeclarator(out, graph, method.result, method.isExplicitConversion ? "" : method.name, owner, headers);
-    out << '(';
-    for (size_t i = 0; i < method.parameters.size(); ++i) {
-        const auto& param = method.parameters[i];
-        if (i) out << ", ";
-        if (param.byConstReference) out << "const ";
-        cppDeclarator(out, graph, param.type, (param.byConstReference ? "&" : "") + param.name, owner, headers);
-        if (!param.defaultValue.empty()) out << " = " << param.defaultValue;
-    }
-    out << ')';
-    if (method.isConst) out << " const";
+    cppParameters(out, graph, method, method.parameters.size(), true, owner, headers);
     if (method.isNoexcept) out << " noexcept";
     if (method.isPureVirtual) out << " = 0";
     if (method.cppBody.empty()) out << ";\n";
     else out << ' ' << method.cppBody << '\n';
+}
+
+void cppForwardingOverloads(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, const MethodInfo& method,
+                           std::set<std::string>& headers) {
+    const auto& params = method.parameters;
+    const auto& methods = std::get<InterfaceType>(decl.data).methods;
+    for (size_t count = requiredParameterCount(method); count < params.size(); ++count) {
+        out << "    ";
+        cppDeclarator(out, graph, method.result, method.name, decl.module, headers);
+        cppParameters(out, graph, method, count, true, decl.module, headers);
+        out << " { ";
+        if (graph.node(method.result.type).qualifiedName != "void") out << "return ";
+        if (std::ranges::count(methods, method.name, &MethodInfo::name) > 1) {
+            // A literal such as nullptr or {} need not select this overload on its own.
+            out << "(this->*static_cast<";
+            cppDeclarator(out, graph, method.result, "(" + decl.name + "::*)", decl.module, headers);
+            cppParameters(out, graph, method, params.size(), false, decl.module, headers);
+            out << ">(&" << decl.name << "::" << method.name << "))";
+        } else {
+            out << "this->" << method.name;
+        }
+        out << '(';
+        for (size_t i = 0; i < params.size(); ++i) {
+            if (i) out << ", ";
+            const auto& p = params[i];
+            const auto& type = graph.node(p.type.type);
+            if (i >= count) out << p.defaultValue;
+            else if (p.byConstReference || std::holds_alternative<ReferenceType>(type.data) || std::holds_alternative<PointerType>(type.data) ||
+                     std::holds_alternative<EnumType>(type.data) || std::holds_alternative<AliasType>(type.data) || isArithmeticType(type.qualifiedName))
+                out << p.name;
+            else {
+                headers.insert("utility");
+                out << "std::move(" << p.name << ')';
+            }
+        }
+        out << "); }\n";
+    }
 }
 
 void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, std::set<std::string>& headers) {
@@ -71,7 +114,11 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
         << "    " << name << "& operator=(" << name << "&& rhs) = delete;\n"
         << "    " << name << "& operator=(" << name << " const& rhs) = delete;\n"
         << "    virtual ~" << name << "() noexcept = default;\n\n";
-    for (const auto& method : std::get<InterfaceType>(decl.data).methods) cppMethod(out, graph, method, decl.module, headers);
+    const auto& methods = std::get<InterfaceType>(decl.data).methods;
+    for (const auto& method : methods) cppMethod(out, graph, method, decl.module, headers);
+    for (const auto& method : methods) {
+        if (method.isPureVirtual) cppForwardingOverloads(out, graph, decl, method, headers);
+    }
     out << "};\n\n";
 }
 
@@ -122,12 +169,13 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
             continue;
         }
         if (binding.optional.size() > method.parameters.size()) throw std::runtime_error(context + ": unknown optional parameter");
-        const size_t firstOptional = method.parameters.size() - binding.optional.size();
+        const size_t firstExplicit = method.parameters.size() - binding.optional.size();
+        const size_t firstOptional = std::min(firstExplicit, requiredParameterCount(method));
         out << "    " << *method.typescriptName << " (";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
             if (i) out << ", ";
-            if (i >= firstOptional && binding.optional[i - firstOptional] != param.name)
+            if (i >= firstExplicit && binding.optional[i - firstExplicit] != param.name)
                 throw std::runtime_error(context + ": optional parameters must match the trailing parameters in order");
             out << param.name << (i >= firstOptional ? "?: " : ": ") << tsSignatureType(graph, param.type, decl.module, imports);
         }

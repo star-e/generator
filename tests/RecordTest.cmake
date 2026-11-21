@@ -7,13 +7,24 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 
 set(privateSpec "${work}/spec/render/private-interface.spec")
 file(READ "${privateSpec}" privateApi)
-string(REPLACE "optional(key)" "optional(name)" invalid "${privateApi}")
+string(REPLACE "getProgramVariant nullable" "getProgramVariant optional(name) nullable" invalid "${privateApi}")
 file(WRITE "${privateSpec}" "${invalid}")
 expect_failure(2 "optional parameters must match the trailing parameters" ${generate})
-string(REPLACE "method getProgramVariant optional(key) nullable;" "getter getKey => key;" invalid "${privateApi}")
+string(REPLACE "method getProgramVariant nullable;" "getter getKey => key;" invalid "${privateApi}")
 file(WRITE "${privateSpec}" "${invalid}")
 expect_failure(2 "getter requires a const nullary value method" ${generate})
 file(WRITE "${privateSpec}" "${privateApi}")
+
+set(renderSpec "${work}/spec/render/render-interface.spec")
+file(READ "${renderSpec}" renderApi)
+# Declare the short overload in the same interface as its defaulted signature.
+string(REPLACE "virtual void clearRenderTarget" "void clearRenderTarget(const ccstd::string& target); virtual void clearRenderTarget" invalid "${renderApi}")
+file(WRITE "${renderSpec}" "${invalid}")
+expect_failure(2 "duplicate method signature clearRenderTarget" ${generate})
+string(REPLACE "gfx::ShaderStageFlagBit::FRAGMENT)" "gfx::ShaderStageFlagBit::MISSING)" invalid "${renderApi}")
+file(WRITE "${renderSpec}" "${invalid}")
+expect_failure(2 "invalid enum default gfx::ShaderStageFlagBit::MISSING" ${generate})
+file(WRITE "${renderSpec}" "${renderApi}")
 
 set(dispatcherSpec "${work}/spec/render/fg-dispatcher.spec")
 file(READ "${dispatcherSpec}" dispatcher)

@@ -46,6 +46,12 @@ namespace cc {
     using LocalUniformID = UniformWord;
     using UniformWord = render::UniformID;
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
+    interface DispatchProbe {
+        @cppOnly virtual uint32_t apply(MoveProbe packet, const int* marker = nullptr, uint32_t scale = 3) const = 0;
+        @cppOnly virtual uint32_t apply(MoveProbe packet, const bool* marker, uint32_t scale) const = 0;
+        @cppOnly virtual bool matches(const ccstd::string& name = \"default\", const ccstd::string& label = {},
+            gfx::ShaderStageFlagBit stages = gfx::ShaderStageFlagBit::VERTEX | gfx::ShaderStageFlagBit::FRAGMENT) const = 0;
+    }
     @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; @notElement scratch: uint32_t = 0; minor: uint32_t = 0; }
     graph TinyNames {
         vertex_descriptor Index = uint8_t;
@@ -151,7 +157,7 @@ string(FIND "${script}" [[import type { Caption } from './caption';]] captionImp
 if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
     message(FATAL_ERROR "Explicit TS binding on an owning string was lost")
 endif()
-foreach(expected IN ITEMS "enabled (value: boolean): boolean;" "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []"
+foreach(expected IN ITEMS "enabled (value?: boolean): boolean;" "rows: Descriptor[][] = []" "byteArrays: Uint8Array[] = []"
                           "values: Map<number, number>"
                           "tables: Map<LayoutType, UniformBlock[]>[] = []"
                           "passes: Set<RenderPassType>[] = []"

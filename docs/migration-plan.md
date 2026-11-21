@@ -83,7 +83,9 @@ C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一
 
 ### 在模块中声明方法
 
-在 `binding typescript` 的接口规则中，`getter getName => name;` 生成只读属性。`getter getName => name setter setName;` 将一对原生方法绑定成同一个可写属性 `name: string`。读取方法须为无参数的 `const` 方法，写入方法须返回 `void`，唯一参数与属性的 TS 类型一致。普通方法的尾部可选参数使用 `method useLightFrustum optional(csmLevel, optCamera);`。[管线接口绑定](../spec/render/render-interface.spec)
+在 `binding typescript` 的接口规则中，`getter getName => name;` 生成只读属性。`getter getName => name setter setName;` 将一对原生方法绑定成同一个可写属性 `name: string`。读取方法须为无参数的 `const` 方法，写入方法须返回 `void`，唯一参数与属性的 TS 类型一致。[管线接口绑定](../spec/render/render-interface.spec)
+
+接口的纯虚方法在参数声明中写默认值。例如 `useLightFrustum` 的末尾两个参数写作 `uint32_t csmLevel = 0, const scene::Camera* optCamera = nullptr`。C++ 生成完整的纯虚签名，以及接收一个或两个参数的非虚转发重载。TS 生成 `useLightFrustum(light: Light, csmLevel?: number, optCamera?: Camera)`，运行时的默认值由 Web 实现提供。仅在 Web 侧可省略的参数仍可使用 `optional(...)`。普通 C++ 成员保留声明上的默认实参。支持数值、布尔值、空指针、字符串字面量、`{}`、枚举成员和同一 flags 类型的按位或组合。[公开接口](../spec/render/render-interface.spec) · [私有接口](../spec/render/private-interface.spec)
 
 `interface` 中的 `virtual void writeBool(bool value) = 0;` 由 C++ 派生类实现，默认也生成 TS 接口方法。需要只在原生侧公开时写 `@cppOnly virtual ... = 0;`。普通成员采用 `ReturnType name(Type arg)`，支持 `static`、`const`、`noexcept`。以分号结尾会生成 C++ 声明，以花括号提供的 C++ 函数体会随头文件输出。普通成员在 `interface`、`struct`、`graph` 中均只生成 C++；字段和构造器继续使用各自的声明语法。[归档接口](../spec/render/archive.spec) · [原生转发重载](../spec/render/private-interface.spec)
 
