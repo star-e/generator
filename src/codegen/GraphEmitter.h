@@ -14,7 +14,7 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id);
 void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& header, std::ostream& source,
                   std::set<std::string>& headers, std::set<std::string>& forwardDeclarations,
                   const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive);
-void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports,
+void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& valueImports, TypeImports& typeImports,
                          const std::vector<BoundField>& fields, std::string_view classMethods);
 
 } // namespace cc::codegen

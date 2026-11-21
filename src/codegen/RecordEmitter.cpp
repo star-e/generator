@@ -1103,7 +1103,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     auto pendingConstEnums = output.constEnums;
     std::string enumImports;
     bool previousTag = false;
-    bool usesGraphRuntime = false;
     bool usesUint64Field = false;
     const std::set<std::string> keepNone;
     for (auto id : module.declarations) {
@@ -1151,13 +1150,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             if (emitTs) {
                 if (model->mutableGraph) validateObjectResets(node, model->fields, fields, keepNone);
-                emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields, classMethods);
+                emitTypeScriptGraph(graph, id, ts, deps.valueImports, deps.typeImports, fields, classMethods);
                 usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
                     if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");
                     pool.add(node.name, entry->second.member, Pool::Reuse::clear);
                 }
-                if (model->hierarchy || model->incidence) usesGraphRuntime = true;
             }
             if (model->serializable && (output.serializationHeader || emitTs)) {
                 emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
@@ -1315,8 +1313,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (!output.typescript) return files;
     std::ostringstream script;
     script << preamble << "/* eslint-disable max-len */\n";
-    // '$' cannot occur in a spec identifier, including declarations named ED, OutE or OutEI.
-    if (usesGraphRuntime) script << "import * as cc$graph from '" << modulePath("cocos/rendering/custom/graph", *output.typescript) << "';\n";
     for (const auto& [member, dependency] : output.poolDependencies)
         deps.typeImports[dependency.from.generic_string()].insert(dependency.name);
     TypeImports packageValues, packageTypes;

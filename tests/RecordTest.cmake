@@ -358,10 +358,14 @@ foreach(capability IN ITEMS mutable_graph vertex_list_graph)
     file(READ "${work}/stage/cocos/rendering/custom/layout-graph.ts" script)
     if(script MATCHES "caption_|Descriptors_|Render(Stage|Phase)_" OR NOT script MATCHES "export class LayoutGraph " OR
        NOT script MATCHES "vertexName [(]v: number[)]: string [{] return this.getCaption[(]v[)]" OR
-       NOT script MATCHES "this.vertexName[(]v[)] === name" OR NOT script MATCHES "return cc[$]graph.getPath[(]this, v[)]")
+       NOT script MATCHES "this.vertexName[(]v[)] === name" OR NOT script MATCHES "return getPath[(]this, v[)]")
         message(FATAL_ERROR "TS graph did not bind the renamed component independently of the native tags")
     endif()
     if(capability STREQUAL "mutable_graph")
+        if(NOT script MATCHES "import type [{] ED [}] from './graph';" OR
+           NOT script MATCHES "import [{] AdjI, InEI, OutE, OutEI, findRelative, getPath [}] from './graph';")
+            message(FATAL_ERROR "Read-only layout graphs must import ED as a type and their iterators and path helpers as values")
+        endif()
         if(script MATCHES "addVertex|createLayoutGraph(Data)? [(]" OR NOT script MATCHES "nv [(]")
             message(FATAL_ERROR "TS graph did not respect mutable_graph")
         endif()
