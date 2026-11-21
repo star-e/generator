@@ -8,6 +8,7 @@ import Maps;
 import RenderWindow;
 import Scene;
 import Light;
+import EngineTypes;
 
 namespace cc::render {
     @comparison("==") @hash struct ClearValue {

@@ -7,6 +7,7 @@ import Strings;
 import PmrContainers;
 import Maps;
 import Sets;
+import EngineTypes;
 
 namespace cc::render {
     struct NullTag {}

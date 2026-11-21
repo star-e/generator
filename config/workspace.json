@@ -2,7 +2,6 @@
   "outputRoot": "../build/staging/cocos4",
   "lineEnding": "crlf",
   "preamble": "preamble.txt",
-  "types": "../spec/extern/types.json",
   "cppDefaults": {
     "root": "native",
     "dir": "cocos/renderer/pipeline/custom"

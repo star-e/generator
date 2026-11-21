@@ -5,6 +5,7 @@ import Gfx;
 import ArchiveInterface;
 import Strings;
 import Containers;
+import EngineTypes;
 
 namespace cc::render {
     enum class UpdateFrequency : uint8_t {

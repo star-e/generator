@@ -2,8 +2,8 @@
   "outputRoot": "../build/self-host",
   "lineEnding": "lf",
   "preamble": "preamble.txt",
-  "types": "../spec/codegen/host-types.json",
   "modules": [
+    { "spec": "../spec/codegen/host-types.spec" },
     {
       "spec": "../spec/codegen/source-location.spec",
       "cpp": { "dir": "generated", "header": "SourceLocation.h" }

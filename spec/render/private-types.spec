@@ -7,6 +7,7 @@ import PmrContainers;
 import Strings;
 import Maps;
 import Gfx;
+import EngineTypes;
 
 namespace cc::render {
     struct ProgramInfo {

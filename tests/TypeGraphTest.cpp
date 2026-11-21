@@ -42,16 +42,19 @@ Module readModule(const std::filesystem::path& spec, const std::filesystem::path
 }
 
 void checkScalarBindings() {
-    const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}},
-                          {"double", {.builtin = true}}, {"float", {.builtin = true}},
-                          {"uint8_t", {.header = "cstdint"}}, {"uint32_t", {.header = "cstdint"}},
-                          {"cc::uint32_t", {}}};
+    const TypeTable types{{"cc::uint32_t", {}}};
     const auto graph = buildTypeGraph({}, types);
     require(graph.node(graph.findType("void")).typescriptName == "void", "wrong default void binding");
     require(graph.node(graph.findType("bool")).typescriptName == "boolean", "wrong default bool binding");
-    for (const auto* name : {"double", "float", "uint8_t", "uint32_t"}) {
+    for (const auto* name : {"int", "char", "double", "float"}) {
         const auto& type = graph.node(graph.findType(name));
-        require(type.typescriptName == "number" && type.typescriptModule.empty(), "expected a TS number without import");
+        require(std::holds_alternative<BuiltinType>(type.data) && type.typescriptName == "number" &&
+                type.cppHeader.empty(), "wrong builtin scalar");
+    }
+    for (const auto* name : {"int32_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t"}) {
+        const auto& type = graph.node(graph.findType(name));
+        require(type.cppHeader == "cstdint" && type.typescriptName == "number" &&
+                type.typescriptModule.empty(), "wrong fixed-width integer binding");
     }
     require(!graph.node(graph.findType("cc::uint32_t")).typescriptName, "scalar binding matched a namespace-local type");
 
@@ -142,11 +145,8 @@ void checkContainerBindings() {
 
 void checkArchive(const std::filesystem::path& specs) {
     const auto spec = specs / "render/archive.spec";
-    const TypeTable types{{"void", {.builtin = true}}, {"bool", {.builtin = true}}, {"double", {.builtin = true}},
-                          {"uint8_t", {}}, {"uint32_t", {}}, {"cc::Material", {}}, {"cc::Texture2D", {}},
-                          {"boost::container::pmr::memory_resource", {"boost/container/pmr/memory_resource.hpp", {}}}};
     const auto graph = buildTypeGraph({{readModule(spec), {}}, {readModule(specs / "extern/types.spec"), {}, true},
-                                       {readModule(specs / "extern/containers.spec"), {}, true}}, types);
+                                       {readModule(specs / "extern/containers.spec"), {}, true}}, {});
     const auto& view = graph.node(graph.findType("std::string_view"));
     require(graph.modules.at(view.module.value).name == "EngineTypes" && view.cppHeader == "string_view" &&
             view.typescriptName == "string" && !std::get<ExternalTypeNode>(view.data).isString,
@@ -169,7 +169,8 @@ void checkArchive(const std::filesystem::path& specs) {
     std::vector<TypeId> children;
     for (auto edge : graph.out_edges(scope)) {
         require(graph.source(edge) == scope, "invalid scope edge");
-        children.push_back(TypeId{graph.target(edge)});
+        const TypeId child{graph.target(edge)};
+        if (graph.node(child).module == graph.node(output).module) children.push_back(child);
     }
     require(children == graph.modules.front().declarations, "scope children changed");
     for (auto edge : graph.in_edges(input.value)) require(graph.source(edge) == scope, "wrong parent");
@@ -177,11 +178,10 @@ void checkArchive(const std::filesystem::path& specs) {
 }
 
 void checkSettings(const std::filesystem::path& spec) {
-    TypeTable externals;
-    for (const auto* name : {"bool", "uint32_t", "float", "cc::Material",
-                             "cc::Texture2D", "cc::IntrusivePtr"}) externals.emplace(name, ExternalType{});
-    const auto gfx = spec.parent_path().parent_path() / "extern/gfx.spec";
-    const auto graph = buildTypeGraph({{readModule(gfx, "cocos/gfx"), {}, true}, {readModule(spec), {}}}, externals);
+    const auto externs = spec.parent_path().parent_path() / "extern";
+    const auto graph = buildTypeGraph({{readModule(externs / "gfx.spec", "cocos/gfx"), {}, true},
+                                       {readModule(externs / "containers.spec"), {}, true},
+                                       {readModule(externs / "types.spec"), {}, true}, {readModule(spec), {}}}, {});
     const auto bloom = graph.findType("cc::render::Bloom");
     const auto bloomType = graph.findType("cc::render::BloomType");
     auto field = [&](TypeId record, const std::string& name) -> const FieldInfo& {
@@ -248,9 +248,6 @@ void checkImports(const std::filesystem::path& specs) {
             @tag struct Phase_ {}
         }
     )"), {}});
-    const TypeTable types{{"cc::IntrusivePtr", {}}, {"uint32_t", {}}, {"uint8_t", {}}, {"bool", {}},
-                          {"void", {}}, {"double", {}},
-                          {"cc::Material", {}}, {"cc::Texture2D", {}}, {"boost::container::pmr::memory_resource", {}}};
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
         const auto& info = graph.node(infoId);
@@ -302,7 +299,8 @@ void checkImports(const std::filesystem::path& specs) {
         const auto& nativeString = std::get<ExternalTypeNode>(text.data);
         require(nativeString.isString && nativeString.isPmr && text.typescriptName == "string", "lost PMR string traits");
         require(consumer.imports == std::vector<ModuleId>{lightNode.module, probeNode.module, graph.node(mode).module,
-                                                        graph.node(archive).module, text.module, graph.node(graph.findType("ccstd::vector")).module},
+                                                        graph.node(archive).module, text.module, graph.node(graph.findType("ccstd::vector")).module,
+                                                        graph.node(graph.findType("cc::IntrusivePtr")).module},
                 "wrong direct imports");
         const auto& pair = std::get<RecordType>(graph.node(graph.findType("cc::render::ResolvePair")).data);
         require(pair.fields.at(3).type.type == mode && pair.fields.at(4).type.type == mode, "wrong resolve mode type");
@@ -329,9 +327,9 @@ void checkImports(const std::filesystem::path& specs) {
         require(fields[1].initializer == "nullptr" && fields[2].name == "level" && fields[2].initializer == "0" &&
                 fields[3].name == "culledByLight" && fields[3].initializer == "false", "wrong LightInfo defaults");
     };
-    check(buildTypeGraph(inputs, types));
+    check(buildTypeGraph(inputs, {}));
     std::ranges::reverse(inputs);
-    check(buildTypeGraph(inputs, types));
+    check(buildTypeGraph(inputs, {}));
 }
 
 void checkTypes() {

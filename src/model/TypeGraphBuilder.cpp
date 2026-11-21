@@ -40,16 +40,16 @@ TypeId ensureNamespace(TypeGraph& graph, const std::string& scope) {
     return graph.appendNode(TypeNode{.name = name, .qualifiedName = scope, .data = NamespaceType{}}, parent);
 }
 
-std::optional<std::string> defaultScalarBinding(std::string_view qualifiedName) {
-    if (qualifiedName == "void") return "void";
-    if (qualifiedName == "bool") return "boolean";
-    if (qualifiedName == "double" || qualifiedName == "float" || qualifiedName == "char" ||
-        qualifiedName == "int" || qualifiedName == "int32_t" || qualifiedName == "uint8_t" || qualifiedName == "uint16_t" ||
-        qualifiedName == "uint32_t" || qualifiedName == "uint64_t") return "number";
-    return std::nullopt;
-}
+void registerExternalTypes(TypeGraph& graph, TypeTable types) {
+    const auto addScalar = [&](const char* name, const char* ts, const std::string& header = {}) {
+        auto& type = types.try_emplace(name, ExternalType{.header = header, .builtin = header.empty()}).first->second;
+        if (!type.typescript) type.typescript = ts;
+    };
+    addScalar("void", "void");
+    addScalar("bool", "boolean");
+    for (const auto* name : {"int", "char", "float", "double"}) addScalar(name, "number");
+    for (const auto* name : {"int32_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t"}) addScalar(name, "number", "cstdint");
 
-void registerExternalTypes(TypeGraph& graph, const TypeTable& types) {
     for (const auto& [qualified, type] : types) {
         const auto pos = qualified.rfind("::");
         const auto parent = pos == std::string::npos ? TypeId{} : ensureNamespace(graph, qualified.substr(0, pos));
@@ -57,7 +57,7 @@ void registerExternalTypes(TypeGraph& graph, const TypeTable& types) {
         graph.appendNode(TypeNode{.name = name, .qualifiedName = qualified,
                                   .data = type.builtin ? TypeData{BuiltinType{}} : TypeData{ExternalTypeNode{}},
                                   .cppHeader = type.header,
-                                  .typescriptName = type.typescript ? type.typescript : defaultScalarBinding(qualified),
+                                  .typescriptName = type.typescript,
                                   .typescriptModule = type.typescriptModule}, parent);
     }
 }

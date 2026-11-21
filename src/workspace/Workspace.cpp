@@ -289,7 +289,8 @@ std::string normalizeLines(const std::string& input, bool crlf) {
 }
 
 Files plan(const Json& settings, const fs::path& base) {
-    auto types = loadTypes(object(base / settings.at("types").get<std::string>()));
+    TypeTable types;
+    if (settings.contains("types")) types = loadTypes(object(base / settings.at("types").get<std::string>()));
     auto preamble = normalizeLines(read(base / settings.at("preamble").get<std::string>()), false);
     const auto eol = settings.at("lineEnding").get<std::string>();
     if (eol != "crlf" && eol != "lf") throw std::runtime_error("lineEnding must be lf or crlf");

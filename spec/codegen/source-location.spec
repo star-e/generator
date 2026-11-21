@@ -1,4 +1,5 @@
 module SourceLocation;
+import HostTypes;
 namespace cc::codegen {
     struct SourceLocation {
         file: std::filesystem::path;

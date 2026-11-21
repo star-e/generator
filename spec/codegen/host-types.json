@@ -1,5 +1,0 @@
-{
-  "std::filesystem::path": { "header": "filesystem" },
-  "std::size_t": { "header": "cstddef" },
-  "std::string": { "header": "string" }
-}

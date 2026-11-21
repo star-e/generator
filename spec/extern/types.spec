@@ -19,6 +19,29 @@ namespace std {
     }
 }
 
+namespace boost::container::pmr {
+    header "boost/container/pmr/memory_resource.hpp" {
+        class memory_resource;
+    }
+}
+
+namespace cc {
+    header "cocos/core/assets/{name}.h" {
+        class Material;
+        class Texture2D;
+    }
+
+    header "cocos/base/Ptr.h" {
+        template<T> class IntrusivePtr;
+    }
+}
+
+namespace cc::render {
+    header "cocos/renderer/pipeline/custom/Array4.h" {
+        template<T> struct Array4;
+    }
+}
+
 namespace cc::geometry {
     header "cocos/core/geometry/{name}.h" {
         class Frustum;
@@ -44,7 +67,7 @@ namespace cc::pipeline {
 binding typescript {
     ccstd::unordered_map<ccstd::string, uint32_t> => "Record<string, number>";
     cc::Material => Material from "cocos/asset/assets";
-    cc::Texture2D => "Texture2D";
+    cc::Texture2D => Texture2D from "cocos/asset/assets";
     std::string_view => "string";
     cc::pipeline::GlobalDSManager => GlobalDSManager from "cocos/rendering/global-descriptor-set-manager";
     cc::pipeline::GeometryRenderer => GeometryRenderer from "cocos/rendering/geometry-renderer";
