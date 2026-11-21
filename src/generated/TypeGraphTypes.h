@@ -64,6 +64,7 @@ struct MethodInfo {
     AccessorKind accessor = AccessorKind::None;
     bool optionalMethod = false;
     ResultPresence resultPresence = ResultPresence::Required;
+    bool cppPrivate = false;
 };
 
 struct FieldInfo {
@@ -77,6 +78,7 @@ struct FieldInfo {
     bool cppOnly = false;
     bool notElement = false;
     bool isMutable = false;
+    bool cppPrivate = false;
 };
 
 struct Enumerator {
@@ -123,6 +125,7 @@ struct ConstructorInfo {
     bool cppOnly = false;
     bool custom = false;
     bool isNoexcept = false;
+    bool cppPrivate = false;
 };
 
 struct RecordType {
@@ -140,6 +143,7 @@ struct RecordType {
     bool isClass = false;
     bool isFinal = false;
     std::optional<bool> destructorNoexcept;
+    bool destructorPrivate = false;
     std::string cppMembers;
     std::vector<FieldInfo> fields;
     std::vector<FieldInfo> staticFields;

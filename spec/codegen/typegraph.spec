@@ -33,6 +33,7 @@ namespace codegen {
         accessor: AccessorKind = AccessorKind::None;
         optionalMethod: bool = false;
         resultPresence: ResultPresence = ResultPresence::Required;
+        cppPrivate: bool = false;
     }
     struct FieldInfo {
         type: TypeUse;
@@ -45,6 +46,7 @@ namespace codegen {
         cppOnly: bool = false;
         notElement: bool = false;
         isMutable: bool = false;
+        cppPrivate: bool = false;
     }
     struct Enumerator {
         name: std::string;
@@ -72,6 +74,7 @@ namespace codegen {
         cppOnly: bool = false;
         custom: bool = false;
         isNoexcept: bool = false;
+        cppPrivate: bool = false;
     }
     struct RecordType {
         moveOnly: bool = false;
@@ -88,6 +91,7 @@ namespace codegen {
         isClass: bool = false;
         isFinal: bool = false;
         destructorNoexcept: std::optional<bool>;
+        destructorPrivate: bool = false;
         cppMembers: std::string;
         fields: std::vector<FieldInfo>;
         staticFields: std::vector<FieldInfo>;

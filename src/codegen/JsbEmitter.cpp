@@ -36,6 +36,7 @@ void emitRecordJsb(Files& files, const TypeGraph& graph, const TypeModule& modul
                             << "    auto *obj = const_cast<se::Object *>(from.toObject());\n"
                             << "    bool ok = true;\n    se::Value field;\n";
         for (const auto& field : record->fields) {
+            if (field.cppPrivate) continue;
             source << "\n    nativevalue_to_se(from." << field.name << ", tmp, ctx);\n"
                    << "    obj->setProperty(\"" << field.name << "\", tmp);\n";
             toNativeDefinitions << "    obj->getProperty(\"" << field.name << "\", &field, true);\n"

@@ -12,6 +12,22 @@
 
 using namespace cc::render;
 
+// An external caller can name only the public declarations.
+template<class T, class = void> constexpr bool exposesCount = false;
+template<class T> constexpr bool exposesCount<T, std::void_t<decltype(&T::count)>> = true;
+template<class T, class = void> constexpr bool exposesSeed = false;
+template<class T> constexpr bool exposesSeed<T, std::void_t<decltype(&T::seed)>> = true;
+template<class T, class = void> constexpr bool exposesOffset = false;
+template<class T> constexpr bool exposesOffset<T, std::void_t<decltype(&T::offset)>> = true;
+template<class T, class = void> constexpr bool exposesRawOffset = false;
+template<class T> constexpr bool exposesRawOffset<T, std::void_t<decltype(&T::rawOffset)>> = true;
+static_assert(!exposesCount<cc::StaticProbe> && !exposesSeed<cc::AccessProbe> &&
+              !exposesOffset<cc::AccessProbe> && !exposesRawOffset<cc::AccessProbe>);
+static_assert(!std::is_default_constructible_v<cc::AccessProbe> && !std::is_default_constructible_v<cc::PublicDerived>);
+static_assert(!std::is_destructible_v<cc::HiddenDestructor>);
+static_assert(!std::is_constructible_v<cc::PrivatePmr, cc::PrivatePmr::allocator_type> &&
+              !std::is_constructible_v<cc::PrivatePmr, std::allocator_arg_t, cc::PrivatePmr::allocator_type, ccstd::pmr::string>);
+
 static_assert(std::is_base_of_v<BasicPipeline, Pipeline>);
 static_assert(std::is_base_of_v<Customization, CustomPipelineContext>);
 static_assert(std::is_same_v<decltype(std::declval<ProgramProxy&>().getName()), const ccstd::string&>);
@@ -46,6 +62,12 @@ cc::CustomBaseCtor::CustomBaseCtor(uint32_t value) : id(value) {}
 
 namespace {
 bool checkForwardedConstructors() {
+    cc::PublicDerived access{12};
+    if (access.value != 12 || access.read() != 17) return false;
+    boost::container::pmr::monotonic_buffer_resource resource;
+    cc::DerivedPmrAccess pmrAccess{&resource};
+    cc::NestedPmrAccess nested{std::allocator_arg, &resource};
+    if (pmrAccess.text.get_allocator().resource() != &resource || nested.child.get_allocator().resource() != &resource) return false;
     cc::MoveProbe item;
     item.value = 31;
     cc::CombinedCtor combined{5, true, std::move(item)};

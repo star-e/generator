@@ -585,10 +585,16 @@ private:
         } else if (auto* graph = std::get_if<GraphDeclaration>(&result.data)) {
             parseGraph(*graph);
         } else if (auto* record = std::get_if<Record>(&result.data)) {
+            bool cppPrivate = false;
             while (!accept("}")) {
                 const auto start = location;
-                if (atConstructor()) {
+                if (token == "public" || token == "private") {
+                    cppPrivate = token == "private";
+                    advance();
+                    expect(":");
+                } else if (atConstructor()) {
                     Constructor ctor{start};
+                    ctor.cppPrivate = cppPrivate;
                     if (accept("@")) {
                         expect("cppOnly");
                         ctor.cppOnly = true;
@@ -614,6 +620,7 @@ private:
                     expect("(");
                     expect(")");
                     record->destructorNoexcept = accept("noexcept");
+                    record->destructorPrivate = cppPrivate;
                     expect(";");
                 } else if (token == "cpp" && followedBy("{")) {
                     advance();
@@ -622,23 +629,28 @@ private:
                     const auto end = membersText.find_last_not_of(" \t\r\n");
                     if (end != membersText.npos) {
                         membersText = membersText.substr(0, end + 1);
+                        if (cppPrivate) record->cppMembers += "private:\n";
                         if (membersText.find('\n') == membersText.npos) {
                             record->cppMembers += "    ";
                             membersText.remove_prefix(membersText.find_first_not_of(" \t"));
                         } else if (membersText.front() == '\n') membersText.remove_prefix(1);
                         record->cppMembers.append(membersText);
                         record->cppMembers += '\n';
+                        if (cppPrivate) record->cppMembers += "public:\n";
                     }
                 } else if (accept("mutable")) {
                     auto member = field(members, true);
                     member.isMutable = true;
+                    member.cppPrivate = cppPrivate;
                     record->fields.push_back(std::move(member));
                 } else if (atField()) {
                     bool isStatic = false;
                     auto member = field(members, true, &isStatic);
+                    member.cppPrivate = cppPrivate;
                     (isStatic ? record->staticFields : record->fields).push_back(std::move(member));
                 } else {
                     record->methods.push_back(method(members, record->methods));
+                    record->methods.back().cppPrivate = cppPrivate;
                 }
             }
         } else if (auto* enumeration = std::get_if<Enum>(&result.data)) {

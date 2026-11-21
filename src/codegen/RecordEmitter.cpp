@@ -90,12 +90,29 @@ bool hasDefaultAllocator(const RecordType& record) {
     });
 }
 
+auto emptyConstructor(const RecordType& record) {
+    auto ctor = std::ranges::find_if(record.constructors, [](const auto& c) { return c.fields.empty(); });
+    return ctor != record.constructors.end() ? ctor : std::ranges::find(record.constructors, true, &ConstructorInfo::defaults);
+}
+
+bool accessibleWithoutFields(const ConstructorInfo& ctor) {
+    return !ctor.cppPrivate && (ctor.fields.empty() || ctor.defaults);
+}
+
 template<class Predicate>
 bool recordHierarchySatisfies(const TypeGraph& graph, const RecordType& record, const Predicate& predicate) {
     if (!predicate(record)) return false;
     return std::ranges::all_of(record.bases, [&](TypeId id) {
         const auto* base = std::get_if<RecordType>(&graph.node(id).data);
         return !base || recordHierarchySatisfies(graph, *base, predicate);
+    });
+}
+
+bool hasAccessibleEmptyConstructor(const TypeGraph& graph, const RecordType& record) {
+    const auto ctor = emptyConstructor(record);
+    if (ctor != record.constructors.end() && ctor->cppPrivate) return false;
+    return recordHierarchySatisfies(graph, record, [](const RecordType& r) {
+        return !r.destructorPrivate && (r.constructors.empty() || std::ranges::any_of(r.constructors, accessibleWithoutFields));
     });
 }
 
@@ -194,7 +211,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         std::set<uint32_t> visited;
         const auto storage = recordStorage(graph, field.type.type, visited);
         m.usesAllocator = storage.usesAllocator;
-        m.defaultNeedsAllocator = record && storage.usesAllocator && recordHierarchySatisfies(graph, *record, hasAllocatorConstructor) &&
+        m.defaultNeedsAllocator = record && storage.usesAllocator && hasAccessibleEmptyConstructor(graph, *record) &&
                                   !hasDefaultAllocator(*record);
         m.containsGraph = storage.containsGraph;
         // Pass copyable, single-scalar value records by reference in native constructors.
@@ -439,10 +456,6 @@ void writeEnumNames(std::ostream& out, const std::string& name, const EnumType& 
     else out << "    default:\n        return '';\n    }\n}\n";
 }
 
-bool hasEmptyConstructor(const RecordType& record) {
-    return std::ranges::any_of(record.constructors, [](const ConstructorInfo& ctor) { return ctor.fields.empty(); });
-}
-
 TypeId constructorFieldType(const TypeGraph& graph, TypeId type) {
     while (const auto* alias = std::get_if<AliasType>(&graph.node(type).data)) type = alias->target;
     return type;
@@ -470,7 +483,7 @@ bool hasNativeValueDefault(const TypeGraph& graph, TypeId type, std::map<uint32_
         } else {
             available = hasDefaultAllocator(*record);
         }
-        available = available && recordHierarchySatisfies(graph, *record, hasAllocatorConstructor);
+        available = available && hasAccessibleEmptyConstructor(graph, *record);
         knownDefaults.emplace(type.value, available);
         return available;
     }
@@ -526,6 +539,7 @@ struct BaseCall {
     TypeId type;
     std::vector<const FieldInfo*> fields;
     bool nothrow{};
+    bool allocatorTagged{};
 };
 
 using BaseCalls = std::vector<BaseCall>;
@@ -536,7 +550,7 @@ std::vector<BaseCalls> baseConstructors(const TypeGraph& graph, const RecordType
     for (auto id : record.bases) {
         const auto* base = std::get_if<RecordType>(&graph.node(id).data);
         if (!base) continue;
-        const auto empty = std::ranges::find_if(base->constructors, [](const auto& c) { return c.fields.empty() || c.defaults; });
+        const auto empty = std::ranges::find_if(base->constructors, accessibleWithoutFields);
         std::vector<BaseCalls> next;
         for (const auto& ancestors : baseConstructors(graph, *base)) {
             BaseCall call{id, {}, true};
@@ -551,6 +565,8 @@ std::vector<BaseCalls> baseConstructors(const TypeGraph& graph, const RecordType
                         for (auto index : ctor->fields) choice.fields.push_back(&base->fields.at(index));
                     }
                     choice.nothrow &= !ctor->custom || ctor->isNoexcept;
+                    // A private explicit (alloc) can coexist with public allocator-tagged defaults.
+                    if (ctor->defaults && !ctor->fields.empty()) choice.allocatorTagged = emptyConstructor(*base)->cppPrivate;
                 }
                 // An implicit or explicitly defaulted base constructor may run throwing field initializers.
                 if (choice.fields.empty() && (!ctor || (!ctor->custom && ctor->fields.empty())) && !base->fields.empty())
@@ -562,8 +578,11 @@ std::vector<BaseCalls> baseConstructors(const TypeGraph& graph, const RecordType
             };
             if (base->constructors.empty()) add(nullptr);
             else if (empty != base->constructors.end()) add(&*empty);
-            else for (const auto& ctor : base->constructors) add(&ctor);
+            else for (const auto& ctor : base->constructors) {
+                if (!ctor.cppPrivate) add(&ctor);
+            }
         }
+        if (next.empty()) throw std::runtime_error(graph.node(id).qualifiedName + ": no accessible base constructor");
         combinations = std::move(next);
     }
     return combinations;
@@ -586,6 +605,7 @@ struct BaseInitializer {
     std::string arguments;
     bool usesAllocator{};
     bool containsGraph{};
+    bool allocatorTagged{};
 };
 
 struct ConstructorPrefix {
@@ -603,7 +623,8 @@ ConstructorPrefix bindBaseArguments(const TypeGraph& graph, const TypeNode& node
         const auto& base = graph.node(call.type);
         std::set<uint32_t> visited;
         const auto storage = recordStorage(graph, call.type, visited);
-        BaseInitializer init{cppName(graph, base, graph.modules.at(node.module.value)), {}, storage.usesAllocator, storage.containsGraph};
+        BaseInitializer init{cppName(graph, base, graph.modules.at(node.module.value)), {}, storage.usesAllocator, storage.containsGraph, call.allocatorTagged};
+        if (call.allocatorTagged) deps.headers.insert("memory");
         for (const auto* field : call.fields) {
             auto member = bindMember(graph, node.module, *field, deps, false, false);
             if (names.contains(member.name)) member.name = base.name + "_" + member.name;
@@ -642,16 +663,27 @@ void validateInheritedOverloads(const TypeGraph& graph, const TypeNode& node, co
     }
 }
 
+// The emitter groups special members and fields, so each declaration carries its source access.
+void memberAccess(std::ostream& out, bool& currentPrivate, bool nextPrivate) {
+    if (currentPrivate == nextPrivate) return;
+    out << (nextPrivate ? "private:\n" : "public:\n");
+    currentPrivate = nextPrivate;
+}
+
 void inlineConstructors(std::ostream& out, const TypeGraph& graph, const std::string& name, const RecordType& record,
-                        const std::vector<BoundField>& members, const ConstructorPrefix& prefix, bool specialMembers, std::set<std::string>& headers) {
-    const auto customEmpty = std::ranges::find_if(record.constructors, [](const auto& c) { return c.custom && c.fields.empty(); });
-    if (prefix.types.empty() && customEmpty != record.constructors.end())
-        out << "    " << name << "()" << (customEmpty->isNoexcept ? " noexcept" : "") << ";\n";
-    else if (prefix.types.empty() && (hasEmptyConstructor(record) || (record.constructors.empty() && specialMembers)))
-        out << "    " << name << "() = default;\n";
+                        const std::vector<BoundField>& members, const ConstructorPrefix& prefix, bool specialMembers,
+                        std::set<std::string>& headers, bool& currentPrivate) {
+    const auto empty = std::ranges::find_if(record.constructors, [](const auto& c) { return c.fields.empty(); });
+    if (prefix.types.empty() && (empty != record.constructors.end() || (record.constructors.empty() && specialMembers))) {
+        memberAccess(out, currentPrivate, empty != record.constructors.end() && empty->cppPrivate);
+        if (empty != record.constructors.end() && empty->custom)
+            out << "    " << name << "()" << (empty->isNoexcept ? " noexcept" : "") << ";\n";
+        else out << "    " << name << "() = default;\n";
+    }
     auto write = [&](const ConstructorInfo& declaration) {
         const auto& ctor = declaration.fields;
         if (ctor.empty() && prefix.types.empty()) return;
+        memberAccess(out, currentPrivate, declaration.cppPrivate);
         out << "    " << name << "(" << prefix.parameters;
         for (size_t i = 0; i < ctor.size(); ++i) {
             const auto& m = members.at(ctor[i]);
@@ -701,7 +733,9 @@ void pmrInitializers(std::ostream& source, const ConstructorPrefix& prefix, cons
         auto arguments = base.arguments;
         if (args == CtorArgs::move) arguments = "std::move(static_cast<" + base.name + "&>(rhs))";
         if (args == CtorArgs::copy) arguments = "static_cast<const " + base.name + "&>(rhs)";
-        if (base.usesAllocator) appendArgument(arguments, "alloc");
+        if (args == CtorArgs::fields && base.allocatorTagged) {
+            arguments = arguments.empty() ? "std::allocator_arg, alloc" : "std::allocator_arg, alloc, " + arguments;
+        } else if (base.usesAllocator) appendArgument(arguments, "alloc");
         if (arguments.empty()) continue;
         source << (first ? "\n: " : ",\n  ") << base.name << '(' << arguments << ')';
         first = false;
@@ -722,10 +756,11 @@ void pmrInitializers(std::ostream& source, const ConstructorPrefix& prefix, cons
 
 void pmrFieldConstructors(std::ostream& header, std::ostream& source, const TypeGraph& graph, const std::string& name,
                           const RecordType& record, const std::vector<BoundField>& members, const ConstructorPrefix& prefix,
-                          std::set<std::string>& headers) {
+                          std::set<std::string>& headers, bool& currentPrivate) {
     const std::string alloc = "const allocator_type& alloc";
     const auto constructor = "\n" + name + "::" + name + "(";
     auto writeConstructor = [&](const Order& order, const std::string& declaration, const std::string& params, const ConstructorInfo* ctor = nullptr) {
+        memberAccess(header, currentPrivate, ctor && ctor->cppPrivate);
         header << "    " << name << "(" << declaration << ")" << (ctor && ctor->isNoexcept ? " noexcept" : "")
                << ";" << (params == alloc ? " // NOLINT\n" : "\n");
         if (ctor && ctor->custom) return;
@@ -734,7 +769,7 @@ void pmrFieldConstructors(std::ostream& header, std::ostream& source, const Type
         pmrInitializers(source, prefix, members, CtorArgs::fields, order);
     };
     if (hasAllocatorConstructor(record)) {
-        const auto empty = std::ranges::find_if(record.constructors, [](const auto& c) { return c.fields.empty(); });
+        const auto empty = emptyConstructor(record);
         auto params = prefix.parameters;
         appendArgument(params, alloc);
         auto declaration = params;
@@ -756,7 +791,7 @@ void pmrFieldConstructors(std::ostream& header, std::ostream& source, const Type
             // A default argument cannot refer to alloc. End the preceding overload
             // here so its member initializers can construct the omitted field with alloc.
             if (ctor.defaults && m.defaultNeedsAllocator) {
-                writeConstructor(supplied, declaration, params);
+                writeConstructor(supplied, declaration, params, &ctor);
                 declaration = params;
             }
             if (m.move) headers.insert("utility");
@@ -914,9 +949,10 @@ std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const 
 }
 
 std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module, const std::vector<MethodInfo>& methods,
-                               Dependencies& deps) {
+                               Dependencies& deps, bool currentPrivate = false) {
     std::ostringstream out;
     for (const auto& method : methods) {
+        memberAccess(out, currentPrivate, method.cppPrivate);
         const auto type = methodType(graph, module, method.result.type, deps);
         if (method.isExplicitConversion) out << "    explicit operator " << type;
         else out << "    " << (method.isStatic ? "static " : "") << type << " " << method.name;
@@ -942,8 +978,24 @@ struct StaticField {
     bool forwardEnum;
 };
 
+void cppRecordFriends(std::ostream& out, const TypeGraph& graph, const TypeModule& module, const TypeNode& node,
+                      const TypeModule* archive, Dependencies& deps) {
+    const auto& record = std::get<RecordType>(node.data);
+    const auto& name = node.name;
+    if (std::ranges::any_of(record.fields, [](const auto& f) { return f.cppPrivate && !f.notElement; })) {
+        if (record.compareEqual) out << "    friend bool operator==(const " << name << "&, const " << name << "&) noexcept;\n";
+        if (record.compareLess) out << "    friend bool operator<(const " << name << "&, const " << name << "&) noexcept;\n";
+        if (record.hashable) out << "    friend struct ::ccstd::hash<" << name << ">;\n";
+    }
+    if (archive && record.serializable && std::ranges::any_of(record.fields, [](const auto& f) { return f.cppPrivate && !f.transient; })) {
+        out << "    friend void save(" << nativeType(graph, module, archive->outputArchive, deps) << "&, const " << name << "&);\n"
+            << "    friend void load(" << nativeType(graph, module, archive->inputArchive, deps) << "&, " << name << "&);\n";
+    }
+}
+
 void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, const TypeModule& module,
-               const TypeNode& node, const std::vector<BoundField>& members, const std::vector<StaticField>& statics, Dependencies& deps) {
+               const TypeNode& node, const std::vector<BoundField>& members, const std::vector<StaticField>& statics,
+               const TypeModule* archive, Dependencies& deps) {
     const auto& record = std::get<RecordType>(node.data);
     const bool immovable = !recordHierarchySatisfies(graph, record, [](const RecordType& r) { return !r.immovable; });
     const bool moveOnly = record.moveOnly || std::ranges::any_of(record.bases, [&](TypeId id) { return hasMoveOnlyValue(graph, id); });
@@ -958,10 +1010,13 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         out << (base == record.bases.front() ? " : public " : ", public ") << nativeType(graph, module, base, deps);
     out << " {\n";
     if (record.isClass) out << "public:\n";
+    cppRecordFriends(out, graph, module, node, archive, deps);
+    bool currentPrivate = false;
     std::map<uint32_t, bool> staticDefaults;
     for (size_t i = 0; i < statics.size(); ++i) {
         const auto& [member, forwardEnum] = statics[i];
         const auto& field = record.staticFields[i];
+        memberAccess(out, currentPrivate, field.cppPrivate);
         const auto& type = graph.node(field.type.type);
         if (member.cppDefault.empty() && !hasNativeValueDefault(graph, field.type.type, staticDefaults))
             invalid(field, "no C++ default for static field of type " + type.qualifiedName);
@@ -983,19 +1038,22 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     validateInheritedOverloads(graph, node, prefixes, usesAllocator);
     if (!usesAllocator) {
         for (const auto& prefix : prefixes)
-            inlineConstructors(out, graph, node.name, record, members, prefix, immovable || moveOnly, deps.headers);
+            inlineConstructors(out, graph, node.name, record, members, prefix, immovable || moveOnly, deps.headers, currentPrivate);
     } else {
+        memberAccess(out, currentPrivate, false);
         const auto accessor = allocator != members.end() ? allocator->name + "." : allocatorBase->name + "::";
         out << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
             << "    allocator_type get_allocator() const noexcept { // NOLINT\n"
             << "        return {" << accessor << "get_allocator().resource()};\n    }\n\n";
         for (const auto& prefix : prefixes)
-            pmrFieldConstructors(out, source, graph, node.name, record, members, prefix, deps.headers);
+            pmrFieldConstructors(out, source, graph, node.name, record, members, prefix, deps.headers, currentPrivate);
         if (!immovable) {
+            memberAccess(out, currentPrivate, false);
             if (!bases.empty()) deps.headers.insert("utility");
             pmrSpecialConstructors(out, source, node.name, moveOnly, members, prefixes.front());
         }
     }
+    if (immovable || moveOnly || usesAllocator) memberAccess(out, currentPrivate, false);
     if (immovable) {
         const auto& name = node.name;
         out << "    " << name << "(" << name << "&&) = delete;\n"
@@ -1013,19 +1071,26 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
             << "    " << name << "& operator=(" << name << "&& rhs)" << assignmentSpec << " = " << (assignable ? "default" : "delete") << ";\n"
             << "    " << name << "& operator=(" << name << " const& rhs) = " << (moveOnly || !assignable ? "delete" : "default") << ";\n\n";
     }
-    if (record.destructorNoexcept.has_value())
+    if (record.destructorNoexcept.has_value()) {
+        memberAccess(out, currentPrivate, record.destructorPrivate);
         out << "    ~" << node.name << "()" << (*record.destructorNoexcept ? " noexcept" : "") << ";\n";
-    emitImplementationMethods(out, graph, node, deps.headers);
+    }
+    if (!record.bases.empty() || record.implements) {
+        memberAccess(out, currentPrivate, false);
+        emitImplementationMethods(out, graph, node, deps.headers);
+    }
+    if (!record.cppMembers.empty()) memberAccess(out, currentPrivate, false);
     out << record.cppMembers;
     for (size_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
+        memberAccess(out, currentPrivate, record.fields[i].cppPrivate);
         out << "    ";
         if (record.fields[i].isMutable) out << "mutable ";
         out << m.cpp << " " << m.name;
         if (!m.cppDefault.empty()) out << "{" << m.cppDefault << "}";
         out << ";\n";
     }
-    out << cppMemberFunctions(graph, module, record.methods, deps) << "};\n";
+    out << cppMemberFunctions(graph, module, record.methods, deps, currentPrivate) << "};\n";
 }
 
 bool inferTsType(const BoundField& m) {
@@ -1403,7 +1468,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             usesUint64Field |= emitTs && !field.cppOnly && member.safeUnsignedInteger;
             statics.push_back({std::move(member), forwardEnum});
         }
-        if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, statics, deps);
+        if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, statics,
+                                    output.serializationHeader ? &archive->module : nullptr, deps);
         if (record->serializable && (output.serializationHeader || emitTs)) {
             const bool emitTsArchive = emitTs && !node.typescriptNumber;
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements, emitTsArchive);

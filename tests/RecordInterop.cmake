@@ -30,9 +30,38 @@ namespace cc {
         static kind: LaterKind = LaterKind::ONE;
         static nested: StaticValue;
         @cppOnly static nativeFlag: bool = false;
+    private:
         count: uint32_t = 0;
+    public:
         constructor(count) defaults;
     }
+    @cppOnly class AccessProbe {
+    private:
+        static seed: uint32_t = 5;
+        constructor();
+        uint32_t offset() const { return seed; }
+        cpp { uint32_t rawOffset() const { return offset(); } }
+    public:
+        value: uint32_t = 1;
+        constructor(value);
+        uint32_t read() const { return value + rawOffset(); }
+    }
+    @cppOnly struct PublicDerived : AccessProbe {}
+    @cppOnly struct HiddenDestructor { private: ~HiddenDestructor(); }
+    @cppOnly struct PrivatePmr {
+    private:
+        text: ccstd::pmr::string;
+        constructor(text) defaults;
+    }
+    @cppOnly struct MixedPmrAccess {
+    private:
+        constructor();
+    public:
+        text: ccstd::pmr::string;
+        constructor(text) defaults;
+    }
+    @cppOnly struct DerivedPmrAccess : MixedPmrAccess {}
+    @cppOnly struct NestedPmrAccess { child: DerivedPmrAccess; constructor(child) defaults; }
     enum class LaterKind : uint32_t { ZERO, ONE }
     struct StaticValue { value: uint32_t = 3; }
     struct RequiredCtor { count: uint32_t = 7; enabled: bool = true; constructor(count, enabled); }

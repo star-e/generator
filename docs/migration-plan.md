@@ -77,6 +77,8 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `struct` 和 `class` 可直接声明 `~T();` 或 `~T() noexcept;`。生成器将声明写入 C++ 头文件，定义由手写源文件提供。例如 `ResourceGroup` 在析构时调用各实例化缓冲区的 `clear()`。[模块声明](../spec/render/native-pipeline.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp)
 
+`.spec` 的 `struct` 和 `class` 成员默认公开。`private:` 或 `public:` 作用于后续声明，直到下一个访问标签或类型结束，包含静态成员、构造和析构函数。字段保留声明顺序，生成的比较、哈希和归档函数可以访问其使用的私有字段。JSB 转换只读写公开字段，TypeScript 成员仍按原有绑定规则生成。[原生管线声明](../spec/render/native-pipeline.spec)
+
 C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `emplace_vertex(...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
 `FGDispatcher` 和 `NativePipeline` 在暂存目录沿用引擎文件名。消费测试优先包含暂存头文件。切换引擎中的同名文件前，还需完成表中列出的引擎实现适配。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。

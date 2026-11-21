@@ -32,6 +32,7 @@ struct Method {
     AccessorKind accessor{};
     bool optionalMethod{};
     ResultPresence resultPresence{};
+    bool cppPrivate{};
 };
 
 enum class ArchiveRole { none, input, output };
@@ -52,6 +53,7 @@ struct Field {
     bool cppOnly{};
     bool notElement{};
     bool isMutable{};
+    bool cppPrivate{};
 };
 
 struct Constructor {
@@ -61,6 +63,7 @@ struct Constructor {
     bool cppOnly{};
     bool custom{};
     bool isNoexcept{};
+    bool cppPrivate{};
 };
 
 struct Record {
@@ -69,6 +72,7 @@ struct Record {
     std::vector<TypeRef> bases;
     std::optional<TypeRef> implements;
     std::optional<bool> destructorNoexcept;
+    bool destructorPrivate{};
     std::string cppMembers;
     bool moveOnly{};
     bool immovable{};

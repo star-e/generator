@@ -121,7 +121,7 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
                       .cppBody = method.cppBody, .isStatic = method.isStatic, .isPureVirtual = method.isPureVirtual,
                       .isExplicitConversion = method.isExplicitConversion, .accessor = method.accessor,
-                      .optionalMethod = method.optionalMethod, .resultPresence = method.resultPresence};
+                      .optionalMethod = method.optionalMethod, .resultPresence = method.resultPresence, .cppPrivate = method.cppPrivate};
     if (member.isExplicitConversion) {
         // Match overloads by their resolved target, including aliases inside references and pointers.
         member.name = "operator " + formatTypeName(graph, member.result.type, [&](const TypeNode& part) {
@@ -188,7 +188,7 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
         if (field.isMutable && (std::holds_alternative<ReferenceType>(graph.node(use.type).data) ||
             std::holds_alternative<QualifiedType>(graph.node(use.type).data)))
             throw std::runtime_error(use.location.describe() + ": mutable requires a non-const value field");
-        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement, field.isMutable});
+        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement, field.isMutable, field.cppPrivate});
     }
     return result;
 }
@@ -235,6 +235,7 @@ RecordType resolveRecord(TypeGraph& graph, TypeId id, const Record& syntax, cons
     result.isClass = syntax.isClass;
     result.isFinal = syntax.isFinal;
     result.destructorNoexcept = syntax.destructorNoexcept;
+    result.destructorPrivate = syntax.destructorPrivate;
     result.cppMembers = syntax.cppMembers;
     for (const auto& base : syntax.bases) {
         const auto target = resolve(graph, base, scope, owner).type;
@@ -274,7 +275,7 @@ RecordType resolveRecord(TypeGraph& graph, TypeId id, const Record& syntax, cons
         if (!signatures.insert(std::move(signature)).second) {
             throw std::runtime_error(ctor.location.describe() + ": duplicate constructor signature");
         }
-        result.constructors.push_back({std::move(members), ctor.defaults, ctor.cppOnly, ctor.custom, ctor.isNoexcept});
+        result.constructors.push_back({std::move(members), ctor.defaults, ctor.cppOnly, ctor.custom, ctor.isNoexcept, ctor.cppPrivate});
     }
     for (uint32_t i = 0; i < result.fields.size(); ++i) {
         const auto& field = result.fields[i];

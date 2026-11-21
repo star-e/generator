@@ -260,17 +260,14 @@ namespace cc::render {
 
         void clear() noexcept;
         void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const NativePipeline& ppl);
-        cpp {
-        private:
-            FrustumCullingID getOrCreateFrustumCulling(const SceneData& sceneData);
-            LightBoundsCullingID getOrCreateLightBoundsCulling(const SceneData& sceneData, FrustumCullingID frustumCullingID);
-            NativeRenderQueueID getOrCreateRenderQueue(const NativeRenderQueueKey& key, SceneFlags flags, const scene::Camera* camera);
-            void collectCullingQueries(const RenderGraph& rg);
-            void batchFrustumCulling(const NativePipeline& ppl);
-            void batchLightBoundsCulling();
-            void fillRenderQueues();
-        public:
-        }
+    private:
+        FrustumCullingID getOrCreateFrustumCulling(const SceneData& sceneData);
+        LightBoundsCullingID getOrCreateLightBoundsCulling(const SceneData& sceneData, FrustumCullingID frustumCullingID);
+        NativeRenderQueueID getOrCreateRenderQueue(const NativeRenderQueueKey& key, SceneFlags flags, const scene::Camera* camera);
+        void collectCullingQueries(const RenderGraph& rg);
+        void batchFrustumCulling(const NativePipeline& ppl);
+        void batchLightBoundsCulling();
+        void fillRenderQueues();
     }
 
     @immovable struct LightResource {
@@ -399,11 +396,9 @@ namespace cc::render {
     }
 
     @immovable class NativePipeline final : Pipeline {
-        cpp {
-        private:
-            ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
-        public:
-        }
+    private:
+        _commandBuffers: ccstd::vector<gfx::CommandBuffer*>;
+    public:
         unsyncPool: boost::container::pmr::unsynchronized_pool_resource;
         nullable device: gfx::Device*;
         nullable swapchain: gfx::Swapchain*;
