@@ -28,7 +28,7 @@ void checkSourceLocation() {
     require(loc.describe() == "input.spec:12:7", "source location format changed");
 }
 
-void checkTypeGraphCore() {
+void checkTypeIdsAndUse() {
     static_assert(std::is_aggregate_v<TypeId> && std::is_aggregate_v<ModuleId> && std::is_aggregate_v<TypeUse>);
     static_assert(offsetof(TypeId, value) == 0 && offsetof(ModuleId, value) == 0);
     static_assert(TypeId{}.value == UINT32_MAX && ModuleId{}.value == UINT32_MAX);
@@ -405,7 +405,7 @@ int main(int argc, char** argv) {
         if (argc != 2) throw std::runtime_error("expected spec directory");
         const std::filesystem::path specs = argv[1];
         checkSourceLocation();
-        checkTypeGraphCore();
+        checkTypeIdsAndUse();
         checkScalarBindings();
         checkTemplateBindings();
         checkContainerBindings();

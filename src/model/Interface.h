@@ -1,6 +1,6 @@
 #pragma once
 
-#include "generated/TypeGraphCoreFwd.h"
+#include "generated/TypeGraphFwd.h"
 #include "model/Binding.h"
 #include <map>
 #include <optional>

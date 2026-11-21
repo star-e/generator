@@ -1,6 +1,5 @@
 #pragma once
 
-#include "generated/TypeGraphCoreFwd.h"
 #include "generated/TypeGraphFwd.h"
 #include "codegen/TypeScriptImports.h"
 #include "model/Binding.h"

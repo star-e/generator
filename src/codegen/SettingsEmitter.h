@@ -1,6 +1,5 @@
 #pragma once
 
-#include "generated/TypeGraphCoreFwd.h"
 #include "generated/TypeGraphFwd.h"
 
 #include <filesystem>

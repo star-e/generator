@@ -9,10 +9,6 @@
       "cpp": { "dir": "generated", "header": "SourceLocation.h" }
     },
     {
-      "spec": "../spec/codegen/typegraph-core.spec",
-      "cpp": { "dir": "generated", "header": "TypeGraphCore.h" }
-    },
-    {
       "spec": "../spec/codegen/typegraph.spec",
       "cpp": { "dir": "generated" }
     }
