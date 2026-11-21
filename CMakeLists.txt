@@ -42,6 +42,31 @@ add_executable(CocosCodegen
 target_compile_features(CocosCodegen PRIVATE cxx_std_20)
 target_link_libraries(CocosCodegen PRIVATE CocosCodegenModel nlohmann_json::nlohmann_json)
 set_target_properties(CocosCodegen PROPERTIES OUTPUT_NAME cocos-codegen CXX_EXTENSIONS OFF)
+
+set(COCOS_CODEGEN_ENGINE_ROOT "" CACHE PATH "Engine checkout for baseline and consumer tests")
+# Keep a multi-directory search path in a single -D argument when expanding the options.
+string(REPLACE ";" "\\;" self_host_prefix "${CMAKE_PREFIX_PATH}")
+set(self_host_options
+    "-DSOURCE=${PROJECT_SOURCE_DIR}" "-DGENERATOR=${CMAKE_GENERATOR}"
+    "-DPLATFORM=${CMAKE_GENERATOR_PLATFORM}" "-DTOOLSET=${CMAKE_GENERATOR_TOOLSET}"
+    "-DINSTANCE=${CMAKE_GENERATOR_INSTANCE}" "-DTOOLCHAIN=${CMAKE_TOOLCHAIN_FILE}"
+    "-DCOMPILER=${CMAKE_CXX_COMPILER}" "-DPREFIX=${self_host_prefix}"
+    "-DJSON_DIR=${nlohmann_json_DIR}" "-DJSON_SOURCE=${nlohmann_json_SOURCE_DIR}"
+    "-DENGINE=${COCOS_CODEGEN_ENGINE_ROOT}" "-DCONFIG=$<CONFIG>")
+set(bootstrap "${PROJECT_SOURCE_DIR}/build/bootstrap/cocos-codegen${CMAKE_EXECUTABLE_SUFFIX}")
+
+add_custom_target(begin-codegen-update
+    COMMAND "${CMAKE_COMMAND}" "-DBOOTSTRAP=${bootstrap}" "-DTOOL=$<TARGET_FILE:CocosCodegen>"
+        ${self_host_options} -P "${PROJECT_SOURCE_DIR}/cmake/Bootstrap.cmake"
+    DEPENDS CocosCodegen
+    COMMENT "Verify and save the generator for this update"
+    USES_TERMINAL VERBATIM)
+add_custom_target(generate-selfhost
+    COMMAND "${CMAKE_COMMAND}" "-DBOOTSTRAP=${bootstrap}" "-DSOURCE=${PROJECT_SOURCE_DIR}"
+        -P "${PROJECT_SOURCE_DIR}/cmake/Bootstrap.cmake"
+    COMMENT "Regenerate the self-hosted sources with the saved generator"
+    USES_TERMINAL VERBATIM)
+
 include(CTest)
 if(BUILD_TESTING)
     add_subdirectory(tests)
