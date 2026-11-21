@@ -212,7 +212,13 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         m.byConstReference = ext->constructorConstRef;
         m.move = true;
         m.usesAllocator = ext->isPmr;
-        if (emitTs) bindObject();
+        if (emitTs) {
+            bindObject();
+            if (field.typescriptInitializer != "null") {
+                m.tsResetsObjectInPlace = true;
+                m.tsReset = "this." + m.name + ".reset()";
+            }
+        }
         return m;
     }
     if (!emitTs && !field.isNullable) {
@@ -324,9 +330,10 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner
         }
         auto member = bindMember(graph, owner.module, field, deps, emitTs && !field.cppOnly,
                                  std::ranges::find(requiredFields, result.size()) != requiredFields.end());
-        if (emitTs && !field.cppOnly && field.isReadonly) {
+        if (emitTs && !field.cppOnly && member.tsDefault != "null") {
             const auto childReset = nestedResets.find(field.type.type.value);
-            if (childReset != nestedResets.end()) {
+            if (childReset != nestedResets.end()) member.tsResetsObjectInPlace = true;
+            if (childReset != nestedResets.end() && field.isReadonly) {
                 std::string args;
                 for (const auto& arg : childReset->second) {
                     if (arg.expression.empty()) invalid(field, "nested reset argument has no TypeScript default");
@@ -358,6 +365,16 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner
 }
 
 using Order = std::vector<uint32_t>;
+
+void validateObjectResets(const TypeNode& owner, const std::vector<FieldInfo>& fields,
+                          const std::vector<BoundField>& members, const std::set<std::string>& keepOnReset) {
+    for (const auto& member : members) {
+        if (!member.tsResetsObjectInPlace || member.readonly || keepOnReset.contains(member.name)) continue;
+        const auto field = std::ranges::find(fields, member.name, &FieldInfo::name);
+        throw std::runtime_error(field->type.location.describe() + ": " + owner.qualifiedName + "." + member.name +
+                                 ": in-place reset requires a readonly field");
+    }
+}
 
 void removeCppOnlyFields(const RecordType& record, std::vector<BoundField>& members, Order& order) {
     if (std::ranges::none_of(record.fields, &FieldInfo::cppOnly)) return;
@@ -826,7 +843,10 @@ Order resetParameters(const std::string& name, const std::vector<BoundField>& me
             order.push_back(static_cast<uint32_t>(it - members.begin()));
         }
     } else {
-        order = constructor;
+        for (auto index : constructor) {
+            const auto& member = members[index];
+            if (!member.readonly && !keepOnReset.contains(member.name)) order.push_back(index);
+        }
     }
     auto retained = keepOnReset;
     for (uint32_t i = 0; i < members.size(); ++i) {
@@ -837,7 +857,6 @@ Order resetParameters(const std::string& name, const std::vector<BoundField>& me
             throw std::runtime_error(name + "." + m.name + ": reset requires a writable field");
     }
     if (!retained.empty()) throw std::runtime_error(name + ": unknown keepOnReset field " + *retained.begin());
-    std::erase_if(order, [&](auto index) { return keepOnReset.contains(members[index].name); });
     return order;
 }
 
@@ -1109,6 +1128,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 }
             }
             if (emitTs) {
+                if (model->mutableGraph) validateObjectResets(node, model->fields, fields, keepNone);
                 emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields);
                 usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
@@ -1210,6 +1230,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 const auto member = std::ranges::find(members, field, &BoundField::name);
                 if (member == members.end()) throw std::runtime_error(node.qualifiedName + ": unknown reset field " + field);
                 if (retained.contains(field)) throw std::runtime_error(node.qualifiedName + "." + field + ": reset conflicts with keepOnReset");
+                member->tsResetsObjectInPlace = true;
                 if (hook.from.empty()) {
                     if (member->tsDefault == "null") throw std::runtime_error(node.qualifiedName + "." + field + ": reset method requires a non-null receiver");
                     member->tsReset = "this." + field + "." + hook.name + "()";
@@ -1225,6 +1246,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 throw std::runtime_error(node.qualifiedName + ": pool assign requires constructor parameters for all fields and writable fields");
             pool.add(node.name, entry->second.member, Pool::Reuse::assign, members, order);
         } else if (entry != output.pools.end() || !rule.empty()) {
+            validateObjectResets(node, record->fields, members, retained);
             reset = resetParameters(node.name, members, order, retained, binding);
             if (entry != output.pools.end()) pool.add(node.name, entry->second.member, Pool::Reuse::reset, members, *reset);
         }

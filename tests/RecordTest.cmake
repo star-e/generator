@@ -88,6 +88,14 @@ check_resource_error("constructor(x, y, z, w) defaults;" "constructor(x, y, z, w
     "ClearValue: pool requires a TypeScript constructor callable without arguments")
 check_resource_error("field viewport default null;" "field phaseID default null;"
     "phaseID: TypeScript default null requires a writable value object field")
+check_resource_error("readonly clearColor: gfx::Color;" "clearColor: gfx::Color;"
+    "render-graph[.]spec:[0-9]+:[0-9]+: cc::render::RasterView[.]clearColor: in-place reset requires a readonly field")
+check_resource_error("@notElement readonly viewport: gfx::Viewport;" "@notElement viewport: gfx::Viewport;"
+    "RasterPass[.]viewport: in-place reset requires a readonly field")
+check_resource_error("readonly clearValue: ClearValue;" "clearValue: ClearValue;"
+    "ComputeView[.]clearValue: in-place reset requires a readonly field")
+check_resource_error("readonly globalRenderData: RenderData;" "globalRenderData: RenderData;"
+    "RenderGraph[.]globalRenderData: in-place reset requires a readonly field")
 check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
     "subpassGraph: a record containing a move-only graph must declare @moveOnly")
 check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
@@ -152,6 +160,12 @@ file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" webResource)
 if(NOT webResource MATCHES "constructor [(]swapchain: Swapchain [|] null[)]" OR webResource MATCHES "nativeFence")
     message(FATAL_ERROR "TypeScript must inherit required from the selected visible overload")
 endif()
+# RasterView keeps the object on reuse and ClearView has no generated reset in this fixture.
+string(REPLACE "readonly clearColor: gfx::Color;" "clearColor: gfx::Color;" writableColor "${resource}")
+string(REPLACE "pool rv;" "pool rv keep(clearColor);" writableColor "${writableColor}")
+string(REPLACE "ClearView => class { pool cv2; };" "" writableColor "${writableColor}")
+file(WRITE "${resourceSpec}" "${writableColor}")
+run(${generate})
 file(WRITE "${resourceSpec}" "${resource}")
 
 # The consumer must follow the imported record's binding even if its reset signature changes.
@@ -206,7 +220,7 @@ string(FIND "${script}" "this.descriptorSetLayoutData.reset(0, 0xFFFFFFFF);" nes
 if(nestedReset EQUAL -1)
     message(FATAL_ERROR "A nested reset must follow the child's parameter order and defaults")
 endif()
-string(REPLACE "field descriptorSetLayoutInfo reset with" "field missingInfo reset with" invalid "${layout}")
+string(REPLACE "pool dsd;" "pool dsd; field missingInfo reset with reset();" invalid "${layout}")
 file(WRITE "${layoutSpec}" "${invalid}")
 expect_failure(2 "DescriptorSetData: unknown reset field missingInfo" ${generate})
 string(REPLACE "field descriptorID default 0;" "" inherited "${layout}")

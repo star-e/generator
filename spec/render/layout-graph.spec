@@ -258,11 +258,7 @@ binding typescript {
     DescriptorData => class { pool dd1; field descriptorID default 0; reset constructor; };
     DescriptorBlockData => class { pool dbd; reset constructor; };
     DescriptorSetLayoutData => class { pool dsld; reset(slot, capacity); };
-    DescriptorSetData => class {
-        pool dsd;
-        reset(descriptorSetLayout, descriptorSet);
-        field descriptorSetLayoutInfo reset with resetSetLayoutInfo from "cocos/rendering/custom/layout-access";
-    };
+    DescriptorSetData => class { pool dsd; };
     PipelineLayoutData => class {
         pool pld;
         reset defaults;

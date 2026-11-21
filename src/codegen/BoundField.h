@@ -15,6 +15,7 @@ struct BoundField {
     bool byConstReference{};
     bool referenceMember{};
     bool readonly{};
+    bool tsResetsObjectInPlace{};
     bool transient{};
     bool usesAllocator{};
     bool defaultNeedsAllocator{};

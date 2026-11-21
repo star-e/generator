@@ -141,7 +141,7 @@ binding typescript {
 | Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，`reset defaults;` 通过 `.clear()` 原地清空。 |
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
-| 对象池和重置 | `poolModule "cocos/core/memop";` 指定池实现。`UploadPair => class { pool up keep(source); };` 复用字节存储。`reset constructor;` 沿用构造参数，`reset(slot, capacity);` 按所列字段和顺序生成重置参数。 |
+| 对象池和重置 | 使用 `pool rv;` 的记录默认按 TS 构造参数的顺序选取可写字段。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。`keep(...)` 保留指定字段。`reset(slot, capacity);` 显式指定重置参数及顺序。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 
@@ -318,7 +318,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 归档依次写入四个标量、描述符块数组、uniform block 映射和 binding 映射。空映射与单键映射可以逐字节核对，多键映射按键值核对。向已有对象加载时，数组按归档长度调整，两个 Map 都保留归档中缺失的键。遇到重复键，TS 用归档值覆盖，C++ 保留已有值。[原生互读测试](../tests/consumer/records/LayoutArchiveConsumer.cpp) · [TS 互读测试](../tests/consumer/records/layout-archive.cjs)
 
-`DescriptorSetData` 到 `RenderPhaseData` 的九个记录都由同一份布局声明生成。C++ 记录只支持移动，并将传入的分配器传给嵌套记录和 PMR 容器。TS 重置只读的本模块记录时，调用其已有的 `reset`，按子记录的绑定顺序传入字段默认值。`DescriptorSetData` 据此调用 `descriptorSetLayoutData.reset(0xFFFFFFFF, 0)`。外部 GFX 对象通过 `field descriptorSetLayoutInfo reset with resetSetLayoutInfo from "...";` 原地清空绑定数组。[布局声明](../spec/render/layout-graph.spec) · [GFX 绑定](../spec/extern/gfx.spec)
+`DescriptorSetData` 到 `RenderPhaseData` 的九个记录都由同一份布局声明生成。C++ 记录只支持移动，并将传入的分配器传给嵌套记录和 PMR 容器。TS 重置只读的本模块记录时，调用其已有的 `reset`，按子记录的绑定顺序传入字段默认值。`DescriptorSetData` 据此调用 `descriptorSetLayoutData.reset(0xFFFFFFFF, 0)`。外部 GFX 对象 `descriptorSetLayoutInfo` 的成员函数 `reset()` 原地清空绑定数组。[布局声明](../spec/render/layout-graph.spec) · [GFX 绑定](../spec/extern/gfx.spec)
 
 `layout-graph.ts` 继续导出 `Layout` 和 `PipelineLayoutData`。平台选择逻辑由 `layout-access.ts` 维护，`getSets()` 和 `getSet(frequency)` 在 `(COCOS_RUNTIME || HTML5) && Layout.isWebGPU` 时查询 `descriptorGroups`，其余情况查询 `descriptorSets`。[平台逻辑](../runtime/typescript/layout-access.ts)
 

@@ -1,5 +1,4 @@
 import { COCOS_RUNTIME, HTML5 } from 'internal:constants';
-import type { DescriptorSetLayoutInfo } from '../../gfx';
 import type { DescriptorSetData, LayoutType } from './layout-graph';
 import type { UpdateFrequency } from './types';
 
@@ -21,8 +20,4 @@ export abstract class PipelineLayoutAccess {
     getSet (frequency: UpdateFrequency): DescriptorSetData | undefined {
         return this.getSets().get(frequency);
     }
-}
-
-export function resetSetLayoutInfo (info: DescriptorSetLayoutInfo): void {
-    info.bindings.length = 0;
 }

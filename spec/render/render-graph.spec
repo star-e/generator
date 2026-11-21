@@ -375,11 +375,7 @@ binding typescript {
     poolModule "cocos/core/memop";
     poolDependency renderCommon: RenderCommon;
     ClearValue => class { pool cv; };
-    RasterView => class {
-        pool rv;
-        reset(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, shaderStageFlags);
-        field clearColor reset with reset();
-    };
+    RasterView => class { pool rv; };
     ComputeView => class {
         pool cv1;
         reset(name, accessType, clearFlags, clearValueType, shaderStageFlags);
@@ -387,9 +383,9 @@ binding typescript {
     ResourceDesc => class { pool rd; reset defaults; };
     Subpass => class { pool s; reset defaults; };
     SubpassGraph => class { pool sg; };
-    RasterSubpass => class { pool rs2; reset constructor; field viewport reset with reset(); };
+    RasterSubpass => class { pool rs2; reset constructor; };
     ComputeSubpass => class { pool cs; reset constructor; };
-    RasterPass => class { pool rp; reset defaults; mapKey string; field viewport reset with reset(); };
+    RasterPass => class { pool rp; reset defaults; mapKey string; };
     ResourceTraits => class { pool rt; reset constructor; };
     ResourceStates => class { pool rs1; reset defaults; };
     ManagedResource => class { pool mr; reset defaults; };
@@ -407,7 +403,7 @@ binding typescript {
     CopyPass => class { pool cp1; reset defaults; };
     MovePass => class { pool mp; reset defaults; };
     RaytracePass => class { pool rp2; reset defaults; };
-    ClearView => class { pool cv2; reset(slotName, clearFlags); field clearColor reset with reset(); };
+    ClearView => class { pool cv2; };
     RenderQueue => class { pool rq; field viewport default null; };
     CullingFlags => const enum;
     SceneData => class { pool sd; reset(scene, camera, flags, cullingFlags, shadingLight); };
