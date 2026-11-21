@@ -1,5 +1,7 @@
 #pragma once
 
+#include "generated/TypeGraphCoreFwd.h"
+#include "generated/TypeGraphFwd.h"
 #include "model/Binding.h"
 
 namespace cc::codegen {

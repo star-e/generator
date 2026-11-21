@@ -212,11 +212,11 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `CocosCodegenModel` 编译 `src/generated/` 中的类型图种子。解析器保留语法和源位置，建图器先登记作用域与声明，再绑定字段和方法签名中的类型。Archive 的 C++、TS 后端和 RenderSettings 的 TS 后端消费同一张只读图。作用域边从父指向子，字段和签名通过 `TypeId` 引用其类型，模块按声明顺序保存输出列表。[类型图声明](../spec/codegen/typegraph.spec) · [生成源码](../src/generated/TypeGraphTypes.h) · [建图器](../src/model/TypeGraphBuilder.cpp)
 
-`config/seed-project.json` 引用的 `typegraph.spec` 和 `model-support.spec` 采用一次性种子工具的语法，其中图的方法仍使用 `fn`。种子将 `TypeId`、`ModuleId`、`TypeUse` 作为外部类型引用，三者的字段定义由当前生成器读取。
+`config/seed-project.json` 引用的 `typegraph.spec` 仍定义 `Enumerator`、`EnumType`、`TemplateArgument`、`TemplateInstanceType`、`TypeData`、`TypeNode` 和图 `TypeGraph`。这些声明直接或间接使用 `std::variant`。种子通过 `model-support.spec` 引用自举模块提供的类型。
 
 首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
 
-当前自举生成四个类型。`SourceLocation` 描述源文件和行列，诊断文本的实现位于 `SpecParser.cpp`。`TypeId` 和 `ModuleId` 使用 32 位无符号值，默认值 `0xFFFFFFFF` 表示无效编号。`TypeUse` 将类型编号和使用位置保存在一起。运行 `cocos-codegen generate --workspace config/self-host.json` 会为两个模块分别生成前置头、主头和源文件，写入 `build/self-host/generated/`。日常构建使用 `src/generated/` 中对应的快照。[源位置声明](../spec/codegen/source-location.spec) · [类型图基础声明](../spec/codegen/typegraph-core.spec) · [自举配置](../config/self-host.json)
+`SourceLocation` 和 `TypeGraphCore` 两个模块合计自举生成 31 个类型。`TypeGraphCore` 包含类型编号、字段与方法签名、构造函数、回调、图组件、节点类型和模块描述。`GraphType` 描述一张图的能力，`Node_` 是类型图的组件标签。`HostTypes` 为 `std::vector<T>` 和 `std::optional<T>` 指定标准头文件。运行 `cocos-codegen generate --workspace config/self-host.json` 会将两个模块的前置头、主头和源文件写入 `build/self-host/generated/`，日常构建使用 `src/generated/` 中的快照。[源位置声明](../spec/codegen/source-location.spec) · [类型图基础声明](../spec/codegen/typegraph-core.spec) · [自举配置](../config/self-host.json)
 
 1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在独立的空目录生成第一轮，检查产物清单、LF 换行和快照字节。
 2. 测试在新的构建目录编译同一个 `CocosCodegen` 目标，并将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮的输出根目录。解析器和 TypeGraph 使用这一轮生成的两个模块。

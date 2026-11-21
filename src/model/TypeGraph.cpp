@@ -1,7 +1,9 @@
 #include "generated/TypeGraphTypes.h"
 #include "model/TypeName.h"
 
+#include <cstddef>
 #include <stdexcept>
+#include <type_traits>
 
 namespace cc::codegen {
 
@@ -45,6 +47,26 @@ TypeId TypeGraph::appendNode(TypeNode newNode, TypeId parent) {
 }
 
 namespace {
+
+// Layouts previously checked by the seed generator.
+template<class T, std::size_t Size, std::size_t Alignment>
+constexpr bool hasFixedLayout = std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T> &&
+                                sizeof(T) == Size && alignof(T) == Alignment;
+
+static_assert(hasFixedLayout<AccessorKind, 4, 4> && hasFixedLayout<ResultPresence, 4, 4>);
+static_assert(hasFixedLayout<NamespaceType, 1, 1> && hasFixedLayout<TagType, 1, 1> && hasFixedLayout<BuiltinType, 1, 1>);
+static_assert(hasFixedLayout<ExternalTypeNode, 8, 4>);
+static_assert(offsetof(ExternalTypeNode, isStruct) == 0 && offsetof(ExternalTypeNode, isString) == 1);
+static_assert(offsetof(ExternalTypeNode, isPmr) == 2 && offsetof(ExternalTypeNode, constructorConstRef) == 3);
+static_assert(offsetof(ExternalTypeNode, container) == 4);
+static_assert(hasFixedLayout<AliasType, 4, 4> && offsetof(AliasType, target) == 0);
+static_assert(hasFixedLayout<PointerType, 4, 4> && offsetof(PointerType, pointee) == 0);
+static_assert(hasFixedLayout<ReferenceType, 8, 4> && offsetof(ReferenceType, referred) == 0 &&
+              offsetof(ReferenceType, rvalue) == 4);
+static_assert(hasFixedLayout<QualifiedType, 8, 4> && offsetof(QualifiedType, base) == 0);
+static_assert(offsetof(QualifiedType, isConst) == 4 && offsetof(QualifiedType, isVolatile) == 5);
+static_assert(hasFixedLayout<TemplateParameterType, 8, 4> && offsetof(TemplateParameterType, owner) == 0 &&
+              offsetof(TemplateParameterType, index) == 4);
 
 template<class Payload>
 TypeId intern(TypeGraph& graph, Payload value) {

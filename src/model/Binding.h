@@ -1,7 +1,7 @@
 #pragma once
 
 #include "model/TypeRef.h"
-#include "generated/TypeGraphFwd.h"
+#include "generated/TypeGraphCoreFwd.h"
 #include <algorithm>
 #include <filesystem>
 #include <map>
