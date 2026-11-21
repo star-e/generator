@@ -82,6 +82,7 @@ namespace codegen {
         typescriptConstructor: std::optional<ConstructorInfo>;
         bases: std::vector<TypeId>;
         fields: std::vector<FieldInfo>;
+        staticFields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;
     }
     struct CallbackTypeInfo {

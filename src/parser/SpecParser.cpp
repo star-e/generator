@@ -341,6 +341,11 @@ private:
                 advance();
             } else if (rule.kind == BindingTarget::classType && key == "extends") {
                 rule.base = bindingImport();
+            } else if (rule.kind == BindingTarget::classType && key == "methods") {
+                if (token != "R" || !remaining.starts_with('"')) fail("expected a raw string for TypeScript methods");
+                rule.classMethods = rawStringBody("TypeScript");
+                if (!rule.classMethods.empty() && !rule.classMethods.ends_with('\n')) rule.classMethods += '\n';
+                advance();
             } else if (rule.kind == BindingTarget::classType && key == "mapKey") {
                 if (accept("json")) rule.mapKey = MapKeyKind::Json;
                 else if (accept("string")) rule.mapKey = MapKeyKind::String;
@@ -423,7 +428,20 @@ private:
         if (accept("typescript")) {
             expect("{");
             while (!accept("}")) {
-                if (accept("module")) {
+                if (accept("import")) {
+                    if (module.external) fail("TypeScript imports require a generated module");
+                    auto& item = rules.typescriptImports.emplace_back();
+                    item.typeOnly = accept("type");
+                    expect("{");
+                    do { uniqueName(item.names); } while (accept(",") && token != "}");
+                    expect("}");
+                    expect("from");
+                    item.from = quotedString("TypeScript module specifier");
+                    if (item.from.empty() || item.from.find_first_of("'\\") != std::string::npos ||
+                        std::ranges::any_of(item.from, [](unsigned char ch) { return std::iscntrl(ch); }))
+                        fail("invalid TypeScript module specifier");
+                    expect(";");
+                } else if (accept("module")) {
                     if (!module.external || token != module.name) fail("expected the declaring extern module " + module.name);
                     if (!rules.typescriptFrom.empty()) fail("duplicate TypeScript module source for " + module.name);
                     advance();
@@ -576,7 +594,9 @@ private:
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
                 } else if (atField()) {
-                    record->fields.push_back(field(members, true));
+                    bool isStatic = false;
+                    auto member = field(members, true, &isStatic);
+                    (isStatic ? record->staticFields : record->fields).push_back(std::move(member));
                 } else {
                     record->methods.push_back(method(members, record->methods));
                 }
@@ -787,7 +807,7 @@ private:
         return next.token == expected;
     }
 
-    Field field(std::set<std::string>& names, bool record = false) {
+    Field field(std::set<std::string>& names, bool record = false, bool* isStatic = nullptr) {
         Field result;
         while (accept("@")) {
             if (record && accept("cppOnly")) {
@@ -802,6 +822,7 @@ private:
                 result.transient = true;
             }
         }
+        if (isStatic) *isStatic = accept("static");
         result.isReadonly = accept("readonly");
         result.isNullable = accept("nullable");
         result.name = uniqueName(names);
@@ -864,7 +885,13 @@ private:
     }
 
     bool atField() const {
-        return token == "@" || token == "readonly" || token == "nullable" || followedBy(":");
+        auto next = *this;
+        while (next.accept("@")) {
+            if (next.token != "cppOnly" && next.token != "transient" && next.token != "notElement") return false;
+            next.advance();
+        }
+        next.accept("static");
+        return next.token == "readonly" || next.token == "nullable" || next.followedBy(":");
     }
 
     void skipCppWord() {
@@ -879,13 +906,19 @@ private:
         consume(count);
         if (!remaining.starts_with('"') || (word != "R" && word != "u8R" && word != "uR" && word != "UR" && word != "LR")) return;
 
+        rawStringBody("C++");
+    }
+
+    std::string_view rawStringBody(const std::string& language) {
         const auto open = remaining.find('(', 1);
-        if (open == remaining.npos || open > 17) fail("invalid C++ raw string delimiter");
+        if (open == remaining.npos || open > 17) fail("invalid " + language + " raw string delimiter");
         const auto delimiter = remaining.substr(1, open - 1);
-        if (delimiter.find_first_of(" )\\\t\v\f\r\n") != delimiter.npos) fail("invalid C++ raw string delimiter");
+        if (delimiter.find_first_of(" )\\\t\v\f\r\n") != delimiter.npos) fail("invalid " + language + " raw string delimiter");
         const auto end = remaining.find(")" + std::string(delimiter) + "\"", open + 1);
-        if (end == remaining.npos) fail("unterminated C++ raw string");
+        if (end == remaining.npos) fail("unterminated " + language + " raw string");
+        const auto body = remaining.substr(open + 1, end - open - 1);
         consume(end + delimiter.size() + 2);
+        return body;
     }
 
     void finishCppLiteral(char quote) {

@@ -57,15 +57,18 @@ inline std::string modulePath(const std::filesystem::path& target, const std::fi
     return path.starts_with("../") ? path : "./" + path;
 }
 
-inline void writeImports(std::ostream& out, const TypeImports& imports, const std::filesystem::path& from, bool typeOnly) {
-    for (const auto& [path, names] : imports) {
-        out << (typeOnly ? "import type { " : "import { ");
-        for (auto it = names.begin(); it != names.end(); ++it) {
-            if (it != names.begin()) out << ", ";
-            out << *it;
-        }
-        out << " } from '" << modulePath(path, from) << "';\n";
+inline void writeNamedImport(std::ostream& out, const auto& names, std::string_view specifier, bool typeOnly) {
+    out << (typeOnly ? "import type { " : "import { ");
+    for (auto it = names.begin(); it != names.end(); ++it) {
+        if (it != names.begin()) out << ", ";
+        out << *it;
     }
+    out << " } from '" << specifier << "';\n";
+}
+
+inline void writeImports(std::ostream& out, const TypeImports& imports, const std::filesystem::path& from, bool typeOnly) {
+    for (const auto& [path, names] : imports)
+        writeNamedImport(out, names, from.empty() ? path : modulePath(path, from), typeOnly);
 }
 
 } // namespace cc::codegen

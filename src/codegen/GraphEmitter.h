@@ -6,6 +6,7 @@
 #include <iosfwd>
 #include <set>
 #include <string>
+#include <string_view>
 
 namespace cc::codegen {
 
@@ -14,6 +15,6 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& header, std::
                   std::set<std::string>& headers, std::set<std::string>& forwardDeclarations,
                   const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive);
 void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports,
-                         const std::vector<BoundField>& fields);
+                         const std::vector<BoundField>& fields, std::string_view classMethods);
 
 } // namespace cc::codegen

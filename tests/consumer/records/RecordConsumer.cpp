@@ -498,6 +498,20 @@ int main(int argc, char** argv) {
     const bool writePathCases = argc == 3 && std::string_view(argv[1]) == "path-cases";
     if (argc == 3 && !writePathCases) return exchangeRecords(argv[1], argv[2]);
     if (argc != 1 && !writePathCases) return 2;
+    using cc::render::Layout;
+    static_assert(std::is_empty_v<Layout>);
+    if (Layout::type != LayoutType::VULKAN || Layout::isWebGPU) return 1;
+    Layout::type = LayoutType::WEBGPU;
+    Layout::isWebGPU = true;
+    if (Layout{}.type != LayoutType::WEBGPU || !Layout{}.isWebGPU) return 1;
+    Layout::type = LayoutType::VULKAN;
+    Layout::isWebGPU = false;
+    const cc::StaticProbe staticProbe{31};
+    const auto hash = ccstd::hash<cc::StaticProbe>{}(staticProbe);
+    if (cc::StaticProbe::epoch != 7 || cc::StaticProbe::kind != cc::LaterKind::ONE ||
+        cc::StaticProbe::nested.value != 3 || cc::StaticProbe::nativeFlag) return 1;
+    cc::StaticProbe::epoch = 99;
+    if (!(staticProbe == cc::StaticProbe{31}) || ccstd::hash<cc::StaticProbe>{}(staticProbe) != hash) return 1;
     if (!checkLayoutGraph(writePathCases ? argv[2] : nullptr)) return 9;
     if (!cc::ConversionProbe::defaultsMatch() || !checkDefaultDispatch() || !checkMigratedModules()) return 48;
     const cc::DefaultCtor defaults;

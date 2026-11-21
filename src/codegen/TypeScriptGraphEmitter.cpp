@@ -153,7 +153,7 @@ void adjacencyMutation(std::ostream& out, bool references, bool bidirectional) {
 } // namespace
 
 void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& imports,
-                         const std::vector<BoundField>& fields) {
+                         const std::vector<BoundField>& fields, std::string_view classMethods) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     if (model.keyComponentIndex || model.removeVertex)
@@ -384,7 +384,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         return cc$graph.getPath(this, v);
     }
 )";
-    out << "}\n";
+    out << classMethods << "}\n";
 }
 
 } // namespace cc::codegen

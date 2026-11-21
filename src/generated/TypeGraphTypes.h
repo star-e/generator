@@ -134,6 +134,7 @@ struct RecordType {
     std::optional<ConstructorInfo> typescriptConstructor;
     std::vector<TypeId> bases;
     std::vector<FieldInfo> fields;
+    std::vector<FieldInfo> staticFields;
     std::vector<MethodInfo> methods;
 };
 

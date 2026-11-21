@@ -31,6 +31,12 @@ struct TypeScriptImport {
     std::filesystem::path from;
 };
 
+struct TypeScriptNamedImport {
+    std::set<std::string> names;
+    std::string from;
+    bool typeOnly{};
+};
+
 struct InterfaceMethodBinding {
     std::string target;
     AccessorKind accessor{};
@@ -68,6 +74,7 @@ struct TypeScriptBinding {
     std::string numberField;
     std::map<std::string, std::string> fieldDefaults;
     std::optional<TypeScriptImport> base;
+    std::string classMethods;
     std::optional<PoolBinding> pool;
     std::optional<std::vector<std::string>> constructor;
     bool requiredConstructor{};
@@ -89,6 +96,7 @@ inline bool isTypedArrayName(std::string_view name) {
 
 struct ModuleBindings {
     std::vector<TypeScriptBinding> typescript;
+    std::vector<TypeScriptNamedImport> typescriptImports;
     std::filesystem::path typescriptFrom;
     std::map<std::string, SourceLocation> typescriptExports;
     std::filesystem::path poolModule;

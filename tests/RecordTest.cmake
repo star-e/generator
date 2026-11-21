@@ -186,6 +186,13 @@ function(check_pool_error before after diagnostic)
     file(WRITE "${layoutSpec}" "${invalid}")
     expect_failure(2 "${diagnostic}" ${generate})
 endfunction()
+check_pool_error("static isWebGPU: bool = false;" "static isWebGPU: bool = false; constructor(isWebGPU);"
+    "constructor cannot initialize static field isWebGPU")
+check_pool_error("static isWebGPU: bool = false;" "static isWebGPU: bool = false; isWebGPU: bool;"
+    "duplicate name 'isWebGPU'")
+check_pool_error("static isWebGPU:" "static prototype:" "prototype: reserved TypeScript static member name")
+check_pool_error([=[)ts";]=] [=[)wrong";]=] "unterminated TypeScript raw string")
+check_pool_error([=[methods R"ts(]=] [=[methods R"bad tag(]=] "invalid TypeScript raw string delimiter")
 check_pool_error("poolDependency renderCommon: RenderCommon" "poolDependency d: RenderCommon" "duplicate pool member d")
 check_pool_error("poolDependency renderCommon: RenderCommon" "poolDependency renderCommon: Other" "poolDependency requires import Other")
 check_pool_error("poolDependency renderCommon: RenderCommon" "poolDependency renderCommon: Gfx" "imported module has no object pool: Gfx")

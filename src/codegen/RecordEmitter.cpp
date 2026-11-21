@@ -772,8 +772,13 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
     return out.str();
 }
 
+struct StaticField {
+    BoundField member;
+    bool forwardEnum;
+};
+
 void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, const TypeModule& module,
-               const TypeNode& node, const std::vector<BoundField>& members, Dependencies& deps) {
+               const TypeNode& node, const std::vector<BoundField>& members, const std::vector<StaticField>& statics, Dependencies& deps) {
     const auto& record = std::get<RecordType>(node.data);
     for (size_t i = 0; i < members.size(); ++i) {
         const auto& field = record.fields[i];
@@ -781,6 +786,21 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
             invalid(field, "a record containing a move-only graph must declare @moveOnly");
     }
     out << "struct " << node.name << " {\n";
+    std::map<uint32_t, bool> staticDefaults;
+    for (size_t i = 0; i < statics.size(); ++i) {
+        const auto& [member, forwardEnum] = statics[i];
+        const auto& field = record.staticFields[i];
+        const auto& type = graph.node(field.type.type);
+        if (member.cppDefault.empty() && !hasNativeValueDefault(graph, field.type.type, staticDefaults))
+            invalid(field, "no C++ default for static field of type " + type.qualifiedName);
+        if (std::holds_alternative<BuiltinType>(type.data) || std::holds_alternative<AliasType>(type.data) ||
+            (std::holds_alternative<EnumType>(type.data) && !forwardEnum) || std::holds_alternative<PointerType>(type.data)) {
+            out << "    inline static " << member.cpp << " " << member.name << "{" << member.cppDefault << "};\n";
+        } else {
+            out << "    static " << member.cpp << " " << member.name << ";\n";
+            source << "\n" << member.cpp << " " << node.name << "::" << member.name << "{" << member.cppDefault << "};\n";
+        }
+    }
     const auto allocator = std::ranges::find(members, true, &BoundField::usesAllocator);
     const bool usesAllocator = allocator != members.end();
     validateNativeConstructorDefaults(graph, node, members, usesAllocator);
@@ -889,14 +909,30 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& memb
     }
 }
 
-void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<BoundField>& members, const Order& order,
+void tsRecord(std::ostream& ts, std::ostream& staticInitializers, const TypeNode& node, const std::vector<BoundField>& members,
+              const std::vector<StaticField>& statics, const Order& order,
               const Order* reset, const std::set<std::string>& keepOnReset, const std::string& base,
-              bool declaredConstructor, bool defaults) {
+              bool declaredConstructor, bool defaults, std::string_view classMethods) {
     ts << "export class " << node.name;
     if (!base.empty()) ts << " extends " << base;
     ts << " {\n";
+    for (const auto& [field, forwardEnum] : statics) {
+        if (field.ts.empty()) continue; // Native-only field.
+        const auto declaration = std::string(field.readonly ? "static readonly " : "static ") + field.name + ": " + field.ts;
+        if (field.safeUnsignedInteger) {
+            ts << "    declare " << declaration << ";\n";
+            staticInitializers << "cc$defineUint64(" << node.name << ", '" << field.name << "', " << field.tsDefault << ");\n";
+        } else if (forwardEnum || field.tsDefault.starts_with("new ")) {
+            // Initialize after local classes and enums are available.
+            ts << "    declare " << declaration << ";\n";
+            staticInitializers << "Object.assign(" << node.name << ", { " << field.name << ": " << field.tsDefault << " });\n";
+        } else {
+            ts << "    " << declaration << " = " << field.tsDefault << ";\n";
+        }
+    }
     const bool emitConstructor = declaredConstructor || std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
     tsConstructorAndReset(ts, members, order, reset, keepOnReset, !base.empty(), emitConstructor, defaults);
+    ts << classMethods;
     for (uint32_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
         if (m.safeUnsignedInteger) {
@@ -1038,6 +1074,17 @@ struct Pool {
     }
 };
 
+void writeRecordImports(std::ostream& script, const TypeImports& values, TypeImports& types, const std::filesystem::path& from) {
+    writeImports(script, values, from, false);
+    for (const auto& [source, names] : values) {
+        const auto it = types.find(source);
+        if (it == types.end()) continue;
+        for (const auto& name : names) it->second.erase(name);
+        if (it->second.empty()) types.erase(it);
+    }
+    writeImports(script, types, from, true);
+}
+
 } // namespace
 
 Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, std::optional<ArchiveOutput> archive,
@@ -1051,7 +1098,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     ArchiveImports archiveImports{deps.valueImports, output.typescript ? (output.typescript->parent_path() / "serialization").generic_string() : ""};
     Pool pool;
     RecordArchives archives;
-    std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, nameFunctions;
+    std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, staticInitializers, nameFunctions;
     auto pendingEnums = output.namedEnums;
     auto pendingConstEnums = output.constEnums;
     std::string enumImports;
@@ -1072,6 +1119,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         previousTag = false;
         const auto entry = output.pools.find(node.name);
+        const auto methods = output.classMethods.find(node.name);
+        const std::string_view classMethods = methods == output.classMethods.end() ? std::string_view{} : methods->second;
         if (std::holds_alternative<InterfaceType>(node.data)) {
             if (emitTs && standaloneInterfaces && !ts.view().empty()) ts << '\n';
             emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, emitTs ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
@@ -1102,7 +1151,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             if (emitTs) {
                 if (model->mutableGraph) validateObjectResets(node, model->fields, fields, keepNone);
-                emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields);
+                emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields, classMethods);
                 usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
                     if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");
@@ -1154,7 +1203,19 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             throw std::runtime_error(node.qualifiedName + ": pool requires a TypeScript constructor callable without arguments");
         const auto requiredFields = constructor.defaults ? Order{} : constructor.fields;
         auto members = bindFields(graph, node, record->fields, deps, emitTs, nestedResets, requiredFields);
-        if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, deps);
+        std::vector<StaticField> statics;
+        for (const auto& field : record->staticFields) {
+            if (emitTs && !field.cppOnly && (field.name == "prototype" || field.name == "name" || field.name == "length" ||
+                field.name == "arguments" || field.name == "caller" || field.name == "constructor"))
+                invalid(field, "reserved TypeScript static member name");
+            auto member = bindMember(graph, owner, field, deps, emitTs && !field.cppOnly, false);
+            if (field.cppOnly) member.ts.clear();
+            const auto& type = graph.node(field.type.type);
+            const bool forwardEnum = std::holds_alternative<EnumType>(type.data) && type.module == owner && field.type.type.value > id.value;
+            usesUint64Field |= emitTs && !field.cppOnly && member.safeUnsignedInteger;
+            statics.push_back({std::move(member), forwardEnum});
+        }
+        if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, statics, deps);
         if (record->serializable && (output.serializationHeader || emitTs)) {
             const bool emitTsArchive = emitTs && !node.typescriptNumber;
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements, emitTsArchive);
@@ -1190,6 +1251,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (order.size() != members.size() || std::ranges::any_of(members, &BoundField::readonly))
                 throw std::runtime_error(node.qualifiedName + ": pool assign requires constructor parameters for all fields and writable fields");
             pool.add(node.name, entry->second.member, Pool::Reuse::assign, members, order);
+        } else if (entry != output.pools.end() && members.empty() && !statics.empty() && entry->second.keepOnReset.empty()) {
+            pool.add(node.name, entry->second.member, Pool::Reuse::unchanged);
         } else if (entry != output.pools.end()) {
             retained = entry->second.keepOnReset;
             for (const auto& member : members) {
@@ -1208,8 +1271,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto base = output.bases.find(node.name);
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
         usesUint64Field |= std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
-        tsRecord(ts, node, members, order, reset ? &*reset : nullptr, retained,
-                 base == output.bases.end() ? "" : base->second.name, selected.has_value(), constructor.defaults);
+        tsRecord(ts, staticInitializers, node, members, statics, order, reset ? &*reset : nullptr, retained,
+                 base == output.bases.end() ? "" : base->second.name, selected.has_value(), constructor.defaults, classMethods);
     }
     if (pool.count != output.pools.size()) throw std::runtime_error("unknown pool type in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
@@ -1256,17 +1319,43 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (usesGraphRuntime) script << "import * as cc$graph from '" << modulePath("cocos/rendering/custom/graph", *output.typescript) << "';\n";
     for (const auto& [member, dependency] : output.poolDependencies)
         deps.typeImports[dependency.from.generic_string()].insert(dependency.name);
-    writeImports(script, deps.valueImports, *output.typescript, false);
-    for (const auto& [modulePath, names] : deps.valueImports) {
-        auto it = deps.typeImports.find(modulePath);
-        if (it == deps.typeImports.end()) continue;
-        for (const auto& name : names) it->second.erase(name);
-        if (it->second.empty()) deps.typeImports.erase(it);
+    TypeImports packageValues, packageTypes;
+    for (const auto& item : output.typescriptImports) {
+        if (item.from.starts_with("./") || item.from.starts_with("../")) {
+            const auto source = (output.typescript->parent_path() / item.from).lexically_normal().generic_string();
+            auto& names = (item.typeOnly ? deps.typeImports : deps.valueImports)[source];
+            names.insert(item.names.begin(), item.names.end());
+        } else {
+            auto& names = (item.typeOnly ? packageTypes : packageValues)[item.from];
+            names.insert(item.names.begin(), item.names.end());
+        }
     }
-    writeImports(script, deps.typeImports, *output.typescript, true);
+    std::ostringstream runtimeImports;
+    const auto runtimeImport = [&](const std::filesystem::path& path, std::initializer_list<std::string> names, bool typeOnly) {
+        const auto source = path.generic_string();
+        if (deps.valueImports.contains(source) || deps.typeImports.contains(source)) {
+            (typeOnly ? deps.typeImports : deps.valueImports)[source].insert(names);
+        } else {
+            writeNamedImport(runtimeImports, names, modulePath(path, *output.typescript), typeOnly);
+        }
+    };
+    if (pool.count) runtimeImport(output.poolModule, {"RecyclePool"}, false);
+    if (!archives.script.view().empty()) {
+        if (!archive->output.typescript) throw std::runtime_error(module.name + ": serialization requires TypeScript output from " + archive->module.name);
+        const auto& writer = graph.node(archive->module.outputArchive);
+        const auto& reader = graph.node(archive->module.inputArchive);
+        for (const auto* api : {&writer, &reader}) {
+            if (!api->typescriptName)
+                throw std::runtime_error(module.name + ": serialization requires TypeScript export " + api->qualifiedName);
+        }
+        auto path = *archive->output.typescript;
+        runtimeImport(path.replace_extension(), {writer.name, reader.name}, true);
+    }
+    writeRecordImports(script, packageValues, packageTypes, {});
+    writeRecordImports(script, deps.valueImports, deps.typeImports, *output.typescript);
     if (standaloneInterfaces && !deps.typeImports.empty()) script << '\n';
+    script << runtimeImports.str();
     if (pool.count) {
-        script << "import { RecyclePool } from '" << modulePath(output.poolModule, *output.typescript) << "';\n";
         ts << "\nfunction createPool<T> (Constructor: new() => T): RecyclePool<T> {\n"
            << "    return new RecyclePool<T>(() => new Constructor(), 16);\n}\n"
            << "\nexport class " << module.name << "ObjectPool {\n    constructor (";
@@ -1281,19 +1370,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         for (const auto& [member, dependency] : output.poolDependencies) ts << "    public readonly " << member << ": " << dependency.name << ";\n";
         ts << pool.fields.str() << "}\n";
     }
-    if (!archives.script.view().empty()) {
-        if (!archive->output.typescript) throw std::runtime_error(module.name + ": serialization requires TypeScript output from " + archive->module.name);
-        const auto& writer = graph.node(archive->module.outputArchive);
-        const auto& reader = graph.node(archive->module.inputArchive);
-        for (const auto* api : {&writer, &reader}) {
-            if (!api->typescriptName)
-                throw std::runtime_error(module.name + ": serialization requires TypeScript export " + api->qualifiedName);
-        }
-        auto path = *archive->output.typescript;
-        script << "import type { " << writer.name << ", " << reader.name << " } from '"
-               << modulePath(path.replace_extension(), *output.typescript) << "';\n";
-    }
     script << ts.str();
+    if (!staticInitializers.view().empty()) script << '\n' << staticInitializers.str();
     if (usesUint64Field) {
         script << R"(
 function cc$defineUint64 (target: object, key: string, initial: number): void {

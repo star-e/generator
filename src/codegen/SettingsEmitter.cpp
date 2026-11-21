@@ -117,7 +117,11 @@ using Renames = std::map<std::string, std::string>;
 
 void emitRecord(std::ostream& out, const TypeGraph& graph, const TypeNode& node, const SettingsBinding& rules,
                 Imports& imports) {
-    const auto& fields = std::get<RecordType>(node.data).fields;
+    const auto& record = std::get<RecordType>(node.data);
+    for (const auto& field : record.staticFields) {
+        if (!field.cppOnly) invalid(field, "settings interfaces cannot expose a static field");
+    }
+    const auto& fields = record.fields;
     const bool helpers = !rules.interfaceOnly.contains(node.name);
     const auto group = rules.renamedFrom.find(node.name);
     const Renames empty;

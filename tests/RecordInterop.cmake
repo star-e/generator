@@ -24,6 +24,16 @@ namespace cc {
     }
     struct ImplicitCtor { count: uint32_t = 7; }
     struct EmptyCtor { count: uint32_t = 7; constructor(); }
+    @serialize @comparison(\"==\") @hash struct StaticProbe {
+        static epoch: uint64_t = 7;
+        static kind: LaterKind = LaterKind::ONE;
+        static nested: StaticValue;
+        @cppOnly static nativeFlag: bool = false;
+        count: uint32_t = 0;
+        constructor(count) defaults;
+    }
+    enum class LaterKind : uint32_t { ZERO, ONE }
+    struct StaticValue { value: uint32_t = 3; }
     struct RequiredCtor { count: uint32_t = 7; enabled: bool = true; constructor(count, enabled); }
     enum class DefaultKind { ZERO, ONE }
     struct DefaultCtor { count: uint32_t = 7; enabled: bool; kind: DefaultKind; constructor(count, enabled, kind) defaults; }
@@ -130,6 +140,21 @@ binding typescript {
     poolModule \"cocos/core/memop\";
     VectorProbe => class { pool vp; };
 }")
+file(APPEND "${work}/spec/shift.spec" [=[
+binding typescript {
+    import type { UpdateFrequency } from "./types";
+    import { RecyclePool } from "../../core/memop";
+    import type { InputArchive } from "./archive";
+    TinyNames => class {
+        methods R"body(
+    describe (text: string, rate: UpdateFrequency): string {
+        // A brace } or a different raw delimiter )ts" belongs to this method.
+        return `${text.replace(/}/g, ')ts"')}:${rate}`;
+    }
+)body";
+    };
+}
+]=])
 set(workspace "${work}/config/workspace.json")
 file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)

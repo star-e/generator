@@ -162,6 +162,7 @@ std::string bindingName(const std::string& qualified) {
 
 SettingsBinding settingsBinding(const Module& module) {
     SettingsBinding result;
+    if (!module.bindings.typescriptImports.empty()) throw std::runtime_error(module.name + ": explicit TypeScript imports require class output");
     for (const auto& rule : module.bindings.typescript) {
         if (rule.kind == BindingTarget::type) continue;
         const auto name = bindingName(rule.source.name);
@@ -249,6 +250,7 @@ void bindRecordOutput(RecordOutput& output, const Module& module, const TypeGrap
     output.jsbIncludes = bindings.jsbIncludes;
     for (const auto& [source, location] : bindings.jsbRecords) output.jsbRecords.insert(bindingName(source));
     if (!output.typescript) return;
+    output.typescriptImports = bindings.typescriptImports;
     output.poolModule = bindings.poolModule;
     if (module.pool && output.poolModule.empty()) output.poolModule = "cocos/core/memop";
     output.interfaceBindings = interfaceBindings(module);
@@ -260,8 +262,9 @@ void bindRecordOutput(RecordOutput& output, const Module& module, const TypeGrap
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
         if (rule.base) output.bases.emplace(name, *rule.base);
+        if (!rule.classMethods.empty()) output.classMethods.emplace(name, rule.classMethods);
         if (rule.kind == BindingTarget::classType && !rule.from.empty()) {
-            if (rule.base || rule.constructor || !rule.fieldDefaults.empty() ||
+            if (rule.base || !rule.classMethods.empty() || rule.constructor || !rule.fieldDefaults.empty() ||
                 (rule.pool && (rule.pool->assignFields || !rule.pool->keepOnReset.empty()))) invalidBinding(rule, "externally implemented class");
             output.externalClasses.emplace(name, rule.from);
         }

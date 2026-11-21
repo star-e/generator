@@ -67,6 +67,7 @@ struct Record {
     std::set<std::string> comparisons;
     bool hashable{};
     std::vector<Field> fields;
+    std::vector<Field> staticFields;
     std::vector<Constructor> constructors;
     std::vector<Method> methods;
 };

@@ -52,8 +52,7 @@
         "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.h": "../runtime/cpp/LayoutGraphDescriptorSet.h",
         "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp": "../runtime/cpp/LayoutGraphDescriptorSet.cpp",
         "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp": "../runtime/cpp/LayoutGraphPrint.cpp",
-        "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts",
-        "cocos/rendering/custom/layout-access.ts": "../runtime/typescript/layout-access.ts"
+        "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts"
       }
     },
     { "spec": "../spec/extern/scene.spec" },

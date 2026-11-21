@@ -229,11 +229,18 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
                       .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
                       .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
     result.fields = resolveFields(graph, syntax.fields, scope, owner);
+    result.staticFields = resolveFields(graph, syntax.staticFields, scope, owner);
+    for (const auto& field : result.staticFields) {
+        if (std::holds_alternative<ReferenceType>(graph.node(canonicalType(graph, field.type)).data))
+            throw std::runtime_error(field.type.location.describe() + ": static reference field requires a reference initializer");
+    }
     std::set<std::vector<uint32_t>> signatures;
     for (const auto& ctor : syntax.constructors) {
         std::vector<uint32_t> members, signature;
         for (const auto& name : ctor.fields) {
             const auto field = std::ranges::find(result.fields, name, &FieldInfo::name);
+            if (field == result.fields.end() && std::ranges::find(result.staticFields, name, &FieldInfo::name) != result.staticFields.end())
+                throw std::runtime_error(ctor.location.describe() + ": constructor cannot initialize static field " + name);
             if (field == result.fields.end()) throw std::runtime_error(ctor.location.describe() + ": unknown constructor field " + name);
             const auto index = static_cast<uint32_t>(field - result.fields.begin());
             if (std::ranges::find(members, index) != members.end()) {
@@ -633,9 +640,9 @@ TypeScriptRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inpu
                 }
                 rules.emplace(id.value, &rule);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {
-                if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.constructor || rule.base ||
-                    !rule.from.empty() || !rule.fieldDefaults.empty() || rule.mapKey != MapKeyKind::Native)
-                    reject("expected a graph pool binding");
+                if ((!rule.pool && rule.classMethods.empty()) || (rule.pool && (rule.pool->assignFields || !rule.pool->keepOnReset.empty())) ||
+                    rule.constructor || rule.base || !rule.from.empty() || !rule.fieldDefaults.empty() || rule.mapKey != MapKeyKind::Native)
+                    reject("expected a graph pool or methods binding");
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
                 if (!isRecord || !rule.methods.empty() || !rule.callbacks.empty()) reject("expected a record binding");
                 node.typescriptMapKey = rule.mapKey;
@@ -970,6 +977,12 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
     for (ModuleId owner : order) {
         const auto i = owner.value;
         const auto& input = inputs[i];
+        // Member initializers may name an enumerator declared later in the same module.
+        for (size_t j = 0; j < input.syntax.declarations.size(); ++j) {
+            const auto& decl = input.syntax.declarations[j];
+            if (const auto* enumeration = std::get_if<Enum>(&decl.data))
+                resolveEnum(graph, graph.modules[i].declarations[j], *enumeration, decl.externalScope.empty() ? scopes[i] : decl.externalScope, owner);
+        }
         for (size_t j = 0; j < input.syntax.declarations.size(); ++j) {
             const auto& decl = input.syntax.declarations[j];
             const auto id = graph.modules[i].declarations[j];
@@ -985,8 +998,6 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             } else if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
                 auto payload = resolveGraph(graph, *g, qualify(scopes[i], decl.name), owner);
                 graph.getNode(id.value).data = std::move(payload);
-            } else if (const auto* enumeration = std::get_if<Enum>(&decl.data)) {
-                resolveEnum(graph, id, *enumeration, decl.externalScope.empty() ? scopes[i] : decl.externalScope, owner);
             } else if (std::holds_alternative<Interface>(decl.data)) {
                 auto payload = resolveInterface(graph, decl, rule, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);

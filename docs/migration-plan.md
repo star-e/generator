@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 59 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 58 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -144,6 +144,7 @@ binding typescript {
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
 | 对象池和重置 | 模块中入池的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。按值持有的 `Int8Array`、`Uint8Array`、`Int16Array`、`Uint16Array`、`Int32Array`、`Uint32Array` 在复用时自动保留原数组和内容，并从 `reset` 和池工厂的参数中省略。其他需要保留的字段可用 `keep(...)` 指定。 |
+| 手写 TS 方法 | 在 `binding typescript` 的 `Type => class { ... };` 中写 `methods R"ts(...)ts";`。原始字符串包含一个或多个完整的 TS 方法，保留函数签名、方法体和缩进。可更换首尾的 `ts` 分隔符。作用域外的依赖在绑定块中用 `import { Name } from "模块";` 或 `import type { Name } from "模块";` 引入，路径遵循生成文件的 TS 导入语义。由 TypeScript 编译器检查方法语法、类型及重名。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 
@@ -322,7 +323,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 `DescriptorSetData` 到 `RenderPhaseData` 的九个记录都由同一份布局声明生成。C++ 记录只支持移动，并将传入的分配器传给嵌套记录和 PMR 容器。TS 重置只读的本模块记录时，调用其已有的 `reset`，按子记录的绑定顺序传入字段默认值。`DescriptorSetData` 据此调用 `descriptorSetLayoutData.reset(0xFFFFFFFF, 0)`。外部 GFX 对象 `descriptorSetLayoutInfo` 的成员函数 `reset()` 原地清空绑定数组。[布局声明](../spec/render/layout-graph.spec) · [GFX 绑定](../spec/extern/gfx.spec)
 
-`layout-graph.ts` 继续导出 `Layout` 和 `PipelineLayoutData`。平台选择逻辑由 `layout-access.ts` 维护，`getSets()` 和 `getSet(frequency)` 在 `(COCOS_RUNTIME || HTML5) && Layout.isWebGPU` 时查询 `descriptorGroups`，其余情况查询 `descriptorSets`。[平台逻辑](../runtime/typescript/layout-access.ts)
+`Layout` 在共享 `.spec` 中声明 `static type: LayoutType = LayoutType::VULKAN;` 和 `static isWebGPU: bool = false;`，由 C++ 和 TS 各自生成类级状态。静态字段不计入构造参数、对象池重置、归档、比较和哈希。TS 的 `layout-graph.ts` 导出 `Layout` 和 `PipelineLayoutData`。`PipelineLayoutData.getSets()` 和 `getSet(frequency)` 在 `(COCOS_RUNTIME || HTML5) && Layout.isWebGPU` 时查询 `descriptorGroups`，其余情况查询 `descriptorSets`。两个方法通过同一份 `.spec` 中的 `methods` 块生成。[声明与方法实现](../spec/render/layout-graph.spec)
 
 互读样本覆盖效果、技术、着色器、描述符集合以及渲染阶段和相位。每个 Map 使用一个键，便于逐字节核对 C++、TS 和旧引擎 TS 的输出。GPU 句柄声明为 `@transient`，原生测试使用引擎空后端创建有效句柄，并验证加载后的对象身份。[原生测试](../tests/consumer/records/PipelineArchiveConsumer.cpp) · [TS 测试](../tests/consumer/records/pipeline-archive.cjs)
 

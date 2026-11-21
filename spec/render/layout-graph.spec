@@ -15,7 +15,10 @@ namespace cc::render {
         WEBGPU,
     }
 
-    struct Layout {}
+    struct Layout {
+        static type: LayoutType = LayoutType::VULKAN;
+        static isWebGPU: bool = false;
+    }
 
     enum class DescriptorTypeOrder : uint8_t {
         UNIFORM_BUFFER,
@@ -238,9 +241,9 @@ namespace cc::render {
 }
 
 binding typescript {
+    import { COCOS_RUNTIME, HTML5 } from "internal:constants";
     poolDependency renderCommon: RenderCommon;
     LayoutType => const enum;
-    Layout => class from "cocos/rendering/custom/layout-access";
     DescriptorTypeOrder => const enum { names; };
     RenderPassType => const enum;
     DescriptorBlockIndex => class { assign; mapKey json; };
@@ -248,6 +251,14 @@ binding typescript {
     NameLocalID => number(value);
     DescriptorData => class { pool dd1; field descriptorID default 0; };
     PipelineLayoutData => class {
-        extends PipelineLayoutAccess from "cocos/rendering/custom/layout-access";
+        methods R"ts(
+    getSets (): Map<UpdateFrequency, DescriptorSetData> {
+        return (COCOS_RUNTIME || HTML5) && Layout.isWebGPU ? this.descriptorGroups : this.descriptorSets;
+    }
+
+    getSet (frequency: UpdateFrequency): DescriptorSetData | undefined {
+        return this.getSets().get(frequency);
+    }
+)ts";
     };
 }
