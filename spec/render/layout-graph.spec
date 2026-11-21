@@ -242,7 +242,6 @@ namespace cc::render {
 
 binding typescript {
     import { COCOS_RUNTIME, HTML5 } from "internal:constants";
-    poolDependency renderCommon: RenderCommon;
     LayoutType => const enum;
     DescriptorTypeOrder => const enum { names; };
     RenderPassType => const enum;

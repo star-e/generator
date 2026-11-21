@@ -234,7 +234,7 @@ foreach(expected IN ITEMS "enabled (value?: boolean): boolean;" "rows: Descripto
                           "keyed: Map<string, DescriptorBlockIndex>[] = []"
                           "index: DescriptorBlockIndex = new DescriptorBlockIndex()"
                           [[import { DescriptorBlockIndex } from './layout-graph';]]
-                          [[import type { Descriptor, DescriptorDB, LayoutGraph, LayoutType, RenderPassType } from './layout-graph';]]
+                          [[import type { Descriptor, DescriptorDB, LayoutGraph, LayoutGraphObjectPool, LayoutType, RenderPassType } from './layout-graph';]]
                           [[import type { UniformBlock } from '../../gfx';]])
     string(FIND "${script}" "${expected}" pos)
     if(pos EQUAL -1)

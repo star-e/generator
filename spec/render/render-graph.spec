@@ -372,7 +372,6 @@ namespace cc::render {
 }
 
 binding typescript {
-    poolDependency renderCommon: RenderCommon;
     ComputeView => class { pool cv1; };
     RasterSubpass => class { pool rs2; };
     RasterPass => class { mapKey string; };

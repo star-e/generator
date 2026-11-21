@@ -233,6 +233,15 @@ std::string poolMemberName(const std::string& type) {
     return initials.empty() ? type : initials;
 }
 
+std::string poolDependencyName(std::string name) {
+    // Preserve the start of the next word: GPUDevice becomes gpuDevice.
+    for (size_t i = 0; i < name.size() && std::isupper(static_cast<unsigned char>(name[i])); ++i) {
+        if (i > 0 && i + 1 < name.size() && std::islower(static_cast<unsigned char>(name[i + 1]))) break;
+        name[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(name[i])));
+    }
+    return name;
+}
+
 bool inferredPoolType(const TypeNode& node) {
     if (!node.typescriptName || node.typescriptNumber) return false;
     if (const auto* record = std::get_if<RecordType>(&node.data)) {
@@ -243,7 +252,8 @@ bool inferredPoolType(const TypeNode& node) {
     return graph && graph->mutableGraph;
 }
 
-void bindRecordOutput(RecordOutput& output, const Module& module, const TypeGraph& graph, ModuleId owner) {
+void bindRecordOutput(std::vector<ModuleOutput>& outputs, const Module& module, const TypeGraph& graph, ModuleId owner) {
+    auto& output = outputs.at(owner.value).types;
     const auto& bindings = module.bindings;
     if (output.jsbHeader && !bindings.jsb)
         throw std::runtime_error(module.name + ": cpp.jsb requires a .spec binding jsb block");
@@ -288,10 +298,31 @@ void bindRecordOutput(RecordOutput& output, const Module& module, const TypeGrap
         if (!inserted) throw std::runtime_error(module.name + ": duplicate pool member " + pool.member + " for " +
             it->second + " and " + name + ". Specify 'pool <name>;' on one of the types.");
     }
-    if (output.pools.empty() && !bindings.poolDependencies.empty())
-        throw std::runtime_error(module.name + ": poolDependency requires a local object pool");
-    for (const auto& [member, dependency] : bindings.poolDependencies) {
-        if (!poolMembers.emplace(member, dependency).second) throw std::runtime_error(module.name + ": duplicate pool member " + member);
+    if (output.pools.empty()) {
+        if (!bindings.poolDependencies.empty()) throw std::runtime_error(module.name + ": poolDependency requires a local object pool");
+        return;
+    }
+    const auto& imports = graph.modules.at(owner.value).imports;
+    const auto addDependency = [&](const std::string& member, ModuleId id) {
+        const auto& name = graph.modules.at(id.value).name;
+        const auto& dependency = outputs.at(id.value).types;
+        if (dependency.pools.empty() || !dependency.typescript)
+            throw std::runtime_error(module.name + ": imported module has no object pool: " + name);
+        if (!poolMembers.emplace(member, name).second) throw std::runtime_error(module.name + ": duplicate pool member " + member);
+        auto from = *dependency.typescript;
+        output.poolDependencies.emplace_back(member, TypeScriptImport{name + "ObjectPool", from.replace_extension()});
+    };
+    for (const auto& [member, name] : bindings.poolDependencies) {
+        const auto found = std::ranges::find_if(imports, [&](ModuleId id) { return graph.modules.at(id.value).name == name; });
+        if (found == imports.end()) throw std::runtime_error(module.name + ": poolDependency requires import " + name);
+        addDependency(member, *found);
+    }
+    for (const auto id : imports) {
+        const auto& dependency = outputs.at(id.value).types;
+        if (!dependency.typescript || dependency.pools.empty()) continue;
+        const auto& name = graph.modules.at(id.value).name;
+        if (std::ranges::find(bindings.poolDependencies, name, &PoolDependency::module) == bindings.poolDependencies.end())
+            addDependency(poolDependencyName(name), id);
     }
     for (const auto& name : {"constructor", "reset"})
         if (poolMembers.contains(name)) throw std::runtime_error(module.name + ": conflicting pool member " + name);
@@ -391,21 +422,10 @@ Files plan(const Json& settings, const fs::path& base) {
         const auto& module = graph.modules.at(i);
         auto& output = outputs[i];
         auto& records = output.types;
-        if (!inputs[i].modelOnly) bindRecordOutput(records, syntax, graph, owner);
+        if (!inputs[i].modelOnly) bindRecordOutput(outputs, syntax, graph, owner);
         if (output.settingsFile)
             addFile(*output.settingsFile, emitSettings(graph, owner, settingsBinding(syntax), *output.settingsFile, preamble));
         if (!records.header.empty() || records.typescript) {
-            if (records.typescript) {
-                for (const auto& [member, name] : syntax.bindings.poolDependencies) {
-                    const auto found = std::ranges::find_if(module.imports, [&](ModuleId id) { return graph.modules.at(id.value).name == name; });
-                    if (found == module.imports.end()) throw std::runtime_error(module.name + ": poolDependency requires import " + name);
-                    const auto& dependency = outputs.at(found->value).types;
-                    if (dependency.pools.empty() || !dependency.typescript)
-                        throw std::runtime_error(module.name + ": imported module has no object pool: " + name);
-                    auto from = *dependency.typescript;
-                    records.poolDependencies.emplace_back(member, TypeScriptImport{name + "ObjectPool", from.replace_extension()});
-                }
-            }
             for (auto imported : module.imports) {
                 const auto& dependency = outputs.at(imported.value).types;
                 if (!records.forwardHeader.empty() && !dependency.forwardHeader.empty())
