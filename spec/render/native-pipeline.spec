@@ -12,8 +12,62 @@ import PmrContainers;
 import Strings;
 import Maps;
 import Gfx;
+import RenderGraph;
+import RenderInterface;
+import PrivateInterface;
+import PrivateTypes;
+import FGDispatcher;
+import Sets;
 
 namespace cc::render {
+    struct RenderGraphFilter {
+        nullable validPasses: const ccstd::pmr::vector<bool>*;
+        cpp {
+            bool operator()(RenderGraph::Vertex pass) const { return (*validPasses)[pass]; }
+        }
+    }
+
+    class NativeRenderNode implements RenderNode {
+        nullable pipelineRuntime: const PipelineRuntime*;
+        nullable renderGraph: RenderGraph*;
+        nodeID: RenderGraph::Vertex = 0xFFFFFFFF;
+        constructor(pipelineRuntime, renderGraph, nodeID);
+    }
+
+    class NativeSetter : NativeRenderNode implements Setter {
+        nullable layoutGraph: const LayoutGraphData*;
+        layoutID: LayoutGraphData::Vertex = 0xFFFFFFFF;
+        constructor(layoutGraph, layoutID);
+        void setVec4ArraySize(const ccstd::string& name, uint32_t sz);
+        void setVec4ArrayElem(const ccstd::string& name, const cc::Vec4& vec, uint32_t id);
+        void setMat4ArraySize(const ccstd::string& name, uint32_t sz);
+        void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t id);
+    }
+
+    class NativeRenderSubpassBuilderImpl : NativeSetter implements RenderSubpassBuilder {}
+
+    class NativeSceneBuilder final : SceneBuilder, NativeSetter {}
+
+    class NativeRenderQueueBuilder final : RenderQueueBuilder, NativeSetter {}
+
+    class NativeRenderSubpassBuilder final : RenderSubpassBuilder, NativeRenderSubpassBuilderImpl {}
+
+    class NativeMultisampleRenderSubpassBuilder final : MultisampleRenderSubpassBuilder, NativeRenderSubpassBuilderImpl {}
+
+    class NativeComputeSubpassBuilder final : ComputeSubpassBuilder, NativeSetter {}
+
+    class NativeRenderPassBuilder final : RenderPassBuilder, NativeSetter {}
+
+    class NativeMultisampleRenderPassBuilder final : MultisampleRenderPassBuilder, NativeSetter {
+        subpassID: RenderGraph::Vertex = 0xFFFFFFFF;
+        subpassLayoutID: LayoutGraphData::Vertex = 0xFFFFFFFF;
+        constructor(subpassID, subpassLayoutID);
+    }
+
+    class NativeComputeQueueBuilder final : ComputeQueueBuilder, NativeSetter {}
+
+    class NativeComputePassBuilder final : ComputePassBuilder, NativeSetter {}
+
     struct DrawInstance {
         nullable subModel: const scene::SubModel*;
         priority: uint32_t = 0;
@@ -70,6 +124,11 @@ namespace cc::render {
         void clear() noexcept;
         bool empty() const noexcept;
         void recordCommands(gfx::CommandBuffer* cmdBuffer, gfx::RenderPass* renderPass, uint32_t subpassIndex, SceneFlags sceneFlags) const;
+    }
+
+    @immovable struct ResourceGroup {
+        instancingBuffers: PmrUnorderedSet<IntrusivePtr<pipeline::InstancedBuffer>>;
+        ~ResourceGroup() noexcept;
     }
 
     @moveOnly struct BufferPool {
@@ -185,6 +244,62 @@ namespace cc::render {
         lightByteOffset: uint32_t = 0xFFFFFFFF;
     }
 
+    @moveOnly struct SceneCulling {
+        frustumCullings: ccstd::pmr::unordered_map<const scene::RenderScene*, FrustumCulling>;
+        frustumCullingResults: ccstd::pmr::vector<ccstd::vector<const scene::Model*>>;
+        lightBoundsCullings: ccstd::pmr::unordered_map<const scene::RenderScene*, LightBoundsCulling>;
+        lightBoundsCullingResults: ccstd::pmr::vector<LightBoundsCullingResult>;
+        renderQueueIndex: ccstd::pmr::unordered_map<NativeRenderQueueKey, NativeRenderQueueID>;
+        renderQueues: ccstd::pmr::vector<NativeRenderQueue>;
+        renderQueueQueryIndex: PmrFlatMap<RenderGraph::Vertex, NativeRenderQueueQuery>;
+        numFrustumCulling: uint32_t = 0;
+        numLightBoundsCulling: uint32_t = 0;
+        numRenderQueues: uint32_t = 0;
+        gpuCullingPassID: RenderGraph::Vertex = 0xFFFFFFFF;
+        enableLightCulling: bool = true;
+
+        void clear() noexcept;
+        void buildRenderQueues(const RenderGraph& rg, const LayoutGraphData& lg, const NativePipeline& ppl);
+        cpp {
+        private:
+            FrustumCullingID getOrCreateFrustumCulling(const SceneData& sceneData);
+            LightBoundsCullingID getOrCreateLightBoundsCulling(const SceneData& sceneData, FrustumCullingID frustumCullingID);
+            NativeRenderQueueID getOrCreateRenderQueue(const NativeRenderQueueKey& key, SceneFlags flags, const scene::Camera* camera);
+            void collectCullingQueries(const RenderGraph& rg);
+            void batchFrustumCulling(const NativePipeline& ppl);
+            void batchLightBoundsCulling();
+            void fillRenderQueues();
+        public:
+        }
+    }
+
+    @immovable struct LightResource {
+        cpuBuffer: ccstd::pmr::vector<char>;
+        nullable programLibrary: const NativeProgramLibrary*;
+        nullable device: gfx::Device*;
+        elementSize: uint32_t = 0;
+        maxNumLights: uint32_t = 16;
+        binding: uint32_t = 0xFFFFFFFF;
+        resized: bool = false;
+        nullable lightBuffer: IntrusivePtr<gfx::Buffer>;
+        nullable firstLightBufferView: IntrusivePtr<gfx::Buffer>;
+        lights: ccstd::pmr::vector<const scene::Light*>;
+        lightIndex: PmrFlatMap<const scene::Light*, uint32_t>;
+
+        void init(const NativeProgramLibrary& programLib, gfx::Device* deviceIn, uint32_t maxNumLights);
+        void buildLights(SceneCulling& sceneCulling, bool bHDR, const scene::Shadows* shadowInfo);
+        void tryUpdateRenderSceneLocalDescriptorSet(const SceneCulling& sceneCulling);
+        void clear();
+        uint32_t addLight(const scene::Light* light, bool bHDR, float exposure, const scene::Shadows* shadowInfo);
+        void buildLightBuffer(gfx::CommandBuffer* cmdBuffer) const;
+    }
+
+    @comparison("==", "<") @hash struct DescriptorSetKey {
+        nodeID: uint32_t = 0xFFFFFFFF;
+        frequency: UpdateFrequency = UpdateFrequency::PER_INSTANCE;
+        constructor(nodeID, frequency);
+    }
+
     @moveOnly struct DescriptorSetContext {
         nullable descriptorSet: IntrusivePtr<gfx::DescriptorSet>;
         constructor();
@@ -213,6 +328,38 @@ namespace cc::render {
         bool hasNoData() const noexcept {
             return !hasConstants && buffers.empty() && textures.empty() && samplers.empty();
         }
+    }
+
+    @immovable struct NativeRenderContext {
+        defaultResource: std::unique_ptr<gfx::DefaultResource>;
+        nextFenceValue: uint64_t = 0;
+        resourceGroups: ccstd::pmr::map<uint64_t, ResourceGroup>;
+        layoutGraphResources: ccstd::pmr::vector<LayoutGraphNodeResource>;
+        fullscreenQuad: QuadResource;
+        sceneCulling: SceneCulling;
+        lightResources: LightResource;
+        resourceGraphIndex: ccstd::pmr::unordered_map<RenderGraph::Vertex, PmrFlatMap<NameLocalID, ResourceGraph::Vertex>>;
+        graphNodeRenderData: ccstd::pmr::unordered_map<DescriptorSetKey, DeviceRenderData>;
+        graphNodeDescriptorSets: ccstd::pmr::unordered_map<DescriptorSetKey, gfx::DescriptorSet*>;
+        constructor(defaultResource);
+        void clearPreviousResources(uint64_t finishedFenceValue) noexcept;
+    }
+
+    @immovable class NativeProgramLibrary final : ProgramLibrary {
+        layoutGraph: LayoutGraphData;
+        phases: PmrFlatMap<uint32_t, ProgramGroup>;
+        unsycPool: boost::container::pmr::unsynchronized_pool_resource;
+        mergeHighFrequency: bool = false;
+        fixedLocal: bool = true;
+        localLayoutData: DescriptorSetLayoutData;
+        nullable localDescriptorSetLayout: IntrusivePtr<gfx::DescriptorSetLayout>;
+        nullable emptyDescriptorSetLayout: IntrusivePtr<gfx::DescriptorSetLayout>;
+        nullable emptyPipelineLayout: IntrusivePtr<gfx::PipelineLayout>;
+        nullable pipeline: PipelineRuntime*;
+        nullable device: gfx::Device*;
+        void init(gfx::Device* deviceIn);
+        void setPipeline(PipelineRuntime* pipelineIn);
+        void destroy();
     }
 
     struct PipelineCustomization {
@@ -249,5 +396,57 @@ namespace cc::render {
         layers: Array4<BuiltinShadowTransform>;
         specialLayer: BuiltinShadowTransform;
         shadowDistance: float = 0;
+    }
+
+    @immovable class NativePipeline final : Pipeline {
+        cpp {
+        private:
+            ccstd::vector<gfx::CommandBuffer*> _commandBuffers;
+        public:
+        }
+        unsyncPool: boost::container::pmr::unsynchronized_pool_resource;
+        nullable device: gfx::Device*;
+        nullable swapchain: gfx::Swapchain*;
+        macros: MacroRecord;
+        constantMacros: ccstd::string;
+        globalDSManager: std::unique_ptr<pipeline::GlobalDSManager>;
+        name: ccstd::pmr::string;
+        nullable programLibrary: NativeProgramLibrary*;
+        nullable profiler: scene::Model*;
+        lightingMode: LightingMode = LightingMode::DEFAULT;
+        nullable pipelineSceneData: IntrusivePtr<pipeline::PipelineSceneData>;
+        nativeContext: NativeRenderContext;
+        resourceGraph: ResourceGraph;
+        renderGraph: RenderGraph;
+        mutable builtinCSMs: PmrFlatMap<BuiltinCascadedShadowMapKey, BuiltinCascadedShadowMap>;
+        statistics: PipelineStatistics;
+        custom: PipelineCustomization;
+        defaultFramebufferHasDepthStencil: bool = false;
+
+        constructor() noexcept = custom;
+        void executeRenderGraph(const RenderGraph& rg);
+        void addCustomContext(std::string_view name, std::shared_ptr<CustomPipelineContext> ptr);
+        void addCustomRenderPass(std::string_view name, std::shared_ptr<CustomRenderPass> ptr);
+        void addCustomRenderSubpass(std::string_view name, std::shared_ptr<CustomRenderSubpass> ptr);
+        void addCustomComputeSubpass(std::string_view name, std::shared_ptr<CustomComputeSubpass> ptr);
+        void addCustomComputePass(std::string_view name, std::shared_ptr<CustomComputePass> ptr);
+        void addCustomRenderQueue(std::string_view name, std::shared_ptr<CustomRenderQueue> ptr);
+        void addCustomRenderCommand(std::string_view name, std::shared_ptr<CustomRenderCommand> ptr);
+        void setCustomContext(std::string_view name);
+        void prepareDescriptorSets(gfx::CommandBuffer& cmdBuff, const FrameGraphDispatcher& rdg, RenderGraph::Vertex passID);
+    }
+
+    class NativeProgramProxy final : ProgramProxy {
+        nullable shader: IntrusivePtr<gfx::Shader>;
+        nullable pipelineState: IntrusivePtr<gfx::PipelineState>;
+        constructor();
+        constructor(shader);
+        constructor(shader, pipelineState);
+    }
+
+    class NativeRenderingModule final : RenderingModule {
+        programLibrary: std::shared_ptr<NativeProgramLibrary>;
+        constructor();
+        constructor(programLibrary);
     }
 }

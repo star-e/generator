@@ -340,6 +340,9 @@ namespace cc::gfx {
     header "cocos/renderer/gfx-base/GFXObject.h" {
         class GFXObject;
     }
+    header "cocos/renderer/gfx-base/GFXDevice.h" {
+        class DefaultResource;
+    }
 
     header "cocos/renderer/gfx-base/GFXDef.h" {
         @constRef struct Color;

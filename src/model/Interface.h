@@ -51,6 +51,7 @@ struct Field {
     bool transient{};
     bool cppOnly{};
     bool notElement{};
+    bool isMutable{};
 };
 
 struct Constructor {
@@ -58,9 +59,17 @@ struct Constructor {
     std::vector<std::string> fields;
     bool defaults{};
     bool cppOnly{};
+    bool custom{};
+    bool isNoexcept{};
 };
 
 struct Record {
+    bool isClass{};
+    bool isFinal{};
+    std::vector<TypeRef> bases;
+    std::optional<TypeRef> implements;
+    std::optional<bool> destructorNoexcept;
+    std::string cppMembers;
     bool moveOnly{};
     bool immovable{};
     bool serializable{};

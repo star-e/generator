@@ -10,8 +10,9 @@ binding typescript {
     Label => Caption from "cocos/rendering/custom/caption";
 }
 ]])
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import Gfx; import Text; import ArchiveInterface;
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import Gfx; import Text; import ArchiveInterface; import RenderInterface; import NativePipeline;
 namespace cc {
+    @cppOnly class RenderNodeProbe final : render::RenderNode, render::NativeRenderNode {}
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     interface ConversionProbe {
         explicit operator uint32_t() const noexcept { return 17; }
@@ -75,6 +76,19 @@ namespace cc {
     using LocalUniformID = UniformWord;
     using UniformWord = render::UniformID;
     @moveOnly struct MoveProbe { value: uint32_t = 0; }
+    @cppOnly struct MoveArgumentBase { item: MoveProbe; constructor(item); }
+    @cppOnly struct MoveArgumentPmr : MoveArgumentBase { text: ccstd::pmr::string; }
+    @cppOnly struct CombinedCtor : RequiredCtor, MoveArgumentBase {
+        count: uint32_t = 9;
+        constructor(count) defaults;
+    }
+    @cppOnly struct OptionalBaseCtor : DefaultCtor { count: uint32_t = 0; constructor(count); }
+    @cppOnly struct CustomBaseCtor { id: uint32_t; constructor(id) = custom; }
+    @cppOnly struct ExplicitEmptyDerived : CustomBaseCtor { constructor(); }
+    @cppOnly struct PmrDerivedCtor : AllocatorCtorProbe {
+        count: uint32_t = 9;
+        constructor(count) defaults;
+    }
     interface DispatchProbe {
         @cppOnly virtual uint32_t apply(MoveProbe packet, const int* marker = nullptr, uint32_t scale = 3) const = 0;
         @cppOnly virtual uint32_t apply(MoveProbe packet, const bool* marker, uint32_t scale) const = 0;
@@ -267,6 +281,32 @@ namespace cc::render {
 ]] "${drawSort}\n${instanceSort}\n${queueSort}\n}\n")
 # Compile the engine's texture-view query with the generated descriptor and visitor member.
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp" nativeResourceGraph)
+source_between(nativeResourceGraph "ResourceGroup::~ResourceGroup()" "void ProgramResource::syncResources(" groupDestructor)
+file(READ "${ENGINE}/native/cocos/renderer/pipeline/InstancedBuffer.cpp" instancedBuffer)
+source_between(instancedBuffer "void InstancedBuffer::clear()" "void InstancedBuffer::setDynamicOffset(" clearInstances)
+file(APPEND "${stage}/NativeQueueSort.cpp" "\nnamespace cc::render {\n${groupDestructor}}\nnamespace cc::pipeline {\n${clearInstances}}\n")
+file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeRenderGraph.cpp" nativeRenderGraph)
+source_between(nativeRenderGraph "ccstd::string NativeRenderNode::getName()" "RenderGraph::vertex_descriptor RenderGraph::getPassID(" renderNodeMethods)
+foreach(component IN ITEMS Name Data)
+    string(REPLACE "get(RenderGraph::${component}Tag{}, *renderGraph, nodeID)" "renderGraph->get${component}(nodeID)" renderNodeMethods "${renderNodeMethods}")
+endforeach()
+file(APPEND "${stage}/NativeQueueSort.cpp" "\nnamespace cc::render {\n${renderNodeMethods}}\n")
+file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeProgramLibrary.cpp" nativeLibrary)
+source_between(nativeLibrary "const ccstd::string &NativeProgramProxy::getName()" "namespace {" proxyMethods)
+file(APPEND "${stage}/NativeQueueSort.cpp" "\nnamespace cc::render {\n${proxyMethods}}\n")
+
+# Archive the library constructor separately: its vtable is supplied by the engine shader compiler.
+# Compile both parts of the generated implementation; the queue consumer links the data types it uses.
+set(nativePipelineSource "${stage}/native/cocos/renderer/pipeline/custom/NativePipelineTypes.cpp")
+file(READ "${nativePipelineSource}" nativePipeline)
+source_between(nativePipeline "NativeProgramLibrary::NativeProgramLibrary(" "\n\n" libraryConstructor)
+string(REPLACE "${libraryConstructor}" "" nativeData "${nativePipeline}")
+file(WRITE "${stage}/NativeData.cpp" "${nativeData}")
+file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativePipeline.cpp" nativePipelineImplementation)
+source_between(nativePipelineImplementation "NativePipeline::NativePipeline(" "gfx::Device *NativePipeline::getDevice()" pipelineConstructor)
+file(WRITE "${stage}/NativeLibraryConstructor.cpp"
+    "#include \"cocos/renderer/pipeline/custom/NativePipelineTypes.h\"\n#include \"cocos/renderer/pipeline/custom/RenderingModule.h\"\n"
+    "namespace cc::render {\n${libraryConstructor}\n${pipelineConstructor}}\n")
 source_between(nativeResourceGraph "bool ResourceGraph::isTextureView(" "gfx::Buffer* ResourceGraph::getBuffer(" textureViewQuery)
 string(REPLACE "vertex_descriptor" "Vertex" textureViewQuery "${textureViewQuery}")
 string(REGEX REPLACE "visitObject[(][ \t\r\n]*resID, [*]this," "visit_object(resID," textureViewQuery "${textureViewQuery}")

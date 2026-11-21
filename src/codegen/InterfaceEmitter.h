@@ -22,5 +22,6 @@ void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule
                           std::string_view body, const std::set<std::string>& headers, const std::string& preamble);
 void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream* cpp, std::set<std::string>& headers,
                    std::ostream* script, TypeImports& imports, const InterfaceBindings& bindings);
+void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers);
 
 } // namespace cc::codegen

@@ -12,6 +12,7 @@ namespace std {
 
     header "memory" {
         template<T> class shared_ptr;
+        template<T> class unique_ptr;
     }
 
     header "vector" {
@@ -20,6 +21,9 @@ namespace std {
 }
 
 namespace boost::container::pmr {
+    header "boost/container/pmr/unsynchronized_pool_resource.hpp" {
+        class unsynchronized_pool_resource;
+    }
     header "boost/container/pmr/memory_resource.hpp" {
         class memory_resource;
     }

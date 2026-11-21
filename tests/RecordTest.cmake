@@ -59,6 +59,9 @@ function(check_resource_error before after diagnostic)
     file(WRITE "${resourceSpec}" "${invalid}")
     expect_failure(2 "${diagnostic}" ${generate})
 endfunction()
+check_resource_error("struct ClearValue {" "struct ClearValue { ~Other();" "expected destructor name 'ClearValue'")
+check_resource_error("struct ClearValue {" "struct ClearValue { ~ClearValue(); ~ClearValue() noexcept;" "duplicate destructor for ClearValue")
+check_resource_error("struct ClearValue {" "struct ClearValue { ~ClearValue(uint32_t id);" "expected '[)]'")
 check_resource_error("binding typescript {" "binding typescript { ClearValue => class { constructor(x, y, z, w) required; };"
     "required TypeScript constructor conflicts with declared defaults")
 check_resource_error("constructor(x, y, z, w) defaults;" "@cppOnly constructor(z, w); constructor(x, y, z, w) defaults;"
@@ -84,6 +87,13 @@ check_resource_error("namespace cc::render {" [=[namespace cc::render {
     @cppOnly struct RequiredPmr { name: ccstd::pmr::string; constructor(name); }
     @cppOnly struct MissingPmr { child: RequiredPmr; constructor(child) defaults; }
     ]=] "child: .*no C[+][+] default for cc::render::RequiredPmr")
+check_resource_error("namespace cc::render {" [=[namespace cc::render {
+    @cppOnly struct OverloadBase {
+        id: uint32_t; value: bool;
+        constructor(id); @cppOnly constructor(id, value);
+    }
+    @cppOnly struct Ambiguous : OverloadBase { enabled: bool; constructor(enabled) defaults; }
+    ]=] "Ambiguous: inherited constructor overloads conflict at 2 field arguments")
 string(REPLACE "constructor(x, y, z, w) defaults;" "constructor(x, y, z, w);" required "${resource}")
 file(WRITE "${resourceSpec}" "${required}\nbinding typescript { ClearValue => class { pool cv; }; }")
 expect_failure(2 "ClearValue: pool requires a TypeScript constructor callable without arguments" ${generate})
@@ -133,6 +143,17 @@ check_resource_error("@notElement slotID" "@notElement @notElement slotID" "dupl
 check_resource_error("incidence_graph { out_edges: vector; }" "" "bidirectional_graph requires incidence_graph")
 check_resource_error("bidirectional_graph { in_edges: vector; }" "hierarchy_graph { storage: shared_edges; }"
     "explicit incidence storage conflicts with shared hierarchy edges")
+string(REPLACE "struct ClearValue {" "class ClearValue { ~ClearValue();" withDestructor "${resource}")
+file(WRITE "${resourceSpec}" "${withDestructor}")
+run(${generate})
+set(nativeDir "${work}/stage/native/cocos/renderer/pipeline/custom")
+file(READ "${nativeDir}/RenderGraphTypes.h" probeHeader)
+file(READ "${nativeDir}/NativePipelineTypes.h" pipelineHeader)
+file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" probeTs)
+if(NOT probeHeader MATCHES "~ClearValue[(][)];" OR NOT pipelineHeader MATCHES "~ResourceGroup[(][)] noexcept;"
+   OR probeTs MATCHES "~ClearValue")
+    message(FATAL_ERROR "Expected the declared C++ destructors with their respective exception specifications")
+endif()
 string(REPLACE "constructor(swapchain, isDepthStencil) defaults;" [=[
     @cppOnly nativeFence: uint64_t = 18446744073709551615;
     constructor(swapchain, isDepthStencil) defaults;

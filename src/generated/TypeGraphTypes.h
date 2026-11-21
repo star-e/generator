@@ -76,6 +76,7 @@ struct FieldInfo {
     std::string typescriptInitializer;
     bool cppOnly = false;
     bool notElement = false;
+    bool isMutable = false;
 };
 
 struct Enumerator {
@@ -120,6 +121,8 @@ struct ConstructorInfo {
     std::vector<uint32_t> fields;
     bool defaults = false;
     bool cppOnly = false;
+    bool custom = false;
+    bool isNoexcept = false;
 };
 
 struct RecordType {
@@ -133,6 +136,11 @@ struct RecordType {
     std::vector<ConstructorInfo> constructors;
     std::optional<ConstructorInfo> typescriptConstructor;
     std::vector<TypeId> bases;
+    std::optional<TypeId> implements;
+    bool isClass = false;
+    bool isFinal = false;
+    std::optional<bool> destructorNoexcept;
+    std::string cppMembers;
     std::vector<FieldInfo> fields;
     std::vector<FieldInfo> staticFields;
     std::vector<MethodInfo> methods;

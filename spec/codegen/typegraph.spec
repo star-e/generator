@@ -44,6 +44,7 @@ namespace codegen {
         typescriptInitializer: std::string;
         cppOnly: bool = false;
         notElement: bool = false;
+        isMutable: bool = false;
     }
     struct Enumerator {
         name: std::string;
@@ -69,6 +70,8 @@ namespace codegen {
         fields: std::vector<uint32_t>;
         defaults: bool = false;
         cppOnly: bool = false;
+        custom: bool = false;
+        isNoexcept: bool = false;
     }
     struct RecordType {
         moveOnly: bool = false;
@@ -81,6 +84,11 @@ namespace codegen {
         constructors: std::vector<ConstructorInfo>;
         typescriptConstructor: std::optional<ConstructorInfo>;
         bases: std::vector<TypeId>;
+        implements: std::optional<TypeId>;
+        isClass: bool = false;
+        isFinal: bool = false;
+        destructorNoexcept: std::optional<bool>;
+        cppMembers: std::string;
         fields: std::vector<FieldInfo>;
         staticFields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;

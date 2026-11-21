@@ -41,7 +41,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/NativeQueueSort.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativeTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/FGDispatcherTypes.cpp"
-    "${STAGING}/native/cocos/renderer/pipeline/custom/NativePipelineTypes.cpp"
+    "${STAGING}/NativeData.cpp"
     ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
     "${STAGING}/ResourceGraphTextureView.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"
@@ -56,12 +56,18 @@ add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${STAGING}/Legac
     "${custom}/ArchiveTypes.cpp" "${custom}/RenderCommonTypes.cpp" "${custom}/LayoutGraphTypes.cpp"
     "${custom}/LayoutGraphSerialization.cpp")
 target_compile_definitions(LegacyArchiveConsumer PRIVATE CC_TEST_LEGACY_LAYOUT=1)
+# NativeData.cpp inherits the adjacent generated header's include directory.
+set_property(SOURCE "${STAGING}/NativeData.cpp" PROPERTY INCLUDE_DIRECTORIES "${STAGING}/native/cocos/renderer/pipeline/custom")
+add_library(NativeLibraryConstructor STATIC "${STAGING}/NativeLibraryConstructor.cpp")
+target_link_libraries(RecordConsumer PRIVATE NativeLibraryConstructor)
 # Material and Model transitively include the engine's native typed array headers.
-target_compile_definitions(RecordConsumer PRIVATE "$<$<PLATFORM_ID:Windows>:_USE_MATH_DEFINES>")
-target_include_directories(RecordConsumer PRIVATE "${STAGING}/native"
-    "$<$<PLATFORM_ID:Windows>:${native}/external/win64/include/v8>"
-    "$<$<PLATFORM_ID:Darwin>:${native}/external/mac/include/v8>"
-    "$<$<PLATFORM_ID:Linux>:${native}/external/linux/include/v8>")
+foreach(target IN ITEMS RecordConsumer NativeLibraryConstructor)
+    target_compile_definitions(${target} PRIVATE "$<$<PLATFORM_ID:Windows>:_USE_MATH_DEFINES>")
+    target_include_directories(${target} PRIVATE "${STAGING}/native"
+        "$<$<PLATFORM_ID:Windows>:${native}/external/win64/include/v8>"
+        "$<$<PLATFORM_ID:Darwin>:${native}/external/mac/include/v8>"
+        "$<$<PLATFORM_ID:Linux>:${native}/external/linux/include/v8>")
+endforeach()
 get_target_property(containerType Boost::container TYPE)
 if(WIN32 AND containerType STREQUAL "SHARED_LIBRARY")
     add_custom_command(TARGET RecordConsumer POST_BUILD COMMAND "${CMAKE_COMMAND}" -E
@@ -73,7 +79,7 @@ foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer)
     target_sources(${target} PRIVATE LayoutPrintConsumer.cpp LayoutDescriptorConsumer.cpp "${STAGING}/DescriptorTypeMapping.cpp")
     target_link_libraries(${target} PRIVATE DescriptorTestGfx)
 endforeach()
-foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer DescriptorTestGfx)
+foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer DescriptorTestGfx NativeLibraryConstructor)
     target_link_libraries(${target} PRIVATE Boost::container)
     set_target_properties(${target} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
     target_include_directories(${target} PRIVATE "${native}" "${native}/cocos"

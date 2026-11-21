@@ -37,14 +37,14 @@ void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use
 }
 
 void cppParameters(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, size_t count, bool named,
-                   ModuleId owner, std::set<std::string>& headers) {
+                   ModuleId owner, std::set<std::string>& headers, bool defaults = true) {
     out << '(';
     for (size_t i = 0; i < count; ++i) {
         const auto& param = method.parameters[i];
         if (i) out << ", ";
         if (param.byConstReference) out << "const ";
         cppDeclarator(out, graph, param.type, (param.byConstReference ? "&" : "") + (named ? param.name : ""), owner, headers);
-        if (!method.isPureVirtual && !param.defaultValue.empty()) out << " = " << param.defaultValue;
+        if (defaults && !method.isPureVirtual && !param.defaultValue.empty()) out << " = " << param.defaultValue;
     }
     out << ')';
     if (method.isConst) out << " const";
@@ -59,6 +59,17 @@ void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& meth
     if (method.isPureVirtual) out << " = 0";
     if (method.cppBody.empty()) out << ";\n";
     else out << ' ' << method.cppBody << '\n';
+}
+
+void forwardArgument(std::ostream& out, const TypeGraph& graph, const ParameterInfo& p, std::set<std::string>& headers) {
+    const auto& type = graph.node(p.type.type);
+    if (p.byConstReference || std::holds_alternative<ReferenceType>(type.data) || std::holds_alternative<PointerType>(type.data) ||
+        std::holds_alternative<EnumType>(type.data) || std::holds_alternative<AliasType>(type.data) || isArithmeticType(type.qualifiedName)) {
+        out << p.name;
+    } else {
+        headers.insert("utility");
+        out << "std::move(" << p.name << ')';
+    }
 }
 
 void cppForwardingOverloads(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, const MethodInfo& method,
@@ -84,15 +95,8 @@ void cppForwardingOverloads(std::ostream& out, const TypeGraph& graph, const Typ
         for (size_t i = 0; i < params.size(); ++i) {
             if (i) out << ", ";
             const auto& p = params[i];
-            const auto& type = graph.node(p.type.type);
             if (i >= count) out << p.defaultValue;
-            else if (p.byConstReference || std::holds_alternative<ReferenceType>(type.data) || std::holds_alternative<PointerType>(type.data) ||
-                     std::holds_alternative<EnumType>(type.data) || std::holds_alternative<AliasType>(type.data) || isArithmeticType(type.qualifiedName))
-                out << p.name;
-            else {
-                headers.insert("utility");
-                out << "std::move(" << p.name << ')';
-            }
+            else forwardArgument(out, graph, p, headers);
         }
         out << "); }\n";
     }
@@ -202,6 +206,69 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
 }
 
 } // namespace
+
+void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers) {
+    const auto& record = std::get<RecordType>(node.data);
+    if (record.bases.empty() && !record.implements) return;
+    using Methods = std::map<std::string, const MethodInfo*>;
+    auto signature = [&](const MethodInfo& method) {
+        std::ostringstream key;
+        key << method.name;
+        cppParameters(key, graph, method, method.parameters.size(), false, node.module, headers, false);
+        return key.str();
+    };
+    auto collect = [&](auto& self, TypeId id, Methods& methods) -> void {
+        const auto& data = graph.node(id).data;
+        if (const auto* iface = std::get_if<InterfaceType>(&data)) {
+            for (auto base : iface->bases) self(self, base, methods);
+            for (const auto& method : iface->methods)
+                if (method.isPureVirtual) methods[signature(method)] = &method;
+        } else if (const auto* base = std::get_if<RecordType>(&data)) {
+            for (auto parent : base->bases) self(self, parent, methods);
+            if (base->implements) self(self, *base->implements, methods);
+        }
+    };
+    Methods overrides, implementation;
+    std::map<std::string, TypeId> providers;
+    for (auto base : record.bases) {
+        if (std::holds_alternative<InterfaceType>(graph.node(base).data)) {
+            collect(collect, base, overrides);
+        } else {
+            Methods supplied;
+            collect(collect, base, supplied);
+            for (const auto& [key, method] : supplied) {
+                auto [it, inserted] = providers.try_emplace(key, base);
+                if (!inserted) it->second = TypeId{};
+            }
+        }
+    }
+    if (record.implements) collect(collect, *record.implements, implementation);
+    implementation.insert(overrides.begin(), overrides.end());
+    for (const auto& method : record.methods) implementation.erase(signature(method));
+    for (const auto& [key, candidate] : implementation) {
+        const bool overrideMethod = overrides.contains(key);
+        const auto provider = providers.find(key);
+        if (provider != providers.end() && provider->second == TypeId{})
+            throw std::runtime_error(node.qualifiedName + ": ambiguous implementation of " + key);
+        if (!overrideMethod && provider != providers.end()) continue;
+        const auto& method = overrideMethod ? *overrides.at(key) : *candidate;
+        out << "    ";
+        if (method.isExplicitConversion) out << "explicit operator ";
+        cppDeclarator(out, graph, method.result, method.isExplicitConversion ? "" : method.name, node.module, headers);
+        cppParameters(out, graph, method, method.parameters.size(), true, node.module, headers);
+        if (method.isNoexcept) out << " noexcept";
+        if (overrideMethod) out << " override";
+        if (provider == providers.end()) { out << ";\n"; continue; }
+        out << " { ";
+        if (graph.node(method.result.type).qualifiedName != "void") out << "return ";
+        out << graph.node(provider->second).qualifiedName << "::" << method.name << '(';
+        for (size_t i = 0; i < method.parameters.size(); ++i) {
+            if (i) out << ", ";
+            forwardArgument(out, graph, method.parameters[i], headers);
+        }
+        out << "); }\n";
+    }
+}
 
 void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream* cpp, std::set<std::string>& headers,
                    std::ostream* script, TypeImports& imports, const InterfaceBindings& bindings) {

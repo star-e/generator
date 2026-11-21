@@ -71,11 +71,15 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 原生与 Web 消费测试覆盖这些类型。 |
 | FGDispatcher | `FGDispatcherFwd.h` 提供前置声明，`FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
-| NativePipeline | `NativePipelineTypes.h/.cpp` 及 `NativePipelineFwd.h`覆盖 28 个记录，包括绘制队列、实例化队列、组合队列和设备渲染数据。原生消费测试使用引擎排序实现核对不透明和透明绘制顺序。 | 剩余记录和实现类涉及构造限制、自定义析构、多重继承和私有状态。 |
+| NativePipeline | `NativePipelineFwd.h` 和 `NativePipelineTypes.h/.cpp` 覆盖旧版全部 50 个顶层类型，包括 9 个具体构建器、原生管线、程序库、资源上下文和绘制队列。 | 引擎切换时，手写执行器和管线代码中引用旧图自由函数与嵌套标签的调用仍需适配。 |
+
+`NativeSetter : NativeRenderNode implements Setter` 为实现类生成 `Setter` 的成员声明。`NativeRenderQueueBuilder final : RenderQueueBuilder, NativeSetter` 从公开接口推导 `override` 签名，并将已有实现转发到 `NativeSetter`。C++ 派生类的 `constructor(...)` 只列自己的字段。生成器按基类声明顺序收集必需的构造参数，放在本类参数之前，并在初始化列表中分别传给直接基类。派生类省略 `constructor` 时也会转发，允许零业务参数构造的基类则省略其字段参数。`constructor() noexcept = custom;` 为引擎手写的 `NativePipeline` 构造函数生成声明。[原生管线声明](../spec/render/native-pipeline.spec) · [消费测试](../tests/consumer/records/MigrationConsumer.cpp)
+
+`struct` 和 `class` 可直接声明 `~T();` 或 `~T() noexcept;`。生成器将声明写入 C++ 头文件，定义由手写源文件提供。例如 `ResourceGroup` 在析构时调用各实例化缓冲区的 `clear()`。[模块声明](../spec/render/native-pipeline.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp)
 
 C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `emplace_vertex(...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
-`FGDispatcher` 和 `NativePipeline` 在暂存目录沿用引擎文件名。消费测试优先包含暂存头文件。切换引擎中的同名文件前，还需补齐表中列出的声明和实现适配。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
+`FGDispatcher` 和 `NativePipeline` 在暂存目录沿用引擎文件名。消费测试优先包含暂存头文件。切换引擎中的同名文件前，还需完成表中列出的引擎实现适配。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
 
 ## 生成流程
 

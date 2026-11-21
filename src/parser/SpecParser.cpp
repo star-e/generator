@@ -540,7 +540,7 @@ private:
                     else if (annotation == "hash" && !record.hashable) record.hashable = true;
                     else if (annotation == "cppOnly" && !result.cppOnly) result.cppOnly = true;
                     else fail("unknown or duplicate record annotation @" + annotation);
-                    if (token != "@" && token != "struct" && token != "graph")
+                    if (token != "@" && token != "struct" && token != "class" && token != "graph")
                         fail("@" + annotation + " requires a struct");
                 } while (accept("@"));
                 if (accept("graph")) {
@@ -550,11 +550,13 @@ private:
                                                    .comparisons = std::move(record.comparisons), .hashable = record.hashable};
                 } else {
                     if (record.immovable && record.moveOnly) fail("@immovable and @moveOnly cannot be combined");
-                    expect("struct");
+                    record.isClass = accept("class");
+                    if (!record.isClass) expect("struct");
                     result.data = std::move(record);
                 }
             }
         } else if (accept("struct")) result.data = Record{};
+        else if (accept("class")) result.data = Record{.isClass = true};
         else if (accept("graph")) result.data = GraphDeclaration{};
         else if (accept("flags")) result.data = Enum{.isFlags = true};
         else if (accept("enum")) {
@@ -569,6 +571,12 @@ private:
             enumeration->underlying = type();
         } else if (auto* iface = std::get_if<Interface>(&result.data); iface && accept(":")) {
             iface->bases.push_back(type());
+        } else if (auto* record = std::get_if<Record>(&result.data)) {
+            record->isFinal = accept("final");
+            if (accept(":")) {
+                do { record->bases.push_back(type()); } while (accept(","));
+            }
+            if (accept("implements")) record->implements = type();
         }
         expect("{");
         std::set<std::string> members;
@@ -593,8 +601,38 @@ private:
                     }
                     ctor.defaults = accept("defaults");
                     if (!ctor.defaults) accept("required"); // Legacy spelling for mandatory parameters.
+                    ctor.isNoexcept = accept("noexcept");
+                    if (accept("=")) { expect("custom"); ctor.custom = true; }
+                    if (ctor.isNoexcept && !ctor.custom) fail("explicit noexcept requires a custom constructor");
+                    if (ctor.custom && ctor.defaults) fail("custom constructors cannot use defaults");
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
+                } else if (accept("~")) {
+                    if (record->destructorNoexcept.has_value()) fail("duplicate destructor for " + result.name);
+                    if (token != result.name) fail("expected destructor name '" + result.name + "'");
+                    advance();
+                    expect("(");
+                    expect(")");
+                    record->destructorNoexcept = accept("noexcept");
+                    expect(";");
+                } else if (token == "cpp" && followedBy("{")) {
+                    advance();
+                    auto body = cppBody();
+                    auto membersText = std::string_view(body).substr(1, body.size() - 2);
+                    const auto end = membersText.find_last_not_of(" \t\r\n");
+                    if (end != membersText.npos) {
+                        membersText = membersText.substr(0, end + 1);
+                        if (membersText.find('\n') == membersText.npos) {
+                            record->cppMembers += "    ";
+                            membersText.remove_prefix(membersText.find_first_not_of(" \t"));
+                        } else if (membersText.front() == '\n') membersText.remove_prefix(1);
+                        record->cppMembers.append(membersText);
+                        record->cppMembers += '\n';
+                    }
+                } else if (accept("mutable")) {
+                    auto member = field(members, true);
+                    member.isMutable = true;
+                    record->fields.push_back(std::move(member));
                 } else if (atField()) {
                     bool isStatic = false;
                     auto member = field(members, true, &isStatic);

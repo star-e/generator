@@ -185,7 +185,10 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
                                      " default " + field.initializer);
         }
         if (field.initializer.find("::") != std::string::npos) enumDefaultType(graph, use, field.initializer, scope, owner);
-        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement});
+        if (field.isMutable && (std::holds_alternative<ReferenceType>(graph.node(use.type).data) ||
+            std::holds_alternative<QualifiedType>(graph.node(use.type).data)))
+            throw std::runtime_error(use.location.describe() + ": mutable requires a non-const value field");
+        result.push_back({std::move(use), field.name, field.initializer, field.isReadonly, field.isNullable, field.transient, {}, field.cppOnly, field.notElement, field.isMutable});
     }
     return result;
 }
@@ -223,12 +226,31 @@ std::optional<ConstructorInfo> selectTypeScriptConstructor(const TypeNode& node,
     return ctor;
 }
 
-RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
+RecordType resolveRecord(TypeGraph& graph, TypeId id, const Record& syntax, const std::string& scope, ModuleId owner) {
     RecordType result{.moveOnly = syntax.moveOnly, .immovable = syntax.immovable, .serializable = syntax.serializable,
                       .compareEqual = syntax.comparisons.contains("=="),
                       .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
                       .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
     result.fields = resolveFields(graph, syntax.fields, scope, owner);
+    result.isClass = syntax.isClass;
+    result.isFinal = syntax.isFinal;
+    result.destructorNoexcept = syntax.destructorNoexcept;
+    result.cppMembers = syntax.cppMembers;
+    for (const auto& base : syntax.bases) {
+        const auto target = resolve(graph, base, scope, owner).type;
+        const auto& node = graph.node(target);
+        const auto* record = std::get_if<RecordType>(&node.data);
+        if ((!record && !std::holds_alternative<InterfaceType>(node.data)) || (record && record->isFinal) ||
+            (node.module == owner && target.value >= id.value) || std::ranges::find(result.bases, target) != result.bases.end())
+            throw std::runtime_error(base.location.describe() + ": expected a distinct, earlier non-final base");
+        result.bases.push_back(target);
+    }
+    if (syntax.implements) {
+        const auto target = resolve(graph, *syntax.implements, scope, owner).type;
+        if (!std::holds_alternative<InterfaceType>(graph.node(target).data))
+            throw std::runtime_error(syntax.implements->location.describe() + ": implements requires an interface");
+        result.implements = target;
+    }
     result.staticFields = resolveFields(graph, syntax.staticFields, scope, owner);
     for (const auto& field : result.staticFields) {
         if (std::holds_alternative<ReferenceType>(graph.node(canonicalType(graph, field.type)).data))
@@ -252,7 +274,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         if (!signatures.insert(std::move(signature)).second) {
             throw std::runtime_error(ctor.location.describe() + ": duplicate constructor signature");
         }
-        result.constructors.push_back({std::move(members), ctor.defaults, ctor.cppOnly});
+        result.constructors.push_back({std::move(members), ctor.defaults, ctor.cppOnly, ctor.custom, ctor.isNoexcept});
     }
     for (uint32_t i = 0; i < result.fields.size(); ++i) {
         const auto& field = result.fields[i];
@@ -990,7 +1012,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             const auto binding = bindings.find(id.value);
             const auto& rule = binding == bindings.end() ? noBinding : *binding->second;
             if (const auto* record = std::get_if<Record>(&decl.data)) {
-                auto payload = resolveRecord(graph, *record, scopes[i], owner);
+                auto payload = resolveRecord(graph, id, *record, scopes[i], owner);
                 const auto& node = graph.node(id);
                 if (!input.modelOnly && !node.typescriptModule.empty() && !node.typescriptNumber && rule.from.empty())
                     payload.typescriptConstructor = selectTypeScriptConstructor(node, payload, rule);

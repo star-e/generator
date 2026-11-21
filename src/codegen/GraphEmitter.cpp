@@ -386,7 +386,8 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id, std::set<uint32_t>& vis
     if (const auto* alias = std::get_if<AliasType>(&node.data)) return hasMoveOnlyValue(graph, alias->target, visited);
     const auto fieldMoves = [&](const FieldInfo& f) { return hasMoveOnlyValue(graph, f.type.type, visited); };
     if (const auto* record = std::get_if<RecordType>(&node.data))
-        return record->moveOnly || std::ranges::any_of(record->fields, fieldMoves);
+        return record->moveOnly || std::ranges::any_of(record->fields, fieldMoves) ||
+               std::ranges::any_of(record->bases, [&](TypeId base) { return hasMoveOnlyValue(graph, base, visited); });
     if (const auto* nested = std::get_if<GraphType>(&node.data)) {
         const auto columnMoves = [&](const ComponentInfo& c) { return hasMoveOnlyValue(graph, c.valueType, visited); };
         return std::ranges::any_of(nested->components, columnMoves) || std::ranges::any_of(nested->alternatives, columnMoves) ||

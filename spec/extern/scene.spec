@@ -1,5 +1,8 @@
 extern module Scene;
 namespace cc::scene {
+    header "cocos/scene/Shadow.h" {
+        class Shadows;
+    }
     header "cocos/scene/{name}.h" {
         class Camera;
         class RenderScene;
