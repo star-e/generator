@@ -77,6 +77,10 @@ namespace cc {
     @cppOnly struct ExternalDefaultProbe { box: sample::Box<uint32_t>; constructor(box) defaults; }
     struct OverloadedCtor { value: RequiredCtor; count: uint32_t = 7; @cppOnly constructor(value, count); constructor(count, value); }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words) defaults; }
+    @cppOnly struct DefaultAllocatorOnly {
+        text: ccstd::pmr::string;
+        constructor() defaults;
+    }
     struct AllocatorCtorProbe {
         count: uint32_t = 0;
         countIn: ccstd::pmr::string;

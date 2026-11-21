@@ -162,6 +162,7 @@ namespace cc::render {
         mode: gfx::ResolveMode = gfx::ResolveMode::SAMPLE_ZERO;
         mode1: gfx::ResolveMode = gfx::ResolveMode::SAMPLE_ZERO;
 
+        @cppOnly constructor() defaults;
         constructor(source, target, resolveFlags, mode, mode1) defaults;
     }
 
@@ -177,6 +178,7 @@ namespace cc::render {
         targetFirstSlice: uint32_t = 0;
         targetPlaneSlice: uint32_t = 0;
 
+        @cppOnly constructor() defaults;
         constructor(source, target, mipLevels, numSlices,
                     sourceMostDetailedMip, sourceFirstSlice, sourcePlaneSlice,
                     targetMostDetailedMip, targetFirstSlice, targetPlaneSlice) defaults;
@@ -192,6 +194,7 @@ namespace cc::render {
         targetFirstSlice: uint32_t = 0;
         targetPlaneSlice: uint32_t = 0;
 
+        @cppOnly constructor() defaults;
         constructor(source, target, mipLevels, numSlices,
                     targetMostDetailedMip, targetFirstSlice, targetPlaneSlice) defaults;
     }
@@ -205,6 +208,7 @@ namespace cc::render {
         targetFirstSlice: uint32_t = 0;
         targetPlaneSlice: uint32_t = 0;
 
+        @cppOnly constructor() defaults;
         constructor(source, target, mipLevels, numSlices,
                     targetMostDetailedMip, targetFirstSlice, targetPlaneSlice) defaults;
     }

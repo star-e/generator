@@ -359,13 +359,15 @@ MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中�
 
 JSB 绑定的 `record` 单独选择 `LightInfo`、`ResolvePair`、`CopyPair`、`UploadPair` 和 `MovePair`。`RenderCommonJsb.h/.cpp` 按声明顺序转换所选记录的所有字段，包括 `LightInfo.light` 和 `probe`。JS 写入 C++ 时，缺失、`null` 或 `undefined` 的属性保留 C++ 原值。独立的引擎消费测试还验证 `UploadPair.source` 从 `Uint8Array` 子视图读入字节并转回 JS。[模块绑定](../spec/render/render-common.spec) · [JSB 消费测试](../tests/consumer/jsb/JsbConsumer.cpp)
 
-生成默认暂存文件后，可在原生引擎的构建环境中运行 JSB 消费测试。将 `ENGINE` 和 `STAGING` 替换为引擎根目录和暂存根目录的绝对路径。
+生成默认暂存文件后，可在原生引擎的构建环境中运行两个 JSB 消费测试。一个验证记录与 JS 值的转换，另一个用暂存的 `render.i` 和 C++ 头文件生成并编译 `jsb_render_auto.cpp`。后者通过 JS 读写 `RenderNode.name`，调用 `ComputePassBuilder.addQueue` 和 `ComputeQueueBuilder.addDispatch` 的各个重载，核对原生方法收到的实参及默认值。测试还分别在 JS 持有和释放队列后触发 GC，检查每个原生队列的析构次数。测试链接引擎提供的原生记录实现。`ENGINE` 和 `STAGING` 分别指向引擎和暂存根目录。
 
 ```sh
 cmake -S tests/consumer/jsb -B build/jsb -DENGINE=<engine-root> -DSTAGING=<staging-root> -DCMAKE_BUILD_TYPE=Release
-cmake --build build/jsb --config Release --target JsbConsumer
+cmake --build build/jsb --config Release --target JsbConsumer RenderNodeConsumer
 ctest --test-dir build/jsb -C Release --output-on-failure
 ```
+
+引擎的 JSB 数组转换用 `vector::resize` 增加元素。`ResolvePair`、`CopyPair`、`UploadPair` 和 `MovePair` 在 `.spec` 中声明 `@cppOnly constructor() defaults;`，无参构造时使用 `boost::container::pmr::get_default_resource()`。带字段的构造声明继续生成分配器前置的 C++ 重载，以及带默认字段参数的 TS 构造。
 
 旧版 52 个文件作为历史基线。按这 11 个模块的新版计划，退役四个图头后生成 **48 个文件**，其中原生 C++ 文件为 37 个。C++ 默认目录是 `native/cocos/renderer/pipeline/custom/`，引擎 TS 默认目录是 `cocos/rendering/custom/`。模块名与文件前缀分别配置，尤其注意 `PrivateInterface → Private` 和 `PrivateTypes → Native`。
 

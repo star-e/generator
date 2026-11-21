@@ -42,8 +42,15 @@ bool checkUpload(se::ScriptEngine& engine) {
     if (!engine.evalString("({source: null, targetFirstSlice: 17})", 0, &input) ||
         !sevalue_to_native(input, &upload, nullptr) || upload.targetFirstSlice != 17 ||
         upload.source != ccstd::vector<uint8_t>{0, 128, 255}) return false;
-    return engine.evalString("({source: []})", 0, &input) && sevalue_to_native(input, &upload, nullptr) &&
-           upload.source.empty() && upload.target == "new target";
+    if (!engine.evalString("({source: []})", 0, &input) || !sevalue_to_native(input, &upload, nullptr) ||
+        !upload.source.empty() || upload.target != "new target") return false;
+
+    ccstd::vector<cc::render::UploadPair> uploads;
+    return engine.evalString("[{target: 'first'}, {target: 'second'}]", 0, &input) &&
+           sevalue_to_native(input, &uploads, nullptr) && uploads.size() == 2 &&
+           uploads[0].target == "first" && uploads[1].target == "second" &&
+           uploads[0].get_allocator().resource() == boost::container::pmr::get_default_resource() &&
+           uploads[1].get_allocator().resource() == boost::container::pmr::get_default_resource();
 }
 
 } // namespace

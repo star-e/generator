@@ -1,18 +1,8 @@
 include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/SwigTool.cmake")
 test_workspace(work)
 run("${TOOL}" generate --workspace "${SOURCE}/config/workspace.json" --output "${work}/stage")
 set(native "${ENGINE}/native")
-if(CMAKE_HOST_WIN32)
-    set(swig "${native}/external/win64/bin/swig")
-    set(executable "${swig}/bin/swig.exe")
-elseif(CMAKE_HOST_APPLE)
-    set(swig "${native}/external/mac/bin/swig")
-    set(executable "${swig}/bin/swig")
-else()
-    set(swig "${native}/external/linux/bin/swig")
-    set(executable "${swig}/bin/swig")
-endif()
-set(lib "${swig}/share/swig/4.1.0")
 # Match cc_gen_swig_files. Put the candidate header ahead of the engine checkout.
 foreach(version IN ITEMS engine stage)
     set(input "${native}")
@@ -20,10 +10,8 @@ foreach(version IN ITEMS engine stage)
         set(input "${work}/stage/native")
     endif()
     file(MAKE_DIRECTORY "${work}/${version}")
-    run("${executable}" -c++ -cocos -fvirtual -noexcept -cpperraswarn
-        -D__clang__ -Dfinal= -DCC_PLATFORM=3 -Dconstexpr=const -DCC_PLATFORM_ANDROID=3
-        "-I${lib}/javascript/cocos" "-I${lib}" "-I${input}" "-I${input}/cocos" "-I${native}" "-I${native}/cocos"
-        -o "${work}/${version}/jsb_render_auto.cpp" "${input}/tools/swig-config/render.i")
+    render_swig_command(swig "${native}" "${input}")
+    run(${swig} -o "${work}/${version}/jsb_render_auto.cpp" "${input}/tools/swig-config/render.i")
     file(STRINGS "${work}/${version}/jsb_render_auto.cpp" lines
         REGEX "static bool js_|cls->define|tryAllowDestroyInGC|^#if CC_USE_GEOMETRY_RENDERER")
     set(api)

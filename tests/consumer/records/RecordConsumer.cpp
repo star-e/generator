@@ -147,6 +147,9 @@ static_assert(std::is_default_constructible_v<cc::WrappedCtor> && !std::is_defau
 using CtorProbe = cc::AllocatorCtorProbe;
 using ProbeString = decltype(CtorProbe::countIn);
 using ProbeAlloc = const CtorProbe::allocator_type&;
+static_assert(std::is_default_constructible_v<cc::DefaultAllocatorOnly>);
+static_assert(std::is_constructible_v<cc::DefaultAllocatorOnly, ProbeAlloc>);
+static_assert(!std::is_constructible_v<cc::DefaultAllocatorOnly, std::allocator_arg_t, ProbeAlloc>);
 static_assert(!std::is_default_constructible_v<CtorProbe> && !std::is_constructible_v<CtorProbe, ProbeAlloc>);
 static_assert(!std::is_constructible_v<CtorProbe, uint32_t> && !std::is_constructible_v<CtorProbe, uint32_t, ProbeString>);
 static_assert(!std::is_default_constructible_v<cc::NestedAllocatorCtorProbe>);
@@ -193,7 +196,7 @@ bool uses(const Pair& pair, pmr::memory_resource* resource) {
 bool checkResolvePair() {
     using cc::gfx::ResolveMode;
     pmr::monotonic_buffer_resource first, second;
-    ResolvePair defaults{pmr::get_default_resource()};
+    ResolvePair defaults;
     ResolvePair empty(&first);
     if (!uses(defaults, pmr::get_default_resource()) || !uses(empty, &first) || defaults != empty ||
         !empty.source.empty() || !empty.target.empty() || empty.resolveFlags != ResolveFlags::NONE ||
@@ -239,7 +242,7 @@ bool checkSubresources(Indices... indices) {
     pmr::monotonic_buffer_resource first, second;
     Pair empty(&first);
     const std::array<uint32_t, sizeof...(indices)> defaults{UINT32_MAX, UINT32_MAX};
-    static_assert(!std::is_default_constructible_v<Pair>);
+    if (!uses(Pair{}, pmr::get_default_resource())) return false;
     static_assert(!std::is_constructible_v<Pair, decltype(Pair::source)>);
     static_assert(!std::is_constructible_v<Pair, decltype(Pair::source), decltype(Pair::target), Indices..., const typename Pair::allocator_type&>);
     if (!uses(empty, &first) || !empty.source.empty() || !empty.target.empty() || subresources(empty) != defaults) return false;
