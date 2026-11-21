@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 61 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 58 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -66,12 +66,12 @@ ctest --test-dir build/host --output-on-failure
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
-| FGDispatcher | `FGDispatcherRecords.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
-| NativePipeline | `NativePipelineRecords.h/.cpp` 及前置声明覆盖 28 个记录，包括绘制队列、实例化队列、组合队列和设备渲染数据。原生消费测试使用引擎排序实现核对不透明和透明绘制顺序。 | 剩余记录和实现类涉及构造限制、自定义析构、多重继承和私有状态。 |
+| FGDispatcher | `FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
+| NativePipeline | `NativePipelineTypes.h/.cpp` 及 `NativePipelineFwd.h`覆盖 28 个记录，包括绘制队列、实例化队列、组合队列和设备渲染数据。原生消费测试使用引擎排序实现核对不透明和透明绘制顺序。 | 剩余记录和实现类涉及构造限制、自定义析构、多重继承和私有状态。 |
 
 C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `emplace_vertex(...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
-两个 `*Records.h` 只供暂存消费验证。引擎中的同名类型仍定义在旧模块内；切换这些模块时需要一起移走旧定义。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
+`FGDispatcher` 和 `NativePipeline` 在暂存目录沿用引擎文件名。消费测试优先包含暂存头文件。切换引擎中的同名文件前，还需补齐表中列出的声明和实现适配。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
 
 ## 生成流程
 
@@ -120,7 +120,7 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 
 在 `extern module` 的无定义 `class` 或 `struct` 上用 `@string` 声明拥有 UTF-8 文本的原生类型。字段默认绑定为 TS `string`，初值为 `''`，序列化使用字符串读写接口。显式 TS 绑定可以指定兼容的字符串别名及其导入路径。需要传递内存资源的字符串另加 `@pmr`。例如 `ccstd::pmr::string` 同时声明这两个注解，`std::string_view` 作为借用视图只声明 TS 绑定。[原生字符串声明](../spec/extern/strings.spec) · [借用视图绑定](../spec/extern/types.spec)
 
-外部模块的声明共用一个 C++ 头文件时，在模块的 `import` 之后写一次 `cpp { header "..."; }`。一个模块涉及多个头文件时，在 `namespace` 内用 `header "..." { ... }` 包住相关声明。固定路径供整组共用，路径中的 `{name}` 替换为声明的非限定名，保留大小写。例如 `GFX{name}.h` 将 `Buffer` 映射到 `GFXBuffer.h`。组内路径优先于模块默认值，组外声明继续使用模块默认值。消费方按模块名导入，TS 绑定仍写在模块级 `binding typescript` 中。[模块级头文件](../spec/extern/gfx.spec) · [资源头文件分组](../spec/extern/gfx-resource.spec) · [Scene 命名模板](../spec/extern/scene.spec)
+外部模块的声明共用一个 C++ 头文件时，在模块的 `import` 之后写一次 `cpp { header "..."; }`。一个模块涉及多个头文件时，在 `namespace` 内用 `header "..." { ... }` 包住相关声明。固定路径供整组共用，路径中的 `{name}` 替换为声明的非限定名，保留大小写。例如 `GFX{name}.h` 将 `Buffer` 映射到 `GFXBuffer.h`。组内路径优先于模块默认值，组外声明继续使用模块默认值。消费方按模块名导入，TS 绑定仍写在模块级 `binding typescript` 中。[Gfx 默认头文件与分组](../spec/extern/gfx.spec) · [Scene 命名模板](../spec/extern/scene.spec)
 
 `DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型都声明 `reset defaults;`，通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
@@ -271,7 +271,7 @@ C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 
 
 TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = this.N)` 指定起点，用 `path(v)` 生成绝对路径。路径段取自 `named_graph` 指定的名称组件。同一父节点下有重复名称时，查询返回最先插入的匹配项。查找失败返回 `g.N`，`path(g.N)` 返回空字符串，其他无效的顶点编号触发 `RangeError`。消费测试在 TS 中重建 C++ 用例的顶点和父子关系，逐项比较绝对路径和查询结果。[TS 寻址测试](../tests/consumer/records/layout-graph-consumer.ts.in)
 
-在 `layout-graph.spec` 中，`@serialize graph LayoutGraph` 和相应的 `@serialize struct` 声明共同定义图归档。四个头部数值依次为顶点数、边数、阶段数和相位数。接下来按顶点编号写类别、父编号、名称、描述符库和载荷；根的父编号为 `0xFFFFFFFF`。描述符映射的键在 TS 内存中使用 JSON 字符串，在归档中按索引结构的字段顺序写入。`UniformBlock` 的外部 TS 编解码函数由 `archive from` 指向引擎模块。读入整张图并核对类别和边的计数后，两端才替换目标图。[布局声明](../spec/render/layout-graph.spec) · [外部类型绑定](../spec/extern/uniform-block.spec)
+在 `layout-graph.spec` 中，`@serialize graph LayoutGraph` 和相应的 `@serialize struct` 声明共同定义图归档。四个头部数值依次为顶点数、边数、阶段数和相位数。接下来按顶点编号写类别、父编号、名称、描述符库和载荷；根的父编号为 `0xFFFFFFFF`。描述符映射的键在 TS 内存中使用 JSON 字符串，在归档中按索引结构的字段顺序写入。`UniformBlock` 的外部 TS 编解码函数由 `archive from` 指向引擎模块。读入整张图并核对类别和边的计数后，两端才替换目标图。[布局声明](../spec/render/layout-graph.spec) · [外部类型绑定](../spec/extern/gfx.spec)
 
 互操作测试使用引擎提交 `81f9296d` 的 TS 写入器生成的 628 字节固定样本，包含空图和一片有两个根的森林。C++ 和 TS 均读取该样本，并分别写出与其逐字节一致的数据。用例覆盖同名相位、两种描述符映射、含成员的 uniform block 和着色器集合。字符串沿用引擎 `BinaryArchive` 的单字节编码。[旧格式样本](../tests/consumer/records/fixtures/layout-graph.bin) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
@@ -287,7 +287,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 归档依次写入四个标量、描述符块数组、uniform block 映射和 binding 映射。空映射与单键映射可以逐字节核对，多键映射按键值核对。向已有对象加载时，数组按归档长度调整，两个 Map 都保留归档中缺失的键。遇到重复键，TS 用归档值覆盖，C++ 保留已有值。[原生互读测试](../tests/consumer/records/LayoutArchiveConsumer.cpp) · [TS 互读测试](../tests/consumer/records/layout-archive.cjs)
 
-`DescriptorSetData` 到 `RenderPhaseData` 的九个记录都由同一份布局声明生成。C++ 记录只支持移动，并将传入的分配器传给嵌套记录和 PMR 容器。TS 重置只读的本模块记录时，调用其已有的 `reset`，按子记录的绑定顺序传入字段默认值。`DescriptorSetData` 据此调用 `descriptorSetLayoutData.reset(0xFFFFFFFF, 0)`。外部 GFX 对象通过 `field descriptorSetLayoutInfo reset with resetSetLayoutInfo from "...";` 原地清空绑定数组。[布局声明](../spec/render/layout-graph.spec) · [GFX 绑定](../spec/extern/descriptor-set.spec)
+`DescriptorSetData` 到 `RenderPhaseData` 的九个记录都由同一份布局声明生成。C++ 记录只支持移动，并将传入的分配器传给嵌套记录和 PMR 容器。TS 重置只读的本模块记录时，调用其已有的 `reset`，按子记录的绑定顺序传入字段默认值。`DescriptorSetData` 据此调用 `descriptorSetLayoutData.reset(0xFFFFFFFF, 0)`。外部 GFX 对象通过 `field descriptorSetLayoutInfo reset with resetSetLayoutInfo from "...";` 原地清空绑定数组。[布局声明](../spec/render/layout-graph.spec) · [GFX 绑定](../spec/extern/gfx.spec)
 
 `layout-graph.ts` 继续导出 `Layout` 和 `PipelineLayoutData`。平台选择逻辑由 `layout-access.ts` 维护，`getSets()` 和 `getSet(frequency)` 在 `(COCOS_RUNTIME || HTML5) && Layout.isWebGPU` 时查询 `descriptorGroups`，其余情况查询 `descriptorSets`。[平台逻辑](../runtime/typescript/layout-access.ts)
 
@@ -307,7 +307,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中为 `std::unordered_map` 分配代理。`RenderStageData::descriptorVisibility` 沿用这个引擎容器，若该笔分配抛错，标准库会终止进程。Windows Debug 和 Release 都对两种载荷逐笔注入分配失败。stage 用例在独立进程中执行每一次注入，单独记录 Debug 代理的终止，并验证其他分配点的回滚和原图重试。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
-`RenderCommon` 的十个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash`生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。前置头与历史基线逐字节核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
+`RenderCommon` 的十二个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash` 生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。测试核对两个共享标签的前置声明和名称查询，并将两个头文件的其余内容与历史基线核对，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 
 记录模块可以用 `cpp.names` 为 C++ 名称查询头选择默认名或指定相对于模块输出目录的文件名。`RenderCommonNames.h` 按声明顺序为普通枚举、标签和结构体生成 `cc::render::getName` 重载。相同枚举值返回首次声明的名称，未知值返回空字符串。标签返回去掉 `Tag` 或 `_` 后缀的名称，例如 `RasterPassTag` 对应 `"RasterPass"`。[工作区](../config/workspace.json) · [C++17 消费测试](../tests/consumer/records/RecordConsumer.cpp)
 
@@ -359,7 +359,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。[渲染图声明](../spec/render/render-graph.spec)
 
-`ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。[外部 GFX 类型](../spec/extern/gfx-resource.spec)
+`ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。[外部 GFX 类型](../spec/extern/gfx.spec)
 
 `binding typescript` 可用 `constructor(...)` 按参数名和顺序选择一个构造重载。两个视图的池化工厂复用嵌套对象，分别调用 `Color.reset()` 和 `ClearValue.reset(0, 0, 0, 0)`。[渲染图声明与绑定](../spec/render/render-graph.spec)
 

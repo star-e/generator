@@ -30,7 +30,6 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/ShiftProbe.cpp"
     "${STAGING}/native/ShiftSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp"
-    "${STAGING}/native/cocos/renderer/pipeline/custom/GraphTags.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     "${STAGING}/native/IndexedKeys.cpp"
@@ -41,8 +40,8 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     RenderQueueConsumer.cpp
     "${STAGING}/NativeQueueSort.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativeTypes.cpp"
-    "${STAGING}/native/cocos/renderer/pipeline/custom/FGDispatcherRecords.cpp"
-    "${STAGING}/native/cocos/renderer/pipeline/custom/NativePipelineRecords.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/FGDispatcherTypes.cpp"
+    "${STAGING}/native/cocos/renderer/pipeline/custom/NativePipelineTypes.cpp"
     ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
     "${STAGING}/ResourceGraphTextureView.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"

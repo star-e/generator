@@ -2,8 +2,7 @@ module PrivateInterface;
 import EngineTypes;
 import Containers;
 import Strings;
-import GfxDescriptorSet;
-import GfxResource;
+import Gfx;
 import PipelineExternals;
 
 namespace cc::render {

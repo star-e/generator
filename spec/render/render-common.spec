@@ -75,6 +75,8 @@ namespace cc::render {
 
     @tag struct BufferTag {}
     @tag struct TextureTag {}
+    @tag struct Name_ {}
+    @tag struct Layout_ {}
 
     enum class TaskType : uint8_t {
         SYNC,

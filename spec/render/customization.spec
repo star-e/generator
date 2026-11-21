@@ -1,7 +1,7 @@
 module Customization;
 import EngineTypes;
 import RenderGraph;
-import GfxResource;
+import Gfx;
 import PipelineExternals;
 
 namespace cc::render {

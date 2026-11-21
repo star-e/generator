@@ -1,4 +1,4 @@
-#include "cocos/renderer/pipeline/custom/FGDispatcherRecords.h"
+#include "cocos/renderer/pipeline/custom/FGDispatcherTypes.h"
 #include "FailingResource.h"
 #include "IndexedKeys.h"
 #include "IndexedKeysSerialization.h"

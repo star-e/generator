@@ -13,8 +13,7 @@
     { "spec": "../spec/extern/pmr-containers.spec" },
     { "spec": "../spec/extern/sets.spec" },
     { "spec": "../spec/extern/maps.spec" },
-    { "spec": "../spec/extern/uniform-block.spec" },
-    { "spec": "../spec/extern/descriptor-set.spec" },
+    { "spec": "../spec/extern/gfx.spec" },
     { "spec": "../spec/extern/strings.spec" },
     {
       "spec": "../spec/render/archive.spec",
@@ -41,14 +40,6 @@
       }
     },
     {
-      "spec": "../spec/render/graph-tags.spec",
-      "cpp": {
-        "header": "GraphTags.h",
-        "forward": false,
-        "names": "GraphTagNames.h"
-      }
-    },
-    {
       "spec": "../spec/render/layout-graph.spec",
       "cpp": {
         "names": true,
@@ -66,7 +57,6 @@
         "cocos/rendering/custom/layout-access.ts": "../runtime/typescript/layout-access.ts"
       }
     },
-    { "spec": "../spec/extern/gfx-resource.spec" },
     { "spec": "../spec/extern/scene.spec" },
     { "spec": "../spec/extern/render-window.spec" },
     {
@@ -77,7 +67,6 @@
         "native/cocos/base/GraphEdges.h": "../runtime/cpp/GraphEdges.h"
       }
     },
-    { "spec": "../spec/extern/gfx.spec" },
     { "spec": "../spec/extern/light.spec" },
     { "spec": "../spec/extern/reflection-probe.spec" },
     { "spec": "../spec/extern/pipeline-externals.spec" },
@@ -111,7 +100,7 @@
     },
     {
       "spec": "../spec/render/fg-dispatcher.spec",
-      "cpp": { "header": "FGDispatcherRecords.h", "forward": false }
+      "cpp": { "forward": false }
     },
     {
       "spec": "../spec/render/private-types.spec",
@@ -126,10 +115,7 @@
     },
     {
       "spec": "../spec/render/native-pipeline.spec",
-      "cpp": {
-        "header": "NativePipelineRecords.h",
-        "forward": "NativePipelineRecordsFwd.h"
-      },
+      "cpp": {},
       "runtimeFiles": {
         "native/cocos/renderer/pipeline/custom/Array4.h": "../runtime/cpp/Array4.h"
       }

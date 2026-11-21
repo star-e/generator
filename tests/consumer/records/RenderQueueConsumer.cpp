@@ -1,4 +1,4 @@
-#include "cocos/renderer/pipeline/custom/NativePipelineRecords.h"
+#include "cocos/renderer/pipeline/custom/NativePipelineTypes.h"
 
 #include <array>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>

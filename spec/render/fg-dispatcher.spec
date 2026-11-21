@@ -1,6 +1,5 @@
 module FGDispatcher;
 import Gfx;
-import GfxResource;
 import RenderGraph;
 import LayoutGraph;
 import Containers;

@@ -2,11 +2,9 @@ module RenderInterface;
 import EngineTypes;
 import Containers;
 import Gfx;
-import GfxResource;
 import Scene;
 import Light;
 import RenderWindow;
-import GfxDescriptorSet;
 import RenderCommon;
 import PipelineExternals;
 

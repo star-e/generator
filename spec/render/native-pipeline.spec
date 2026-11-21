@@ -11,9 +11,7 @@ import Containers;
 import PmrContainers;
 import Strings;
 import Maps;
-import GfxResource;
 import Gfx;
-import GfxDescriptorSet;
 
 namespace cc::render {
     struct DrawInstance {

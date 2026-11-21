@@ -1,8 +1,8 @@
 #include "cocos/renderer/pipeline/custom/RenderInterfaceTypes.h"
 #include "cocos/renderer/pipeline/custom/PrivateTypes.h"
-#include "cocos/renderer/pipeline/custom/FGDispatcherRecords.h"
+#include "cocos/renderer/pipeline/custom/FGDispatcherTypes.h"
 #include "cocos/renderer/pipeline/custom/NativeTypes.h"
-#include "cocos/renderer/pipeline/custom/NativePipelineRecords.h"
+#include "cocos/renderer/pipeline/custom/NativePipelineTypes.h"
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <limits>

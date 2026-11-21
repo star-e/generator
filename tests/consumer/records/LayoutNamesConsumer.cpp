@@ -12,6 +12,7 @@ bool checkLayoutNames() {
            getName(static_cast<RenderPassType>(255)) == ""sv &&
            getName(UpdateFrequency::PER_PASS) == "PER_PASS"sv &&
            getName(RenderStage_{}) == "RenderStage"sv && getName(RenderPhase_{}) == "RenderPhase"sv &&
-           getName(Layout_{}) == "Layout"sv && getName(Descriptor{}) == "Descriptor"sv &&
+           getName(Name_{}) == "Name"sv && getName(Layout_{}) == "Layout"sv &&
+           getName(Descriptor{}) == "Descriptor"sv &&
            getName(graph) == "LayoutGraph"sv && getName(data) == "LayoutGraphData"sv;
 }

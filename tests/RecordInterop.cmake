@@ -8,7 +8,7 @@ cpp { header "SampleText.h"; }
 namespace sample { @string class Text; @string struct Label; }
 binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 ]])
-file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import GraphTags; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import GfxUniformBlock; import Text; import ArchiveInterface;
+file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import Gfx; import Text; import ArchiveInterface;
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
     interface ConversionProbe {
@@ -112,7 +112,7 @@ string(JSON config SET "${config}" modules ${count} [[{
     "backend": "model", "spec": "../spec/text.spec"
 }]])
 file(WRITE "${work}/spec/indexed-keys.spec" [[module IndexedKeys;
-import GraphTags;
+import RenderCommon;
 import Strings;
 import ArchiveInterface;
 namespace cc {
@@ -182,7 +182,7 @@ source_between(nativeQueues "void RenderDrawQueue::sortOpaqueOrCutout()" "void R
 source_between(nativeQueues "void RenderInstancingQueue::sort()" "void RenderInstancingQueue::uploadBuffers(" instanceSort)
 source_between(nativeQueues "void NativeRenderQueue::sort()" "void NativeRenderQueue::recordCommands(" queueSort)
 file(WRITE "${stage}/NativeQueueSort.cpp" [[
-#include "cocos/renderer/pipeline/custom/NativePipelineRecords.h"
+#include "cocos/renderer/pipeline/custom/NativePipelineTypes.h"
 #include <algorithm>
 #include <tuple>
 namespace cc::render {
@@ -208,7 +208,7 @@ foreach(tag IN ITEMS Barrier PassNode RenderPassInfo)
 endforeach()
 string(REPLACE "holds<RasterPassTag>(u, renderGraph)" "renderGraph.holds<RasterPassTag>(u)" dispatcherQueries "${dispatcherQueries}")
 file(WRITE "${stage}/DispatcherQueries.cpp" [[
-#include "cocos/renderer/pipeline/custom/FGDispatcherRecords.h"
+#include "cocos/renderer/pipeline/custom/FGDispatcherTypes.h"
 #include "cocos/renderer/pipeline/custom/details/GslUtils.h"
 #include "cocos/math/Vec2.h"
 namespace cc::render {

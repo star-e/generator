@@ -5,7 +5,7 @@ import Containers;
 import PmrContainers;
 import Strings;
 import Maps;
-import GfxResource;
+import Gfx;
 
 namespace cc::render {
     @requireAllocator struct ProgramInfo {

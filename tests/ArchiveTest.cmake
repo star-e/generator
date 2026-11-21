@@ -36,21 +36,18 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     native/cocos/renderer/pipeline/custom/Array4.h
     native/cocos/renderer/pipeline/custom/CustomFwd.h
     native/cocos/renderer/pipeline/custom/CustomTypes.h
-    native/cocos/renderer/pipeline/custom/FGDispatcherRecords.cpp
-    native/cocos/renderer/pipeline/custom/FGDispatcherRecords.h
+    native/cocos/renderer/pipeline/custom/FGDispatcherTypes.cpp
+    native/cocos/renderer/pipeline/custom/FGDispatcherTypes.h
     native/cocos/renderer/pipeline/custom/NativeFwd.h
-    native/cocos/renderer/pipeline/custom/NativePipelineRecords.cpp
-    native/cocos/renderer/pipeline/custom/NativePipelineRecords.h
-    native/cocos/renderer/pipeline/custom/NativePipelineRecordsFwd.h
+    native/cocos/renderer/pipeline/custom/NativePipelineTypes.cpp
+    native/cocos/renderer/pipeline/custom/NativePipelineTypes.h
+    native/cocos/renderer/pipeline/custom/NativePipelineFwd.h
     native/cocos/renderer/pipeline/custom/NativeTypes.cpp
     native/cocos/renderer/pipeline/custom/NativeTypes.h
     native/cocos/renderer/pipeline/custom/PrivateFwd.h
     native/cocos/renderer/pipeline/custom/PrivateTypes.h
     native/cocos/renderer/pipeline/custom/RenderInterfaceFwd.h
     native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.h
-    native/cocos/renderer/pipeline/custom/GraphTags.h
-    native/cocos/renderer/pipeline/custom/GraphTags.cpp
-    native/cocos/renderer/pipeline/custom/GraphTagNames.h
     native/cocos/renderer/pipeline/custom/RenderGraphFwd.h
     native/cocos/renderer/pipeline/custom/RenderGraphTypes.h native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp
     cocos/rendering/custom/graph-dfs.ts
@@ -72,7 +69,26 @@ if(NOT files STREQUAL expectedFiles)
 endif()
 foreach(path IN LISTS baselineFiles)
     string(JSON expected GET "${baseline}" files "${path}")
-    file(SHA256 "${output}/${path}" actual)
+    # The historical RenderCommon headers predate the two shared graph tags.
+    if(path MATCHES "/RenderCommon(Fwd|Names)[.]h$")
+        if(path MATCHES "Fwd[.]h$")
+            set(sharedTags "struct Name_;\nstruct Layout_;\n")
+        else()
+            string(CONCAT sharedTags
+                "inline const char* getName(const Name_& /*v*/) noexcept { return \"Name\"; }\n"
+                "inline const char* getName(const Layout_& /*v*/) noexcept { return \"Layout\"; }\n")
+        endif()
+        file(READ "${output}/${path}" content)
+        string(FIND "${content}" "${sharedTags}" offset)
+        if(offset EQUAL -1)
+            message(FATAL_ERROR "Missing shared graph tags in ${path}")
+        endif()
+        string(REPLACE "${sharedTags}" "" historical "${content}")
+        string(REPLACE "\n" "\r\n" historical "${historical}")
+        string(SHA256 actual "${historical}")
+    else()
+        file(SHA256 "${output}/${path}" actual)
+    endif()
     if(NOT actual STREQUAL expected)
         message(FATAL_ERROR "Baseline mismatch: ${path} (${actual})")
     endif()
