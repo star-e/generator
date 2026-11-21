@@ -133,18 +133,29 @@ const std::string& tsSignatureType(const TypeGraph& graph, const TypeUse& use, M
     }
 }
 
+std::string tsCallbackType(const TypeGraph& graph, const CallbackTypeInfo& type, ModuleId owner, TypeImports& imports) {
+    if (type.declaration.type != TypeId{}) return boundTypeScriptName(graph, type.declaration, owner, imports);
+    if (type.arguments.empty()) return type.name;
+    std::string result = type.name + "<";
+    for (size_t i = 0; i < type.arguments.size(); ++i) {
+        if (i) result += ", ";
+        result += tsCallbackType(graph, type.arguments[i], owner, imports);
+    }
+    return result + ">";
+}
+
 void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, TypeImports& imports, const InterfaceBindings& bindings) {
     out << "export interface " << decl.name;
-    const auto& bases = std::get<InterfaceType>(decl.data).bases;
+    const auto& iface = std::get<InterfaceType>(decl.data);
     bool firstBase = true;
-    for (auto base : bases) {
+    for (auto base : iface.bases) {
         const auto& type = graph.node(base);
-        if (std::holds_alternative<ExternalTypeNode>(type.data) && !type.typescriptName) continue;
+        if (type.cppOnly || (std::holds_alternative<ExternalTypeNode>(type.data) && !type.typescriptName)) continue;
         out << (firstBase ? " extends " : ", ") << boundTypeScriptName(graph, base, decl.module, imports, decl.qualifiedName);
         firstBase = false;
     }
     out << " {\n";
-    const auto& methods = std::get<InterfaceType>(decl.data).methods;
+    const auto& methods = iface.methods;
     for (const auto& method : methods) {
         if (!method.typescriptName || method.accessor == AccessorKind::Setter) continue;
         const InterfaceMethodBinding defaults;
@@ -152,9 +163,8 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         const auto& binding = it == bindings.end() ? defaults : it->second;
         const auto& result = tsSignatureType(graph, method.result, decl.module, imports);
         const auto context = method.result.location.describe() + ": " + decl.name + "." + method.name;
-        if (binding.nullable && !std::holds_alternative<PointerType>(graph.node(method.result.type).data))
-            throw std::runtime_error(context + ": nullable result requires a pointer");
-        const auto suffix = binding.nullable ? " | null;\n" : ";\n";
+        const auto suffix = method.resultPresence == ResultPresence::Nullable ? " | null;\n" :
+                            method.resultPresence == ResultPresence::Optional ? " | undefined;\n" : ";\n";
         if (method.accessor == AccessorKind::Getter) {
             if (!binding.optional.empty())
                 throw std::runtime_error(context + ": getter requires a const nullary value method");
@@ -169,7 +179,7 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         if (binding.optional.size() > method.parameters.size()) throw std::runtime_error(context + ": unknown optional parameter");
         const size_t firstExplicit = method.parameters.size() - binding.optional.size();
         const size_t firstOptional = std::min(firstExplicit, requiredParameterCount(method));
-        out << "    " << *method.typescriptName << " (";
+        out << "    " << *method.typescriptName << (method.optionalMethod ? "? (" : " (");
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
             if (i) out << ", ";
@@ -178,6 +188,15 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
             out << param.name << (i >= firstOptional ? "?: " : ": ") << tsSignatureType(graph, param.type, decl.module, imports);
         }
         out << "): " << result << suffix;
+    }
+    for (const auto& callback : iface.typescriptCallbacks) {
+        out << "    " << callback.name << (callback.optional ? "? (" : " (");
+        for (size_t i = 0; i < callback.parameters.size(); ++i) {
+            if (i) out << ", ";
+            const auto& param = callback.parameters[i];
+            out << param.name << (param.optional ? "?: " : ": ") << tsCallbackType(graph, param.type, decl.module, imports);
+        }
+        out << "): " << tsCallbackType(graph, callback.result, decl.module, imports) << (callback.optionalResult ? " | undefined;\n" : ";\n");
     }
     out << "}\n";
 }

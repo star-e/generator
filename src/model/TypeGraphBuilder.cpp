@@ -120,7 +120,8 @@ MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::stri
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
                       .cppBody = method.cppBody, .isStatic = method.isStatic, .isPureVirtual = method.isPureVirtual,
-                      .isExplicitConversion = method.isExplicitConversion, .accessor = method.accessor};
+                      .isExplicitConversion = method.isExplicitConversion, .accessor = method.accessor,
+                      .optionalMethod = method.optionalMethod, .resultPresence = method.resultPresence};
     if (member.isExplicitConversion) {
         // Match overloads by their resolved target, including aliases inside references and pointers.
         member.name = "operator " + formatTypeName(graph, member.result.type, [&](const TypeNode& part) {
@@ -492,13 +493,15 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
     }
 }
 
-using InterfaceRules = std::map<uint32_t, const MethodBindings*>;
+using InterfaceRules = std::map<uint32_t, const TypeScriptBinding*>;
 
 void bindTypeScriptExports(TypeGraph& graph, ModuleId owner, const Module& syntax) {
     const auto& exports = syntax.bindings.typescriptExports;
     if (exports.empty()) return;
     for (const auto& [name, at] : exports) {
         const auto decl = std::ranges::find(syntax.declarations, name, &Declaration::name);
+        if (decl != syntax.declarations.end() && decl->cppOnly)
+            throw std::runtime_error(at.describe() + ": cannot export @cppOnly type " + name);
         if (syntax.external || decl == syntax.declarations.end() ||
             !(std::holds_alternative<Record>(decl->data) || std::holds_alternative<Interface>(decl->data) ||
               std::holds_alternative<Enum>(decl->data) || std::holds_alternative<GraphDeclaration>(decl->data)))
@@ -536,6 +539,7 @@ InterfaceRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& input
                 throw std::runtime_error(at.describe() + ": " + reason + " for " + qualifiedTypeName(graph, id));
             };
             if (node.module != ModuleId{} && node.module != owner) reject("bind the type in its declaring module");
+            if (node.cppOnly) reject("cannot bind @cppOnly type");
             const auto& exports = input.syntax.bindings.typescriptExports;
             if (rule.kind == BindingTarget::numberField && exports.contains(node.name))
                 reject("number(field) has no named TypeScript export");
@@ -593,13 +597,13 @@ InterfaceRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& input
                     if (visible > 1 && method.accessor != AccessorKind::None)
                         reject("ambiguous property accessor " + name);
                 }
-                methods.emplace(id.value, &rule.methods);
+                methods.emplace(id.value, &rule);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {
                 if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.constructor || rule.reset || rule.base ||
                     !rule.from.empty() || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() || rule.mapKey != MapKeyKind::Native)
                     reject("expected a graph pool binding");
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
-                if (!isRecord || !rule.methods.empty()) reject("expected a record binding");
+                if (!isRecord || !rule.methods.empty() || !rule.callbacks.empty()) reject("expected a record binding");
                 node.typescriptMapKey = rule.mapKey;
             } else if (!isEnum) reject("expected an enum binding");
         }
@@ -646,7 +650,22 @@ std::string accessorName(const MethodInfo& method) {
     return property;
 }
 
-InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const MethodBindings& bindings,
+CallbackTypeInfo resolveCallbackType(const TypeGraph& graph, const TypeRef& type, const std::string& scope, ModuleId module) {
+    if (type.pointer) throw std::runtime_error(type.location.describe() + ": expected a TypeScript callback type");
+    const auto& name = type.name;
+    if (name == "Readonly" || name == "Record") {
+        if (type.arguments.size() != (name == "Readonly" ? 1 : 2))
+            throw std::runtime_error(type.location.describe() + ": wrong number of type arguments for " + name);
+        CallbackTypeInfo result{.name = name};
+        for (const auto& arg : type.arguments) result.arguments.push_back(resolveCallbackType(graph, arg, scope, module));
+        return result;
+    }
+    if (!type.arguments.empty()) throw std::runtime_error(type.location.describe() + ": unsupported callback type arguments for " + name);
+    if (name == "any" || name == "string" || name == "number" || name == "boolean" || name == "void") return {.name = name};
+    return {.declaration = {resolveName(graph, name, type.location, scope, module), type.location}};
+}
+
+InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const TypeScriptBinding& rule,
                                const std::string& scope, ModuleId module) {
     InterfaceType result;
     for (const auto& base : std::get<Interface>(decl.data).bases) {
@@ -662,7 +681,7 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
     for (auto& member : result.methods) {
         if (member.cppOnly) continue;
         auto name = member.accessor == AccessorKind::None ? member.name : accessorName(member);
-        if (const auto it = bindings.find(member.name); it != bindings.end()) {
+        if (const auto it = rule.methods.find(member.name); it != rule.methods.end()) {
             const auto& binding = it->second;
             if (!binding.target.empty()) name = binding.target;
             if (binding.accessor != AccessorKind::None) {
@@ -672,8 +691,17 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
             }
             if (member.accessor == AccessorKind::Setter && (binding.nullable || !binding.optional.empty()))
                 throw std::runtime_error(member.result.location.describe() + ": setter cannot have nullable or optional method bindings");
+            if (binding.nullable) {
+                if (member.resultPresence != ResultPresence::Required)
+                    throw std::runtime_error(member.result.location.describe() + ": result optionality is already declared on " + member.name);
+                member.resultPresence = ResultPresence::Nullable;
+            }
         }
         member.typescriptName = name;
+        if (member.optionalMethod && member.accessor != AccessorKind::None)
+            throw std::runtime_error(member.result.location.describe() + ": @optionalMethod requires a regular method");
+        if (member.resultPresence != ResultPresence::Required && !std::holds_alternative<PointerType>(graph.node(member.result.type).data))
+            throw std::runtime_error(member.result.location.describe() + ": nullable or optional result requires a pointer");
         const bool isVoid = graph.node(member.result.type).qualifiedName == "void";
         if (member.accessor == AccessorKind::Getter && (!member.isConst || !member.parameters.empty() || isVoid))
             throw std::runtime_error(member.result.location.describe() + ": getter requires a const nullary value method");
@@ -689,6 +717,17 @@ InterfaceType resolveInterface(TypeGraph& graph, const Declaration& decl, const 
         const auto getter = visibleNames.find(name);
         if (getter == visibleNames.end() || getter->second->accessor != AccessorKind::Getter)
             throw std::runtime_error(setter->result.location.describe() + ": setter " + setter->name + " requires a getter for " + name);
+    }
+    std::set<std::string> callbackNames;
+    for (const auto& callback : rule.callbacks) {
+        if (visibleNames.contains(callback.name) || !callbackNames.insert(callback.name).second)
+            throw std::runtime_error(callback.result.location.describe() + ": duplicate TypeScript member " + decl.name + "." + callback.name);
+        CallbackInfo info{.name = callback.name, .optional = callback.optional,
+                          .result = resolveCallbackType(graph, callback.result, scope, module), .optionalResult = callback.optionalResult};
+        for (const auto& param : callback.parameters) {
+            info.parameters.push_back({param.name, param.optional, resolveCallbackType(graph, param.type, scope, module)});
+        }
+        result.typescriptCallbacks.push_back(std::move(info));
     }
     return result;
 }
@@ -832,6 +871,11 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 node.typescriptName = decl.name;
                 node.typescriptModule = module.bindings.typescriptFrom.generic_string();
             }
+            if (decl.cppOnly) {
+                node.cppOnly = true;
+                node.typescriptName.reset();
+                node.typescriptModule.clear();
+            }
             auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
             if (const auto* iface = std::get_if<Interface>(&decl.data); iface && iface->archiveRole != ArchiveRole::none) {
@@ -887,7 +931,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         }
     }
     const auto bindings = bindTypes(graph, inputs, scopes);
-    const MethodBindings noBinding;
+    const TypeScriptBinding noBinding;
     for (ModuleId owner : order) {
         const auto i = owner.value;
         const auto& input = inputs[i];

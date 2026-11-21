@@ -62,7 +62,7 @@ ctest --test-dir build/host --output-on-failure
 
 | 旧模块 | 当前可生成的内容 | 后续接管条件 |
 | --- | --- | --- |
-| RenderInterface | `render-interface.spec` 统一声明原生接口、`Factory` 和管线能力类型。生成的 `pipeline.ts` 导出旧版 22 个类型中的 9 个，包括 `RenderNode`、`Setter`、`SceneBuilder`、`RenderQueueBuilder` 和 `ComputeQueueBuilder`。 | 剩余 13 个接口涉及运行时、pass、subpass 和管线构建器，包括可选回调和 Web 专用签名。切换公开入口时也要保留 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
+| RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。 | 切换引擎公开入口时还需迁移 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
@@ -99,7 +99,9 @@ C++ 方法可为尾部参数声明默认值，例如 `uint32_t lightByteOffset =
 
 在 `module` 和 `import` 之后，把 `binding typescript` 或 `binding jsb` 写在命名空间外。一个文件可以包含多个绑定块。类型规则以分号结束。声明所属模块可以使用短名、限定名或从根命名空间开始的 `::` 名称。每个原生类型只能有一条 TS 绑定，同一类型的选项写在同一个规则内。
 
-默认按模块生成所有支持的 TS 声明。分步迁移时，可以在 `binding typescript` 中用 `export { ... };` 列出本模块这次要导出的类型名。输出顺序沿用声明顺序，C++ 仍生成整个模块。[RenderInterface 的绑定](../spec/render/render-interface.spec)
+模块默认导出所有支持的 TS 类型，顺序沿用声明顺序。原生专用类型在声明上标记，例如 `@cppOnly struct Factory`。已有的 `binding typescript { export { ... }; }` 仍可用来选择部分类型。[RenderInterface 声明](../spec/render/render-interface.spec)
+
+在纯虚方法上，`@optionalMethod` 允许 Web 实现省略该方法，`@optionalResult` 和 `@nullable` 分别将指针返回值绑定为 `T | undefined` 和 `T | null`。仅在 Web 侧存在的接口成员写在 `binding typescript` 的接口规则中，例如 `callback setup?(...): BasicRenderPassBuilder | undefined;`。回调中的本地和导入类型通过 TypeGraph 解析，可在参数上使用 `?`，也可用 `Readonly` 和 `Record` 描述配置对象。[管线构建器](../spec/render/render-interface.spec) · [程序库接口](../spec/render/private-interface.spec)
 
 ```text
 binding typescript {

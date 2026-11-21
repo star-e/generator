@@ -7,10 +7,9 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 
 set(privateSpec "${work}/spec/render/private-interface.spec")
 file(READ "${privateSpec}" privateApi)
-string(REPLACE "getProgramVariant nullable" "getProgramVariant optional(name) nullable" invalid "${privateApi}")
-file(WRITE "${privateSpec}" "${invalid}")
+file(APPEND "${privateSpec}" "binding typescript { ProgramLibrary => interface { method getProgramVariant optional(name); }; }")
 expect_failure(2 "optional parameters must match the trailing parameters" ${generate})
-string(REPLACE "method getProgramVariant nullable;" "getter getKey => key;" invalid "${privateApi}")
+string(REPLACE "virtual ccstd::string getKey" "@getter virtual ccstd::string getKey" invalid "${privateApi}")
 file(WRITE "${privateSpec}" "${invalid}")
 expect_failure(2 "getter requires a const nullary value method" ${generate})
 file(WRITE "${privateSpec}" "${privateApi}")

@@ -25,11 +25,8 @@ run("${TOOL}" generate --workspace "${workspace}" --output "${work}/both")
 file(GLOB_RECURSE all RELATIVE "${work}/both" "${work}/both/*")
 file(READ "${work}/both/cocos/rendering/custom/pipeline.ts" pipeline)
 string(REGEX MATCHALL "export (enum|interface|class) [A-Za-z0-9_]+" pipelineExports "${pipeline}")
-set(expectedExports "export enum PipelineType" "export enum SubpassCapabilities"
-    "export class PipelineCapabilities" "export interface RenderNode" "export interface Setter"
-    "export interface SceneBuilder" "export interface RenderQueueBuilder" "export interface ComputeQueueBuilder"
-    "export interface RenderingModule")
-if(NOT pipelineExports STREQUAL expectedExports)
+list(LENGTH pipelineExports count)
+if(NOT count EQUAL 22 OR pipeline MATCHES "(Factory|isOcclusionQueryEnabled|resetRenderQueue|setValue \\()")
     message(FATAL_ERROR "Unexpected RenderInterface TypeScript exports: ${pipelineExports}")
 endif()
 foreach(path IN ITEMS native/cocos/renderer/pipeline/custom/RenderSettingsTypes.h
@@ -128,6 +125,31 @@ file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" 
 if(script MATCHES "Detail" OR NOT header MATCHES "struct Detail")
     message(FATAL_ERROR "TypeScript export selection changed C++ declarations or leaked a hidden type")
 endif()
+string(REPLACE "struct Detail" "@cppOnly struct Detail" nativeOnly "${declarations}")
+file(WRITE "${provider}" "${nativeOnly}")
+run(${generate} --check --diff)
+file(APPEND "${provider}" " binding typescript { export { Detail }; }")
+expect_failure(2 "cannot export @cppOnly type Detail" ${generate})
+file(WRITE "${provider}" "${nativeOnly} binding typescript { Detail => class {}; }")
+expect_failure(2 "cannot bind @cppOnly type" ${generate})
+
+set(callbacks "module Provider; import Web; namespace cc { struct Item {} interface Hooks {} }
+    binding typescript { Hooks => interface { callback update?(item: Readonly<WebItem>): WebItem | undefined; }; }")
+file(WRITE "${provider}" "${callbacks}")
+run(${generate})
+file(READ "${work}/mixed/provider.ts" script)
+if(NOT script MATCHES "import type [{] WebItem [}] from './web'" OR NOT script MATCHES "Readonly<WebItem>")
+    message(FATAL_ERROR "A type used only by a callback must be imported")
+endif()
+string(REPLACE "Readonly<WebItem>" "Readonly<Missing>" invalid "${callbacks}")
+file(WRITE "${provider}" "${invalid}")
+expect_failure(2 "unknown type Missing" ${generate})
+string(REPLACE "interface Hooks {}" "interface Hooks { virtual void update() = 0; }" invalid "${callbacks}")
+file(WRITE "${provider}" "${invalid}")
+expect_failure(2 "duplicate TypeScript member Hooks.update" ${generate})
+string(REPLACE "item: Readonly<WebItem>" "first?: number, second: number" invalid "${callbacks}")
+file(WRITE "${provider}" "${invalid}")
+expect_failure(2 "required callback parameter follows an optional parameter" ${generate})
 set(property "getter getValue => value setter setValue;")
 set(accessors "module Provider; namespace cc { struct Item {} interface Options {
     virtual int getValue() const = 0; virtual void setValue(int v) = 0;

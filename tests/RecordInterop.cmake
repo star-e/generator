@@ -382,6 +382,24 @@ file(APPEND "${material}" "export interface EffectAsset { readonly name: string;
 file(WRITE "${stage}/cocos/render-scene/core/pass-utils.d.ts" "export type MacroRecord = Record<string, string | number | boolean>;\n")
 configure_file("${ENGINE}/cocos/rendering/custom/private.ts" "${custom}/legacy-private.ts" COPYONLY)
 configure_file("${ENGINE}/cocos/rendering/custom/pipeline.ts" "${custom}/legacy-pipeline.ts" COPYONLY)
+file(READ "${custom}/legacy-pipeline.ts" legacyPipeline)
+file(READ "${custom}/pipeline.ts" generatedPipeline)
+string(REGEX MATCHALL "export (enum|interface|class) [A-Za-z0-9_]+" legacyExports "${legacyPipeline}")
+string(REGEX MATCHALL "export (enum|interface|class) [A-Za-z0-9_]+" generatedExports "${generatedPipeline}")
+if(NOT legacyExports STREQUAL generatedExports)
+    message(FATAL_ERROR "RenderInterface exports differ from the engine: ${generatedExports}")
+endif()
+set(pipelineContract "${custom}/pipeline-contract.ts")
+file(WRITE "${pipelineContract}" "import type * as G from './pipeline';\nimport type * as L from './legacy-pipeline';\n"
+    "type Compatible<T extends U, U> = T;\ntype API<T> = [keyof T, T];\n")
+foreach(declaration IN LISTS legacyExports)
+    if(declaration MATCHES "export interface (.+)")
+        set(name "${CMAKE_MATCH_1}")
+        file(APPEND "${pipelineContract}"
+            "type G${name} = Compatible<API<G.${name}>, API<L.${name}>>;\n"
+            "type L${name} = Compatible<API<L.${name}>, API<G.${name}>>;\n")
+    endif()
+endforeach()
 file(WRITE "${stage}/cocos/rendering/geometry-renderer.d.ts" "export interface GeometryRenderer {}\n")
 file(WRITE "${stage}/cocos/rendering/global-descriptor-set-manager.d.ts" "export interface GlobalDSManager {}\n")
 file(WRITE "${stage}/cocos/rendering/pipeline-scene-data.d.ts" "export interface PipelineSceneData {}\n")
@@ -497,7 +515,7 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${custom}/program-consumer.ts" "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${subpassConsumer}" "${passConsumer}" "${nodeConsumer}" "${renderGraphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
+    "${custom}/program-consumer.ts" "${pipelineContract}" "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${subpassConsumer}" "${passConsumer}" "${nodeConsumer}" "${renderGraphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
 run("${node}" "${work}/js/rendering/custom/program-consumer.js")
 run("${node}" "${work}/js/rendering/custom/resource-graph-consumer.js")
 run("${node}" "${work}/js/rendering/custom/subpass-graph-consumer.js")

@@ -45,6 +45,20 @@ struct InterfaceMethodBinding {
 using MethodBindings = std::map<std::string, InterfaceMethodBinding>;
 using InterfaceBindings = std::map<std::pair<std::string, std::string>, InterfaceMethodBinding>;
 
+struct CallbackParameter {
+    std::string name;
+    bool optional{};
+    TypeRef type;
+};
+
+struct Callback {
+    std::string name;
+    bool optional{};
+    std::vector<CallbackParameter> parameters;
+    TypeRef result;
+    bool optionalResult{};
+};
+
 struct TypeScriptBinding {
     TypeRef source;
     BindingTarget kind{};
@@ -53,6 +67,7 @@ struct TypeScriptBinding {
     std::filesystem::path archiveFrom;
     bool externalTarget{};
     MethodBindings methods;
+    std::vector<Callback> callbacks;
     std::map<std::string, std::string> renamedFrom;
     std::string numberField;
     std::map<std::string, std::string> fieldDefaults;

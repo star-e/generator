@@ -30,6 +30,8 @@ struct Method {
     bool isPureVirtual{};
     bool isExplicitConversion{};
     AccessorKind accessor{};
+    bool optionalMethod{};
+    ResultPresence resultPresence{};
 };
 
 enum class ArchiveRole { none, input, output };
@@ -137,6 +139,7 @@ struct Declaration {
     std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration> data;
     std::string externalScope;
     std::string cppHeader;
+    bool cppOnly{};
 };
 
 struct ModuleImport {

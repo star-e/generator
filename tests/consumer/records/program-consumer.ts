@@ -3,7 +3,6 @@ import type * as Legacy from './legacy-web-types';
 import { PipelineCapabilities, PipelineType, SubpassCapabilities } from './pipeline';
 import type { RenderingModule } from './pipeline';
 import type * as Pipeline from './pipeline';
-import type * as LegacyPipeline from './legacy-pipeline';
 import type { Camera } from '../../render-scene/scene/camera';
 import type { DirectionalLight } from '../../render-scene/scene/directional-light';
 import type { SceneFlags } from './types';
@@ -12,15 +11,6 @@ import type { ProgramLibrary, ProgramProxy } from './private';
 import type * as LegacyPrivate from './legacy-private';
 
 type Compatible<T extends U, U> = T;
-type GeneratedBuilders = [
-    Pipeline.RenderNode, Pipeline.Setter, Pipeline.SceneBuilder, Pipeline.RenderQueueBuilder, Pipeline.ComputeQueueBuilder,
-];
-type LegacyBuilders = [
-    LegacyPipeline.RenderNode, LegacyPipeline.Setter, LegacyPipeline.SceneBuilder,
-    LegacyPipeline.RenderQueueBuilder, LegacyPipeline.ComputeQueueBuilder,
-];
-export type AcceptsEngineBuilders = Compatible<LegacyBuilders, GeneratedBuilders>;
-export type AcceptsGeneratedBuilders = Compatible<GeneratedBuilders, LegacyBuilders>;
 
 // These calls must compile against the generated public API.
 export function configureQueues(queue: Pipeline.RenderQueueBuilder, compute: Pipeline.ComputeQueueBuilder,

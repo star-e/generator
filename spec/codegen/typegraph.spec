@@ -17,6 +17,7 @@ namespace codegen {
         defaultValue: std::string;
     }
     enum class AccessorKind : uint32_t { None, Getter, Setter }
+    enum class ResultPresence : uint32_t { Required, Nullable, Optional }
     struct MethodInfo {
         result: TypeUse;
         name: std::string;
@@ -30,6 +31,8 @@ namespace codegen {
         isPureVirtual: bool = false;
         isExplicitConversion: bool = false;
         accessor: AccessorKind = AccessorKind::None;
+        optionalMethod: bool = false;
+        resultPresence: ResultPresence = ResultPresence::Required;
     }
     struct FieldInfo {
         type: TypeUse;
@@ -76,7 +79,28 @@ namespace codegen {
         fields: std::vector<FieldInfo>;
         methods: std::vector<MethodInfo>;
     }
-    struct InterfaceType { bases: std::vector<TypeId>; methods: std::vector<MethodInfo>; }
+    struct CallbackTypeInfo {
+        declaration: TypeUse;
+        name: std::string;
+        arguments: std::vector<CallbackTypeInfo>;
+    }
+    struct CallbackParameterInfo {
+        name: std::string;
+        optional: bool = false;
+        type: CallbackTypeInfo;
+    }
+    struct CallbackInfo {
+        name: std::string;
+        optional: bool = false;
+        parameters: std::vector<CallbackParameterInfo>;
+        result: CallbackTypeInfo;
+        optionalResult: bool = false;
+    }
+    struct InterfaceType {
+        bases: std::vector<TypeId>;
+        methods: std::vector<MethodInfo>;
+        typescriptCallbacks: std::vector<CallbackInfo>;
+    }
     struct ComponentInfo { tag: TypeId; valueType: TypeId; name: std::string; publicName: std::string; }
     struct GraphType {
         immovable: bool = false;
@@ -128,6 +152,7 @@ namespace codegen {
         typescriptContainer: ContainerKind = ContainerKind::None;
         typescriptMapKey: MapKeyKind = MapKeyKind::Native;
         typescriptNumber: bool = false;
+        cppOnly: bool = false;
         templateParameters: std::vector<TypeId>;
     }
     struct TypeModule {

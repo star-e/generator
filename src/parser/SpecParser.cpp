@@ -269,11 +269,37 @@ private:
         return result;
     }
 
+    Callback callback() {
+        Callback result;
+        result.name = identifier();
+        result.optional = accept("?");
+        expect("(");
+        std::set<std::string> parameters;
+        if (!accept(")")) {
+            do {
+                CallbackParameter parameter{uniqueName(parameters), accept("?")};
+                if (!parameter.optional && !result.parameters.empty() && result.parameters.back().optional)
+                    fail("required callback parameter follows an optional parameter");
+                expect(":");
+                parameter.type = type();
+                result.parameters.push_back(std::move(parameter));
+            } while (accept(","));
+            expect(")");
+        }
+        expect(":");
+        result.result = type();
+        if (accept("|")) {
+            expect("undefined");
+            result.optionalResult = true;
+        }
+        return result;
+    }
+
     void bindingOptions(TypeScriptBinding& rule) {
         std::set<std::string> options;
         while (!accept("}")) {
             const auto key = identifier();
-            if (key != "method" && key != "getter" && key != "field" && !options.insert(key).second) fail("duplicate binding option " + key);
+            if (key != "method" && key != "getter" && key != "field" && key != "callback" && !options.insert(key).second) fail("duplicate binding option " + key);
             if (rule.kind == BindingTarget::interfaceType && (key == "method" || key == "getter")) {
                 const auto name = identifier();
                 const auto [it, inserted] = rule.methods.try_emplace(name);
@@ -291,6 +317,8 @@ private:
                 }
                 if (accept("optional")) method.optional = bindingFields();
                 method.nullable = accept("nullable");
+            } else if (rule.kind == BindingTarget::interfaceType && key == "callback") {
+                rule.callbacks.push_back(callback());
             } else if (rule.kind == BindingTarget::interfaceType && key == "helpers") {
                 rule.helpers = true;
             } else if (rule.kind == BindingTarget::interfaceType && key == "field") {
@@ -462,7 +490,13 @@ private:
 
     Declaration declaration(std::set<std::string>& names) {
         Declaration result;
+        if (token == "@" && followedBy("cppOnly")) {
+            advance();
+            expect("cppOnly");
+            result.cppOnly = true;
+        }
         if (accept("using")) {
+            if (result.cppOnly) fail("@cppOnly requires a record, interface, graph or enum");
             result.location = location;
             result.name = uniqueName(names);
             expect("=");
@@ -472,6 +506,7 @@ private:
         }
         if (accept("@")) {
             if (accept("tag")) {
+                if (result.cppOnly) fail("@tag already declares a native-only type");
                 expect("struct");
                 result.data = TagDeclaration{};
             } else if (accept("archive")) {
@@ -492,6 +527,7 @@ private:
                     else if (annotation == "serialize" && !record.serializable) record.serializable = true;
                     else if (annotation == "comparison" && record.comparisons.empty()) comparison(record);
                     else if (annotation == "hash" && !record.hashable) record.hashable = true;
+                    else if (annotation == "cppOnly" && !result.cppOnly) result.cppOnly = true;
                     else fail("unknown or duplicate record annotation @" + annotation);
                     if (token != "@" && token != "struct" && token != "graph")
                         fail("@" + annotation + " requires a struct");
@@ -908,6 +944,9 @@ private:
             if (annotation == "cppOnly" && !cppOnly) cppOnly = true;
             else if (annotation == "getter" && result.accessor == AccessorKind::None) result.accessor = AccessorKind::Getter;
             else if (annotation == "setter" && result.accessor == AccessorKind::None) result.accessor = AccessorKind::Setter;
+            else if (annotation == "optionalMethod" && !result.optionalMethod) result.optionalMethod = true;
+            else if (annotation == "nullable" && result.resultPresence == ResultPresence::Required) result.resultPresence = ResultPresence::Nullable;
+            else if (annotation == "optionalResult" && result.resultPresence == ResultPresence::Required) result.resultPresence = ResultPresence::Optional;
             else fail("unknown or duplicate method annotation @" + annotation);
         }
         result.isPureVirtual = accept("virtual");
@@ -923,6 +962,10 @@ private:
         result.cppOnly = cppOnly || result.isExplicitConversion || !result.isPureVirtual;
         if (result.accessor != AccessorKind::None && result.cppOnly)
             fail("@getter and @setter require a TypeScript-visible pure virtual method");
+        if ((result.optionalMethod || result.resultPresence != ResultPresence::Required) && result.cppOnly)
+            fail("TypeScript optionality requires a visible pure virtual method");
+        if (result.optionalMethod && result.accessor != AccessorKind::None)
+            fail("@optionalMethod requires a regular method");
         result.result = type(nullptr, true);
         if (!result.isExplicitConversion)
             result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();

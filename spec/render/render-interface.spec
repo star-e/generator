@@ -21,9 +21,9 @@ namespace cc::render {
         @getter virtual const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers() const = 0;
         @getter virtual pipeline::PipelineSceneData* getPipelineSceneData() const = 0;
         @getter virtual const ccstd::string& getConstantMacros() const = 0;
-        @getter virtual scene::Model* getProfiler() const = 0;
+        @getter @nullable virtual scene::Model* getProfiler() const = 0;
         @setter virtual void setProfiler(scene::Model* profiler) = 0;
-        @getter virtual pipeline::GeometryRenderer* getGeometryRenderer() const = 0;
+        @getter @nullable virtual pipeline::GeometryRenderer* getGeometryRenderer() const = 0;
         @getter virtual float getShadingScale() const = 0;
         @setter virtual void setShadingScale(float scale) = 0;
         virtual const ccstd::string& getMacroString(const ccstd::string& name) const = 0;
@@ -33,11 +33,11 @@ namespace cc::render {
         virtual void setMacroInt(const ccstd::string& name, int32_t value) = 0;
         virtual void setMacroBool(const ccstd::string& name, bool value) = 0;
         virtual void onGlobalPipelineStateChanged() = 0;
-        virtual void setValue(const ccstd::string& name, int32_t value) = 0;
-        virtual void setValue(const ccstd::string& name, bool value) = 0;
-        virtual bool isOcclusionQueryEnabled() const = 0;
-        virtual void resetRenderQueue(bool reset) = 0;
-        virtual bool isRenderQueueReset() const = 0;
+        @cppOnly virtual void setValue(const ccstd::string& name, int32_t value) = 0;
+        @cppOnly virtual void setValue(const ccstd::string& name, bool value) = 0;
+        @cppOnly virtual bool isOcclusionQueryEnabled() const = 0;
+        @cppOnly virtual void resetRenderQueue(bool reset) = 0;
+        @cppOnly virtual bool isRenderQueueReset() const = 0;
     }
 
     enum class PipelineType : uint8_t { BASIC, STANDARD }
@@ -144,7 +144,7 @@ namespace cc::render {
         virtual void addResolvePass(const ccstd::vector<ResolvePair>& resolvePairs) = 0;
         virtual void addCopyPass(const ccstd::vector<CopyPair>& copyPairs) = 0;
         virtual void addBuiltinReflectionProbePass(const scene::Camera* camera) = 0;
-        virtual gfx::DescriptorSetLayout* getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
+        @optionalResult virtual gfx::DescriptorSetLayout* getDescriptorSetLayout(const ccstd::string& shaderName, UpdateFrequency freq) = 0;
         virtual void setMat4(const ccstd::string& name, const Mat4& mat) = 0;
         virtual void setQuaternion(const ccstd::string& name, const Quaternion& quat) = 0;
         virtual void setColor(const ccstd::string& name, const gfx::Color& color) = 0;
@@ -242,9 +242,9 @@ namespace cc::render {
     }
 
     interface PipelineBuilder {
-        virtual void windowResize(BasicPipeline* pipeline, scene::RenderWindow* window, scene::Camera* camera, uint32_t width, uint32_t height) = 0;
+        @optionalMethod virtual void windowResize(BasicPipeline* pipeline, scene::RenderWindow* window, scene::Camera* camera, uint32_t width, uint32_t height) = 0;
         virtual void setup(const ccstd::vector<scene::Camera*>& cameras, BasicPipeline* pipeline) = 0;
-        virtual void onGlobalPipelineStateChanged() = 0;
+        @optionalMethod virtual void onGlobalPipelineStateChanged() = 0;
     }
 
     interface RenderingModule {
@@ -253,7 +253,7 @@ namespace cc::render {
         virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name) const = 0;
     }
 
-    struct Factory {
+    @cppOnly struct Factory {
         static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<uint8_t>& bufferIn);
         static void destroy(RenderingModule* renderingModule) noexcept;
         static Pipeline* createPipeline();
@@ -261,7 +261,15 @@ namespace cc::render {
 }
 
 binding typescript {
-    export { PipelineType, SubpassCapabilities, PipelineCapabilities, RenderNode, Setter, SceneBuilder,
-             RenderQueueBuilder, ComputeQueueBuilder, RenderingModule };
     PipelineCapabilities => class { constructor(); };
+    PipelinePassBuilder => interface {
+        callback configCamera?(camera: Readonly<scene::Camera>, pplConfigs: Readonly<Record<string, any>>,
+                               cameraConfigs: Record<string, any>): void;
+        callback windowResize?(ppl: BasicPipeline, pplConfigs: Readonly<Record<string, any>>,
+                               cameraConfigs: Readonly<Record<string, any>>, window: scene::RenderWindow,
+                               camera: scene::Camera, width: number, height: number): void;
+        callback setup?(ppl: BasicPipeline, pplConfigs: Readonly<Record<string, any>>,
+                        cameraConfigs: Readonly<Record<string, any>>, camera: scene::Camera, context: Record<string, any>,
+                        prevRenderPass?: BasicRenderPassBuilder): BasicRenderPassBuilder | undefined;
+    };
 }

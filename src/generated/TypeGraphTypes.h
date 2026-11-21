@@ -43,6 +43,12 @@ enum class AccessorKind : uint32_t {
     Setter,
 };
 
+enum class ResultPresence : uint32_t {
+    Required,
+    Nullable,
+    Optional,
+};
+
 struct MethodInfo {
     TypeUse result;
     std::string name;
@@ -56,6 +62,8 @@ struct MethodInfo {
     bool isPureVirtual = false;
     bool isExplicitConversion = false;
     AccessorKind accessor = AccessorKind::None;
+    bool optionalMethod = false;
+    ResultPresence resultPresence = ResultPresence::Required;
 };
 
 struct FieldInfo {
@@ -123,9 +131,30 @@ struct RecordType {
     std::vector<MethodInfo> methods;
 };
 
+struct CallbackTypeInfo {
+    TypeUse declaration;
+    std::string name;
+    std::vector<CallbackTypeInfo> arguments;
+};
+
+struct CallbackParameterInfo {
+    std::string name;
+    bool optional = false;
+    CallbackTypeInfo type;
+};
+
+struct CallbackInfo {
+    std::string name;
+    bool optional = false;
+    std::vector<CallbackParameterInfo> parameters;
+    CallbackTypeInfo result;
+    bool optionalResult = false;
+};
+
 struct InterfaceType {
     std::vector<TypeId> bases;
     std::vector<MethodInfo> methods;
+    std::vector<CallbackInfo> typescriptCallbacks;
 };
 
 struct ComponentInfo {
@@ -233,6 +262,7 @@ struct TypeNode {
     ContainerKind typescriptContainer = ContainerKind::None;
     MapKeyKind typescriptMapKey = MapKeyKind::Native;
     bool typescriptNumber = false;
+    bool cppOnly = false;
     std::vector<TypeId> templateParameters;
 };
 

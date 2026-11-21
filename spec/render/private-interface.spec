@@ -21,7 +21,7 @@ namespace cc::render {
         virtual const gfx::DescriptorSetLayout& getLocalDescriptorSetLayout(gfx::Device* device, uint32_t phaseID, const ccstd::string& programName) = 0;
         virtual const IProgramInfo& getProgramInfo(uint32_t phaseID, const ccstd::string& programName) const = 0;
         virtual const gfx::ShaderInfo& getShaderInfo(uint32_t phaseID, const ccstd::string& programName) const = 0;
-        virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, const ccstd::pmr::string* key = nullptr) = 0;
+        @nullable virtual ProgramProxy* getProgramVariant(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, const ccstd::pmr::string* key = nullptr) = 0;
         @cppOnly virtual gfx::PipelineState* getComputePipelineState(gfx::Device* device, uint32_t phaseID, const ccstd::string& name, MacroRecord& defines, const ccstd::pmr::string* key = nullptr) = 0;
         virtual const ccstd::vector<int>& getBlockSizes(uint32_t phaseID, const ccstd::string& programName) const = 0;
         virtual const ccstd::unordered_map<ccstd::string, uint32_t>& getHandleMap(uint32_t phaseID, const ccstd::string& programName) const = 0;
@@ -29,10 +29,4 @@ namespace cc::render {
         virtual uint32_t getDescriptorNameID(const ccstd::pmr::string& name) = 0;
         virtual const ccstd::pmr::string& getDescriptorName(uint32_t nameID) = 0;
     }
-}
-
-binding typescript {
-    ProgramLibrary => interface {
-        method getProgramVariant nullable;
-    };
 }
