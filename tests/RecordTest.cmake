@@ -468,8 +468,7 @@ foreach(fragment IN ITEMS [[obj->setProperty("completedPasses", tmp)]] [[obj->ge
         message(FATAL_ERROR "Missing JSB property access: ${fragment}")
     endif()
 endforeach()
-string(REPLACE " => const enum;" " => enum;" both "${changed}")
-string(REPLACE "UpdateFrequency => enum" "AccessType => const enum { names; };\n    UpdateFrequency => enum" both "${both}")
+string(REPLACE "AccessType => enum;" "AccessType => const enum { names; };\n    ParameterType => enum;" both "${changed}")
 file(WRITE "${spec}" "${both}")
 run(${generate})
 file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderCommonTypes.h" cpp)
@@ -493,7 +492,8 @@ foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "L
         message(FATAL_ERROR "Missing C++ fragment: ${fragment}")
     endif()
 endforeach()
-foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "level = 11"
+foreach(fragment IN ITEMS "export const enum AccessType {" "export enum ParameterType {" "export const enum TaskType {" "export const enum ResolveFlags {"
+                          "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "level = 11"
                           "sourceFirstSlice = 0XfF" "mipLevels = 0xFFFFFFFF"
                           "mode: ResolveMode = ResolveMode.AVERAGE" "v.reset(target, source, resolveFlags, mode, mode1);"
                           "constructor (light: Light | null = null, probe: ReflectionProbe | null = null, level = 11, culledByLight = false)")
@@ -530,7 +530,7 @@ endfunction()
 bad_binding("UpdateFrequency => enum" "LightInfo => enum" "expected an enum binding")
 bad_binding("record LightInfo;" "record MissingRecord;" "unknown type MissingRecord")
 bad_binding("record LightInfo;" "record QueueHint;" "expected a local JSB record QueueHint")
-bad_binding("ParameterType => const enum;" "BufferTag => const enum;" "expected an enum binding")
+bad_binding("AccessType => enum;" "BufferTag => const enum;" "expected an enum binding")
 bad_class_binding("MissingStats" "" "unknown type MissingStats")
 foreach(option IN ITEMS "reset constructor" "reset defaults" "reset(level, light)")
     bad_class_binding("UploadPair" "${option};" "render-common[.]spec:[0-9]+:[0-9]+: invalid binding option reset")

@@ -11,6 +11,7 @@ namespace cc::codegen {
 
 struct SettingsBinding {
     std::set<std::string> interfaceOnly;
+    std::set<std::string> runtimeEnums;
     std::set<std::string> registerEnums;
     std::map<std::string, std::map<std::string, std::string>> renamedFrom;
 };

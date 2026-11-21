@@ -4,6 +4,7 @@
 
 #include <ostream>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 namespace cc::codegen {
@@ -54,6 +55,12 @@ inline void writeEnumMembers(std::ostream& out, const EnumType& enumeration, Enu
         }
         out << ",\n";
     }
+}
+
+inline void writeTypeScriptEnum(std::ostream& out, std::string_view name, const EnumType& enumeration, bool runtimeObject) {
+    out << (runtimeObject ? "export enum " : "export const enum ") << name << " {\n";
+    writeEnumMembers(out, enumeration, EnumTarget::typescript);
+    out << "}\n";
 }
 
 } // namespace cc::codegen

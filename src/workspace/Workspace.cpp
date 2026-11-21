@@ -166,10 +166,11 @@ SettingsBinding settingsBinding(const Module& module) {
     for (const auto& rule : module.bindings.typescript) {
         if (rule.kind == BindingTarget::type) continue;
         const auto name = bindingName(rule.source.name);
-        if (rule.kind == BindingTarget::constEnum || rule.kind == BindingTarget::classType ||
+        if (rule.kind == BindingTarget::classType ||
             rule.kind == BindingTarget::numberField || rule.names || !rule.methods.empty() || !rule.callbacks.empty())
             invalidBinding(rule, "settings");
         if (rule.kind == BindingTarget::interfaceType && !rule.helpers) result.interfaceOnly.insert(name);
+        if (rule.kind == BindingTarget::enumeration) result.runtimeEnums.insert(name);
         if (rule.registerEnum) result.registerEnums.insert(name);
         if (!rule.renamedFrom.empty()) result.renamedFrom.emplace(name, rule.renamedFrom);
     }
@@ -270,7 +271,7 @@ void bindRecordOutput(std::vector<ModuleOutput>& outputs, const Module& module, 
         if (rule.registerEnum || rule.helpers || !rule.renamedFrom.empty())
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
-        if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
+        if (rule.kind == BindingTarget::enumeration) output.runtimeEnums.insert(name);
         if (rule.base) output.bases.emplace(name, *rule.base);
         if (!rule.classMethods.empty()) output.classMethods.emplace(name, rule.classMethods);
         if (rule.kind == BindingTarget::classType && !rule.from.empty()) {

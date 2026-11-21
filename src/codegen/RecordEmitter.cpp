@@ -1100,7 +1100,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     RecordArchives archives;
     std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, staticInitializers, nameFunctions;
     auto pendingEnums = output.namedEnums;
-    auto pendingConstEnums = output.constEnums;
     std::string enumImports;
     bool previousTag = false;
     bool usesUint64Field = false;
@@ -1176,11 +1175,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             cpp << (enumeration->isFlags ? " { // NOLINT(performance-enum-size)\n" : " {\n");
             writeEnumMembers(cpp, *enumeration, EnumTarget::cpp);
-            if (emitTs) {
-                ts << (pendingConstEnums.erase(node.name) ? "export const enum " : "export enum ") << node.name << " {\n";
-                writeEnumMembers(ts, *enumeration, EnumTarget::typescript);
-                ts << "}\n";
-            }
+            if (emitTs) writeTypeScriptEnum(ts, node.name, *enumeration, output.runtimeEnums.contains(node.name));
             cpp << "};\n";
             if (enumeration->isFlags) {
                 deps.headers.insert("type_traits");
@@ -1274,7 +1269,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
     if (pool.count != output.pools.size()) throw std::runtime_error("unknown pool type in " + module.name);
     if (!pendingEnums.empty()) throw std::runtime_error("unknown enum " + *pendingEnums.begin() + " in " + module.name);
-    if (!pendingConstEnums.empty()) throw std::runtime_error("unknown const enum " + *pendingConstEnums.begin() + " in " + module.name);
 
     Files files;
     if (deps.emitCpp) {

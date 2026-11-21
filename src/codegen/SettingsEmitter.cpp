@@ -201,9 +201,7 @@ std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsB
         if (!node.typescriptName || std::holds_alternative<AliasType>(node.data)) continue;
         body << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
-            body << "export enum " << node.name << " {\n";
-            writeEnumMembers(body, *enumeration, EnumTarget::typescript);
-            body << "}\n";
+            writeTypeScriptEnum(body, node.name, *enumeration, rules.runtimeEnums.contains(node.name));
             if (rules.registerEnums.contains(node.name)) {
                 imports.names.insert("ccenum");
                 body << "ccenum(" << node.name << ");\n";

@@ -35,6 +35,8 @@ string(REPLACE "threshold: float = 0.8" "cutoff: float = 0.25" changed "${origin
 string(REPLACE "module RenderSettings;" "module RenderSettings; import Strings; import Containers;" changed "${changed}")
 string(REPLACE "struct MSAA {" "struct MSAA { label: ccstd::pmr::string; bytes: ccstd::vector<uint8_t>; labels: ccstd::vector<ccstd::string>; counts: ccstd::map<ccstd::string, uint32_t>;" changed "${changed}")
 string(REPLACE "MipmapFilter," "MipmapFilter, LegacyFilter = MipmapFilter," changed "${changed}")
+string(REPLACE "enum class BloomType" "enum class DefaultMode { One }\n    enum class RuntimeMode { One }\n    enum class ExplicitConstMode { One }\n    enum class BloomType" changed "${changed}")
+string(REPLACE "binding typescript {" "binding typescript { RuntimeMode => enum; ExplicitConstMode => const enum;" changed "${changed}")
 string(REPLACE "iterations: uint32_t = 3" "iterations: uint32_t = 0xA" changed "${changed}")
 file(WRITE "${spec}" "${changed}")
 run(${generate})
@@ -43,7 +45,8 @@ if(NOT paths STREQUAL "editor/assets/default_renderpipeline/builtin-pipeline-typ
     message(FATAL_ERROR "Unexpected settings outputs: ${paths}")
 endif()
 file(READ "${output}/${paths}" ts)
-foreach(fragment IN ITEMS "cutoff: number; /* 0.25 */" "cutoff: 0.25," "value.cutoff = 0.25;" "LegacyFilter = MipmapFilter,"
+foreach(fragment IN ITEMS "export const enum DefaultMode {" "export enum RuntimeMode {" "export const enum ExplicitConstMode {"
+                          "export enum BloomType {" "ccenum(BloomType);" "cutoff: number; /* 0.25 */" "cutoff: 0.25," "value.cutoff = 0.25;" "LegacyFilter = MipmapFilter,"
                           "iterations: 0xA," "value.iterations = 0xA;" "label: string;" "label: ''," "value.label = '';"
                           "bytes: Uint8Array;" "bytes: new Uint8Array(0)," "value.bytes = new Uint8Array(0);"
                           "labels: string[];" "labels: []," "value.labels = [];"
@@ -54,6 +57,9 @@ foreach(fragment IN ITEMS "cutoff: number; /* 0.25 */" "cutoff: 0.25," "value.cu
     endif()
 endforeach()
 
+string(REPLACE "BloomType => enum" "BloomType => const enum" broken "${original}")
+file(WRITE "${spec}" "${broken}")
+expect_failure(2 "register requires a runtime enum" ${generate})
 string(REPLACE "BloomType::KawaseDualFilter" "BloomType::Missing" broken "${original}")
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "render-settings.spec:[0-9]+:[0-9]+: invalid enum default BloomType::Missing" ${generate})

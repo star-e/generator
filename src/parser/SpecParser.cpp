@@ -371,8 +371,10 @@ private:
                 }
             } else if (rule.kind == BindingTarget::enumeration || rule.kind == BindingTarget::constEnum) {
                 if (key == "names") rule.names = true;
-                else if (key == "register") rule.registerEnum = true;
-                else fail("unknown enum binding option " + key);
+                else if (key == "register") {
+                    if (rule.kind == BindingTarget::constEnum) fail("register requires a runtime enum");
+                    rule.registerEnum = true;
+                } else fail("unknown enum binding option " + key);
             } else fail("invalid binding option " + key);
             expect(";");
         }

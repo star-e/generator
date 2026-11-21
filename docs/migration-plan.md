@@ -142,7 +142,7 @@ binding typescript {
 | Map | 在外部类型声明上写 `@container("map") template<K, V> class map;`。TypeGraph 按键、值各自的绑定生成 `Map<K, V>`，从两侧递归收集导入。每个字段用 `new Map<K, V>()` 初始化。 |
 | Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，池化重置时调用 `.clear()` 原地清空。 |
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
-| 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
+| 枚举 | 枚举和 `flags` 默认生成 TS `const enum`。`QueueHint => enum;` 保留运行时枚举对象。`DescriptorTypeOrder => const enum { names; };` 为常量枚举生成名称查询。`BloomType => enum { register; };` 将运行时枚举注册到编辑器。 |
 | 对象池和重置 | 模块中入池的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。按值持有的 `Int8Array`、`Uint8Array`、`Int16Array`、`Uint16Array`、`Int32Array`、`Uint32Array` 在复用时自动保留原数组和内容，并从 `reset` 和池工厂的参数中省略。其他需要保留的字段可用 `keep(...)` 指定。 |
 | 手写 TS 方法 | 在 `binding typescript` 的 `Type => class { ... };` 中写 `methods R"ts(...)ts";`。原始字符串包含一个或多个完整的 TS 方法，保留函数签名、方法体和缩进。可更换首尾的 `ts` 分隔符。作用域外的依赖在绑定块中用 `import { Name } from "模块";` 或 `import type { Name } from "模块";` 引入，路径遵循生成文件的 TS 导入语义。由 TypeScript 编译器检查方法语法、类型及重名。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
@@ -269,7 +269,7 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `RenderSettings` 的 `PipelineSettings.bloom` 和 `Bloom.type` 分别引用 `Bloom` 和 `BloomType`。设置后端按字段生成 TS 接口、默认值工厂和递归补全函数。旧版材质迁移规则在绑定中声明。`cocos.settings.editor` 编译引擎的 `BuiltinPipelineSettings` 并在隔离环境调用 `onEnable()`，检查新字段缺失、已有材质和显式 `null` 三种情况。[设置声明](../spec/render/render-settings.spec)
 
-`RenderCommon` 的全部十三个枚举和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。`.spec` 支持十进制、十六进制整数初值、两个非负整数字面量的左移，以及对同一枚举中先前成员的引用。TypeGraph 保存初值表达式和求值结果，检查移位量与底层类型的取值范围。`ResourceFlags`、`SceneFlags` 和 `ResolveFlags` 共用 C++ 位运算符和 `any()` 的生成逻辑。模块绑定用 `const enum` 将 `ResolveFlags` 生成为 TS 常量枚举，用 `names;` 选择需要生成名称查询的枚举。[模块声明](../spec/render/render-common.spec) · [模块绑定](../spec/render/render-common.spec)
+`RenderCommon` 的全部十三个枚举和 `LightInfo` 已生成到暂存目录的 `cocos/rendering/custom/types.ts` 和 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.h`。`.spec` 支持十进制、十六进制整数初值、两个非负整数字面量的左移，以及对同一枚举中先前成员的引用。TypeGraph 保存初值表达式和求值结果，检查移位量与底层类型的取值范围。`ResourceFlags`、`SceneFlags` 和 `ResolveFlags` 共用 C++ 位运算符和 `any()` 的生成逻辑。`ResolveFlags` 按默认规则生成 TS 常量枚举。`ResourceFlags` 和 `SceneFlags` 显式绑定为 `enum`，供 JavaScript 在运行时访问。`names;` 单独控制名称查询。[模块声明](../spec/render/render-common.spec) · [模块绑定](../spec/render/render-common.spec)
 
 `SceneFlags` 的成员可以用 `@deprecated("Please use OPAQUE.")` 声明弃用原因。TypeGraph 将说明绑定到该成员，C++ 和 TS 后端生成相同的文档注释。TS 运行时保留旧别名的反向映射，例如 `SceneFlags[1]` 返回 `"OPAQUE_OBJECT"`。
 

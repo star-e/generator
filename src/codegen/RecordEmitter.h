@@ -23,7 +23,7 @@ struct RecordOutput {
     std::set<std::filesystem::path> jsbIncludes;
     std::optional<std::filesystem::path> typescript;
     std::set<std::string> namedEnums;
-    std::set<std::string> constEnums;
+    std::set<std::string> runtimeEnums;
     InterfaceBindings interfaceBindings;
     std::map<std::string, TypeScriptImport> bases;
     std::map<std::string, std::string> classMethods;

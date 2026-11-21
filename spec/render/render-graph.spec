@@ -381,8 +381,6 @@ binding typescript {
     RaytracePass => class { pool rp2; };
     ClearView => class { pool cv2; };
     RenderQueue => class { field viewport default null; };
-    CullingFlags => const enum;
-    BlitType => const enum;
     RenderData => class { pool rd1; };
     RenderGraph => class { pool rg1; };
 }

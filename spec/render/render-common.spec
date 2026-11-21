@@ -226,12 +226,12 @@ namespace cc::render {
 
 binding typescript {
     UpdateFrequency => enum { names; };
-    ParameterType => const enum;
-    TaskType => const enum;
-    LightingMode => const enum;
-    AttachmentType => const enum;
-    ClearValueType => const enum;
-    ResolveFlags => const enum;
+    ResourceResidency => enum;
+    QueueHint => enum;
+    ResourceDimension => enum;
+    ResourceFlags => enum;
+    SceneFlags => enum;
+    AccessType => enum;
 }
 
 binding jsb {

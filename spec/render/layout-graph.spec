@@ -242,9 +242,7 @@ namespace cc::render {
 
 binding typescript {
     import { COCOS_RUNTIME, HTML5 } from "internal:constants";
-    LayoutType => const enum;
     DescriptorTypeOrder => const enum { names; };
-    RenderPassType => const enum;
     DescriptorBlockIndex => class { assign; mapKey json; };
     DescriptorGroupBlockIndex => class { assign; mapKey json; };
     NameLocalID => number(value);
