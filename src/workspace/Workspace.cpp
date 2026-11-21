@@ -410,7 +410,7 @@ Files plan(const Json& settings, const fs::path& base) {
                     .typescriptModule = settingsRecord ? std::string{} : tsModule.generic_string()});
             }
         }
-        inputs.push_back({std::move(module), std::move(mappings)});
+        inputs.push_back({std::move(module), std::move(mappings), false, typesOutput.header.generic_string()});
     }
     std::vector<ModuleId> dependencyOrder;
     const auto graph = buildTypeGraph(inputs, {}, &dependencyOrder);

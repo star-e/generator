@@ -210,19 +210,17 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 生成器自举
 
-`CocosCodegenModel` 编译 `src/generated/` 中的类型图种子。解析器保留语法和源位置，建图器先登记作用域与声明，再绑定字段和方法签名中的类型。Archive 的 C++、TS 后端和 RenderSettings 的 TS 后端消费同一张只读图。作用域边从父指向子，字段和签名通过 `TypeId` 引用其类型，模块按声明顺序保存输出列表。[类型图声明](../spec/codegen/typegraph.spec) · [生成源码](../src/generated/TypeGraphTypes.h) · [建图器](../src/model/TypeGraphBuilder.cpp)
+日常构建编译 `src/generated/` 里的自举快照。运行 `cocos-codegen generate --workspace config/self-host.json` 会在 `build/self-host/generated/` 生成 `SourceLocation`、`TypeGraphCore`、`TypeGraph` 三个模块的九个 C++ 文件。解析器、建图器和各后端都使用这份模型。[自举配置](../config/self-host.json) · [声明](../spec/codegen/typegraph.spec) · [生成的图](../src/generated/TypeGraphTypes.h)
 
-`config/seed-project.json` 引用的 `typegraph.spec` 仍定义 `Enumerator`、`EnumType`、`TemplateArgument`、`TemplateInstanceType`、`TypeData`、`TypeNode` 和图 `TypeGraph`。这些声明直接或间接使用 `std::variant`。种子通过 `model-support.spec` 引用自举模块提供的类型。
+外部模板声明支持末尾的类型参数包。比如 `template<First, Rest...> class variant;` 至少需要一个类型，`template<Ts...> class tuple;` 也接受空参数列表 `tuple<>`。通过 `using` 声明 C++ 模板实例的别名，生成器会收集所需头文件并先生成别名的依赖。`TemplateArgument` 和 `TypeData` 都遵循这条规则。[宿主类型](../spec/codegen/host-types.spec) · [类型别名](../spec/codegen/typegraph.spec)
 
-首份种子由一次性工具生成，该 Windows 可执行文件的 SHA-256 为 `a38d3b74247ebfd7fd6a24f46ddf00ed5932d6d1ff7527c8a0c35fdc99b0f8f0`。复核时将 `config/seed-*.json` 和 `spec/codegen/` 按相对路径复制到临时工作区，以 `config/seed-workspace.json` 运行 `generate --workspace`。再用 `cmake -DINPUT_DIR=<临时工作区>/build/seed -DOUTPUT_DIR=<对照目录> -DRUNTIME_NAMESPACE=<原工具的图运行时命名空间> -P cmake/ImportTypeGraphSeed.cmake` 导入四个 C++ 文件，逐字节对照 `src/generated/`。导入只适配图运行时引用，迭代器与边由 Cocos 实现。日常构建直接编译源码种子。[种子工程](../config/seed-project.json) · [导入脚本](../cmake/ImportTypeGraphSeed.cmake) · [图支持代码](../src/model/GraphSupport.h)
+`TypeGraph` 用 `vertex_storage: indexed(graph::BidirectionalStorage<uint32_t>);` 指定宿主的双向边存储。它适用于声明了顶点遍历、出边和入边的平面组件图。存储模板按顶点编号类型实例化，提供顶点与边的遍历、查询和 `reserve`。生成器为每个组件生成 `std::vector` 和访问方法，为图生成字段和方法声明。`appendNode` 的登记与回滚、按名称查找和类型复用由 `TypeGraph.cpp` 实现。[图存储](../src/model/GraphSupport.h) · [图操作](../src/model/TypeGraph.cpp)
 
-`SourceLocation` 和 `TypeGraphCore` 两个模块合计自举生成 31 个类型。`TypeGraphCore` 包含类型编号、字段与方法签名、构造函数、回调、图组件、节点类型和模块描述。`GraphType` 描述一张图的能力，`Node_` 是类型图的组件标签。`HostTypes` 为 `std::vector<T>` 和 `std::optional<T>` 指定标准头文件。运行 `cocos-codegen generate --workspace config/self-host.json` 会将两个模块的前置头、主头和源文件写入 `build/self-host/generated/`，日常构建使用 `src/generated/` 中的快照。[源位置声明](../spec/codegen/source-location.spec) · [类型图基础声明](../spec/codegen/typegraph-core.spec) · [自举配置](../config/self-host.json)
+1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在空目录生成第一轮，逐文件检查路径、LF 换行和快照字节。
+2. 在新的构建目录将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮输出，用该目录中的三个模块编译候选生成器。
+3. 候选生成器在第二个空目录再生成一次，逐字节比较两轮的九个文件，然后运行当前配置启用的其余回归测试。[自举测试](../tests/SelfHost.cmake)
 
-1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在独立的空目录生成第一轮，检查产物清单、LF 换行和快照字节。
-2. 测试在新的构建目录编译同一个 `CocosCodegen` 目标，并将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮的输出根目录。解析器和 TypeGraph 使用这一轮生成的两个模块。
-3. 候选工具在第二个空目录生成同一份声明。测试逐文件比较两轮结果，再用候选构建运行当前配置的所有非自举回归，包含源位置的聚合初始化、缺失导入的文件名和行列，以及已启用的引擎消费者。完整 TypeGraph 的接管仍按相同流程扩展。[自举测试](../tests/SelfHost.cmake)
-
-自身声明或生成规则变更时，重新生成受影响的快照，将输入改动和源码差异一并审查。如果新声明依赖新增语法，先让可构建的工具支持该语法，再用它刷新种子。
+修改模型或生成规则时，将声明和刷新后的快照一同提交。若模型需要新语法，先用现有快照构建能解析该语法的工具，再用它生成下一轮快照。
 
 ## JS 与 C++ 的共享缓冲区
 

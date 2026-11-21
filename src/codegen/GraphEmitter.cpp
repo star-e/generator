@@ -42,6 +42,26 @@ void vertexRange(std::ostream& out, const std::string& vertex) {
 )";
 }
 
+void componentAccessors(std::ostream& out, const TypeGraph& graph, const GraphType& model, const std::string& vertex,
+                        const std::vector<std::string>& storage, const std::vector<std::string>& types,
+                        std::string_view vectorType) {
+    for (size_t i = 0; i < model.components.size(); ++i) {
+        const auto& tag = graph.node(model.components[i].tag);
+        const auto accessor = "get" + model.components[i].publicName;
+        const auto valueType = canonicalType(graph, {model.components[i].valueType, {}});
+        for (const std::string qualifier : {"", " const"}) {
+            if (qualifier.empty() && ((model.nameIndex && i == model.nameComponentIndex) || i == model.keyComponentIndex)) continue;
+            const auto result = graph.node(valueType).qualifiedName == "bool"
+                ? std::string(vectorType) + "<bool>::" + std::string(qualifier.empty() ? "reference" : "const_reference")
+                : types[i] + qualifier + "&";
+            out << "\n    " << result << " " << accessor << "(" << vertex << " v)" << qualifier
+                << " noexcept { return this->" << storage[i] << "[v]; }\n"
+                << "    " << result << " get(const ::" << tag.qualifiedName << "&, " << vertex << " v)"
+                << qualifier << " noexcept { return " << accessor << "(v); }\n";
+        }
+    }
+}
+
 void hierarchyInterface(std::ostream& out, const std::string& name, const std::string& vertex,
                         const std::string& rows) {
     out << "    struct Link { " << vertex << " source, target; };\n"
@@ -689,7 +709,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     const auto& name = node.name;
     // Vertex storage also uses the native PMR vector when there are no explicit vector fields.
     const auto storageVector = graph.findType("ccstd::pmr::vector");
-    if (storageVector != TypeId{} && !graph.node(storageVector).cppHeader.empty()) headers.insert(graph.node(storageVector).cppHeader);
+    if (model.indexedStorage) headers.insert("vector");
+    else if (storageVector != TypeId{} && !graph.node(storageVector).cppHeader.empty()) headers.insert(graph.node(storageVector).cppHeader);
     else headers.insert("cocos/base/std/container/vector.h");
     headers.insert("utility");
     if (!integer.cppHeader.empty()) headers.insert(integer.cppHeader);
@@ -708,7 +729,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (valueNode.qualifiedName == "ccstd::pmr::string") args = "\"\"";
         if (const auto* instance = std::get_if<TemplateInstanceType>(&value);
             instance && graph.node(instance->declaration).qualifiedName == "ccstd::pmr::vector") args = "0U";
-        if (!std::holds_alternative<BuiltinType>(value) && !std::holds_alternative<EnumType>(value) &&
+        if (!model.indexedStorage && !std::holds_alternative<BuiltinType>(value) && !std::holds_alternative<EnumType>(value) &&
             !std::holds_alternative<PointerType>(value)) {
             // Segmented columns append without relocating allocator-aware or move-only elements.
             dequeColumns.insert(component.name);
@@ -775,6 +796,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         api.insert(symbols.begin(), symbols.end());
     }
     if (model.vertexList) api.insert({"vertices", "num_vertices", "VertexIterator", "VertexRange"});
+    if (model.indexedStorage) api.insert("reserve");
     if (model.incidence) {
         std::set<std::string> symbols{"Edge", "null_vertex", "source", "target", "out_edges", "out_degree",
                                       "adjacent_vertices", "edges", "num_edges", "edge"};
@@ -820,6 +842,31 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (api.contains(method.name) || method.name == name)
             throw std::runtime_error(method.result.location.describe() + ": graph method collides with C++ member " + method.name);
         members.insert(method.name);
+    }
+    if (model.indexedStorage) {
+        const auto base = formatTypeName(graph, *model.indexedStorage, [&](const TypeNode& part) {
+            collectCppHeader(graph, graph.modules.at(node.module.value), part, headers);
+            return part.qualifiedName;
+        });
+        out << '\n';
+        writeDocumentation(out, node.documentation);
+        out << "struct " << name << " : public " << base << " {\n"
+            << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
+            << "    void reserve(" << vertex << " capacity) {\n        " << base << "::reserve(capacity);\n";
+        for (const auto& column : storage) out << "        this->" << column << ".reserve(capacity);\n";
+        out << "    }\n";
+        componentAccessors(out, graph, model, vertex, storage, types, "std::vector");
+        if (!methods.empty()) out << '\n' << methods;
+        for (size_t i = 0; i < storage.size(); ++i)
+            out << "    std::vector<" << types[i] << "> " << storage[i] << ";\n";
+        for (const auto& field : fields) {
+            writeDocumentation(out, field.documentation, "    ");
+            out << "    " << field.cpp << " " << field.name;
+            if (!field.cppDefault.empty()) out << "{" << field.cppDefault << "}";
+            out << ";\n";
+        }
+        out << "};\n";
+        return;
     }
     const auto internalColumn = [&](std::string field) {
         while (!members.insert(field).second) field += "0";
@@ -945,20 +992,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
                    << "    current.swap(replacement);\n    this->nameIndex_.erase(old);\n}\n";
         }
     }
-    for (size_t i = 0; i < model.components.size(); ++i) {
-        const auto& tag = graph.node(model.components[i].tag);
-        const auto accessor = "get" + model.components[i].publicName;
-        for (const std::string qualifier : {"", " const"}) {
-            if (qualifier.empty() && ((model.nameIndex && i == model.nameComponentIndex) || i == model.keyComponentIndex)) continue;
-            const auto result = columnValue(model.components[i].valueType).qualifiedName == "bool"
-                ? "ccstd::pmr::vector<bool>::" + std::string(qualifier.empty() ? "reference" : "const_reference")
-                : types[i] + qualifier + "&";
-            out << "\n    " << result << " " << accessor << "(" << vertex << " v)" << qualifier
-                << " noexcept { return this->" << storage[i] << "[v]; }\n"
-                << "    " << result << " get(const ::" << tag.qualifiedName << "&, " << vertex << " v)"
-                << qualifier << " noexcept { return " << accessor << "(v); }\n";
-        }
-    }
+    componentAccessors(out, graph, model, vertex, storage, types, "ccstd::pmr::vector");
     if (!alternatives.empty()) {
         headers.insert({"cstdint", "variant", "cocos/base/TemplateUtils.h"});
         payloadAccess(out, alternatives, vertex, handles);

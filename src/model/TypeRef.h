@@ -13,6 +13,7 @@ struct TypeRef {
     std::vector<TypeRef> arguments;
     bool constPointee{};
     bool reference{};
+    bool hasTemplateArguments{};
 };
 
 } // namespace cc::codegen

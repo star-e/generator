@@ -90,9 +90,10 @@ TypeId resolveName(const TypeGraph& graph, const std::string& name, const Source
 TypeUse resolve(TypeGraph& graph, const TypeRef& use, const std::string& scope, ModuleId owner) {
     auto id = resolveName(graph, use.name, use.location, scope, owner);
     const auto& declaration = graph.node(id);
-    if (!declaration.templateParameters.empty() && declaration.templateParameters.size() != use.arguments.size())
+    if (!acceptsTemplateArity(declaration, use.arguments.size()) ||
+        (!declaration.templateParameters.empty() && use.arguments.empty() && !use.hasTemplateArguments))
         throw std::runtime_error(use.location.describe() + ": wrong number of template arguments for " + declaration.qualifiedName);
-    if (!use.arguments.empty()) {
+    if (use.hasTemplateArguments || !use.arguments.empty()) {
         if (!std::holds_alternative<ExternalTypeNode>(graph.node(id).data))
             throw std::runtime_error(use.location.describe() + ": expected an external template for " + graph.node(id).qualifiedName);
         std::vector<TemplateArgument> arguments;
@@ -432,6 +433,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     const auto descriptor = graph.findType(qualify(scope, syntax.vertexAlias));
     result.vertexType = canonicalType(graph, {descriptor, syntax.vertexType->location});
     result.indexedVertices = syntax.indexed;
+    if (syntax.indexedStorage) result.indexedStorage = resolve(graph, *syntax.indexedStorage, scope, owner).type;
     result.vertexList = syntax.vertexList;
     result.mutableGraph = syntax.mutableGraph;
     result.removeVertex = syntax.removeVertex;
@@ -504,6 +506,19 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     if (syntax.addressableGraph) {
         if (!result.parentGraph) throw std::runtime_error(syntax.addressableGraph->describe() + ": addressable_graph requires parent_graph");
         result.addressableGraph = true;
+    }
+    if (result.indexedStorage) {
+        const auto& location = syntax.indexedStorage->location;
+        const auto& base = graph.node(*result.indexedStorage);
+        const auto* instance = std::get_if<TemplateInstanceType>(&base.data);
+        const auto* argument = instance && instance->arguments.size() == 1
+            ? std::get_if<TypeId>(&instance->arguments.front()) : nullptr;
+        if (!argument || canonicalType(graph, {*argument, location}) != result.vertexType)
+            throw std::runtime_error(location.describe() + ": indexed storage requires an external template instantiated with the vertex descriptor type");
+        if (!result.vertexList || !result.incidence || !result.bidirectional || result.mutableGraph || result.hierarchy ||
+            !result.alternatives.empty() || result.components.empty() || result.nameComponentIndex || result.keyComponentIndex ||
+            result.serializable || result.immovable || result.compareEqual || result.compareLess || result.hashable)
+            throw std::runtime_error(location.describe() + ": custom indexed storage requires a flat bidirectional component graph with vertex_list_graph");
     }
     return result;
 }
@@ -666,7 +681,7 @@ TypeScriptRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inpu
             } else if (!isEnum) reject("expected an enum binding");
         }
     }
-    // Emit scalar aliases from the canonical target, inheriting its final TS binding.
+    // Flatten alias chains and inherit the binding of the final target.
     for (size_t i = 0; i < inputs.size(); ++i) {
         const auto& declarations = inputs[i].syntax.declarations;
         for (size_t j = 0; j < declarations.size(); ++j) {
@@ -675,9 +690,11 @@ TypeScriptRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inpu
             const auto id = graph.modules[i].declarations[j];
             const auto targetId = canonicalType(graph, {id, alias->target.location});
             const auto& target = graph.node(targetId);
-            if (!isArithmeticType(target.qualifiedName))
-                throw std::runtime_error(alias->target.location.describe() + ": expected a numeric or boolean alias target");
+            const bool templateAlias = std::holds_alternative<TemplateInstanceType>(target.data);
+            if (!isArithmeticType(target.qualifiedName) && !templateAlias)
+                throw std::runtime_error(alias->target.location.describe() + ": expected a scalar or template instance alias target");
             auto& node = graph.getNode(id.value);
+            if (templateAlias && !inputs[i].nativeHeader.empty()) node.cppHeader = inputs[i].nativeHeader;
             node.data = AliasType{targetId};
             node.typescriptName = target.typescriptName;
             node.typescriptModule = target.typescriptModule;
@@ -935,6 +952,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 node.typescriptName.reset();
                 node.typescriptModule.clear();
             }
+            node.variadicTemplate = external && external->variadicTemplate;
             auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
             if (const auto* iface = std::get_if<Interface>(&decl.data); iface && iface->archiveRole != ArchiveRole::none) {

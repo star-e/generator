@@ -54,6 +54,9 @@ constexpr bool hasFixedLayout = std::is_trivially_copyable_v<T> && std::is_stand
                                 sizeof(T) == Size && alignof(T) == Alignment;
 
 static_assert(hasFixedLayout<AccessorKind, 4, 4> && hasFixedLayout<ResultPresence, 4, 4>);
+static_assert(hasFixedLayout<bool, 1, 1> && hasFixedLayout<uint32_t, 4, 4>);
+static_assert(hasFixedLayout<TypeId, 4, 4> && hasFixedLayout<ModuleId, 4, 4>);
+static_assert(hasFixedLayout<ContainerKind, 4, 4> && hasFixedLayout<MapKeyKind, 4, 4>);
 static_assert(hasFixedLayout<NamespaceType, 1, 1> && hasFixedLayout<TagType, 1, 1> && hasFixedLayout<BuiltinType, 1, 1>);
 static_assert(hasFixedLayout<ExternalTypeNode, 8, 4>);
 static_assert(offsetof(ExternalTypeNode, isStruct) == 0 && offsetof(ExternalTypeNode, isString) == 1);
@@ -115,7 +118,7 @@ TypeId TypeGraph::makeTemplateInstance(TypeId declaration, std::vector<TemplateA
     const auto& decl = node(declaration);
     const auto* external = std::get_if<ExternalTypeNode>(&decl.data);
     const auto container = external ? external->container : ContainerKind::None;
-    if ((!decl.templateParameters.empty() && arguments.size() != decl.templateParameters.size()) ||
+    if (!acceptsTemplateArity(decl, arguments.size()) ||
         ((container == ContainerKind::Array || container == ContainerKind::Set) && arguments.size() != 1) ||
         (container == ContainerKind::Map && arguments.size() != 2))
         throw std::invalid_argument("wrong number of template arguments for " + decl.qualifiedName);

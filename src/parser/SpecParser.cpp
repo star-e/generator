@@ -141,9 +141,17 @@ private:
         if (accept("template")) {
             expect("<");
             std::set<std::string> parameters;
-            do { decl.templateParameters.push_back(uniqueName(parameters)); } while (accept(","));
+            do {
+                decl.templateParameters.push_back(uniqueName(parameters));
+                if (accept("...")) {
+                    decl.variadicTemplate = true;
+                    break;
+                }
+            } while (accept(","));
             expect(">");
         }
+        if (decl.variadicTemplate && decl.container != ContainerKind::None)
+            fail("a container binding requires fixed template arity");
         if (decl.container == ContainerKind::Array && decl.templateParameters.size() != 1)
             fail("@container(\"array\") requires exactly one type parameter");
         if (decl.container == ContainerKind::Map && decl.templateParameters.size() != 2)
@@ -230,7 +238,9 @@ private:
         size_t length = 0;
         if (!remaining.empty()) {
             length = remaining.starts_with("::") || remaining.starts_with("<<") || remaining.starts_with("=>") ? 2 : 1;
-            if (remaining.starts_with("0x") || remaining.starts_with("0X")) {
+            if (remaining.starts_with("...")) {
+                length = 3;
+            } else if (remaining.starts_with("0x") || remaining.starts_with("0X")) {
                 length = 2;
                 while (length < remaining.size() && std::isalnum(static_cast<unsigned char>(remaining[length]))) ++length;
             } else if (std::isdigit(static_cast<unsigned char>(remaining.front()))) {
@@ -833,6 +843,10 @@ private:
                 if (graph.indexed) fail("duplicate vertex storage");
                 expect(":");
                 expect("indexed");
+                if (accept("(")) {
+                    graph.indexedStorage = type();
+                    expect(")");
+                }
                 expect(";");
                 graph.indexed = true;
             } else if (accept("vertex_list_graph")) {
@@ -1047,9 +1061,10 @@ private:
         const bool isConst = accept("const");
         TypeRef result{at, qualifiedTypeName()};
         if (accept("<")) {
-            do {
-                result.arguments.push_back(type());
-            } while (accept(","));
+            result.hasTemplateArguments = true;
+            if (token != ">") {
+                do { result.arguments.push_back(type()); } while (accept(","));
+            }
             expect(">");
         }
         result.pointer = accept("*");

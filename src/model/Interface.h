@@ -116,6 +116,7 @@ struct ExternalDeclaration {
     bool constructorConstRef{};
     ContainerKind container{};
     std::vector<std::string> templateParameters;
+    bool variadicTemplate{};
 };
 struct TagDeclaration {};
 struct AliasDeclaration { TypeRef target; };
@@ -134,6 +135,7 @@ struct GraphDeclaration {
     bool hashable{};
     std::string vertexAlias;
     std::optional<TypeRef> vertexType;
+    std::optional<TypeRef> indexedStorage;
     bool indexed{};
     bool vertexList{};
     bool mutableGraph{};

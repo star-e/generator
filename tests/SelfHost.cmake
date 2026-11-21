@@ -8,7 +8,8 @@ set(build "${work}/build")
 run("${TOOL}" generate --workspace "${workspace}" --output "${first}")
 set(expectedFiles
     generated/SourceLocation.cpp generated/SourceLocation.h generated/SourceLocationFwd.h
-    generated/TypeGraphCore.cpp generated/TypeGraphCore.h generated/TypeGraphCoreFwd.h)
+    generated/TypeGraphCore.cpp generated/TypeGraphCore.h generated/TypeGraphCoreFwd.h
+    generated/TypeGraphFwd.h generated/TypeGraphTypes.cpp generated/TypeGraphTypes.h)
 file(GLOB_RECURSE firstFiles RELATIVE "${first}" "${first}/*")
 if(NOT firstFiles STREQUAL expectedFiles)
     message(FATAL_ERROR "Unexpected self-host outputs: ${firstFiles}")
@@ -59,6 +60,10 @@ foreach(path IN LISTS firstFiles)
     run("${CMAKE_COMMAND}" -E compare_files "${first}/${path}" "${second}/${path}")
 endforeach()
 run("${candidate}" generate --workspace "${workspace}" --output "${first}" --check --diff)
+
+set(engineWorkspace "${SOURCE}/config/workspace.json")
+run("${TOOL}" generate --workspace "${engineWorkspace}" --output "${work}/engine")
+run("${candidate}" generate --workspace "${engineWorkspace}" --output "${work}/engine" --check --diff)
 
 # Run the candidate's tests, including the parser diagnostics and all configured engine consumers.
 run("${CMAKE_CTEST_COMMAND}" --test-dir "${build}" ${testConfig} --output-on-failure --no-tests=error -E "^cocos[.]selfhost$")

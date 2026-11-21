@@ -1,77 +1,43 @@
+/*
+ Copyright (c) 2021-2024 Xiamen Yaji Software Co., Ltd.
+
+ https://www.cocos.com
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ of the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+*/
+
+/**
+ * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
+ * The following section is auto-generated.
+ * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
+ */
+// clang-format off
+// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)
 #include "TypeGraphTypes.h"
 
 namespace cc {
 
 namespace codegen {
 
-// Graph
-void TypeGraph::reserve(uint32_t vertexCapacity) {
-    this->mVertices.reserve(vertexCapacity);
-    this->nodes.reserve(vertexCapacity);
-}
-
-// IncidenceGraph
-auto TypeGraph::edge(Vertex u, Vertex v) const noexcept -> std::pair<Edge, bool> {
-    for (auto candidate : this->out_edges(u)) {
-        if (this->target(candidate) == v) {
-            return { candidate, true };
-        }
-    }
-    return { { null_vertex(), null_vertex() }, false };
-}
-
 } // namespace codegen
 
 } // namespace cc
 
-#include <cstddef>
-#include <type_traits>
-
-namespace {
-constexpr bool validateFixedLayout_CocosTypeGraph() {
-    {
-        using CheckedType = ::cc::codegen::TypeId;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::TypeId");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::TypeId");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::TypeId");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::TypeId");
-    }
-    {
-        using CheckedType = bool;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: bool");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: bool");
-        static_assert(sizeof(CheckedType) == 1ULL, "fixed layout size: bool");
-        static_assert(alignof(CheckedType) == 1ULL, "fixed layout alignment: bool");
-    }
-    {
-        using CheckedType = ::cc::codegen::ModuleId;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::ModuleId");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::ModuleId");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::ModuleId");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::ModuleId");
-    }
-    {
-        using CheckedType = ::cc::codegen::ContainerKind;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::ContainerKind");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::ContainerKind");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::ContainerKind");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::ContainerKind");
-    }
-    {
-        using CheckedType = ::uint32_t;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::uint32_t");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::uint32_t");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::uint32_t");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::uint32_t");
-    }
-    {
-        using CheckedType = ::cc::codegen::MapKeyKind;
-        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::MapKeyKind");
-        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::MapKeyKind");
-        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::MapKeyKind");
-        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::MapKeyKind");
-    }
-    return true;
-}
-static_assert(validateFixedLayout_CocosTypeGraph());
-} // namespace
+// NOLINTEND(misc-include-cleaner, bugprone-easily-swappable-parameters)
+// clang-format on

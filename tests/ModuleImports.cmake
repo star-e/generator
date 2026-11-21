@@ -367,4 +367,48 @@ bad_graph("${storage}" "${storage} named_graph { component: BufferTag; }" "named
 bad_graph("${storage}" "${storage} ${named}" "named_graph requires a string component: RasterPassTag")
 bad_graph("component RasterPassTag:" "component RasterPassTag: uint32_t { member: first; } component RasterPassTag:" "invalid or duplicate component accessor")
 
+# Use separate modules to exercise transitive header dependencies of native template aliases.
+file(WRITE "${work}/aliases.json" [[{
+  "outputRoot":"out","lineEnding":"lf","preamble":"config/preamble.txt","modules":[
+    {"spec":"library.spec"},{"spec":"aliases.spec","cpp":{"dir":"generated"}},
+    {"spec":"consumer.spec","cpp":{"dir":"generated"}}]
+}]])
+set(generate "${TOOL}" generate --workspace "${work}/aliases.json")
+set(library [[extern module Library;
+namespace std {
+    header "tuple" { template<Ts...> class tuple; }
+    header "variant" { template<First, Rest...> class variant; }
+}]])
+file(WRITE "${work}/library.spec" "${library}")
+set(aliases [[module Aliases;
+import Library;
+namespace cc {
+    using Many = std::variant<Empty, Item, uint32_t>;
+    using Empty = std::tuple<>;
+    struct Item { index: uint32_t = 0; }
+}]])
+file(WRITE "${work}/aliases.spec" "${aliases}")
+file(WRITE "${work}/consumer.spec" [[module Consumer;
+import Aliases;
+namespace cc { struct Result { value: Many; } }]])
+run(${generate})
+file(READ "${work}/out/generated/AliasesTypes.h" aliasHeader)
+file(READ "${work}/out/generated/ConsumerTypes.h" consumerHeader)
+string(FIND "${aliasHeader}" "using Empty = std::tuple<>;" emptyAt)
+string(FIND "${aliasHeader}" "using Many = std::variant<Empty, Item, uint32_t>;" manyAt)
+if(emptyAt LESS 0 OR manyAt LESS_EQUAL emptyAt OR NOT consumerHeader MATCHES "generated/AliasesTypes[.]h")
+    message(FATAL_ERROR "Native alias dependency order or imported header is incorrect")
+endif()
+foreach(target IN ITEMS "std::variant<>" "std::tuple")
+    string(REPLACE "std::tuple<>;" "${target};" invalid "${aliases}")
+    file(WRITE "${work}/aliases.spec" "${invalid}")
+    expect_failure(2 "aliases.spec:[0-9]+:[0-9]+: wrong number of template arguments" ${generate})
+endforeach()
+string(REPLACE "std::tuple<>;" "std::tuple<Many>;" invalid "${aliases}")
+file(WRITE "${work}/aliases.spec" "${invalid}")
+expect_failure(2 "cyclic type alias" ${generate})
+string(REPLACE "Ts..." "Ts..., Tail" invalid "${library}")
+file(WRITE "${work}/library.spec" "${invalid}")
+expect_failure(2 "library.spec:[0-9]+:[0-9]+: expected '>'" ${generate})
+
 finish_workspace("${work}")

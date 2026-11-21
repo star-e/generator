@@ -1,20 +1,20 @@
-module CocosTypeGraph;
-import CocosModelSupport;
+module TypeGraph;
+import HostTypes;
+import TypeGraphCore;
 
-namespace cc {
-namespace codegen {
+namespace cc::codegen {
     struct Enumerator {
         name: std::string;
         initializer: std::string;
-        value: std::variant<int64_t, uint64_t>;
+        value: std::variant<std::int64_t, uint64_t>;
         documentation: std::string;
     }
 
     struct EnumType { underlying: TypeId; values: std::vector<Enumerator>; isFlags: bool = false; }
-    type TemplateArgument = std::variant<TypeId, std::string>;
+    using TemplateArgument = std::variant<TypeId, std::string>;
     @comparison("==") struct TemplateInstanceType { declaration: TypeId; arguments: std::vector<TemplateArgument>; }
 
-    type TypeData = std::variant<NamespaceType, TagType, BuiltinType, ExternalTypeNode, EnumType,
+    using TypeData = std::variant<NamespaceType, TagType, BuiltinType, ExternalTypeNode, EnumType,
         RecordType, InterfaceType, GraphType, AliasType, PointerType, ReferenceType,
         QualifiedType, FunctionType, TemplateParameterType, TemplateInstanceType>;
     struct TypeNode {
@@ -32,12 +32,13 @@ namespace codegen {
         typescriptTypeOnly: bool = false;
         cppOnly: bool = false;
         templateParameters: std::vector<TypeId>;
+        variadicTemplate: bool = false;
         documentation: std::string;
     }
 
     graph TypeGraph {
         vertex_descriptor Vertex = uint32_t;
-        vertex_storage: indexed;
+        vertex_storage: indexed(graph::BidirectionalStorage<uint32_t>);
         vertex_list_graph;
         incidence_graph { out_edges: vector; }
         bidirectional_graph { in_edges: vector; }
@@ -45,14 +46,13 @@ namespace codegen {
         modules: std::vector<TypeModule>;
         nameIndex: std::map<std::string, TypeId>;
         // Scope edges run from parent to child. Vertices retain their IDs throughout a build.
-        fn appendNode(node: TypeNode, parent: TypeId) -> TypeId;
-        fn node(id: TypeId) const -> const TypeNode&;
-        fn findType(qualifiedName: const std::string&) const -> TypeId;
-        fn makePointer(pointee: TypeId) -> TypeId;
-        fn makeReference(referred: TypeId, rvalue: bool) -> TypeId;
-        fn makeQualified(base: TypeId, isConst: bool, isVolatile: bool) -> TypeId;
-        fn makeFunction(result: TypeId, parameters: std::vector<TypeId>, isNoexcept: bool) -> TypeId;
-        fn makeTemplateInstance(declaration: TypeId, arguments: std::vector<TemplateArgument>) -> TypeId;
+        TypeId appendNode(TypeNode node, TypeId parent);
+        const TypeNode& node(TypeId id) const;
+        TypeId findType(const std::string& qualifiedName) const;
+        TypeId makePointer(TypeId pointee);
+        TypeId makeReference(TypeId referred, bool rvalue);
+        TypeId makeQualified(TypeId base, bool isConst, bool isVolatile);
+        TypeId makeFunction(TypeId result, std::vector<TypeId> parameters, bool isNoexcept);
+        TypeId makeTemplateInstance(TypeId declaration, std::vector<TemplateArgument> arguments);
     }
-}
 }

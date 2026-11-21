@@ -1,39 +1,79 @@
-#pragma once
+/*
+ Copyright (c) 2021-2024 Xiamen Yaji Software Co., Ltd.
 
-// clang-format off
-#include "TypeGraphFwd.h" // IWYU pragma: export
-#include "TypeGraphDependencies.h" // IWYU pragma: export
-// clang-format on
+ https://www.cocos.com
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ of the Software, and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+*/
+
+/**
+ * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
+ * The following section is auto-generated.
+ * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
+ */
+#pragma once
+#include <cstdint>
+#include "generated/TypeGraphCore.h"
+#include <map>
+#include "model/GraphSupport.h"
+#include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <variant>
+#include <vector>
+#include "TypeGraphFwd.h"
 
 namespace cc {
 
 namespace codegen {
 
+using TemplateArgument = std::variant<TypeId, std::string>;
+
+using TypeData = std::variant<NamespaceType, TagType, BuiltinType, ExternalTypeNode, EnumType, RecordType, InterfaceType, GraphType, AliasType, PointerType, ReferenceType, QualifiedType, FunctionType, TemplateParameterType, TemplateInstanceType>;
+
 struct Enumerator {
     std::string name;
     std::string initializer;
-    std::variant<int64_t, uint64_t> value;
+    std::variant<std::int64_t, uint64_t> value;
     std::string documentation;
 };
 
 struct EnumType {
     TypeId underlying;
     std::vector<Enumerator> values;
-    bool isFlags = false;
+    bool isFlags{false};
 };
 
-using TemplateArgument = std::variant<TypeId, std::string>;
-
 struct TemplateInstanceType {
-    bool operator==(const TemplateInstanceType& rhs) const noexcept {
-        return std::tie(declaration, arguments) == std::tie(rhs.declaration, rhs.arguments);
-    }
-
     TypeId declaration;
     std::vector<TemplateArgument> arguments;
 };
 
-using TypeData = std::variant<NamespaceType, TagType, BuiltinType, ExternalTypeNode, EnumType, RecordType, InterfaceType, GraphType, AliasType, PointerType, ReferenceType, QualifiedType, FunctionType, TemplateParameterType, TemplateInstanceType>;
+inline bool operator==(const TemplateInstanceType& lhs, const TemplateInstanceType& rhs) noexcept {
+    return std::forward_as_tuple(lhs.declaration, lhs.arguments) ==
+           std::forward_as_tuple(rhs.declaration, rhs.arguments);
+}
+
+inline bool operator!=(const TemplateInstanceType& lhs, const TemplateInstanceType& rhs) noexcept {
+    return !(lhs == rhs);
+}
 
 struct TypeNode {
     std::string name;
@@ -44,60 +84,28 @@ struct TypeNode {
     std::optional<std::string> typescriptName;
     std::string typescriptModule;
     std::string typescriptArchiveModule;
-    ContainerKind typescriptContainer = ContainerKind::None;
-    MapKeyKind typescriptMapKey = MapKeyKind::Native;
-    bool typescriptNumber = false;
-    bool typescriptTypeOnly = false;
-    bool cppOnly = false;
+    ContainerKind typescriptContainer{ContainerKind::None};
+    MapKeyKind typescriptMapKey{MapKeyKind::Native};
+    bool typescriptNumber{false};
+    bool typescriptTypeOnly{false};
+    bool cppOnly{false};
     std::vector<TypeId> templateParameters;
+    bool variadicTemplate{false};
     std::string documentation;
 };
 
-struct TypeGraph {
-    // Graph
+struct TypeGraph : public cc::codegen::graph::BidirectionalStorage<uint32_t> {
     using Vertex = uint32_t;
+    void reserve(Vertex capacity) {
+        cc::codegen::graph::BidirectionalStorage<uint32_t>::reserve(capacity);
+        this->nodes.reserve(capacity);
+    }
 
-    // VertexListGraph
-    using VertexIterator = cc::codegen::graph::IntegerIterator<Vertex>;
+    cc::codegen::TypeNode& getNode(Vertex v) noexcept { return this->nodes[v]; }
+    cc::codegen::TypeNode& get(const ::cc::codegen::Node_&, Vertex v) noexcept { return getNode(v); }
 
-    // Graph
-    struct VertexType {
-        std::vector<Vertex> mOutEdges;
-        std::vector<Vertex> mInEdges;
-    };
-
-    // IncidenceGraph
-    using Edge = cc::codegen::graph::EdgeDescriptor<Vertex>;
-    using OutEdgeIterator = cc::codegen::graph::OutEdgeIterator<Edge, decltype(VertexType::mOutEdges)::const_iterator>;
-
-    // BidirectionalGraph
-    using InEdgeIterator = cc::codegen::graph::InEdgeIterator<Edge, decltype(VertexType::mInEdges)::const_iterator>;
-
-    // Graph
-    static constexpr Vertex null_vertex() noexcept { return (std::numeric_limits<Vertex>::max)(); }
-    void reserve(uint32_t vertexCapacity);
-
-    // IncidenceGraph
-    std::pair<Edge, bool> edge(Vertex u, Vertex v) const noexcept;
-    Vertex source(Edge edge) const noexcept;
-    Vertex target(Edge edge) const noexcept;
-    cc::codegen::graph::IteratorPair<OutEdgeIterator> out_edges(Vertex v) const noexcept;
-    uint32_t out_degree(Vertex v) const noexcept;
-
-    // BidirectionalGraph
-    cc::codegen::graph::IteratorPair<InEdgeIterator> in_edges(Vertex v) const noexcept;
-    uint32_t in_degree(Vertex v) const noexcept;
-    uint32_t degree(Vertex v) const noexcept;
-
-    // VertexListGraph
-    cc::codegen::graph::IteratorPair<VertexIterator> vertices() const noexcept;
-    uint32_t num_vertices() const noexcept;
-
-    // ComponentGraph
-    TypeNode const& get(Node_, Vertex v) const noexcept;
-    TypeNode& get(Node_, Vertex v) noexcept;
-    TypeNode const& getNode(Vertex v) const noexcept;
-    TypeNode& getNode(Vertex v) noexcept;
+    cc::codegen::TypeNode const& getNode(Vertex v) const noexcept { return this->nodes[v]; }
+    cc::codegen::TypeNode const& get(const ::cc::codegen::Node_&, Vertex v) const noexcept { return getNode(v); }
 
     TypeId appendNode(TypeNode node, TypeId parent);
     const TypeNode& node(TypeId id) const;
@@ -107,79 +115,10 @@ struct TypeGraph {
     TypeId makeQualified(TypeId base, bool isConst, bool isVolatile);
     TypeId makeFunction(TypeId result, std::vector<TypeId> parameters, bool isNoexcept);
     TypeId makeTemplateInstance(TypeId declaration, std::vector<TemplateArgument> arguments);
-
-    std::vector<VertexType> mVertices;
-    std::vector<TypeNode> nodes;
-
+    std::vector<cc::codegen::TypeNode> nodes;
     std::vector<TypeModule> modules;
     std::map<std::string, TypeId> nameIndex;
 };
-
-} // namespace codegen
-
-} // namespace cc
-
-namespace cc {
-
-namespace codegen {
-
-// IncidenceGraph
-inline auto TypeGraph::source(Edge edge) const noexcept -> Vertex {
-    return edge.source;
-}
-
-inline auto TypeGraph::target(Edge edge) const noexcept -> Vertex {
-    return edge.target;
-}
-
-inline auto TypeGraph::out_edges(Vertex v) const noexcept -> cc::codegen::graph::IteratorPair<OutEdgeIterator> {
-    const auto& edges = this->mVertices[v].mOutEdges;
-    return { OutEdgeIterator(v, edges.begin()), OutEdgeIterator(v, edges.end()) };
-}
-
-inline auto TypeGraph::out_degree(Vertex v) const noexcept -> uint32_t {
-    return static_cast<uint32_t>(this->mVertices[v].mOutEdges.size());
-}
-
-// BidirectionalGraph
-inline auto TypeGraph::in_edges(Vertex v) const noexcept -> cc::codegen::graph::IteratorPair<InEdgeIterator> {
-    const auto& edges = this->mVertices[v].mInEdges;
-    return { InEdgeIterator(v, edges.begin()), InEdgeIterator(v, edges.end()) };
-}
-
-inline auto TypeGraph::in_degree(Vertex v) const noexcept -> uint32_t {
-    return static_cast<uint32_t>(this->mVertices[v].mInEdges.size());
-}
-
-inline auto TypeGraph::degree(Vertex v) const noexcept -> uint32_t {
-    return this->in_degree(v) + this->out_degree(v);
-}
-
-// VertexListGraph
-inline auto TypeGraph::vertices() const noexcept -> cc::codegen::graph::IteratorPair<VertexIterator> {
-    return { VertexIterator(0), VertexIterator(static_cast<Vertex>(this->mVertices.size())) };
-}
-
-inline auto TypeGraph::num_vertices() const noexcept -> uint32_t {
-    return static_cast<uint32_t>(this->mVertices.size());
-}
-
-// ComponentGraph
-inline auto TypeGraph::get(Node_, Vertex v) const noexcept -> TypeNode const& {
-    return this->nodes[v];
-}
-
-inline auto TypeGraph::get(Node_, Vertex v) noexcept -> TypeNode& {
-    return this->nodes[v];
-}
-
-inline auto TypeGraph::getNode(Vertex v) const noexcept -> TypeNode const& {
-    return this->nodes[v];
-}
-
-inline auto TypeGraph::getNode(Vertex v) noexcept -> TypeNode& {
-    return this->nodes[v];
-}
 
 } // namespace codegen
 

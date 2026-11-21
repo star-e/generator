@@ -1,14 +1,9 @@
 #pragma once
 
-#include <generated/TypeGraphCore.h>
-
-#include <cstdint>
 #include <iterator>
-#include <map>
-#include <optional>
+#include <limits>
 #include <ranges>
-#include <string>
-#include <variant>
+#include <utility>
 #include <vector>
 
 namespace cc::codegen::graph {
@@ -60,5 +55,40 @@ using OutEdgeIterator = IncidentIterator<Edge, Iterator, false>;
 
 template<class Edge, class Iterator>
 using InEdgeIterator = IncidentIterator<Edge, Iterator, true>;
+
+template<class Vertex>
+struct BidirectionalStorage {
+    using Edge = EdgeDescriptor<Vertex>;
+    using VertexIterator = IntegerIterator<Vertex>;
+    using OutEdgeIterator = graph::OutEdgeIterator<Edge, typename std::vector<Vertex>::const_iterator>;
+    using InEdgeIterator = graph::InEdgeIterator<Edge, typename std::vector<Vertex>::const_iterator>;
+    struct VertexType {
+        std::vector<Vertex> mOutEdges;
+        std::vector<Vertex> mInEdges;
+    };
+    std::vector<VertexType> mVertices;
+
+    static constexpr Vertex null_vertex() noexcept { return (std::numeric_limits<Vertex>::max)(); }
+    Vertex num_vertices() const noexcept { return static_cast<Vertex>(mVertices.size()); }
+    IteratorPair<VertexIterator> vertices() const noexcept { return {VertexIterator(0), VertexIterator(num_vertices())}; }
+    void reserve(Vertex capacity) { mVertices.reserve(capacity); }
+    Vertex source(Edge e) const noexcept { return e.source; }
+    Vertex target(Edge e) const noexcept { return e.target; }
+    IteratorPair<OutEdgeIterator> out_edges(Vertex v) const noexcept {
+        const auto& edges = mVertices[v].mOutEdges;
+        return {OutEdgeIterator(v, edges.begin()), OutEdgeIterator(v, edges.end())};
+    }
+    IteratorPair<InEdgeIterator> in_edges(Vertex v) const noexcept {
+        const auto& edges = mVertices[v].mInEdges;
+        return {InEdgeIterator(v, edges.begin()), InEdgeIterator(v, edges.end())};
+    }
+    Vertex out_degree(Vertex v) const noexcept { return static_cast<Vertex>(mVertices[v].mOutEdges.size()); }
+    Vertex in_degree(Vertex v) const noexcept { return static_cast<Vertex>(mVertices[v].mInEdges.size()); }
+    Vertex degree(Vertex v) const noexcept { return in_degree(v) + out_degree(v); }
+    std::pair<Edge, bool> edge(Vertex u, Vertex v) const noexcept {
+        for (auto e : out_edges(u)) if (e.target == v) return {e, true};
+        return {{null_vertex(), null_vertex()}, false};
+    }
+};
 
 } // namespace cc::codegen::graph

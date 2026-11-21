@@ -119,7 +119,8 @@ bool hasAccessibleEmptyConstructor(const TypeGraph& graph, const RecordType& rec
 
 RecordStorage recordStorage(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
     const auto& data = graph.node(id).data;
-    if (std::holds_alternative<GraphType>(data)) return {true, true};
+    if (const auto* alias = std::get_if<AliasType>(&data)) return recordStorage(graph, alias->target, visited);
+    if (const auto* graphType = std::get_if<GraphType>(&data)) return {!graphType->indexedStorage, true};
     if (const auto* external = std::get_if<ExternalTypeNode>(&data)) return {external->isPmr};
     if (const auto* instance = std::get_if<TemplateInstanceType>(&data))
         return {std::get<ExternalTypeNode>(graph.node(instance->declaration).data).isPmr};
@@ -145,6 +146,13 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
                  .readonly = field.isReadonly, .transient = field.transient};
     auto scalarType = field.type.type;
     while (const auto* alias = std::get_if<AliasType>(&graph.node(scalarType).data)) scalarType = alias->target;
+    if (scalarType != field.type.type && std::holds_alternative<TemplateInstanceType>(graph.node(scalarType).data)) {
+        auto target = field;
+        target.type.type = scalarType;
+        auto bound = bindMember(graph, owner, target, deps, emitTs, typeOnly);
+        bound.cpp = nativeType(graph, module, field.type.type, deps);
+        return bound;
+    }
     if (std::holds_alternative<ReferenceType>(graph.node(scalarType).data)) {
         if (emitTs) invalid(field, "borrowed reference fields require a native record or @cppOnly");
         m.cpp = nativeType(graph, module, field.type.type, deps);
@@ -884,11 +892,35 @@ void writeScalarAliases(std::ostream& out, const TypeGraph& graph, const TypeMod
         const auto* alias = std::get_if<AliasType>(&node.data);
         if (!alias) continue;
         const auto& target = graph.node(alias->target);
+        if (std::holds_alternative<TemplateInstanceType>(target.data)) continue;
         collectCppHeader(graph, module, target, includes);
         out << '\n';
         writeDocumentation(out, node.documentation);
         out << "using " << node.name << " = " << cppName(graph, target, module) << ";\n";
     }
+}
+
+void writeTemplateAliases(std::ostream& out, const TypeGraph& graph, ModuleId owner, Dependencies& deps) {
+    std::set<uint32_t> visiting, emitted;
+    const auto& module = graph.modules.at(owner.value);
+    const auto write = [&](auto& self, TypeId id) -> void {
+        const auto& node = graph.node(id);
+        const auto* alias = std::get_if<AliasType>(&node.data);
+        if (!alias || node.module != owner || emitted.contains(id.value) ||
+            !std::holds_alternative<TemplateInstanceType>(graph.node(alias->target).data)) return;
+        if (!visiting.insert(id.value).second) throw std::runtime_error(node.qualifiedName + ": cyclic type alias");
+        const auto target = formatTypeName(graph, alias->target, [&](const TypeNode& part) {
+            if (std::holds_alternative<AliasType>(part.data)) self(self, graph.findType(part.qualifiedName));
+            collectCppHeader(graph, module, part, deps.headers);
+            return cppName(graph, part, module);
+        });
+        visiting.erase(id.value);
+        emitted.insert(id.value);
+        out << '\n';
+        writeDocumentation(out, node.documentation);
+        out << "using " << node.name << " = " << target << ";\n";
+    };
+    for (auto id : module.declarations) write(write, id);
 }
 
 std::string forwardHeader(const TypeGraph& graph, const TypeModule& module, const std::ostringstream& hashes,
@@ -1030,7 +1062,9 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         const auto& type = graph.node(field.type.type);
         if (member.cppDefault.empty() && !hasNativeValueDefault(graph, field.type.type, staticDefaults))
             invalid(field, "no C++ default for static field of type " + type.qualifiedName);
-        if (std::holds_alternative<BuiltinType>(type.data) || std::holds_alternative<AliasType>(type.data) ||
+        const auto* alias = std::get_if<AliasType>(&type.data);
+        const bool scalarAlias = alias && !std::holds_alternative<TemplateInstanceType>(graph.node(alias->target).data);
+        if (std::holds_alternative<BuiltinType>(type.data) || scalarAlias ||
             (std::holds_alternative<EnumType>(type.data) && !forwardEnum) || std::holds_alternative<PointerType>(type.data)) {
             out << "    inline static " << member.cpp << " " << member.name << "{" << member.cppDefault << "};\n";
         } else {
@@ -1397,6 +1431,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     Pool pool;
     RecordArchives archives;
     std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, staticInitializers, nameFunctions;
+    if (deps.emitCpp) writeTemplateAliases(cpp, graph, owner, deps);
     auto pendingEnums = output.namedEnums;
     std::string enumImports;
     bool previousTag = false;

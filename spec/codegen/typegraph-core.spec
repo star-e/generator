@@ -133,6 +133,7 @@ namespace cc::codegen {
         hashable: bool = false;
         vertexType: TypeId;
         indexedVertices: bool = false;
+        indexedStorage: std::optional<TypeId>;
         vertexList: bool = false;
         incidence: bool = false;
         bidirectional: bool = false;

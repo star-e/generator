@@ -232,6 +232,7 @@ struct GraphType {
     bool hashable{false};
     TypeId vertexType;
     bool indexedVertices{false};
+    std::optional<TypeId> indexedStorage;
     bool vertexList{false};
     bool incidence{false};
     bool bidirectional{false};

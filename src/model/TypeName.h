@@ -6,6 +6,11 @@
 
 namespace cc::codegen {
 
+inline bool acceptsTemplateArity(const TypeNode& declaration, size_t count) {
+    const auto parameters = declaration.templateParameters.size();
+    return parameters == 0 || (declaration.variadicTemplate ? count >= parameters - 1 : count == parameters);
+}
+
 inline TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
     std::set<uint32_t> visited;
     while (const auto* alias = std::get_if<AliasType>(&graph.node(use.type).data)) {

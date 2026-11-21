@@ -9,6 +9,7 @@ struct ModuleInput {
     Module syntax;
     TypeTable externalTypes;
     bool modelOnly{};
+    std::string nativeHeader;
 };
 
 // Register declarations before binding direct imports and resolving type uses in dependency order.
