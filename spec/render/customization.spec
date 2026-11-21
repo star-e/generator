@@ -1,4 +1,5 @@
 module Customization;
+import EngineTypes;
 import RenderGraph;
 import GfxResource;
 import PipelineExternals;

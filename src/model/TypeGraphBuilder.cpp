@@ -705,19 +705,26 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
         auto& entry = graph.modules.emplace_back(TypeModule{.name = module.name, .namespaces = module.namespaces});
         std::string scope;
         for (const auto& part : module.namespaces) scope = qualify(scope, part);
-        const auto parent = ensureNamespace(graph, scope);
+        const auto moduleNamespace = ensureNamespace(graph, scope);
         for (const auto& decl : module.declarations) {
-            auto qualified = qualify(scope, decl.name);
+            const auto& declarationScope = decl.externalScope.empty() ? scope : decl.externalScope;
+            const auto parent = declarationScope == scope ? moduleNamespace : ensureNamespace(graph, declarationScope);
+            auto qualified = qualify(declarationScope, decl.name);
             if (graph.findType(qualified) != TypeId{}) {
                 throw std::runtime_error(decl.location.describe() + ": duplicate type " + qualified);
             }
             const auto* external = std::get_if<ExternalDeclaration>(&decl.data);
-            TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl)};
+            TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl),
+                          .cppHeader = decl.cppHeader};
             if (const auto it = input.externalTypes.find(decl.name); it != input.externalTypes.end()) {
-                node.cppHeader = it->second.header;
+                if (!it->second.header.empty()) {
+                    if (!node.cppHeader.empty())
+                        throw std::runtime_error(decl.location.describe() + ": C++ header already declared in .spec for " + node.qualifiedName);
+                    node.cppHeader = it->second.header;
+                }
                 node.typescriptName = it->second.typescript;
                 node.typescriptModule = it->second.typescriptModule;
-            } else if (!external && !std::holds_alternative<TagType>(node.data)) {
+            } else if (decl.externalScope.empty() && !std::holds_alternative<TagType>(node.data) && !external) {
                 node.typescriptName = decl.name;
             }
             if (external && external->isString && !node.typescriptName) node.typescriptName = "string";
@@ -779,7 +786,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 auto payload = resolveGraph(graph, *g, qualify(scopes[i], decl.name), owner);
                 graph.getNode(id.value).data = std::move(payload);
             } else if (const auto* enumeration = std::get_if<Enum>(&decl.data)) {
-                resolveEnum(graph, id, *enumeration, scopes[i], owner);
+                resolveEnum(graph, id, *enumeration, decl.externalScope.empty() ? scopes[i] : decl.externalScope, owner);
             } else if (std::holds_alternative<Interface>(decl.data)) {
                 const auto names = bindings.find(id.value);
                 auto payload = resolveInterface(graph, decl, names == bindings.end() ? noRenames : names->second, scopes[i], owner);

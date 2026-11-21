@@ -222,6 +222,9 @@ Files plan(const Json& settings, const fs::path& base) {
         const auto spec = base / config.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
         const auto backend = config.value("backend", std::string{"interfaces"});
+        if (backend != "model" && (!module.cppHeader.empty() ||
+            std::ranges::any_of(module.declarations, [](const Declaration& decl) { return !decl.cppHeader.empty(); })))
+            throw std::runtime_error(spec.string() + ": external C++ headers require the model backend");
         if (config.contains("projection"))
             throw std::runtime_error(spec.string() + ": move JSON projection rules into .spec binding blocks");
         if (backend != "records" && (module.bindings.jsb || !module.bindings.poolModule.empty() || !module.bindings.poolDependencies.empty()))

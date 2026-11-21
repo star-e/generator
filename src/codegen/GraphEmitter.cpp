@@ -685,7 +685,10 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     const auto& vertex = graph.node(TypeId{graph.target(*alias)}).name;
     const auto& integer = graph.node(model.vertexType);
     const auto& name = node.name;
-    headers.insert("cocos/base/std/container/vector.h");
+    // Vertex storage also uses the native PMR vector when there are no explicit vector fields.
+    const auto storageVector = graph.findType("ccstd::pmr::vector");
+    if (storageVector != TypeId{} && !graph.node(storageVector).cppHeader.empty()) headers.insert(graph.node(storageVector).cppHeader);
+    else headers.insert("cocos/base/std/container/vector.h");
     headers.insert("utility");
     if (!integer.cppHeader.empty()) headers.insert(integer.cppHeader);
     std::set<std::string> moveOnlyColumns;

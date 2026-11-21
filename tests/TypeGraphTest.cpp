@@ -88,8 +88,11 @@ void checkTemplateBindings() {
 void checkContainerBindings() {
     const auto module = parseModule("lists.spec", R"(
         extern module Lists;
+        cpp { header "sample/Containers.h"; }
         namespace sample {
-            @container("array") template<Item> struct List;
+            header "sample/{name}.h" {
+                @container("array") template<Item> struct List;
+            }
             @container("map") template<Key, Value> class Table;
             @container("set") template<Item> class Collection;
             @string class Text;
@@ -105,6 +108,9 @@ void checkContainerBindings() {
     )");
     auto graph = buildTypeGraph({{module, {}, true}}, {});
     const auto list = graph.findType("sample::List");
+    require(graph.node(list).cppHeader == "sample/List.h" &&
+            graph.node(graph.findType("sample::Table")).cppHeader == "sample/Containers.h",
+            "grouped template header leaked into the following declaration");
     const auto text = graph.findType("sample::Text");
     const auto table = graph.findType("sample::Table");
     const auto label = graph.findType("sample::Label");

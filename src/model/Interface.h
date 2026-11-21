@@ -131,6 +131,8 @@ struct Declaration {
     std::string name;
     SourceLocation location;
     std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration> data;
+    std::string externalScope;
+    std::string cppHeader;
 };
 
 struct ModuleImport {
@@ -144,6 +146,7 @@ struct Module {
     std::vector<Declaration> declarations;
     std::vector<ModuleImport> imports;
     ModuleBindings bindings;
+    std::string cppHeader;
 };
 
 struct ExternalType {

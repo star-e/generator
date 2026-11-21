@@ -1,4 +1,6 @@
 extern module GfxUniformBlock;
+cpp { header "cocos/renderer/gfx-base/GFXDef-common.h"; }
+
 namespace cc::gfx {
     struct UniformBlock;
 }

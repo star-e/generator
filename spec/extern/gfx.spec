@@ -1,4 +1,6 @@
-module Gfx;
+extern module Gfx;
+cpp { header "cocos/renderer/gfx-base/GFXDef-common.h"; }
+
 namespace cc::gfx {
     flags BarrierType : uint32_t { FULL, SPLIT_BEGIN, SPLIT_END }
     enum class LoadOp : uint32_t { LOAD, CLEAR, DISCARD }

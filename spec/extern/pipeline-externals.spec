@@ -1,14 +1,31 @@
 extern module PipelineExternals;
 namespace cc {
-    class MacroRecord;
-    class RefCounted;
-    class EffectAsset;
-    struct IProgramInfo;
-    class ArrayBuffer;
-    class Mat4;
-    class Quaternion;
-    class Vec2;
-    class Vec4;
+    header "cocos/renderer/core/PassUtils.h" {
+        class MacroRecord;
+    }
+
+    header "cocos/base/RefCounted.h" {
+        class RefCounted;
+    }
+
+    header "cocos/core/assets/EffectAsset.h" {
+        class EffectAsset;
+    }
+
+    header "cocos/renderer/core/ProgramLib.h" {
+        struct IProgramInfo;
+    }
+
+    header "cocos/core/ArrayBuffer.h" {
+        class ArrayBuffer;
+    }
+
+    header "cocos/math/{name}.h" {
+        class Mat4;
+        class Quaternion;
+        class Vec2;
+        class Vec4;
+    }
 }
 
 binding typescript {

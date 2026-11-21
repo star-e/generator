@@ -37,68 +37,122 @@ public:
             module.imports.push_back({location, identifier()});
             expect(";");
         }
+        if (accept("cpp")) {
+            if (!external) fail("cpp.header requires an extern module");
+            expect("{");
+            expect("header");
+            module.cppHeader = headerPath(false);
+            expect(";");
+            expect("}");
+        }
         bool hasNamespace = false;
-        std::set<std::string> names;
         while (!token.empty()) {
             if (accept("binding")) {
                 binding(module.bindings);
                 continue;
             }
-            if (hasNamespace || !accept("namespace")) fail("expected namespace or binding block");
+            if ((hasNamespace && !external) || !accept("namespace")) fail("expected namespace or binding block");
+            const auto parts = qualifiedName();
+            if (!hasNamespace) module.namespaces = parts;
+            else if (module.namespaces != parts) module.namespaces.clear();
             hasNamespace = true;
-            module.namespaces = qualifiedName();
-            parseDeclarations(module, external, names);
+            expect("{");
+            std::set<std::string> names;
+            if (external) {
+                std::string scope;
+                for (const auto& part : parts) scope += (scope.empty() ? "" : "::") + part;
+                parseExternalDeclarations(module, scope, names);
+            } else {
+                while (!accept("}")) module.declarations.push_back(declaration(names));
+            }
         }
         return module;
     }
 
 private:
-    void parseDeclarations(Module& module, bool external, std::set<std::string>& names) {
-        expect("{");
+    static std::string expandHeader(std::string path, std::string_view name) {
+        constexpr std::string_view placeholder = "{name}";
+        for (size_t pos = 0; (pos = path.find(placeholder, pos)) != std::string::npos; pos += name.size())
+            path.replace(pos, placeholder.size(), name);
+        return path;
+    }
+
+    std::string headerPath(bool allowName) {
+        const auto at = location;
+        auto spelling = quotedString("C++ header");
+        const auto sample = allowName ? expandHeader(spelling, "Type") : spelling;
+        if (sample.find_first_of("{}") != std::string::npos)
+            throw std::runtime_error(at.describe() + (allowName ? ": expected {name} as the header placeholder"
+                                                              : ": module cpp.header requires a fixed path"));
+        const std::filesystem::path path(sample);
+        if (sample.find_first_of("\\:\"<>") != std::string::npos || path.has_root_path() || !path.has_filename() ||
+            std::ranges::any_of(sample, [](unsigned char ch) { return std::iscntrl(ch); }) ||
+            std::ranges::any_of(path, [](const auto& part) { return part == "." || part == ".."; }))
+            throw std::runtime_error(at.describe() + ": expected a relative C++ include path");
+        return spelling;
+    }
+
+    void parseExternalDeclarations(Module& module, const std::string& scope, std::set<std::string>& names) {
+        const auto append = [&](const std::string& header) {
+            auto decl = (token == "enum" || token == "flags") ? declaration(names) : externalDeclaration(names);
+            decl.externalScope = scope;
+            decl.cppHeader = expandHeader(header, decl.name);
+            module.declarations.push_back(std::move(decl));
+        };
         while (!accept("}")) {
-            if (external) {
-                ExternalDeclaration decl;
-                while (accept("@")) {
-                    const auto annotation = identifier();
-                    if (annotation == "string" && !decl.isString) decl.isString = true;
-                    else if (annotation == "pmr" && !decl.isPmr) decl.isPmr = true;
-                    else if (annotation == "constRef" && !decl.constructorConstRef) decl.constructorConstRef = true;
-                    else if (annotation == "container" && decl.container == ContainerKind::None) {
-                        expect("(");
-                        const auto kind = quotedString("container kind");
-                        if (kind == "array") decl.container = ContainerKind::Array;
-                        else if (kind == "map") decl.container = ContainerKind::Map;
-                        else if (kind == "set") decl.container = ContainerKind::Set;
-                        else fail("unsupported container kind '" + kind + "'");
-                        expect(")");
-                        continue;
-                    } else fail("unknown or duplicate external type annotation @" + annotation);
-                    if (token == "(") fail("@" + annotation + " takes no arguments");
+            if (accept("header")) {
+                const auto header = headerPath(true);
+                expect("{");
+                while (!accept("}")) {
+                    if (token == "header") fail("nested header blocks are not supported");
+                    append(header);
                 }
-                if (accept("template")) {
-                    expect("<");
-                    std::set<std::string> parameters;
-                    do { decl.templateParameters.push_back(uniqueName(parameters)); } while (accept(","));
-                    expect(">");
-                }
-                if (decl.container == ContainerKind::Array && decl.templateParameters.size() != 1)
-                    fail("@container(\"array\") requires exactly one type parameter");
-                if (decl.container == ContainerKind::Map && decl.templateParameters.size() != 2)
-                    fail("@container(\"map\") requires exactly two type parameters");
-                if (decl.container == ContainerKind::Set && decl.templateParameters.size() != 1)
-                    fail("@container(\"set\") requires exactly one type parameter");
-                if (decl.isString && !decl.templateParameters.empty()) fail("@string requires a non-template declaration");
-                decl.isStruct = accept("struct");
-                if (decl.constructorConstRef && (!decl.isStruct || decl.isString || !decl.templateParameters.empty()))
-                    fail("@constRef requires an external value struct");
-                if (!decl.isStruct) expect("class");
-                const auto start = location;
-                module.declarations.push_back({uniqueName(names), start, std::move(decl)});
-                expect(";");
             } else {
-                module.declarations.push_back(declaration(names));
+                append(module.cppHeader);
             }
         }
+    }
+
+    Declaration externalDeclaration(std::set<std::string>& names) {
+        ExternalDeclaration decl;
+        while (accept("@")) {
+            const auto annotation = identifier();
+            if (annotation == "string" && !decl.isString) decl.isString = true;
+            else if (annotation == "pmr" && !decl.isPmr) decl.isPmr = true;
+            else if (annotation == "constRef" && !decl.constructorConstRef) decl.constructorConstRef = true;
+            else if (annotation == "container" && decl.container == ContainerKind::None) {
+                expect("(");
+                const auto kind = quotedString("container kind");
+                if (kind == "array") decl.container = ContainerKind::Array;
+                else if (kind == "map") decl.container = ContainerKind::Map;
+                else if (kind == "set") decl.container = ContainerKind::Set;
+                else fail("unsupported container kind '" + kind + "'");
+                expect(")");
+                continue;
+            } else fail("unknown or duplicate external type annotation @" + annotation);
+            if (token == "(") fail("@" + annotation + " takes no arguments");
+        }
+        if (accept("template")) {
+            expect("<");
+            std::set<std::string> parameters;
+            do { decl.templateParameters.push_back(uniqueName(parameters)); } while (accept(","));
+            expect(">");
+        }
+        if (decl.container == ContainerKind::Array && decl.templateParameters.size() != 1)
+            fail("@container(\"array\") requires exactly one type parameter");
+        if (decl.container == ContainerKind::Map && decl.templateParameters.size() != 2)
+            fail("@container(\"map\") requires exactly two type parameters");
+        if (decl.container == ContainerKind::Set && decl.templateParameters.size() != 1)
+            fail("@container(\"set\") requires exactly one type parameter");
+        if (decl.isString && !decl.templateParameters.empty()) fail("@string requires a non-template declaration");
+        decl.isStruct = accept("struct");
+        if (decl.constructorConstRef && (!decl.isStruct || decl.isString || !decl.templateParameters.empty()))
+            fail("@constRef requires an external value struct");
+        if (!decl.isStruct) expect("class");
+        const auto start = location;
+        auto name = uniqueName(names);
+        expect(";");
+        return {std::move(name), start, std::move(decl)};
     }
 
     std::string_view remaining;

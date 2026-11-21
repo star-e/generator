@@ -1,7 +1,9 @@
 extern module Containers;
 namespace ccstd {
-    @container("map") template<K, V> class unordered_map;
-    @string class string;
-    @container("array") template<T> class vector;
-    @container("map") template<K, V> class map;
+    header "cocos/base/std/container/{name}.h" {
+        @container("map") template<K, V> class unordered_map;
+        @string class string;
+        @container("array") template<T> class vector;
+        @container("map") template<K, V> class map;
+    }
 }

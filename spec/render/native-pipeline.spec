@@ -1,4 +1,5 @@
 module NativePipeline;
+import EngineTypes;
 import Customization;
 import LayoutGraph;
 import RenderCommon;

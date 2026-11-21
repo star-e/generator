@@ -4,6 +4,7 @@ set(stage "${work}/engine")
 # Compile a uint32_t high bit alongside the production enums in both consumer languages.
 file(COPY "${SOURCE}/spec" "${SOURCE}/config" "${SOURCE}/runtime" DESTINATION "${work}")
 file(WRITE "${work}/spec/text.spec" [[extern module Text;
+cpp { header "SampleText.h"; }
 namespace sample { @string class Text; @string struct Label; }
 binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 ]])
@@ -108,8 +109,7 @@ string(JSON config SET "${config}" modules ${count} [[{
 }]])
 math(EXPR count "${count} + 1")
 string(JSON config SET "${config}" modules ${count} [[{
-    "backend": "model", "spec": "../spec/text.spec",
-    "types": { "Text": { "header": "SampleText.h" }, "Label": { "header": "SampleText.h" } }
+    "backend": "model", "spec": "../spec/text.spec"
 }]])
 file(WRITE "${work}/spec/indexed-keys.spec" [[module IndexedKeys;
 import GraphTags;

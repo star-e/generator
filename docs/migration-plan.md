@@ -100,7 +100,7 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 
 在 `extern module` 的无定义 `class` 或 `struct` 上用 `@string` 声明拥有 UTF-8 文本的原生类型。字段默认绑定为 TS `string`，初值为 `''`，序列化使用字符串读写接口。显式 TS 绑定可以指定兼容的字符串别名及其导入路径。需要传递内存资源的字符串另加 `@pmr`。例如 `ccstd::pmr::string` 同时声明这两个注解，`std::string_view` 作为借用视图只声明 TS 绑定。[原生字符串声明](../spec/extern/strings.spec) · [借用视图绑定](../spec/extern/types.spec)
 
-原生头文件、输出路径继续在工作区配置中声明。多个模块共用的外部类型绑定可以集中在仅包含绑定的模块里。[通用类型绑定](../spec/extern/types.spec) · [外部 Gfx 类型](../spec/extern/gfx.spec) · [RenderCommon 绑定](../spec/render/render-common.spec)
+外部模块的声明共用一个 C++ 头文件时，在模块的 `import` 之后写一次 `cpp { header "..."; }`。一个模块涉及多个头文件时，在 `namespace` 内用 `header "..." { ... }` 包住相关声明。固定路径供整组共用，路径中的 `{name}` 替换为声明的非限定名，保留大小写。例如 `GFX{name}.h` 将 `Buffer` 映射到 `GFXBuffer.h`。组内路径优先于模块默认值，组外声明继续使用模块默认值。消费方按模块名导入，TS 绑定仍写在模块级 `binding typescript` 中。[模块级头文件](../spec/extern/gfx.spec) · [资源头文件分组](../spec/extern/gfx-resource.spec) · [Scene 命名模板](../spec/extern/scene.spec)
 
 `DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型都声明 `reset defaults;`，通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 

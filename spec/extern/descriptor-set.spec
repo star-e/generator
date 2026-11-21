@@ -1,9 +1,14 @@
 extern module GfxDescriptorSet;
 namespace cc::gfx {
-    struct DescriptorSetLayoutInfo;
-    class DescriptorSetLayout;
-    class DescriptorSet;
-    class PipelineLayout;
+    header "cocos/renderer/gfx-base/GFXDef-common.h" {
+        struct DescriptorSetLayoutInfo;
+    }
+
+    header "cocos/renderer/gfx-base/GFX{name}.h" {
+        class DescriptorSetLayout;
+        class DescriptorSet;
+        class PipelineLayout;
+    }
 }
 
 binding typescript {

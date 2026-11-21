@@ -5,63 +5,13 @@
   "types": "../spec/extern/types.json",
   "modules": [
     { "backend": "model", "spec": "../spec/extern/types.spec" },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/containers.spec",
-      "types": {
-        "unordered_map": { "header": "cocos/base/std/container/unordered_map.h" },
-        "map": { "header": "cocos/base/std/container/map.h" },
-        "string": { "header": "cocos/base/std/container/string.h" },
-        "vector": { "header": "cocos/base/std/container/vector.h" }
-      }
-    },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/pmr-containers.spec",
-      "types": {
-        "map": { "header": "cocos/base/std/container/map.h" },
-        "unordered_map": { "header": "cocos/base/std/container/unordered_map.h" },
-        "vector": { "header": "cocos/base/std/container/vector.h" }
-      }
-    },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/sets.spec",
-      "types": {
-        "PmrFlatSet": { "header": "cocos/renderer/pipeline/custom/details/Set.h" },
-        "PmrTransparentSet": { "header": "cocos/renderer/pipeline/custom/details/Set.h" }
-      }
-    },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/maps.spec",
-      "types": {
-        "PmrTransparentMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
-        "PmrUnorderedMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
-        "PmrUnorderedStringMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" },
-        "PmrFlatMap": { "header": "cocos/renderer/pipeline/custom/details/Map.h" }
-      }
-    },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/uniform-block.spec",
-      "types": { "UniformBlock": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" } }
-    },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/descriptor-set.spec",
-      "types": {
-        "DescriptorSetLayoutInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "DescriptorSetLayout": { "header": "cocos/renderer/gfx-base/GFXDescriptorSetLayout.h" },
-        "DescriptorSet": { "header": "cocos/renderer/gfx-base/GFXDescriptorSet.h" },
-        "PipelineLayout": { "header": "cocos/renderer/gfx-base/GFXPipelineLayout.h" }
-      }
-    },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/strings.spec",
-      "types": { "string": { "header": "cocos/base/std/container/string.h" } }
-    },
+    { "backend": "model", "spec": "../spec/extern/containers.spec" },
+    { "backend": "model", "spec": "../spec/extern/pmr-containers.spec" },
+    { "backend": "model", "spec": "../spec/extern/sets.spec" },
+    { "backend": "model", "spec": "../spec/extern/maps.spec" },
+    { "backend": "model", "spec": "../spec/extern/uniform-block.spec" },
+    { "backend": "model", "spec": "../spec/extern/descriptor-set.spec" },
+    { "backend": "model", "spec": "../spec/extern/strings.spec" },
     {
       "spec": "../spec/render/archive.spec",
       "nativeRoot": "native",
@@ -115,55 +65,9 @@
         "cocos/rendering/custom/layout-access.ts": "../runtime/typescript/layout-access.ts"
       }
     },
-    {
-      "spec": "../spec/extern/gfx-resource.spec",
-      "backend": "model",
-      "types": {
-        "ResourceRange": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "RenderPassInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "FramebufferInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "BufferInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "TextureInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "ShaderInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "Attribute": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "CommandBuffer": { "header": "cocos/renderer/gfx-base/GFXCommandBuffer.h" },
-        "Shader": { "header": "cocos/renderer/gfx-base/GFXShader.h" },
-        "PipelineState": { "header": "cocos/renderer/gfx-base/GFXPipelineState.h" },
-        "GFXObject": { "header": "cocos/renderer/gfx-base/GFXObject.h" },
-        "InputAssembler": { "header": "cocos/renderer/gfx-base/GFXInputAssembler.h" },
-        "SamplerInfo": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "Sampler": { "header": "cocos/renderer/gfx-base/states/GFXSampler.h" },
-        "Viewport": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "Color": { "header": "cocos/renderer/gfx-base/GFXDef.h" },
-        "Device": { "header": "cocos/renderer/gfx-base/GFXDevice.h" },
-        "RenderPass": { "header": "cocos/renderer/gfx-base/GFXRenderPass.h" },
-        "Buffer": { "header": "cocos/renderer/gfx-base/GFXBuffer.h" },
-        "Texture": { "header": "cocos/renderer/gfx-base/GFXTexture.h" },
-        "Framebuffer": { "header": "cocos/renderer/gfx-base/GFXFramebuffer.h" },
-        "Swapchain": { "header": "cocos/renderer/gfx-base/GFXSwapchain.h" }
-      }
-    },
-    {
-      "spec": "../spec/extern/scene.spec",
-      "backend": "model",
-      "types": {
-        "DirectionalLight": { "header": "cocos/scene/DirectionalLight.h" },
-        "SphereLight": { "header": "cocos/scene/SphereLight.h" },
-        "SpotLight": { "header": "cocos/scene/SpotLight.h" },
-        "PointLight": { "header": "cocos/scene/PointLight.h" },
-        "RangedDirectionalLight": { "header": "cocos/scene/RangedDirectionalLight.h" },
-        "Pass": { "header": "cocos/scene/Pass.h" },
-        "SubModel": { "header": "cocos/scene/SubModel.h" },
-        "Camera": { "header": "cocos/scene/Camera.h" },
-        "RenderScene": { "header": "cocos/scene/RenderScene.h" },
-        "Model": { "header": "cocos/scene/Model.h" }
-      }
-    },
-    {
-      "spec": "../spec/extern/render-window.spec",
-      "backend": "model",
-      "types": { "RenderWindow": { "header": "cocos/scene/RenderWindow.h" } }
-    },
+    { "backend": "model", "spec": "../spec/extern/gfx-resource.spec" },
+    { "backend": "model", "spec": "../spec/extern/scene.spec" },
+    { "backend": "model", "spec": "../spec/extern/render-window.spec" },
     {
       "spec": "../spec/render/render-graph.spec",
       "backend": "records",
@@ -175,56 +79,10 @@
         "native/cocos/base/GraphEdges.h": "../runtime/cpp/GraphEdges.h"
       }
     },
-    {
-      "spec": "../spec/extern/gfx.spec",
-      "backend": "model",
-      "types": {
-        "Type": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "BarrierType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "AccessFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "SampleCount": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "TextureType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "TextureFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "ResolveMode": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "LoadOp": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "StoreOp": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "ClearFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "ShaderStageFlagBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "MemoryAccessBit": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "ViewDimension": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "SampleType": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" },
-        "Format": { "header": "cocos/renderer/gfx-base/GFXDef-common.h" }
-      }
-    },
-    {
-      "spec": "../spec/extern/light.spec",
-      "backend": "model",
-      "types": {
-        "Light": { "header": "cocos/scene/Light.h" }
-      }
-    },
-    {
-      "spec": "../spec/extern/reflection-probe.spec",
-      "backend": "model",
-      "types": {
-        "ReflectionProbe": { "header": "cocos/scene/ReflectionProbe.h" }
-      }
-    },
-    {
-      "backend": "model",
-      "spec": "../spec/extern/pipeline-externals.spec",
-      "types": {
-        "MacroRecord": { "header": "cocos/renderer/core/PassUtils.h" },
-        "RefCounted": { "header": "cocos/base/RefCounted.h" },
-        "EffectAsset": { "header": "cocos/core/assets/EffectAsset.h" },
-        "IProgramInfo": { "header": "cocos/renderer/core/ProgramLib.h" },
-        "ArrayBuffer": { "header": "cocos/core/ArrayBuffer.h" },
-        "Mat4": { "header": "cocos/math/Mat4.h" },
-        "Quaternion": { "header": "cocos/math/Quaternion.h" },
-        "Vec2": { "header": "cocos/math/Vec2.h" },
-        "Vec4": { "header": "cocos/math/Vec4.h" }
-      }
-    },
+    { "backend": "model", "spec": "../spec/extern/gfx.spec" },
+    { "backend": "model", "spec": "../spec/extern/light.spec" },
+    { "backend": "model", "spec": "../spec/extern/reflection-probe.spec" },
+    { "backend": "model", "spec": "../spec/extern/pipeline-externals.spec" },
     {
       "backend": "records",
       "spec": "../spec/render/pipeline-capabilities.spec",
