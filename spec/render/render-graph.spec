@@ -1,4 +1,4 @@
-module RenderGraph;
+@pool module RenderGraph;
 import Gfx;
 import RenderCommon;
 import Strings;
@@ -372,41 +372,18 @@ namespace cc::render {
 }
 
 binding typescript {
-    poolModule "cocos/core/memop";
     poolDependency renderCommon: RenderCommon;
-    ClearValue => class { pool cv; };
-    RasterView => class { pool rv; };
     ComputeView => class { pool cv1; };
-    ResourceDesc => class { pool rd; };
-    Subpass => class { pool s; };
-    SubpassGraph => class { pool sg; };
     RasterSubpass => class { pool rs2; };
-    ComputeSubpass => class { pool cs; };
-    RasterPass => class { pool rp; mapKey string; };
-    ResourceTraits => class { pool rt; };
+    RasterPass => class { mapKey string; };
     ResourceStates => class { pool rs1; };
-    ManagedResource => class { pool mr; };
-    ManagedBuffer => class { pool mb; };
-    ManagedTexture => class { pool mt; };
-    PersistentBuffer => class { pool pb; };
-    PersistentTexture => class { pool pt; };
-    RenderSwapchain => class { pool rs; };
-    PersistentRenderPassAndFramebuffer => class { pool prpaf; };
-    FormatView => class { pool fv; };
-    SubresourceView => class { pool sv; };
-    ResourceGraph => class { pool rg; };
-    ComputePass => class { pool cp; };
     ResolvePass => class { pool rp1; };
     CopyPass => class { pool cp1; };
-    MovePass => class { pool mp; };
     RaytracePass => class { pool rp2; };
     ClearView => class { pool cv2; };
-    RenderQueue => class { pool rq; field viewport default null; };
+    RenderQueue => class { field viewport default null; };
     CullingFlags => const enum;
-    SceneData => class { pool sd; };
-    Dispatch => class { pool d; };
     BlitType => const enum;
-    Blit => class { pool b; };
     RenderData => class { pool rd1; };
     RenderGraph => class { pool rg1; };
 }

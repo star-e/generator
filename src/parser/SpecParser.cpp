@@ -29,7 +29,12 @@ public:
 
     Module parse() {
         Module module;
+        if (accept("@")) {
+            expect("pool");
+            module.pool = true;
+        }
         module.external = accept("extern");
+        if (module.pool && module.external) fail("@pool requires a generated module");
         expect("module");
         module.name = identifier();
         expect(";");
@@ -343,11 +348,18 @@ private:
             } else if (rule.kind == BindingTarget::classType && key == "constructor") {
                 rule.constructor = bindingFields();
                 rule.requiredConstructor = accept("required");
-            } else if (rule.kind == BindingTarget::classType && key == "pool") {
-                auto& pool = rule.pool.emplace();
-                pool.member = identifier();
-                if (accept("assign")) pool.assignFields = true;
-                else if (accept("keep")) {
+            } else if (rule.kind == BindingTarget::classType && (key == "pool" || key == "assign" || key == "keep")) {
+                if (!rule.pool) rule.pool.emplace();
+                auto& pool = *rule.pool;
+                auto reuse = key;
+                if (key == "pool") {
+                    pool.member = identifier();
+                    if (token == "assign" || token == "keep") reuse = identifier();
+                }
+                if (reuse != "pool" && (pool.assignFields || !pool.keepOnReset.empty()))
+                    fail("duplicate or conflicting pool reuse option");
+                if (reuse == "assign") pool.assignFields = true;
+                else if (reuse == "keep") {
                     expect("(");
                     do { uniqueName(pool.keepOnReset); } while (accept(","));
                     expect(")");

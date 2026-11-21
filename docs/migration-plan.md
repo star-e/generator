@@ -56,7 +56,9 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 
-普通模块的 `typescript` 字符串指定要生成的 `.ts` 文件。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。枚举注册、对象池、JSB 导出类型等规则仍写在 `.spec` 的绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。旧版 `forward` 的布尔值按默认规则处理，字符串指定的文件名继续有效。[工作区输出测试](../tests/WorkspaceOutputs.cmake)
+普通模块的 `typescript` 字符串指定要生成的 `.ts` 文件。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。在 `.spec` 的模块声明上用 `@pool` 启用 TS 对象池。枚举注册和 JSB 导出类型写在绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。旧版 `forward` 的布尔值按默认规则处理，字符串指定的文件名继续有效。[工作区输出测试](../tests/WorkspaceOutputs.cmake)
+
+例如，`@pool module RenderGraph;` 会将本模块中支持 `new T()` 的 TS 记录类和可修改的图加入 `RenderGraphObjectPool`。枚举、标签、接口、映射为数值的记录以及只在 C++ 中可见的声明均跳过。池成员名取类型名中每段连续大写字母的首字母，再转成小写，如 `LightInfo → li`、`DescriptorDB → dd`。全小写类型沿用原名。两个类型推导出同一成员名时生成器会报告两者，在 `binding typescript` 中为其中一个指定名字即可。例如 `ComputeView => class { pool cv1; };` 让 `ClearValue` 继续使用 `cv`。对象池默认从 `cocos/core/memop` 导入 `RecyclePool`，其他运行库路径可用 `poolModule` 指定。跨模块对象池的构造参数由 `poolDependency` 声明。
 
 独立构建运行 `cocos.typegraph`、`cocos.modules.imports`、`cocos.archive.generate`、`cocos.settings.generate`、`cocos.records.generate` 和 `cocos.selfhost`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线、归档互读、编辑器设置和 RenderCommon 消费测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake) · [编辑器消费测试](../tests/SettingsInterop.cmake)
 
@@ -141,7 +143,7 @@ binding typescript {
 | Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，池化重置时调用 `.clear()` 原地清空。 |
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
-| 对象池和重置 | 使用 `pool rv;` 的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。`keep(...)` 保留指定字段并将其排除在参数之外。 |
+| 对象池和重置 | 模块中入池的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。`keep(...)` 保留指定字段并将其排除在参数之外。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 
@@ -278,15 +280,15 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `CopyPair` 和 `MovePair` 共用上述 PMR 构造和 TS 对象池生成逻辑。两者的 `mipLevels` 和 `numSlices` 默认值均为 `0xFFFFFFFF`。TypeGraph 按 `uint8_t` 或 `uint32_t` 的范围校验十六进制字段初值，C++ 和 TS 保留声明中的写法。消费测试为各个 mip 和 slice 参数传入不同的值，并检查跨内存资源复制、移动以及对象池重置后的所有字段。[模块声明](../spec/render/render-common.spec) · [消费测试](../tests/RecordInterop.cmake)
 
-`UploadPair` 在声明上标注 `@moveOnly`。TypeGraph 将其保存为 `RecordType.moveOnly`，C++ 后端据此生成移动操作并禁用复制。带分配器移动时，`source` 转移字节存储，`target` 使用传入的内存资源。TS 构造函数接收只读字段 `source` 的初值，默认为 `new Uint8Array(0)`。对象池绑定中的 `pool up keep(source);` 使 `reset()` 和 `createUploadPair()` 只接收其余六个字段，复用时保留原数组及内容。[模块声明](../spec/render/render-common.spec)
+`UploadPair` 在声明上标注 `@moveOnly`。TypeGraph 将其保存为 `RecordType.moveOnly`，C++ 后端据此生成移动操作并禁用复制。带分配器移动时，`source` 转移字节存储，`target` 使用传入的内存资源。TS 构造函数接收只读字段 `source` 的初值，默认为 `new Uint8Array(0)`。对象池绑定中的 `keep(source);` 使 `reset()` 和 `createUploadPair()` 只接收其余六个字段，复用时保留原数组及内容。[模块声明](../spec/render/render-common.spec)
 
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 
-`PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。该类型没有构造参数，`pool ps;` 自动生成无参 `reset()`。`RenderCommonObjectPool.createPipelineStatistics()` 每次从池中取出对象时都调用该方法。消费测试用引擎的 `RecyclePool` 核对对象复用和全部计数器，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建和复用的对象都采用声明值。[声明](../spec/render/render-common.spec)
+`PipelineStatistics` 的 11 个计数器在声明中各自指定默认值。C++ 生成带字段初值的聚合类型。该类型没有构造参数，模块的 `@pool` 会为它生成无参 `reset()`。`RenderCommonObjectPool.createPipelineStatistics()` 每次从池中取出对象时都调用该方法。消费测试用引擎的 `RecyclePool` 核对对象复用和全部计数器，并将临时声明中的 `numRenderPasses` 改为 `7`，验证新建和复用的对象都采用声明值。[声明](../spec/render/render-common.spec)
 
 ### 引擎模块和产物
 
-`LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。`pool d;` 据此推导出 TS 的 `reset(type)`，更新类型并把 `count` 恢复为声明值。TS 名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec)
+`LayoutGraph` 已接入 `LayoutType`、`DescriptorTypeOrder`、`RenderPassType` 和 `Descriptor`。三个枚举在 C++ 使用 `uint8_t`，在 TS 使用 `const enum`。`Descriptor` 的构造函数只接收 `gfx::Type`，`count` 的初值来自字段声明。模块的 `@pool` 据此推导出 TS 的 `reset(type)`，更新类型并把 `count` 恢复为声明值。TS 名称查询文件已完整对齐引擎。[模块声明](../spec/render/layout-graph.spec)
 
 `DescriptorBlockIndex` 从 `RenderCommon` 引入 `UpdateFrequency` 和 `ParameterType`，从 `Gfx` 引入 `ShaderStageFlagBit`。生成模块之间的枚举引用使用提供方配置的头文件和 TS 输出路径。声明上的 `@comparison("<")` 让 C++ 后端按字段声明顺序生成 `operator<`。该键依次比较 `updateFrequency`、`parameterType`、`descriptorType`、`visibility`。`DescriptorGroupBlockIndex` 在这四项之后依次比较 `accessType`、`viewDimension`、`sampleType`、`format`。两个索引的 TS 构造函数以相同顺序写入字段，保留引擎用 `JSON.stringify(index)` 查表时的键字符串。[C++ 键测试](../tests/consumer/records/RecordConsumer.cpp) · [TS 键测试](../tests/consumer/records/consumer.cjs)
 
@@ -334,7 +336,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 原生 `initializeDescriptorSetLayoutInfo()` 向现有绑定列表追加条目。每个块从自己的 `offset` 开始，按描述符的 `count` 推进绑定编号，类型转换沿用引擎的 `getGfxDescriptorType()`。`getOrCreatePerPassDescriptorSet()` 用 `getLayout(vertex)` 查找普通集合的 `PER_PASS` 项，按需创建并缓存布局和集合。新旧消费程序读取同一份转换归档，对照绑定字段，再通过 `gfx::Device` 的创建入口检查缓存命中时的调用次数与对象身份。[暂存实现](../runtime/cpp/LayoutGraphDescriptorSet.cpp) · [原生对照测试](../tests/consumer/records/LayoutDescriptorConsumer.cpp)
 
-`LayoutGraphObjectPool` 的 24 个工厂由 TS 绑定生成。`poolDependency renderCommon: RenderCommon;` 将已导入模块的对象池作为构造参数和只读属性。`reset()` 只重置本地子池的取用位置。下次取出时，普通记录调用自己的 `reset(...)`，两个描述符索引用 `pool … assign;` 按构造参数逐字段赋值，可修改的图调用 `clear()`，外部实现的空记录 `Layout` 直接复用。消费测试用同一套用例对照旧引擎和新生成的池。[布局绑定](../spec/render/layout-graph.spec) · [对象池测试](../tests/consumer/records/layout-pool.cjs)
+`LayoutGraphObjectPool` 的 24 个工厂由模块的 `@pool` 生成。`poolDependency renderCommon: RenderCommon;` 将已导入模块的对象池作为构造参数和只读属性。`reset()` 只重置本地子池的取用位置。下次取出时，普通记录调用自己的 `reset(...)`，两个描述符索引用 `assign;` 按构造参数逐字段赋值，可修改的图调用 `clear()`，外部实现的空记录 `Layout` 直接复用。消费测试用同一套用例对照旧引擎和新生成的池。[布局绑定](../spec/render/layout-graph.spec) · [对象池测试](../tests/consumer/records/layout-pool.cjs)
 
 MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中为 `std::unordered_map` 分配代理。`RenderStageData::descriptorVisibility` 沿用这个引擎容器，若该笔分配抛错，标准库会终止进程。Windows Debug 和 Release 都对两种载荷逐笔注入分配失败。stage 用例在独立进程中执行每一次注入，单独记录 Debug 代理的终止，并验证其他分配点的回滚和原图重试。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 

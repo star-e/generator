@@ -221,7 +221,28 @@ void loadCppOutput(RecordOutput& output, const Json& cpp, const Json& defaults, 
     }
 }
 
-void bindRecordOutput(RecordOutput& output, const Module& module) {
+std::string poolMemberName(const std::string& type) {
+    std::string initials;
+    bool previousUpper = false;
+    for (unsigned char ch : type) {
+        const bool upper = std::isupper(ch) != 0;
+        if (upper && !previousUpper) initials += static_cast<char>(std::tolower(ch));
+        previousUpper = upper;
+    }
+    return initials.empty() ? type : initials;
+}
+
+bool inferredPoolType(const TypeNode& node) {
+    if (!node.typescriptName || node.typescriptNumber) return false;
+    if (const auto* record = std::get_if<RecordType>(&node.data)) {
+        const auto& ctor = record->typescriptConstructor;
+        return !ctor || ctor->defaults || ctor->fields.empty();
+    }
+    const auto* graph = std::get_if<GraphType>(&node.data);
+    return graph && graph->mutableGraph;
+}
+
+void bindRecordOutput(RecordOutput& output, const Module& module, const TypeGraph& graph, ModuleId owner) {
     const auto& bindings = module.bindings;
     if (output.jsbHeader && !bindings.jsb)
         throw std::runtime_error(module.name + ": cpp.jsb requires a .spec binding jsb block");
@@ -229,8 +250,8 @@ void bindRecordOutput(RecordOutput& output, const Module& module) {
     for (const auto& [source, location] : bindings.jsbRecords) output.jsbRecords.insert(bindingName(source));
     if (!output.typescript) return;
     output.poolModule = bindings.poolModule;
+    if (module.pool && output.poolModule.empty()) output.poolModule = "cocos/core/memop";
     output.interfaceBindings = interfaceBindings(module);
-    std::set<std::string> poolMembers;
     for (const auto& rule : bindings.typescript) {
         if (rule.kind == BindingTarget::type) continue;
         const auto name = bindingName(rule.source.name);
@@ -246,15 +267,28 @@ void bindRecordOutput(RecordOutput& output, const Module& module) {
         }
         if (rule.pool) {
             if (output.poolModule.empty()) throw std::runtime_error(rule.source.location.describe() + ": pool binding requires poolModule");
-            if (!poolMembers.insert(rule.pool->member).second)
-                throw std::runtime_error(rule.source.location.describe() + ": duplicate pool member " + rule.pool->member);
+            if (rule.pool->member.empty() && !module.pool)
+                throw std::runtime_error(rule.source.location.describe() + ": pool reuse requires @pool or an explicit pool member");
             output.pools.emplace(name, *rule.pool);
         }
+    }
+    if (module.pool) {
+        for (auto id : graph.modules.at(owner.value).declarations) {
+            const auto& node = graph.node(id);
+            if (inferredPoolType(node)) output.pools.try_emplace(node.name);
+        }
+    }
+    std::map<std::string, std::string> poolMembers;
+    for (auto& [name, pool] : output.pools) {
+        if (pool.member.empty()) pool.member = poolMemberName(name);
+        const auto [it, inserted] = poolMembers.emplace(pool.member, name);
+        if (!inserted) throw std::runtime_error(module.name + ": duplicate pool member " + pool.member + " for " +
+            it->second + " and " + name + ". Specify 'pool <name>;' on one of the types.");
     }
     if (output.pools.empty() && !bindings.poolDependencies.empty())
         throw std::runtime_error(module.name + ": poolDependency requires a local object pool");
     for (const auto& [member, dependency] : bindings.poolDependencies) {
-        if (!poolMembers.insert(member).second) throw std::runtime_error(module.name + ": duplicate pool member " + member);
+        if (!poolMembers.emplace(member, dependency).second) throw std::runtime_error(module.name + ": duplicate pool member " + member);
     }
     for (const auto& name : {"constructor", "reset"})
         if (poolMembers.contains(name)) throw std::runtime_error(module.name + ": conflicting pool member " + name);
@@ -320,7 +354,6 @@ Files plan(const Json& settings, const fs::path& base) {
             tsModule = path;
             tsModule.replace_extension();
         }
-        bindRecordOutput(typesOutput, module);
         TypeTable mappings;
         for (const auto& decl : module.declarations) {
             if (std::holds_alternative<AliasDeclaration>(decl.data)) {
@@ -355,6 +388,7 @@ Files plan(const Json& settings, const fs::path& base) {
         const auto& module = graph.modules.at(i);
         auto& output = outputs[i];
         auto& records = output.types;
+        if (!inputs[i].modelOnly) bindRecordOutput(records, syntax, graph, owner);
         if (output.settingsFile)
             addFile(*output.settingsFile, emitSettings(graph, owner, settingsBinding(syntax), *output.settingsFile, preamble));
         if (!records.header.empty() || records.typescript) {

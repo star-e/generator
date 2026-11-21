@@ -156,6 +156,7 @@ struct Module {
     ModuleBindings bindings;
     std::string cppHeader;
     bool external{};
+    bool pool{};
 };
 
 struct ExternalType {

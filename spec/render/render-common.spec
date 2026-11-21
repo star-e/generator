@@ -1,4 +1,4 @@
-module RenderCommon;
+@pool module RenderCommon;
 import Light;
 import ReflectionProbe;
 import Gfx;
@@ -232,14 +232,7 @@ binding typescript {
     AttachmentType => const enum;
     ClearValueType => const enum;
     ResolveFlags => const enum;
-
-    poolModule "cocos/core/memop";
-    LightInfo => class { pool li; };
-    ResolvePair => class { pool rp; };
-    CopyPair => class { pool cp; };
-    UploadPair => class { pool up keep(source); };
-    MovePair => class { pool mp; };
-    PipelineStatistics => class { pool ps; };
+    UploadPair => class { keep(source); };
 }
 
 binding jsb {

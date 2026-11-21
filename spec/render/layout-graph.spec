@@ -1,4 +1,4 @@
-module LayoutGraph;
+@pool module LayoutGraph;
 import ArchiveInterface;
 import Gfx;
 import RenderCommon;
@@ -238,37 +238,16 @@ namespace cc::render {
 }
 
 binding typescript {
-    poolModule "cocos/core/memop";
     poolDependency renderCommon: RenderCommon;
     LayoutType => const enum;
-    Layout => class from "cocos/rendering/custom/layout-access" { pool l; };
+    Layout => class from "cocos/rendering/custom/layout-access";
     DescriptorTypeOrder => const enum { names; };
     RenderPassType => const enum;
-    Descriptor => class { pool d; };
-    DescriptorBlock => class { pool db; };
-    DescriptorBlockFlattened => class { pool dbf; };
-    DescriptorBlockIndex => class { pool dbi assign; mapKey json; };
-    DescriptorGroupBlockIndex => class { pool dgbi assign; mapKey json; };
-    DescriptorDB => class { pool dd; };
-    RenderPhase => class { pool rp; };
-    LayoutGraph => class { pool lg; };
-    UniformData => class { pool ud; };
-    UniformBlockData => class { pool ubd; };
+    DescriptorBlockIndex => class { assign; mapKey json; };
+    DescriptorGroupBlockIndex => class { assign; mapKey json; };
     NameLocalID => number(value);
     DescriptorData => class { pool dd1; field descriptorID default 0; };
-    DescriptorBlockData => class { pool dbd; };
-    DescriptorSetLayoutData => class { pool dsld; };
-    DescriptorSetData => class { pool dsd; };
     PipelineLayoutData => class {
-        pool pld;
         extends PipelineLayoutAccess from "cocos/rendering/custom/layout-access";
     };
-    ShaderBindingData => class { pool sbd; };
-    ShaderLayoutData => class { pool sld; };
-    TechniqueData => class { pool td; };
-    EffectData => class { pool ed; };
-    ShaderProgramData => class { pool spd; };
-    RenderStageData => class { pool rsd; };
-    RenderPhaseData => class { pool rpd; };
-    LayoutGraphData => class { pool lgd; };
 }
