@@ -143,7 +143,7 @@ binding typescript {
 | Set | 在外部类型声明上写 `@container("set") template<T> class PmrTransparentSet;`。TypeGraph 按元素绑定生成 `Set<T>` 并收集元素类型的导入。每个字段用 `new Set<T>()` 初始化，池化重置时调用 `.clear()` 原地清空。 |
 | JSON 字符串键 | `DescriptorBlockIndex => class { mapKey json; };` 指定这个类型用作 TS Map 的键时表示为 `string`。引擎调用方用 `JSON.stringify(index)` 写入和查找。普通字段、参数和 Map 的值仍使用索引类。 |
 | 枚举 | `DescriptorTypeOrder => const enum { names; };` 生成常量枚举和名称查询。`BloomType => enum { register; };` 请求编辑器注册。 |
-| 对象池和重置 | 模块中入池的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。`keep(...)` 保留指定字段并将其排除在参数之外。 |
+| 对象池和重置 | 模块中入池的记录按 TS 构造参数的顺序选取可写字段作为 `reset` 参数。没有可传入的字段时生成无参 `reset()`。原地重置的对象字段须在 `.spec` 中声明为 `readonly`。非空的内嵌外部对象调用 `this.field.reset()`，可空资源引用仍可作为参数传入。按值持有的 `Int8Array`、`Uint8Array`、`Int16Array`、`Uint16Array`、`Int32Array`、`Uint32Array` 在复用时自动保留原数组和内容，并从 `reset` 和池工厂的参数中省略。其他需要保留的字段可用 `keep(...)` 指定。 |
 | 编辑器设置 | `ForwardPassConfigs => interface;` 生成接口。`Bloom => interface { helpers; field kawaseFilterMaterial renamedFrom material; };` 生成工厂和补全函数并迁移旧字段。 |
 | JSB 转换 | 在 `binding jsb` 内用 `record ResolvePair;` 选择类型，用 `include "cocos/renderer/pipeline/custom/details/JsbConversion.h";` 指定转换所需头文件。 |
 
@@ -280,7 +280,7 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `CopyPair` 和 `MovePair` 共用上述 PMR 构造和 TS 对象池生成逻辑。两者的 `mipLevels` 和 `numSlices` 默认值均为 `0xFFFFFFFF`。TypeGraph 按 `uint8_t` 或 `uint32_t` 的范围校验十六进制字段初值，C++ 和 TS 保留声明中的写法。消费测试为各个 mip 和 slice 参数传入不同的值，并检查跨内存资源复制、移动以及对象池重置后的所有字段。[模块声明](../spec/render/render-common.spec) · [消费测试](../tests/RecordInterop.cmake)
 
-`UploadPair` 在声明上标注 `@moveOnly`。TypeGraph 将其保存为 `RecordType.moveOnly`，C++ 后端据此生成移动操作并禁用复制。带分配器移动时，`source` 转移字节存储，`target` 使用传入的内存资源。TS 构造函数接收只读字段 `source` 的初值，默认为 `new Uint8Array(0)`。对象池绑定中的 `keep(source);` 使 `reset()` 和 `createUploadPair()` 只接收其余六个字段，复用时保留原数组及内容。[模块声明](../spec/render/render-common.spec)
+`UploadPair` 在声明上标注 `@moveOnly`。TypeGraph 将其保存为 `RecordType.moveOnly`，C++ 后端据此生成移动操作并禁用复制。带分配器移动时，`source` 转移字节存储，`target` 使用传入的内存资源。TS 构造函数接收只读字段 `source` 的初值，默认为 `new Uint8Array(0)`。生成器根据 `source` 的 `Uint8Array` 类型推导出保留行为。`reset()` 和 `createUploadPair()` 接收其余六个字段，复用时保留原数组及内容。[模块声明](../spec/render/render-common.spec)
 
 `cocos.records.interop` 逐个对照引擎的 C++ 和 TS 枚举声明，并逐字节对照 `types-names.ts`。C++17 消费者在编译时检查枚举底层类型和数值。TS 消费者编译后验证常量枚举成员的值、运行时枚举对象和更新频率名称查询。测试还使用引擎的 `RecyclePool` 验证 `createLightInfo()` 在复用时重置全部字段。[消费测试](../tests/RecordInterop.cmake)
 

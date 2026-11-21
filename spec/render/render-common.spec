@@ -232,7 +232,6 @@ binding typescript {
     AttachmentType => const enum;
     ClearValueType => const enum;
     ResolveFlags => const enum;
-    UploadPair => class { keep(source); };
 }
 
 binding jsb {

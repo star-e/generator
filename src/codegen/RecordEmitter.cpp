@@ -159,6 +159,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         if (emitTs) {
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.typeImports);
             m.tsDefault = typeScriptContainerInitializer(node);
+            m.tsKeepOnReset = node.typescriptContainer == ContainerKind::None && isUnclampedIntegerTypedArrayName(m.ts);
             if (node.typescriptContainer == ContainerKind::Array) m.tsReset = "this." + m.name + ".length = 0";
             if (isAssociativeContainer(node.typescriptContainer)) m.tsReset = "this." + m.name + ".clear()";
         }
@@ -1183,13 +1184,17 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         auto& order = constructor.fields;
         removeCppOnlyFields(*record, members, order);
-        const auto& retained = entry == output.pools.end() ? keepNone : entry->second.keepOnReset;
+        std::set<std::string> retained;
         std::optional<Order> reset;
         if (entry != output.pools.end() && entry->second.assignFields) {
             if (order.size() != members.size() || std::ranges::any_of(members, &BoundField::readonly))
                 throw std::runtime_error(node.qualifiedName + ": pool assign requires constructor parameters for all fields and writable fields");
             pool.add(node.name, entry->second.member, Pool::Reuse::assign, members, order);
         } else if (entry != output.pools.end()) {
+            retained = entry->second.keepOnReset;
+            for (const auto& member : members) {
+                if (member.tsKeepOnReset) retained.insert(member.name);
+            }
             validateObjectResets(node, record->fields, members, retained);
             reset = resetParameters(node.name, members, order, retained);
             pool.add(node.name, entry->second.member, Pool::Reuse::reset, members, *reset);

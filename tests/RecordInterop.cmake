@@ -125,7 +125,11 @@ namespace cc {
     @tag struct Count_ {}
     @tag struct Layout_ {}
 }
-binding typescript { ::ccstd::vector<::uint32_t> => Uint32Array; }")
+binding typescript {
+    ::ccstd::vector<::uint32_t> => Uint32Array;
+    poolModule \"cocos/core/memop\";
+    VectorProbe => class { pool vp; };
+}")
 set(workspace "${work}/config/workspace.json")
 file(READ "${workspace}" config)
 string(JSON count LENGTH "${config}" modules)
