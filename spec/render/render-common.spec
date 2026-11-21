@@ -144,8 +144,7 @@ namespace cc::render {
         level: uint32_t = 0;
         culledByLight: bool = false;
 
-        constructor(light, level, culledByLight, probe);
-        constructor(light, level);
+        constructor(light, level, culledByLight, probe) defaults;
     }
 
     flags ResolveFlags : uint32_t {
@@ -162,7 +161,7 @@ namespace cc::render {
         mode: gfx::ResolveMode = gfx::ResolveMode::SAMPLE_ZERO;
         mode1: gfx::ResolveMode = gfx::ResolveMode::SAMPLE_ZERO;
 
-        constructor(source, target, resolveFlags, mode, mode1);
+        constructor(source, target, resolveFlags, mode, mode1) defaults;
     }
 
     @serialize struct CopyPair {
@@ -179,7 +178,7 @@ namespace cc::render {
 
         constructor(source, target, mipLevels, numSlices,
                     sourceMostDetailedMip, sourceFirstSlice, sourcePlaneSlice,
-                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
+                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice) defaults;
     }
 
     @moveOnly
@@ -193,7 +192,7 @@ namespace cc::render {
         targetPlaneSlice: uint32_t = 0;
 
         constructor(source, target, mipLevels, numSlices,
-                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
+                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice) defaults;
     }
 
     @serialize struct MovePair {
@@ -206,7 +205,7 @@ namespace cc::render {
         targetPlaneSlice: uint32_t = 0;
 
         constructor(source, target, mipLevels, numSlices,
-                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice);
+                    targetMostDetailedMip, targetFirstSlice, targetPlaneSlice) defaults;
     }
 
     @serialize struct PipelineStatistics {

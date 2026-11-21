@@ -22,6 +22,9 @@ bool checkRenderViews() {
         ccstd::hash<ClearValue>{}(value) != hashFields(value.x, value.y, value.z, value.w)) return false;
 
     boost::container::pmr::monotonic_buffer_resource arena, other;
+    const RasterView defaultColor{std::allocator_arg, &arena, "color"};
+    if (defaultColor.slotName != "color" || defaultColor.clearColor.x != 0.F || defaultColor.clearColor.y != 0.F ||
+        defaultColor.clearColor.z != 0.F || defaultColor.clearColor.w != 0.F) return false;
     const gfx::Color color{0.25F, 0.5F, 0.75F, 1.F};
     RasterView raster{"color", "resolve", AccessType::WRITE, AttachmentType::RENDER_TARGET,
                       gfx::LoadOp::CLEAR, gfx::StoreOp::STORE, gfx::ClearFlagBit::COLOR, color,
@@ -35,8 +38,8 @@ bool checkRenderViews() {
         ccstd::hash<RasterView>{}(rasterCopy) != rasterHash) return false;
     rasterCopy.clearColor.w = 0.F;
     if (raster == rasterCopy) return false;
-    RasterView singleSlot{"color", raster.accessType, raster.attachmentType, raster.loadOp, raster.storeOp,
-                          raster.clearFlags, color, raster.shaderStageFlags, &arena};
+    RasterView singleSlot{std::allocator_arg, &arena, "color", raster.accessType, raster.attachmentType, raster.loadOp, raster.storeOp,
+                          raster.clearFlags, color, raster.shaderStageFlags};
     if (!singleSlot.slotName1.empty() || singleSlot == raster) return false;
 
     ComputeView compute{"storage", AccessType::READ_WRITE, 3, gfx::ClearFlagBit::COLOR,
@@ -51,8 +54,8 @@ bool checkRenderViews() {
         ccstd::hash<ComputeView>{}(computeCopy) != computeHash) return false;
     computeCopy.clearValueType = ClearValueType::INT_TYPE;
     if (compute == computeCopy) return false;
-    ComputeView firstPlane{"storage", AccessType::READ, compute.clearFlags, compute.clearValueType,
-                           value, compute.shaderStageFlags, &arena};
+    ComputeView firstPlane{std::allocator_arg, &arena, "storage", AccessType::READ, compute.clearFlags, compute.clearValueType,
+                           value, compute.shaderStageFlags};
     if (firstPlane.plane != 0 || !firstPlane.isRead() || firstPlane.isWrite()) return false;
     firstPlane.accessType = AccessType::WRITE;
     return !firstPlane.isRead() && firstPlane.isWrite();
@@ -71,7 +74,7 @@ bool checkPersistentRenderPassAndFramebuffer() {
     const auto passRefs = pass->getRefCount();
     const auto framebufferRefs = framebuffer->getRefCount();
     {
-        PersistentRenderPassAndFramebuffer cached{pass, framebuffer, &arena};
+        PersistentRenderPassAndFramebuffer cached{std::allocator_arg, &arena, pass, framebuffer};
         if (cached.clearColors.get_allocator().resource() != &arena ||
             pass->getRefCount() != passRefs + 1 || framebuffer->getRefCount() != framebufferRefs + 1) return false;
         cached.clearColors.push_back({0.25F, 0.5F, 0.75F, 1.F});

@@ -190,8 +190,41 @@ std::vector<FieldInfo> resolveFields(TypeGraph& graph, const std::vector<Field>&
     return result;
 }
 
+std::optional<ConstructorInfo> selectTypeScriptConstructor(const TypeNode& node, const RecordType& record, const TypeScriptBinding& rule) {
+    auto constructors = record.constructors;
+    std::erase_if(constructors, [](const ConstructorInfo& ctor) { return ctor.cppOnly; });
+    for (auto& ctor : constructors)
+        std::erase_if(ctor.fields, [&](auto i) { return record.fields[i].cppOnly; });
+
+    if (const auto& selected = rule.constructor) {
+        if (record.constructors.empty()) {
+            // Older TS bindings could explicitly request either zero or all visible fields.
+            auto& ctor = constructors.emplace_back();
+            ctor.defaults = true;
+            if (!selected->empty()) {
+                for (uint32_t i = 0; i < record.fields.size(); ++i)
+                    if (!record.fields[i].cppOnly) ctor.fields.push_back(i);
+            }
+        }
+        std::erase_if(constructors, [&](const ConstructorInfo& ctor) {
+            return !std::ranges::equal(ctor.fields, *selected, {}, [&](auto i) -> std::string_view { return record.fields[i].name; });
+        });
+        if (constructors.empty()) throw std::runtime_error(node.qualifiedName + ": TypeScript constructor does not match a declared constructor");
+    }
+    if (constructors.empty()) return std::nullopt;
+    if (constructors.size() != 1)
+        throw std::runtime_error(node.qualifiedName + ": ambiguous TypeScript constructor; mark native overloads @cppOnly");
+    auto ctor = std::move(constructors.front());
+    if (rule.requiredConstructor) {
+        if (!record.constructors.empty() && ctor.defaults)
+            throw std::runtime_error(node.qualifiedName + ": required TypeScript constructor conflicts with declared defaults");
+        ctor.defaults = false;
+    }
+    return ctor;
+}
+
 RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::string& scope, ModuleId owner) {
-    RecordType result{.moveOnly = syntax.moveOnly, .immovable = syntax.immovable, .requireAllocator = syntax.requireAllocator, .serializable = syntax.serializable,
+    RecordType result{.moveOnly = syntax.moveOnly, .immovable = syntax.immovable, .serializable = syntax.serializable,
                       .compareEqual = syntax.comparisons.contains("=="),
                       .compareLess = syntax.comparisons.contains("<") || syntax.comparisons.contains(">"),
                       .compareGreater = syntax.comparisons.contains(">"), .hashable = syntax.hashable};
@@ -212,7 +245,7 @@ RecordType resolveRecord(TypeGraph& graph, const Record& syntax, const std::stri
         if (!signatures.insert(std::move(signature)).second) {
             throw std::runtime_error(ctor.location.describe() + ": duplicate constructor signature");
         }
-        result.constructors.push_back({std::move(members), ctor.required});
+        result.constructors.push_back({std::move(members), ctor.defaults, ctor.cppOnly});
     }
     for (uint32_t i = 0; i < result.fields.size(); ++i) {
         const auto& field = result.fields[i];
@@ -493,7 +526,7 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
     }
 }
 
-using InterfaceRules = std::map<uint32_t, const TypeScriptBinding*>;
+using TypeScriptRules = std::map<uint32_t, const TypeScriptBinding*>;
 
 void bindTypeScriptExports(TypeGraph& graph, ModuleId owner, const Module& syntax) {
     const auto& exports = syntax.bindings.typescriptExports;
@@ -516,8 +549,8 @@ void bindTypeScriptExports(TypeGraph& graph, ModuleId owner, const Module& synta
     }
 }
 
-InterfaceRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inputs, const std::vector<std::string>& scopes) {
-    InterfaceRules methods;
+TypeScriptRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inputs, const std::vector<std::string>& scopes) {
+    TypeScriptRules rules;
     std::map<uint32_t, SourceLocation> bound;
     for (uint32_t i = 0; i < inputs.size(); ++i) {
         const auto& input = inputs[i];
@@ -577,6 +610,7 @@ InterfaceRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& input
                     !(isEnum && input.modelOnly)) reject("expected an external type");
                 if (!rule.target.empty()) {
                     node.typescriptName = rule.target;
+                    node.typescriptTypeOnly = rule.externalInterface;
                     node.typescriptModule = rule.externalTarget && rule.from.empty() && node.module == owner
                         ? input.syntax.bindings.typescriptFrom.generic_string() : rule.from.generic_string();
                 }
@@ -597,7 +631,7 @@ InterfaceRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& input
                     if (visible > 1 && method.accessor != AccessorKind::None)
                         reject("ambiguous property accessor " + name);
                 }
-                methods.emplace(id.value, &rule);
+                rules.emplace(id.value, &rule);
             } else if (rule.kind == BindingTarget::classType && std::holds_alternative<GraphType>(node.data)) {
                 if (!rule.pool || rule.pool->assignFields || !rule.pool->keepOnReset.empty() || rule.constructor || rule.reset || rule.base ||
                     !rule.from.empty() || !rule.fieldDefaults.empty() || !rule.fieldResets.empty() || rule.mapKey != MapKeyKind::Native)
@@ -605,6 +639,7 @@ InterfaceRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& input
             } else if (rule.kind == BindingTarget::interfaceType || rule.kind == BindingTarget::classType) {
                 if (!isRecord || !rule.methods.empty() || !rule.callbacks.empty()) reject("expected a record binding");
                 node.typescriptMapKey = rule.mapKey;
+                rules.emplace(id.value, &rule);
             } else if (!isEnum) reject("expected an enum binding");
         }
     }
@@ -632,7 +667,7 @@ InterfaceRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& input
         if (node.typescriptContainer != ContainerKind::None)
             node.typescriptName = typeScriptContainerName(graph, node);
     }
-    return methods;
+    return rules;
 }
 
 std::string accessorName(const MethodInfo& method) {
@@ -939,8 +974,13 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             const auto& decl = input.syntax.declarations[j];
             const auto id = graph.modules[i].declarations[j];
             // Resolving compound types can grow the graph. Reacquire the node by ID afterwards.
+            const auto binding = bindings.find(id.value);
+            const auto& rule = binding == bindings.end() ? noBinding : *binding->second;
             if (const auto* record = std::get_if<Record>(&decl.data)) {
                 auto payload = resolveRecord(graph, *record, scopes[i], owner);
+                const auto& node = graph.node(id);
+                if (!input.modelOnly && !node.typescriptModule.empty() && !node.typescriptNumber && rule.from.empty())
+                    payload.typescriptConstructor = selectTypeScriptConstructor(node, payload, rule);
                 graph.getNode(id.value).data = std::move(payload);
             } else if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
                 auto payload = resolveGraph(graph, *g, qualify(scopes[i], decl.name), owner);
@@ -948,8 +988,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             } else if (const auto* enumeration = std::get_if<Enum>(&decl.data)) {
                 resolveEnum(graph, id, *enumeration, decl.externalScope.empty() ? scopes[i] : decl.externalScope, owner);
             } else if (std::holds_alternative<Interface>(decl.data)) {
-                const auto rule = bindings.find(id.value);
-                auto payload = resolveInterface(graph, decl, rule == bindings.end() ? noBinding : *rule->second, scopes[i], owner);
+                auto payload = resolveInterface(graph, decl, rule, scopes[i], owner);
                 graph.getNode(id.value).data = std::move(payload);
             }
         }

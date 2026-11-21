@@ -322,7 +322,7 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
     }
     out << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc)" << (copyable ? ";\n" : " = delete;\n")
         << "    " << name << "(" << name << "&& rhs, const allocator_type& alloc);\n"
-        << "    " << name << "(" << name << "&& rhs) : "
+        << "    " << name << "(" << name << "&& rhs) noexcept : "
         << name << "(std::move(rhs), rhs.get_allocator()) {}\n"
         << "    " << name << "(const " << name << "&) = delete;\n";
     const bool simple = storage.size() == 1 && copyable && fields.empty();

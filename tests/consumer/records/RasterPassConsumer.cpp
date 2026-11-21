@@ -37,7 +37,9 @@ bool checkRasterPassCache() {
     using Cache = ccstd::pmr::unordered_map<RasterPass, PersistentRenderPassAndFramebuffer>;
     static_assert(std::is_same_v<decltype(ResourceGraph::renderPasses), Cache>);
     static_assert(!std::is_default_constructible_v<RasterPass>);
-    static_assert(!std::is_nothrow_move_constructible_v<RasterPass>);
+    static_assert(std::is_nothrow_move_constructible_v<RasterPass>);
+    static_assert(std::is_nothrow_move_constructible_v<SubpassGraph>);
+    static_assert(!noexcept(SubpassGraph(std::declval<SubpassGraph&&>(), std::declval<const SubpassGraph::allocator_type&>())));
     static_assert(!std::is_nothrow_move_assignable_v<RasterPass>);
     boost::container::pmr::monotonic_buffer_resource arena, scratch;
     ResourceGraph resources{&arena};

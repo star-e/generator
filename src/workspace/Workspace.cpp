@@ -246,8 +246,6 @@ void bindRecordOutput(RecordOutput& output, const Module& module) {
             invalidBinding(rule, "records");
         if (rule.names) output.namedEnums.insert(name);
         if (rule.kind == BindingTarget::constEnum) output.constEnums.insert(name);
-        if (rule.constructor) output.constructors.emplace(name, *rule.constructor);
-        if (rule.requiredConstructor) output.requiredConstructors.insert(name);
         if (rule.reset) output.resets.emplace(name, *rule.reset);
         if (!rule.fieldResets.empty()) {
             if (!rule.reset && !rule.pool)

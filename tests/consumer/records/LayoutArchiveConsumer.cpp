@@ -18,13 +18,11 @@ static_assert(!std::is_default_constructible_v<DescriptorSetLayoutData>);
 static_assert(!std::is_copy_constructible_v<DescriptorSetLayoutData> && !std::is_copy_assignable_v<DescriptorSetLayoutData>);
 static_assert(std::is_nothrow_move_constructible_v<DescriptorSetLayoutData> && std::is_nothrow_move_assignable_v<DescriptorSetLayoutData>);
 static_assert(!std::is_default_constructible_v<DescriptorBlockData>);
-constexpr bool emptyDescriptorsNothrow = noexcept(cc::detail::makeEmptyPmr<decltype(DescriptorBlockData::descriptors)>(
-    std::declval<const BlockAlloc&>(), 0U));
-static_assert(std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
-                                            uint32_t, const BlockAlloc&> == emptyDescriptorsNothrow);
-static_assert(std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
-                                            uint32_t, cc::gfx::MemoryAccessBit, cc::gfx::ViewDimension,
-                                            cc::gfx::SampleType, cc::gfx::Format, const BlockAlloc&> == emptyDescriptorsNothrow);
+static_assert(!std::is_nothrow_constructible_v<DescriptorBlockData, DescriptorTypeOrder, cc::gfx::ShaderStageFlagBit,
+                                             uint32_t, const BlockAlloc&>);
+static_assert(!std::is_nothrow_constructible_v<DescriptorBlockData, std::allocator_arg_t, const BlockAlloc&, DescriptorTypeOrder,
+                                             cc::gfx::ShaderStageFlagBit, uint32_t, cc::gfx::MemoryAccessBit, cc::gfx::ViewDimension,
+                                             cc::gfx::SampleType, cc::gfx::Format>);
 
 bool checkDescriptorData() {
     using cc::gfx::Type;
@@ -123,8 +121,8 @@ DescriptorBlockData descriptorBlock(uint32_t size, const BlockAlloc& alloc) {
     const auto type = DescriptorTypeOrder::STORAGE_IMAGE;
     const auto visibility = ShaderStageFlagBit::COMPUTE;
     auto block = size == 1 ? DescriptorBlockData(type, visibility, 31, alloc)
-                           : DescriptorBlockData(type, visibility, 31, MemoryAccessBit::WRITE_ONLY, ViewDimension::TEX2D_ARRAY,
-                                                 SampleType::UINT, Format::RGBA8, alloc);
+                           : DescriptorBlockData(std::allocator_arg, alloc, type, visibility, 31, MemoryAccessBit::WRITE_ONLY, ViewDimension::TEX2D_ARRAY,
+                                                 SampleType::UINT, Format::RGBA8);
     block.offset = size + 5;
     if (size == 2) block.descriptors.emplace_back(NameLocalID{UINT32_MAX}, Type::FLOAT4, 3);
     block.descriptors.emplace_back(NameLocalID{0}, Type::SAMPLER2D, 2);
@@ -175,7 +173,7 @@ bool usesResource(const DescriptorSetLayoutData& layout, const BlockAlloc& alloc
 bool checkSetLayoutMoves() {
     boost::container::pmr::monotonic_buffer_resource source, destination;
     auto input = setLayout(2, &source);
-    DescriptorSetLayoutData value(7, 16, std::move(input.descriptorBlocks), std::move(input.uniformBlocks), std::move(input.bindingMap), &destination);
+    DescriptorSetLayoutData value(std::allocator_arg, &destination, 7, 16, std::move(input.descriptorBlocks), std::move(input.uniformBlocks), std::move(input.bindingMap));
     if (!usesResource(value, &destination) || value.uniformBlockCapacity || value.samplerTextureCapacity) return false;
     value.uniformBlockCapacity = 6;
     value.samplerTextureCapacity = 10;

@@ -66,6 +66,7 @@ struct TypeScriptBinding {
     std::filesystem::path from;
     std::filesystem::path archiveFrom;
     bool externalTarget{};
+    bool externalInterface{};
     MethodBindings methods;
     std::vector<Callback> callbacks;
     std::map<std::string, std::string> renamedFrom;

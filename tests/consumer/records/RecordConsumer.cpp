@@ -1,3 +1,4 @@
+#include "FailingResource.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 #include "cocos/renderer/pipeline/custom/RenderCommonNames.h"
 #include "cocos/renderer/pipeline/custom/RenderCommonSerialization.h"
@@ -5,12 +6,16 @@
 #include "ShiftProbe.h"
 #include "ShiftSerialization.h"
 #include "cocos/base/std/container/map.h"
+#include "cocos/base/std/container/vector.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <array>
 #include <cstddef>
+#include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <initializer_list>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -128,15 +133,24 @@ static_assert(static_cast<uint32_t>(cc::ShiftProbe::HIGH) == 0x80000000U);
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);
 static_assert(std::is_nothrow_move_constructible_v<ResolvePair> && !std::is_copy_constructible_v<ResolvePair>);
-static_assert(!std::is_nothrow_constructible_v<ResolvePair, decltype(ResolvePair::source), decltype(ResolvePair::target),
-                                               ResolveFlags, cc::gfx::ResolveMode, cc::gfx::ResolveMode, const ResolvePair::allocator_type&>);
+static_assert(!std::is_nothrow_constructible_v<ResolvePair, std::allocator_arg_t, const ResolvePair::allocator_type&,
+                                               decltype(ResolvePair::source), decltype(ResolvePair::target), ResolveFlags,
+                                               cc::gfx::ResolveMode, cc::gfx::ResolveMode>);
+static_assert(std::is_aggregate_v<cc::ImplicitCtor> && std::is_default_constructible_v<cc::EmptyCtor>);
+static_assert(!std::is_default_constructible_v<cc::RequiredCtor> && !std::is_constructible_v<cc::RequiredCtor, uint32_t>);
+static_assert(std::is_constructible_v<cc::RequiredCtor, uint32_t, bool>);
+static_assert(std::is_default_constructible_v<cc::DefaultCtor> && std::is_constructible_v<cc::DefaultCtor, uint32_t>);
+static_assert(std::is_default_constructible_v<cc::WrappedCtor> && !std::is_default_constructible_v<cc::OverloadedCtor>);
 using CtorProbe = cc::AllocatorCtorProbe;
 using ProbeString = decltype(CtorProbe::countIn);
 using ProbeAlloc = const CtorProbe::allocator_type&;
-static_assert(std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeAlloc> ==
-              noexcept(cc::detail::makeEmptyPmr<ProbeString>(std::declval<ProbeAlloc>(), "")));
-static_assert(std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeString, ProbeAlloc> ==
-              std::is_nothrow_constructible_v<ProbeString, ProbeString&&, ProbeAlloc>);
+static_assert(!std::is_default_constructible_v<CtorProbe> && !std::is_constructible_v<CtorProbe, ProbeAlloc>);
+static_assert(!std::is_constructible_v<CtorProbe, uint32_t> && !std::is_constructible_v<CtorProbe, uint32_t, ProbeString>);
+static_assert(!std::is_default_constructible_v<cc::NestedAllocatorCtorProbe>);
+static_assert(!std::is_constructible_v<cc::NestedAllocatorCtorProbe, cc::render::DescriptorDB>);
+static_assert(std::is_constructible_v<cc::NestedAllocatorCtorProbe, cc::render::DescriptorDB, uint32_t, ProbeAlloc>);
+static_assert(!std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeAlloc>);
+static_assert(!std::is_nothrow_constructible_v<CtorProbe, uint32_t, ProbeString, ProbeAlloc>);
 static_assert(std::is_nothrow_move_assignable_v<ResolvePair> && std::is_copy_assignable_v<ResolvePair>);
 static_assert(std::is_nothrow_move_constructible_v<UploadPair> && std::is_nothrow_move_assignable_v<UploadPair>);
 static_assert(!std::is_copy_constructible_v<UploadPair> && !std::is_copy_assignable_v<UploadPair>);
@@ -147,6 +161,26 @@ static_assert(!std::is_copy_constructible_v<cc::MoveProbe> && !std::is_copy_assi
 
 namespace pmr = boost::container::pmr;
 
+int checkMoveTermination() {
+    using Probe = cc::ThrowingMoveProbe;
+    static_assert(std::is_nothrow_move_constructible_v<Probe>);
+    static_assert(!std::is_nothrow_constructible_v<Probe, Probe&&, const Probe::allocator_type&>);
+    pmr::monotonic_buffer_resource arena;
+    Probe source{&arena};
+    try {
+        Probe moved{std::move(source), &arena};
+        return EXIT_FAILURE;
+    } catch (const sample::MoveFailure&) {}
+
+    std::set_terminate([] { std::_Exit(EXIT_SUCCESS); });
+    try {
+        Probe moved{std::move(source)};
+    } catch (...) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_FAILURE;
+}
+
 template<class Pair>
 bool uses(const Pair& pair, pmr::memory_resource* resource) {
     return pair.get_allocator().resource() == resource && pair.source.get_allocator().resource() == resource &&
@@ -156,14 +190,22 @@ bool uses(const Pair& pair, pmr::memory_resource* resource) {
 bool checkResolvePair() {
     using cc::gfx::ResolveMode;
     pmr::monotonic_buffer_resource first, second;
-    ResolvePair defaults;
+    ResolvePair defaults{pmr::get_default_resource()};
     ResolvePair empty(&first);
     if (!uses(defaults, pmr::get_default_resource()) || !uses(empty, &first) || defaults != empty ||
         !empty.source.empty() || !empty.target.empty() || empty.resolveFlags != ResolveFlags::NONE ||
         empty.mode != ResolveMode::SAMPLE_ZERO || empty.mode1 != ResolveMode::SAMPLE_ZERO) return false;
 
     ccstd::pmr::string source(96, 's', &first), target(80, 't', &first);
-    ResolvePair original(source, target, depthStencil, ResolveMode::MIN, ResolveMode::MAX, &second);
+    FailingResource failing;
+    failing.allocationsBeforeFailure = 0;
+    try {
+        ResolvePair{std::allocator_arg, &failing, source};
+        return false;
+    } catch (const InjectedFailure&) {
+        // The long source string requires an allocation in the destination resource.
+    }
+    ResolvePair original(std::allocator_arg, &second, source, target, depthStencil, ResolveMode::MIN, ResolveMode::MAX);
     if (!uses(original, &second) || original.source != source || original.target != target ||
         original.resolveFlags != depthStencil || original.mode != ResolveMode::MIN || original.mode1 != ResolveMode::MAX) return false;
     ResolvePair copied(original, &first);
@@ -194,14 +236,25 @@ bool checkSubresources(Indices... indices) {
     pmr::monotonic_buffer_resource first, second;
     Pair empty(&first);
     const std::array<uint32_t, sizeof...(indices)> defaults{UINT32_MAX, UINT32_MAX};
+    static_assert(!std::is_default_constructible_v<Pair>);
+    static_assert(!std::is_constructible_v<Pair, decltype(Pair::source)>);
+    static_assert(!std::is_constructible_v<Pair, decltype(Pair::source), decltype(Pair::target), Indices..., const typename Pair::allocator_type&>);
     if (!uses(empty, &first) || !empty.source.empty() || !empty.target.empty() || subresources(empty) != defaults) return false;
 
     const ccstd::pmr::string source(96, 's', &first), target(80, 't', &first);
+    const typename Pair::allocator_type alloc{&second};
+    Pair taggedEmpty{std::allocator_arg, alloc};
+    Pair taggedSource{std::allocator_arg, alloc, source};
+    if (!uses(taggedEmpty, &second) || !taggedEmpty.source.empty() || !taggedEmpty.target.empty() || subresources(taggedEmpty) != defaults ||
+        !uses(taggedSource, &second) || taggedSource.source != source || !taggedSource.target.empty() || subresources(taggedSource) != defaults) return false;
+    ccstd::pmr::vector<Pair> pairs{&second};
+    const auto& element = pairs.emplace_back("src");
+    if (!uses(element, &second) || element.source != "src" || !element.target.empty() || subresources(element) != defaults) return false;
     const std::array<uint32_t, sizeof...(indices)> expected{indices...};
     auto matches = [&](const Pair& p, pmr::memory_resource* resource) {
         return uses(p, resource) && p.source == source && p.target == target && subresources(p) == expected;
     };
-    Pair original(source, target, indices..., &second);
+    Pair original(std::allocator_arg, alloc, source, target, indices...);
     if (!matches(original, &second)) return false;
     Pair copied(original, &first);
     if (!matches(copied, &first)) return false;
@@ -226,7 +279,7 @@ bool checkUploadPair() {
                p.mipLevels == 1 && p.numSlices == 2 && p.targetMostDetailedMip == 3 &&
                p.targetFirstSlice == 4 && p.targetPlaneSlice == 5;
     };
-    UploadPair original(std::move(bytes), target, 1, 2, 3, 4, 5, &first);
+    UploadPair original(std::allocator_arg, &first, std::move(bytes), target, 1, 2, 3, 4, 5);
     if (!matches(original, &first)) return false;
     UploadPair moved(std::move(original), &second);
     return matches(moved, &second);
@@ -239,9 +292,9 @@ int exchangeRecords(std::string_view command, const char* path) {
         std::ofstream file(path, std::ios::binary);
         cc::render::BinaryOutputArchive archive(file, &memory);
         save(archive, LightInfo{nullptr, 77, true, nullptr});
-        save(archive, ResolvePair{"color-msaa", "color", depthStencil, ResolveMode::MIN, ResolveMode::MAX, &memory});
-        save(archive, CopyPair{"copy-src", "copy-dst", 1, 2, 3, 4, 5, 6, 7, 8, &memory});
-        save(archive, MovePair{"move-src", "move-dst", 11, 12, 13, 14, 15, &memory});
+        save(archive, ResolvePair{std::allocator_arg, &memory, "color-msaa", "color", depthStencil, ResolveMode::MIN, ResolveMode::MAX});
+        save(archive, CopyPair{std::allocator_arg, &memory, "copy-src", "copy-dst", 1, 2, 3, 4, 5, 6, 7, 8});
+        save(archive, MovePair{std::allocator_arg, &memory, "move-src", "move-dst", 11, 12, 13, 14, 15});
         save(archive, PipelineStatistics{21, 22, 23, 24, 25, 26, 27, 28, 29, 30, UINT32_MAX});
         save(archive, cc::TextProbe{"plain text", "caption"});
         cc::ArrayArchiveProbe arrays;
@@ -349,17 +402,19 @@ bool checkDescriptorDB() {
     using cc::render::DescriptorGroupBlockIndex;
     static_assert(!std::is_default_constructible_v<DescriptorDB> && !std::is_copy_constructible_v<DescriptorDB>);
     using Alloc = const DescriptorDB::allocator_type&;
-    static_assert(std::is_nothrow_constructible_v<DescriptorDB, Alloc> ==
-                  (std::is_nothrow_constructible_v<decltype(DescriptorDB::blocks), Alloc> &&
-                   std::is_nothrow_constructible_v<decltype(DescriptorDB::groupBlocks), Alloc>));
+    static_assert(!std::is_nothrow_constructible_v<DescriptorDB, Alloc>);
     static_assert(std::is_nothrow_move_constructible_v<DescriptorDB> && std::is_copy_assignable_v<DescriptorDB>);
     pmr::monotonic_buffer_resource first, second;
     auto usesResource = [](const DescriptorDB& db, pmr::memory_resource& resource) {
         return db.get_allocator().resource() == &resource && db.blocks.get_allocator().resource() == &resource &&
                db.groupBlocks.get_allocator().resource() == &resource;
     };
-    cc::NestedProbe owner{&first};
-    if (owner.pair.get_allocator().resource() != &first) return false;
+    static_assert(std::is_default_constructible_v<cc::NestedProbe>);
+    cc::NestedProbe owner{std::allocator_arg, &first, DescriptorBlockIndex{}};
+    if (owner.count != 0 || owner.pair.get_allocator().resource() != &first) return false;
+    owner.pair.source = "input";
+    cc::NestedProbe supplied{std::allocator_arg, &second, DescriptorBlockIndex{}, std::move(owner.pair)};
+    if (supplied.count != 0 || supplied.pair.get_allocator().resource() != &second || supplied.pair.source != "input") return false;
     DescriptorDB original{&first};
     if (!usesResource(original, first) || !original.blocks.empty() || !original.groupBlocks.empty()) return false;
     original.blocks[DescriptorBlockIndex{}].count = 3;
@@ -379,7 +434,7 @@ bool checkRenderPhase() {
     using Alloc = const RenderPhase::allocator_type&;
     static_assert(std::is_same_v<Shaders, cc::PmrTransparentSet<ccstd::pmr::string>>);
     static_assert(!std::is_default_constructible_v<RenderPhase>);
-    static_assert(std::is_nothrow_constructible_v<RenderPhase, Alloc> == std::is_nothrow_constructible_v<Shaders, Alloc>);
+    static_assert(!std::is_nothrow_constructible_v<RenderPhase, Alloc>);
     constexpr std::string_view vertex = "forward/opaque/lighting/vertex";
     constexpr std::string_view fragment = "forward/opaque/lighting/fragment";
     pmr::monotonic_buffer_resource first, second;
@@ -422,6 +477,7 @@ bool checkRenderNodeData();
 bool checkRenderGraph();
 
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "pmr-move-termination") return checkMoveTermination();
     if (argc == 4 && std::string_view(argv[1]) == "layout-descriptors")
         return checkLayoutDescriptors(argv[2], argv[3]) ? 0 : 1;
     if (argc == 4 && std::string_view(argv[1]) == "layout-print")
@@ -444,6 +500,10 @@ int main(int argc, char** argv) {
     if (argc != 1 && !writePathCases) return 2;
     if (!checkLayoutGraph(writePathCases ? argv[2] : nullptr)) return 9;
     if (!cc::ConversionProbe::defaultsMatch() || !checkDefaultDispatch() || !checkMigratedModules()) return 48;
+    const cc::DefaultCtor defaults;
+    if (cc::ExternalDefaultProbe{}.box.value != 42) return 49;
+    if (defaults.count != 7 || defaults.enabled || defaults.kind != cc::DefaultKind::ZERO ||
+        cc::WrappedCtor{}.value.count != 7 || cc::OverloadedCtor{cc::RequiredCtor{12, true}, 9}.count != 9) return 49;
     if (!checkLayoutNames()) return 17;
     if (!checkResourceGraph()) return 18;
     if (!checkSubpassGraph()) return 19;

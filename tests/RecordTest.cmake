@@ -25,13 +25,26 @@ file(WRITE "${renderSpec}" "${invalid}")
 expect_failure(2 "invalid enum default gfx::ShaderStageFlagBit::MISSING" ${generate})
 file(WRITE "${renderSpec}" "${renderApi}")
 
+set(programSpec "${work}/spec/render/private-types.spec")
+file(READ "${programSpec}" programs)
+string(REPLACE "handleMap);" "handleMap) defaults;" invalid "${programs}")
+file(WRITE "${programSpec}" "${invalid}")
+expect_failure(2 "programInfo: no TypeScript default for IProgramInfo" ${generate})
+string(REPLACE "struct ProgramGroup {" "struct ProgramGroup { nested: ProgramInfo;" invalid "${programs}")
+file(WRITE "${programSpec}" "${invalid}")
+expect_failure(2 "nested: no TypeScript default for ProgramInfo" ${generate})
+file(WRITE "${programSpec}" "${programs}")
+
 set(dispatcherSpec "${work}/spec/render/fg-dispatcher.spec")
 file(READ "${dispatcherSpec}" dispatcher)
 set(dispatcherCtor "constructor(resourceGraph, renderGraph, layoutGraph, scratch);")
+string(REPLACE "${dispatcherCtor}" "constructor(resourceGraph, renderGraph, layoutGraph, scratch) defaults;" invalid "${dispatcher}")
+file(WRITE "${dispatcherSpec}" "${invalid}")
+expect_failure(2 "resourceGraph: .*no C[+][+] default for cc::render::ResourceGraph&" ${generate})
 string(REPLACE "${dispatcherCtor}" "${dispatcherCtor} constructor(resourceGraph, layoutGraph, scratch);" invalid "${dispatcher}")
 file(WRITE "${dispatcherSpec}" "${invalid}")
 expect_failure(2 "renderGraph: every constructor must initialize the reference field" ${generate})
-string(REPLACE "@immovable @requireAllocator struct FrameGraphDispatcher" "@moveOnly @requireAllocator struct FrameGraphDispatcher" invalid "${dispatcher}")
+string(REPLACE "@immovable struct FrameGraphDispatcher" "@moveOnly struct FrameGraphDispatcher" invalid "${dispatcher}")
 file(WRITE "${dispatcherSpec}" "${invalid}")
 expect_failure(2 "resourceAccessGraph: cannot use an @immovable graph as a value field" ${generate})
 string(REPLACE "${dispatcherCtor}" "constructor(resourceAccessGraph, resourceGraph, renderGraph, layoutGraph, scratch);" invalid "${dispatcher}")
@@ -46,6 +59,33 @@ function(check_resource_error before after diagnostic)
     file(WRITE "${resourceSpec}" "${invalid}")
     expect_failure(2 "${diagnostic}" ${generate})
 endfunction()
+check_resource_error("ClearValue => class { pool cv;" "ClearValue => class { constructor(x, y, z, w) required; pool cv;"
+    "required TypeScript constructor conflicts with declared defaults")
+check_resource_error("constructor(x, y, z, w) defaults;" "@cppOnly constructor(z, w); constructor(x, y, z, w) defaults;"
+    "conflicts with .* at 2 arguments")
+check_resource_error("constructor(x, y, z, w) defaults;" "constructor(x, y, z, w) defaults; @cppOnly constructor();"
+    "conflicts with .* at 0 arguments")
+check_resource_error("constructor(subpassID, count, quality) defaults;" "constructor(subpassID, count, quality) defaults; @cppOnly constructor(count) defaults;"
+    "conflicts with .* for RasterSubpass[(]std::allocator_arg, alloc[)]")
+check_resource_error("namespace cc::render {" [=[namespace cc::render {
+    using AliasCount = uint32_t;
+    @cppOnly struct Prefix {
+        count: uint32_t; otherCount: AliasCount; enabled: bool;
+        constructor(count, enabled) defaults;
+        @cppOnly constructor(otherCount);
+    }]=] "conflicts with .* at 1 argument")
+check_resource_error("namespace cc::render {" [=[namespace cc::render {
+    @cppOnly struct Required { value: double; constructor(value); }
+    @cppOnly struct Missing {
+        count: uint32_t; value: Required; enabled: bool;
+        constructor(count, value, enabled) defaults;
+    }]=] "value: .*no C[+][+] default for cc::render::Required")
+check_resource_error("namespace cc::render {" [=[namespace cc::render {
+    @cppOnly struct RequiredPmr { name: ccstd::pmr::string; constructor(name); }
+    @cppOnly struct MissingPmr { child: RequiredPmr; constructor(child) defaults; }
+    ]=] "child: .*no C[+][+] default for cc::render::RequiredPmr")
+check_resource_error("constructor(x, y, z, w) defaults;" "constructor(x, y, z, w);"
+    "ClearValue: pool requires a TypeScript constructor callable without arguments")
 check_resource_error("field viewport default null;" "field phaseID default null;"
     "phaseID: TypeScript default null requires a writable value object field")
 check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
@@ -84,12 +124,13 @@ check_resource_error("@notElement slotID" "@notElement @notElement slotID" "dupl
 check_resource_error("incidence_graph { out_edges: vector; }" "" "bidirectional_graph requires incidence_graph")
 check_resource_error("bidirectional_graph { in_edges: vector; }" "hierarchy_graph { storage: shared_edges; }"
     "explicit incidence storage conflicts with shared hierarchy edges")
-string(REPLACE "constructor(swapchain, isDepthStencil);" [=[
+string(REPLACE "constructor(swapchain, isDepthStencil) defaults;" [=[
     @cppOnly nativeFence: uint64_t = 18446744073709551615;
-    constructor(swapchain, isDepthStencil);
-    constructor(swapchain, nativeFence) required;
+    constructor(swapchain, isDepthStencil) defaults;
+    constructor(swapchain, nativeFence);
 ]=] changed "${resource}")
-file(WRITE "${resourceSpec}" "${changed}")
+string(REPLACE "pool rs; reset constructor;" "pool rs; constructor(swapchain, isDepthStencil); reset constructor;" baseline "${changed}")
+file(WRITE "${resourceSpec}" "${baseline}")
 run(${generate})
 file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/RenderGraphTypes.h" nativeResource)
 file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" webResource)
@@ -97,8 +138,8 @@ if(webResource MATCHES "(validateSwapchains|mount|unmount|isTexture|isTextureVie
    OR webResource MATCHES "import[^\n]*[ {,]Device[ },]")
     message(FATAL_ERROR "Native ResourceGraph methods or their Device dependency leaked into TypeScript")
 endif()
-if(NOT nativeResource MATCHES "const gfx::Color& clearColorIn")
-    message(FATAL_ERROR "RasterView must accept the external Color by const reference")
+if(NOT nativeResource MATCHES "const gfx::Color& clearColorIn = gfx::Color[{][}]")
+    message(FATAL_ERROR "RasterView must accept Color by const reference with a value-initialized default")
 endif()
 if(NOT nativeResource MATCHES "nativeFence[{]18446744073709551615ULL[}]" OR webResource MATCHES "nativeFence" OR
    NOT webResource MATCHES "constructor [(]swapchain: Swapchain [|] null = null, isDepthStencil = false[)]")
@@ -207,7 +248,7 @@ file(WRITE "${layoutSpec}" "${opaque}")
 expect_failure(2 "blocks: mapKey string has no archive encoding for the native key" ${generate})
 string(REPLACE "struct Descriptor {" "@requireAllocator struct Descriptor {" invalid "${layout}")
 file(WRITE "${layoutSpec}" "${invalid}")
-expect_failure(2 "cc::render::Descriptor: @requireAllocator requires a PMR field" ${generate})
+expect_failure(2 "unknown or duplicate record annotation @requireAllocator" ${generate})
 string(REPLACE "RenderStage_: RenderPassType" "RenderStage_: void" invalid "${layout}")
 file(WRITE "${layoutSpec}" "${invalid}")
 expect_failure(2 "LayoutGraph.stages: polymorphic storage requires an object type" ${generate})
@@ -330,9 +371,9 @@ foreach(fragment IN ITEMS "    count = 7;" "        this.count = 7;")
         message(FATAL_ERROR "Partial constructor ignored the changed field default: ${fragment}")
     endif()
 endforeach()
-string(REPLACE "constructor(type);" "constructor(type); constructor(count);" ambiguous "${layout}")
+string(REPLACE "constructor(type) defaults;" "constructor(type) defaults; constructor(count);" ambiguous "${layout}")
 file(WRITE "${layoutSpec}" "${ambiguous}")
-expect_failure(2 "Descriptor: ambiguous partial TypeScript constructor" ${generate})
+expect_failure(2 "Descriptor: ambiguous TypeScript constructor" ${generate})
 file(WRITE "${layoutSpec}" "${layout}")
 
 run(${generate})
@@ -386,8 +427,7 @@ string(REPLACE "level: uint32_t = 0" "level: uint32_t = 11" changed "${changed}"
 string(REPLACE "sourceFirstSlice: uint32_t = 0" "sourceFirstSlice: uint8_t = 0XfF" changed "${changed}")
 string(REPLACE "gfx::ResolveMode::SAMPLE_ZERO" "gfx::ResolveMode::AVERAGE" changed "${changed}")
 string(REPLACE "constructor(source, target," "constructor(target, source," changed "${changed}")
-string(REPLACE "constructor(light, level);" "constructor(level, light);" changed "${changed}")
-string(REPLACE "constructor(light, level, culledByLight, probe);" "constructor(light, probe, level, culledByLight);" changed "${changed}")
+string(REPLACE "constructor(light, level, culledByLight, probe) defaults;" "constructor(light, probe, level, culledByLight) defaults;" changed "${changed}")
 file(WRITE "${spec}" "${changed}")
 string(REGEX REPLACE "    record [A-Za-z]+;\n" "" selected "${changed}")
 string(REPLACE "binding jsb {" "binding jsb {\n    record PipelineStatistics;" selected "${selected}")
@@ -425,8 +465,8 @@ foreach(output IN ITEMS cpp ts)
 endforeach()
 foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
                           "uint8_t sourceFirstSlice{0XfF};" "uint32_t mipLevels{0xFFFFFFFF};"
-                          "gfx::ResolveMode mode{gfx::ResolveMode::AVERAGE};" "ResolvePair(ccstd::pmr::string targetIn, ccstd::pmr::string sourceIn,"
-                          "LightInfo(uint32_t levelIn, IntrusivePtr<scene::Light> lightIn)")
+                          "gfx::ResolveMode mode{gfx::ResolveMode::AVERAGE};" "ResolvePair(const std::allocator_arg_t&, const allocator_type& alloc, ccstd::pmr::string targetIn = ccstd::pmr::string{}, ccstd::pmr::string sourceIn = ccstd::pmr::string{},"
+                          "LightInfo(IntrusivePtr<scene::Light> lightIn = IntrusivePtr<scene::Light>{}, scene::ReflectionProbe* probeIn = nullptr, uint32_t levelIn = 11, bool culledByLightIn = false)")
     string(FIND "${cpp}" "${fragment}" at)
     if(at EQUAL -1)
         message(FATAL_ERROR "Missing C++ fragment: ${fragment}")
@@ -538,7 +578,7 @@ expect_bad_shift("1 << " 22 "expected nonnegative integer shift count")
 expect_bad_shift("2 << 31" 17 "enum value out of range for uint32_t")
 expect_bad_shift("-1 << 0" 17 "expected nonnegative left shift operand")
 
-string(REPLACE "constructor(light, level);" "constructor(light, missing);" broken "${original}")
+string(REPLACE "constructor(light, level," "constructor(light, missing," broken "${original}")
 file(WRITE "${spec}" "${broken}")
 expect_failure(2 "render-common.spec:[0-9]+:[0-9]+: unknown constructor field missing" ${generate})
 string(REPLACE "enum class AccessType : uint8_t" "enum class AccessType : float" broken "${original}")

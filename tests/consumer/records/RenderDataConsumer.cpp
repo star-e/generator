@@ -54,14 +54,14 @@ bool checkRenderNodeData() {
     static_assert(static_cast<uint8_t>(BlitType::DRAW_3D) == 3);
     Arena arena;
     const gfx::Color color{0.F, 0.25F, 0.5F, 1.F};
-    ClearView clear{"color", gfx::ClearFlagBit::COLOR, color, &arena};
+    ClearView clear{std::allocator_arg, &arena, "color", gfx::ClearFlagBit::COLOR, color};
     RenderQueue queue{3, 5};
     RenderQueue blend{QueueHint::BLEND, 7, 8};
     LightInfo light;
     light.level = 2;
     SceneData scene{nullptr, nullptr, SceneFlags::OPAQUE, light, CullingFlags::LIGHT_FRUSTUM, nullptr};
     Dispatch dispatch{nullptr, 1, 2, 3, 4};
-    Blit quad{nullptr, 7, SceneFlags::BLEND, nullptr, BlitType::FULLSCREEN_QUAD, &arena};
+    Blit quad{std::allocator_arg, &arena, nullptr, 7, SceneFlags::BLEND, nullptr, BlitType::FULLSCREEN_QUAD};
     ccstd::pmr::vector<cc::IntrusivePtr<cc::scene::Model>> models{0U, &arena};
     models.emplace_back();
     Blit draw{nullptr, BlitType::DRAW_3D, std::move(models), &arena};

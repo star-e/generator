@@ -5,7 +5,7 @@ set(stage "${work}/engine")
 file(COPY "${SOURCE}/spec" "${SOURCE}/config" "${SOURCE}/runtime" DESTINATION "${work}")
 file(WRITE "${work}/spec/text.spec" [[extern module Text;
 cpp { header "SampleText.h"; }
-namespace sample { @string class Text; @string struct Label; }
+namespace sample { @string class Text; @string struct Label; struct ThrowOnMove; template<T> struct Box; }
 binding typescript {
     Label => Caption from "cocos/rendering/custom/caption";
 }
@@ -22,14 +22,32 @@ namespace cc {
             return flag == ShiftProbe::HIGH && factor == 0.5F && ptr == nullptr && mask == UINT64_MAX;
         }
     }
-    struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
+    struct ImplicitCtor { count: uint32_t = 7; }
+    struct EmptyCtor { count: uint32_t = 7; constructor(); }
+    struct RequiredCtor { count: uint32_t = 7; enabled: bool = true; constructor(count, enabled); }
+    enum class DefaultKind { ZERO, ONE }
+    struct DefaultCtor { count: uint32_t = 7; enabled: bool; kind: DefaultKind; constructor(count, enabled, kind) defaults; }
+    struct WrappedCtor { value: DefaultCtor; constructor(value) defaults; }
+    @cppOnly struct ExternalDefaultProbe { box: sample::Box<uint32_t>; constructor(box) defaults; }
+    struct OverloadedCtor { value: RequiredCtor; count: uint32_t = 7; @cppOnly constructor(value, count); constructor(count, value); }
+    struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words) defaults; }
     struct AllocatorCtorProbe {
         count: uint32_t = 0;
         countIn: ccstd::pmr::string;
-        constructor(count);
+        @cppOnly constructor(count);
         constructor(count, countIn);
     }
+    @cppOnly struct NestedAllocatorCtorProbe {
+        required: render::DescriptorDB;
+        count: uint32_t = 7;
+        constructor(required, count);
+    }
+    @cppOnly @moveOnly struct ThrowingMoveProbe {
+        member: sample::ThrowOnMove;
+        text: ccstd::pmr::string;
+    }
     struct NestedProbe {
+        count: uint32_t;
         rows: ccstd::vector<ccstd::vector<render::Descriptor>>;
         byteArrays: ccstd::vector<ccstd::vector<uint8_t>>;
         tables: ccstd::vector<ccstd::map<render::LayoutType, ccstd::vector<gfx::UniformBlock>>>;
@@ -37,9 +55,10 @@ namespace cc {
         keyed: ccstd::vector<ccstd::map<render::DescriptorGroupBlockIndex, render::DescriptorBlockIndex>>;
         index: render::DescriptorBlockIndex;
         pair: render::ResolvePair;
-        constructor(index);
+        @cppOnly constructor() defaults;
+        constructor(index, pair, count) defaults;
     }
-    @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label); }
+    @serialize struct TextProbe { text: sample::Text; label: sample::Label; constructor(text, label) defaults; }
     @serialize struct ArrayArchiveProbe { readonly rows: ccstd::vector<ccstd::vector<bool>>; }
     struct UniformIDProbe { id: render::UniformID = 0xFFFFFFFF; local: LocalUniformID = 0; }
     struct LocalIDProbe { id: render::NameLocalID; values: ccstd::map<render::NameLocalID, render::NameLocalID>; }
@@ -147,9 +166,31 @@ string(JSON config SET "${config}" modules ${count} [[{
 }]])
 file(WRITE "${workspace}" "${config}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
-file(WRITE "${stage}/native/SampleText.h" "#pragma once\n#include <string>\nnamespace sample { using Text = std::string; using Label = std::string; }\n")
+file(WRITE "${stage}/native/SampleText.h" [[#pragma once
+#include <string>
+namespace sample {
+using Text = std::string;
+using Label = std::string;
+struct MoveFailure {};
+struct ThrowOnMove {
+    ThrowOnMove() = default;
+    ThrowOnMove(ThrowOnMove&&) { throw MoveFailure{}; }
+    ThrowOnMove& operator=(ThrowOnMove&&) = default;
+};
+template<class T> struct Box {
+    explicit Box() = default;
+    T value{42};
+};
+}
+]])
 file(WRITE "${stage}/cocos/rendering/custom/caption.ts" "export type Caption = string;\n")
 file(READ "${stage}/cocos/rendering/custom/shift-probe.ts" script)
+foreach(fragment IN ITEMS "export class ImplicitCtor {\n    count = 7;" "export class EmptyCtor {\n    constructor () {")
+    string(FIND "${script}" "${fragment}" pos)
+    if(pos EQUAL -1)
+        message(FATAL_ERROR "Incorrect TypeScript constructor declaration: ${fragment}")
+    endif()
+endforeach()
 if(script MATCHES "operator *[(]")
     message(FATAL_ERROR "C++ conversion operator leaked into the TypeScript interface")
 endif()
@@ -250,6 +291,7 @@ gfx::DescriptorType getGfxDescriptorType(DescriptorTypeOrder type);
 set(build "${work}/build")
 build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)
+run("${consumer}" pmr-move-termination)
 set(pathCases "${work}/layout-paths.bin")
 run("${consumer}" path-cases "${pathCases}")
 # Each injected failure runs independently, including the MSVC debug STL's noexcept hash proxy allocation.

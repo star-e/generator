@@ -236,6 +236,9 @@ bool readConvertedLayout(const char* path) {
 
 bool exchangePipelineArchives(bool writing, const char* path) {
     boost::container::pmr::monotonic_buffer_resource arena, destination;
+    DescriptorSetData omitted{std::allocator_arg, &destination};
+    if (omitted.descriptorSetLayoutData.get_allocator().resource() != &destination ||
+        omitted.descriptorSetLayoutData.slot != UINT32_MAX) return false;
     Records records(&destination);
     cc::IntrusivePtr<DescriptorSetLayout> layout(new EmptyDescriptorSetLayout);
     cc::IntrusivePtr<DescriptorSet> set(new EmptyDescriptorSet);

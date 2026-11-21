@@ -401,7 +401,8 @@ private:
             rule.externalTarget = accept("extern");
             if (rule.externalTarget) {
                 if (!rule.source.arguments.empty()) fail("expected a built-in TypedArray target for a template instance");
-                if (!accept("class") && !accept("interface") && !accept("enum"))
+                rule.externalInterface = accept("interface");
+                if (!rule.externalInterface && !accept("class") && !accept("enum"))
                     fail("expected an external class, interface or enum binding");
             }
             rule.target = token == "\"" ? quotedString("TypeScript type") : identifier();
@@ -523,7 +524,6 @@ private:
                     const auto annotation = identifier();
                     if (annotation == "moveOnly" && !record.moveOnly) record.moveOnly = true;
                     else if (annotation == "immovable" && !record.immovable) record.immovable = true;
-                    else if (annotation == "requireAllocator" && !record.requireAllocator) record.requireAllocator = true;
                     else if (annotation == "serialize" && !record.serializable) record.serializable = true;
                     else if (annotation == "comparison" && record.comparisons.empty()) comparison(record);
                     else if (annotation == "hash" && !record.hashable) record.hashable = true;
@@ -533,7 +533,7 @@ private:
                         fail("@" + annotation + " requires a struct");
                 } while (accept("@"));
                 if (accept("graph")) {
-                    if (record.moveOnly || record.requireAllocator) fail("@moveOnly and @requireAllocator require a struct");
+                    if (record.moveOnly) fail("@moveOnly requires a struct");
                     if (record.immovable && record.serializable) fail("@serialize requires a replaceable graph");
                     result.data = GraphDeclaration{.immovable = record.immovable, .serializable = record.serializable,
                                                    .comparisons = std::move(record.comparisons), .hashable = record.hashable};
@@ -568,15 +568,20 @@ private:
         } else if (auto* record = std::get_if<Record>(&result.data)) {
             while (!accept("}")) {
                 const auto start = location;
-                if (token == "constructor" && followedBy("(")) {
-                    advance();
+                if (atConstructor()) {
                     Constructor ctor{start};
+                    if (accept("@")) {
+                        expect("cppOnly");
+                        ctor.cppOnly = true;
+                    }
+                    expect("constructor");
                     expect("(");
                     if (!accept(")")) {
                         do { ctor.fields.push_back(identifier()); } while (accept(","));
                         expect(")");
                     }
-                    ctor.required = accept("required");
+                    ctor.defaults = accept("defaults");
+                    if (!ctor.defaults) accept("required"); // Legacy spelling for mandatory parameters.
                     expect(";");
                     record->constructors.push_back(std::move(ctor));
                 } else if (atField()) {
@@ -776,6 +781,13 @@ private:
             advance();
         }
         return member;
+    }
+
+    bool atConstructor() const {
+        if (token != "@") return token == "constructor" && followedBy("(");
+        auto next = *this;
+        next.advance();
+        return next.accept("cppOnly") && next.accept("constructor") && next.token == "(";
     }
 
     bool followedBy(std::string_view expected) const {

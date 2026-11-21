@@ -24,10 +24,8 @@ static_assert(!std::is_copy_assignable_v<Dispatcher> && !std::is_move_assignable
 static_assert(!std::is_constructible_v<Dispatcher, ResourceGraph&, const RenderGraph&, const LayoutGraphData&,
                                        boost::container::pmr::memory_resource*>);
 
-static_assert(std::is_nothrow_constructible_v<Dispatcher, ResourceGraph&, const RenderGraph&, const LayoutGraphData&,
-                                              boost::container::pmr::memory_resource*, const Allocator&> ==
-              (std::is_nothrow_constructible_v<ResourceAccessGraph, const Allocator&> &&
-               std::is_nothrow_constructible_v<RelationGraph, const Allocator&>));
+static_assert(!std::is_nothrow_constructible_v<Dispatcher, ResourceGraph&, const RenderGraph&, const LayoutGraphData&,
+                                               boost::container::pmr::memory_resource*, const Allocator&>);
 
 bool checkDispatcher() {
     boost::container::pmr::monotonic_buffer_resource graphMemory, scratch, ownedMemory;

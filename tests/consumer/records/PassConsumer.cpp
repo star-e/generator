@@ -8,12 +8,22 @@ using namespace cc::render;
 using Arena = boost::container::pmr::monotonic_buffer_resource;
 
 bool checkSubpasses(Arena& scratch, Arena& storage) {
+    static_assert(!std::is_default_constructible_v<RasterSubpass>);
+    auto* defaultResource = boost::container::pmr::get_default_resource();
+    RasterSubpass partial{std::allocator_arg, defaultResource, 7};
+    RasterSubpass allFields{std::allocator_arg, defaultResource, 7, 4, 2};
+    if (partial.subpassID != 7 || partial.count != 1 || partial.quality != 0 ||
+        allFields.count != 4 || allFields.quality != 2 ||
+        partial.computeViews.get_allocator().resource() != defaultResource ||
+        allFields.resolvePairs.get_allocator().resource() != defaultResource) return false;
+
     RasterSubpass defaults{&scratch};
     ComputeSubpass computeDefaults{&scratch};
     if (defaults.subpassID != 0xFFFFFFFFU || defaults.count != 1 || defaults.quality != 0 ||
-        defaults.showStatistics || defaults.viewport.maxDepth != 1 || computeDefaults.subpassID != 0xFFFFFFFFU) return false;
+        defaults.showStatistics || defaults.viewport.maxDepth != 1 || defaults.get_allocator().resource() != &scratch ||
+        computeDefaults.subpassID != 0xFFFFFFFFU) return false;
 
-    RasterSubpass raster{7, 4, 2, &scratch};
+    RasterSubpass raster{std::allocator_arg, &scratch, 7, 4, 2};
     raster.rasterViews["color"].slotName = "output";
     raster.computeViews["image"].emplace_back().plane = 2;
     raster.resolvePairs.emplace_back().target = "resolved";
@@ -27,7 +37,7 @@ bool checkSubpasses(Arena& scratch, Arena& storage) {
         clone.computeViews.at("image").front().get_allocator().resource() != &storage ||
         clone.resolvePairs.front().get_allocator().resource() != &storage) return false;
 
-    ComputeSubpass compute{9, &scratch};
+    ComputeSubpass compute{std::allocator_arg, &scratch, 9};
     compute.rasterViews["target"].slotID = 1;
     compute.computeViews["source"].emplace_back().name = "input";
     ComputeSubpass moved{std::move(compute), &storage};

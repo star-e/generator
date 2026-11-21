@@ -32,7 +32,7 @@ namespace cc::render {
         type: gfx::Type = gfx::Type::UNKNOWN;
         count: uint32_t = 1;
 
-        constructor(type);
+        constructor(type) defaults;
     }
 
     @serialize struct DescriptorBlock {
@@ -57,7 +57,7 @@ namespace cc::render {
         descriptorType: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;
         visibility: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
 
-        constructor(updateFrequency, parameterType, descriptorType, visibility);
+        constructor(updateFrequency, parameterType, descriptorType, visibility) defaults;
     }
 
     @serialize @comparison("<") struct DescriptorGroupBlockIndex {
@@ -70,15 +70,15 @@ namespace cc::render {
         sampleType: gfx::SampleType = gfx::SampleType::FLOAT;
         format: gfx::Format = gfx::Format::UNKNOWN;
 
-        constructor(updateFrequency, parameterType, descriptorType, visibility, accessType, viewDimension, sampleType, format);
+        constructor(updateFrequency, parameterType, descriptorType, visibility, accessType, viewDimension, sampleType, format) defaults;
     }
 
-    @serialize @requireAllocator struct DescriptorDB {
+    @serialize struct DescriptorDB {
         readonly blocks: ccstd::pmr::map<DescriptorBlockIndex, DescriptorBlock>;
         readonly groupBlocks: ccstd::pmr::map<DescriptorGroupBlockIndex, DescriptorBlock>;
     }
 
-    @serialize @requireAllocator struct RenderPhase {
+    @serialize struct RenderPhase {
         readonly shaders: PmrTransparentSet<ccstd::pmr::string>;
     }
 
@@ -117,10 +117,10 @@ namespace cc::render {
         offset: uint32_t = 0;
         size: uint32_t = 0;
 
-        constructor(uniformID, uniformType, offset);
+        constructor(uniformID, uniformType, offset) defaults;
     }
 
-    @serialize @requireAllocator struct UniformBlockData {
+    @serialize struct UniformBlockData {
         bufferSize: uint32_t = 0;
         readonly uniforms: ccstd::pmr::vector<UniformData>;
     }
@@ -134,12 +134,10 @@ namespace cc::render {
         type: gfx::Type = gfx::Type::UNKNOWN;
         count: uint32_t = 1;
 
-        constructor(descriptorID, type, count);
-        constructor(descriptorID, type);
-        constructor(descriptorID);
+        constructor(descriptorID, type, count) defaults;
     }
 
-    @serialize @requireAllocator struct DescriptorBlockData {
+    @serialize struct DescriptorBlockData {
         type: DescriptorTypeOrder = DescriptorTypeOrder::UNIFORM_BUFFER;
         visibility: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
         offset: uint32_t = 0;
@@ -150,11 +148,11 @@ namespace cc::render {
         format: gfx::Format = gfx::Format::UNKNOWN;
         readonly descriptors: ccstd::pmr::vector<DescriptorData>;
 
-        constructor(type, visibility, capacity, accessType, viewDimension, sampleType, format);
-        constructor(type, visibility, capacity);
+        constructor(type, visibility, capacity, accessType, viewDimension, sampleType, format) defaults;
+        @cppOnly constructor(type, visibility, capacity);
     }
 
-    @serialize @moveOnly @requireAllocator struct DescriptorSetLayoutData {
+    @serialize @moveOnly struct DescriptorSetLayoutData {
         slot: uint32_t = 0xFFFFFFFF;
         capacity: uint32_t = 0;
         uniformBlockCapacity: uint32_t = 0;
@@ -163,49 +161,49 @@ namespace cc::render {
         readonly uniformBlocks: PmrUnorderedMap<NameLocalID, gfx::UniformBlock>;
         readonly bindingMap: PmrFlatMap<NameLocalID, uint32_t>;
 
-        constructor(slot, capacity, descriptorBlocks, uniformBlocks, bindingMap);
+        constructor(slot, capacity, descriptorBlocks, uniformBlocks, bindingMap) defaults;
     }
 
-    @serialize @moveOnly @requireAllocator struct DescriptorSetData {
+    @serialize @moveOnly struct DescriptorSetData {
         readonly descriptorSetLayoutData: DescriptorSetLayoutData;
         readonly descriptorSetLayoutInfo: gfx::DescriptorSetLayoutInfo;
         @transient nullable descriptorSetLayout: IntrusivePtr<gfx::DescriptorSetLayout>;
         @transient nullable descriptorSet: IntrusivePtr<gfx::DescriptorSet>;
-        constructor(descriptorSetLayoutData, descriptorSetLayout, descriptorSet);
+        constructor(descriptorSetLayoutData, descriptorSetLayout, descriptorSet) defaults;
     }
 
-    @serialize @moveOnly @requireAllocator struct PipelineLayoutData {
+    @serialize @moveOnly struct PipelineLayoutData {
         readonly descriptorSets: ccstd::pmr::map<UpdateFrequency, DescriptorSetData>;
         readonly descriptorGroups: ccstd::pmr::map<UpdateFrequency, DescriptorSetData>;
     }
 
-    @serialize @moveOnly @requireAllocator struct ShaderBindingData {
+    @serialize @moveOnly struct ShaderBindingData {
         readonly descriptorBindings: PmrFlatMap<NameLocalID, uint32_t>;
     }
 
-    @serialize @moveOnly @requireAllocator struct ShaderLayoutData {
+    @serialize @moveOnly struct ShaderLayoutData {
         readonly layoutData: ccstd::pmr::map<UpdateFrequency, DescriptorSetLayoutData>;
         readonly bindingData: ccstd::pmr::map<UpdateFrequency, ShaderBindingData>;
     }
 
-    @serialize @moveOnly @requireAllocator struct TechniqueData {
+    @serialize @moveOnly struct TechniqueData {
         readonly passes: ccstd::pmr::vector<ShaderLayoutData>;
     }
 
-    @serialize @moveOnly @requireAllocator struct EffectData {
+    @serialize @moveOnly struct EffectData {
         readonly techniques: ccstd::pmr::map<ccstd::pmr::string, TechniqueData>;
     }
 
-    @serialize @moveOnly @requireAllocator struct ShaderProgramData {
+    @serialize @moveOnly struct ShaderProgramData {
         readonly layout: PipelineLayoutData;
         @transient nullable pipelineLayout: IntrusivePtr<gfx::PipelineLayout>;
     }
 
-    @serialize @moveOnly @requireAllocator struct RenderStageData {
+    @serialize @moveOnly struct RenderStageData {
         readonly descriptorVisibility: PmrUnorderedMap<NameLocalID, gfx::ShaderStageFlagBit>;
     }
 
-    @serialize @moveOnly @requireAllocator struct RenderPhaseData {
+    @serialize @moveOnly struct RenderPhaseData {
         rootSignature: ccstd::pmr::string;
         readonly shaderPrograms: ccstd::pmr::vector<ShaderProgramData>;
         readonly shaderIndex: PmrTransparentMap<ccstd::pmr::string, uint32_t>;

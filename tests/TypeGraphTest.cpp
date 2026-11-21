@@ -307,10 +307,9 @@ void checkImports(const std::filesystem::path& specs) {
         const auto& enumeration = std::get<EnumType>(graph.node(graph.findType("cc::render::AccessType")).data);
         require(enumeration.underlying == graph.findType("uint8_t"), "lost enum underlying type");
         const auto& record = std::get<RecordType>(info.data);
-        require(record.constructors.size() == 2 &&
-                record.constructors[0].fields == std::vector<uint32_t>{0, 2, 3, 1} &&
-                record.constructors[1].fields == std::vector<uint32_t>{0, 2},
-                "lost native constructor overloads or argument order");
+        require(record.constructors.size() == 1 && record.constructors.front().fields == std::vector<uint32_t>{0, 2, 3, 1} &&
+                record.constructors.front().defaults && !record.constructors.front().cppOnly,
+                "expected one shared LightInfo constructor with defaults in declaration order");
         const auto& fields = record.fields;
         require(record.serializable && pair.serializable && !upload.serializable &&
                 fields.at(0).transient && fields.at(1).transient && !fields.at(2).transient, "wrong archive selection");

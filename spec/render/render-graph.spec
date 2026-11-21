@@ -15,7 +15,7 @@ namespace cc::render {
         y: double = 0;
         z: double = 0;
         w: double = 0;
-        constructor(x, y, z, w);
+        constructor(x, y, z, w) defaults;
     }
 
     @comparison("==") @hash struct RasterView {
@@ -29,8 +29,8 @@ namespace cc::render {
         readonly clearColor: gfx::Color;
         @notElement slotID: uint32_t = 0;
         shaderStageFlags: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
-        constructor(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags);
-        constructor(slotName, slotName1, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags);
+        constructor(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags) defaults;
+        @cppOnly constructor(slotName, slotName1, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags);
     }
 
     @comparison("==") @hash struct ComputeView {
@@ -41,13 +41,13 @@ namespace cc::render {
         clearValueType: ClearValueType = ClearValueType::NONE;
         @notElement readonly clearValue: ClearValue;
         shaderStageFlags: gfx::ShaderStageFlagBit = gfx::ShaderStageFlagBit::NONE;
-        constructor(name, accessType, clearFlags, clearValueType, clearValue, shaderStageFlags);
-        constructor(name, accessType, plane, clearFlags, clearValueType, clearValue, shaderStageFlags);
+        constructor(name, accessType, clearFlags, clearValueType, clearValue, shaderStageFlags) defaults;
+        @cppOnly constructor(name, accessType, plane, clearFlags, clearValueType, clearValue, shaderStageFlags);
         bool isRead() const { return accessType != AccessType::WRITE; }
         bool isWrite() const { return accessType != AccessType::READ; }
     }
 
-    @requireAllocator @comparison("==") @hash struct Subpass {
+    @comparison("==") @hash struct Subpass {
         readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
         readonly resolvePairs: ccstd::pmr::vector<ResolvePair>;
@@ -66,7 +66,7 @@ namespace cc::render {
         named_graph { component: Name_; }
     }
 
-    @requireAllocator struct RasterSubpass {
+    struct RasterSubpass {
         readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
         readonly resolvePairs: ccstd::pmr::vector<ResolvePair>;
@@ -75,17 +75,17 @@ namespace cc::render {
         count: uint32_t = 1;
         quality: uint32_t = 0;
         showStatistics: bool = false;
-        constructor(subpassID, count, quality);
+        constructor(subpassID, count, quality) defaults;
     }
 
-    @requireAllocator struct ComputeSubpass {
+    struct ComputeSubpass {
         readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
         subpassID: uint32_t = 0xFFFFFFFF;
-        constructor(subpassID);
+        constructor(subpassID) defaults;
     }
 
-    @requireAllocator @comparison("==") @hash struct RasterPass {
+    @comparison("==") @hash struct RasterPass {
         readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
         @notElement readonly attachmentIndexMap: PmrTransparentMap<ccstd::pmr::string, uint32_t>;
@@ -122,7 +122,7 @@ namespace cc::render {
 
     struct ResourceTraits {
         residency: ResourceResidency = ResourceResidency::MANAGED;
-        constructor(residency);
+        constructor(residency) defaults;
         bool hasSideEffects() const noexcept { return residency == ResourceResidency::PERSISTENT || residency == ResourceResidency::EXTERNAL || residency == ResourceResidency::BACKBUFFER; }
     }
 
@@ -133,26 +133,26 @@ namespace cc::render {
     struct ManagedBuffer {
         nullable buffer: IntrusivePtr<gfx::Buffer>;
         fenceValue: uint64_t = 0;
-        constructor(buffer);
+        constructor(buffer) defaults;
     }
 
     struct ManagedTexture {
         nullable texture: IntrusivePtr<gfx::Texture>;
         fenceValue: uint64_t = 0;
-        constructor(texture);
+        constructor(texture) defaults;
         bool checkResource(const ResourceDesc& desc) const;
     }
 
     struct PersistentBuffer {
         nullable buffer: IntrusivePtr<gfx::Buffer>;
         fenceValue: uint64_t = 0;
-        constructor(buffer);
+        constructor(buffer) defaults;
     }
 
     struct PersistentTexture {
         nullable texture: IntrusivePtr<gfx::Texture>;
         fenceValue: uint64_t = 0;
-        constructor(texture);
+        constructor(texture) defaults;
         bool checkResource(const ResourceDesc& desc) const;
     }
 
@@ -164,19 +164,19 @@ namespace cc::render {
         generation: uint32_t = 0xFFFFFFFF;
         isDepthStencil: bool = false;
         @cppOnly nullable texture: gfx::Texture*;
-        constructor(swapchain, isDepthStencil);
+        constructor(swapchain, isDepthStencil) defaults;
         static gfx::Texture* getColorTexture(gfx::Swapchain* swapchain) noexcept;
         static gfx::Texture* getColorTexture(scene::RenderWindow* renderWindow) noexcept;
         static gfx::Texture* getDepthStencilTexture(gfx::Swapchain* swapchain) noexcept;
     }
 
-    @requireAllocator struct PersistentRenderPassAndFramebuffer {
+    struct PersistentRenderPassAndFramebuffer {
         nullable renderPass: IntrusivePtr<gfx::RenderPass>;
         nullable framebuffer: IntrusivePtr<gfx::Framebuffer>;
         readonly clearColors: ccstd::pmr::vector<gfx::Color>;
         clearDepth: float = 0;
         clearStencil: uint8_t = 0;
-        constructor(renderPass, framebuffer);
+        constructor(renderPass, framebuffer) defaults;
     }
 
     struct FormatView {
@@ -245,25 +245,25 @@ namespace cc::render {
         void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
     }
 
-    @requireAllocator struct ComputePass {
+    struct ComputePass {
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
         readonly textures: PmrTransparentMap<ccstd::pmr::string, gfx::ShaderStageFlagBit>;
     }
 
-    @requireAllocator struct ResolvePass {
+    struct ResolvePass {
         readonly resolvePairs: ccstd::pmr::vector<ResolvePair>;
     }
 
-    @moveOnly @requireAllocator struct CopyPass {
+    @moveOnly struct CopyPass {
         readonly copyPairs: ccstd::pmr::vector<CopyPair>;
         readonly uploadPairs: ccstd::pmr::vector<UploadPair>;
     }
 
-    @requireAllocator struct MovePass {
+    struct MovePass {
         readonly movePairs: ccstd::pmr::vector<MovePair>;
     }
 
-    @requireAllocator struct RaytracePass {
+    struct RaytracePass {
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
     }
 
@@ -271,7 +271,7 @@ namespace cc::render {
         slotName: ccstd::pmr::string;
         clearFlags: gfx::ClearFlagBit = gfx::ClearFlagBit::ALL;
         readonly clearColor: gfx::Color;
-        constructor(slotName, clearFlags, clearColor);
+        constructor(slotName, clearFlags, clearColor) defaults;
     }
 
     struct RenderQueue {
@@ -279,8 +279,8 @@ namespace cc::render {
         phaseID: uint32_t = 0xFFFFFFFF;
         passLayoutID: uint32_t = 0xFFFFFFFF;
         viewport: gfx::Viewport;
-        constructor(hint, phaseID, passLayoutID);
-        constructor(phaseID, passLayoutID);
+        constructor(hint, phaseID, passLayoutID) defaults;
+        @cppOnly constructor(phaseID, passLayoutID);
     }
 
     flags CullingFlags : uint32_t { NONE = 0, CAMERA_FRUSTUM = 0x1, LIGHT_FRUSTUM = 0x2, LIGHT_BOUNDS = 0x4 }
@@ -292,7 +292,7 @@ namespace cc::render {
         flags: SceneFlags = SceneFlags::NONE;
         cullingFlags: CullingFlags = CullingFlags::CAMERA_FRUSTUM;
         nullable shadingLight: IntrusivePtr<scene::Light>;
-        constructor(scene, camera, flags, light, cullingFlags, shadingLight);
+        constructor(scene, camera, flags, light, cullingFlags, shadingLight) defaults;
     }
 
     struct Dispatch {
@@ -301,23 +301,23 @@ namespace cc::render {
         threadGroupCountX: uint32_t = 0;
         threadGroupCountY: uint32_t = 0;
         threadGroupCountZ: uint32_t = 0;
-        constructor(material, passID, threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+        constructor(material, passID, threadGroupCountX, threadGroupCountY, threadGroupCountZ) defaults;
     }
 
     enum class BlitType : uint8_t { FULLSCREEN_QUAD, DRAW_2D, DRAW_PROFILE, DRAW_3D }
 
-    @requireAllocator struct Blit {
+    struct Blit {
         nullable material: IntrusivePtr<Material>;
         passID: uint32_t = 0;
         sceneFlags: SceneFlags = SceneFlags::NONE;
         nullable camera: const scene::Camera*;
         blitType: BlitType = BlitType::FULLSCREEN_QUAD;
         readonly models: ccstd::pmr::vector<IntrusivePtr<scene::Model>>;
-        constructor(material, passID, sceneFlags, camera, blitType);
-        constructor(camera, blitType, models);
+        constructor(material, passID, sceneFlags, camera, blitType) defaults;
+        @cppOnly constructor(camera, blitType, models);
     }
 
-    @moveOnly @requireAllocator struct RenderData {
+    @moveOnly struct RenderData {
         readonly constants: PmrFlatMap<uint32_t, ccstd::pmr::vector<char>>;
         readonly buffers: PmrFlatMap<uint32_t, IntrusivePtr<gfx::Buffer>>;
         readonly textures: PmrFlatMap<uint32_t, IntrusivePtr<gfx::Texture>>;
@@ -376,13 +376,11 @@ binding typescript {
     ClearValue => class { pool cv; };
     RasterView => class {
         pool rv;
-        constructor(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, clearColor, shaderStageFlags);
         reset(slotName, accessType, attachmentType, loadOp, storeOp, clearFlags, shaderStageFlags);
         field clearColor reset with reset();
     };
     ComputeView => class {
         pool cv1;
-        constructor(name, accessType, clearFlags, clearValueType, clearValue, shaderStageFlags);
         reset(name, accessType, clearFlags, clearValueType, shaderStageFlags);
     };
     ResourceDesc => class { pool rd; reset defaults; };
@@ -414,7 +412,7 @@ binding typescript {
     SceneData => class { pool sd; reset(scene, camera, flags, cullingFlags, shadingLight); };
     Dispatch => class { pool d; };
     BlitType => const enum;
-    Blit => class { pool b; constructor(material, passID, sceneFlags, camera, blitType); };
+    Blit => class { pool b; };
     RenderData => class { pool rd1; reset defaults; };
     RenderGraph => class { pool rg1; };
 }

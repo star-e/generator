@@ -23,7 +23,7 @@ namespace cc::render {
         passIndex: uint32_t = 0;
     }
 
-    @requireAllocator struct ProbeHelperQueue {
+    struct ProbeHelperQueue {
         probeMap: ccstd::pmr::vector<scene::SubModel*>;
         static LayoutGraphData::Vertex getDefaultId(const LayoutGraphData& lg);
         void clear() noexcept { return probeMap.clear(); }
@@ -32,7 +32,7 @@ namespace cc::render {
         void applyMacro(const LayoutGraphData& lg, const scene::Model& model, LayoutGraphData::Vertex probeLayoutId);
     }
 
-    @requireAllocator struct RenderInstancingQueue {
+    struct RenderInstancingQueue {
         sortedBatches: ccstd::pmr::vector<pipeline::InstancedBuffer*>;
         passInstances: PmrUnorderedMap<const scene::Pass*, uint32_t>;
         instanceBuffers: ccstd::pmr::vector<IntrusivePtr<pipeline::InstancedBuffer>>;
@@ -46,7 +46,7 @@ namespace cc::render {
             gfx::CommandBuffer* cmdBuffer, uint32_t lightByteOffset = 0xFFFFFFFF) const;
     }
 
-    @requireAllocator struct RenderDrawQueue {
+    struct RenderDrawQueue {
         instances: ccstd::pmr::vector<DrawInstance>;
 
         void add(const scene::Model& model, float depth, uint32_t subModelIdx, uint32_t passIdx);
@@ -56,7 +56,7 @@ namespace cc::render {
             gfx::CommandBuffer* cmdBuffer, uint32_t lightByteOffset = 0xFFFFFFFF) const;
     }
 
-    @requireAllocator @moveOnly struct NativeRenderQueue {
+    @moveOnly struct NativeRenderQueue {
         opaqueQueue: RenderDrawQueue;
         transparentQueue: RenderDrawQueue;
         probeQueue: ProbeHelperQueue;
@@ -72,7 +72,7 @@ namespace cc::render {
         void recordCommands(gfx::CommandBuffer* cmdBuffer, gfx::RenderPass* renderPass, uint32_t subpassIndex, SceneFlags sceneFlags) const;
     }
 
-    @requireAllocator @moveOnly struct BufferPool {
+    @moveOnly struct BufferPool {
         nullable device: gfx::Device*;
         bufferSize: uint32_t = 0;
         dynamic: bool = false;
@@ -80,17 +80,19 @@ namespace cc::render {
         currentBufferViews: ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>;
         freeBuffers: ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>;
         freeBufferViews: ccstd::pmr::vector<IntrusivePtr<gfx::Buffer>>;
+        constructor();
         constructor(device, bufferSize, dynamic);
         void init(gfx::Device* deviceIn, uint32_t sz, bool bDynamic);
         void syncResources();
         gfx::Buffer* allocateBuffer();
     }
 
-    @requireAllocator @moveOnly struct DescriptorSetPool {
+    @moveOnly struct DescriptorSetPool {
         nullable device: gfx::Device*;
         nullable setLayout: IntrusivePtr<gfx::DescriptorSetLayout>;
         currentDescriptorSets: ccstd::pmr::vector<IntrusivePtr<gfx::DescriptorSet>>;
         freeDescriptorSets: ccstd::pmr::vector<IntrusivePtr<gfx::DescriptorSet>>;
+        constructor();
         constructor(device, setLayout);
         void init(gfx::Device* deviceIn, IntrusivePtr<gfx::DescriptorSetLayout> layout);
         void syncDescriptorSets();
@@ -99,20 +101,20 @@ namespace cc::render {
         gfx::DescriptorSet* allocateDescriptorSet();
     }
 
-    @requireAllocator @moveOnly struct UniformBlockResource {
+    @moveOnly struct UniformBlockResource {
         cpuBuffer: ccstd::pmr::vector<char>;
         bufferPool: BufferPool;
         void init(gfx::Device* deviceIn, uint32_t sz, bool bDynamic);
         gfx::Buffer* createFromCpuBuffer();
     }
 
-    @requireAllocator @moveOnly struct ProgramResource {
+    @moveOnly struct ProgramResource {
         uniformBuffers: ccstd::pmr::unordered_map<NameLocalID, UniformBlockResource>;
         descriptorSetPool: DescriptorSetPool;
         void syncResources() noexcept;
     }
 
-    @requireAllocator @moveOnly struct LayoutGraphNodeResource {
+    @moveOnly struct LayoutGraphNodeResource {
         uniformBuffers: ccstd::pmr::unordered_map<NameLocalID, UniformBlockResource>;
         descriptorSetPool: DescriptorSetPool;
         programResources: PmrTransparentMap<ccstd::pmr::string, ProgramResource>;
@@ -123,6 +125,7 @@ namespace cc::render {
         nullable quadVB: IntrusivePtr<gfx::Buffer>;
         nullable quadIB: IntrusivePtr<gfx::Buffer>;
         nullable quadIA: IntrusivePtr<gfx::InputAssembler>;
+        constructor();
         constructor(quadVB, quadIB, quadIA);
     }
 
@@ -140,7 +143,7 @@ namespace cc::render {
         explicit operator uint32_t() const { return value; }
     }
 
-    @requireAllocator struct FrustumCulling {
+    struct FrustumCulling {
         resultIndex: ccstd::pmr::unordered_map<FrustumCullingKey, FrustumCullingID>;
     }
 
@@ -156,7 +159,7 @@ namespace cc::render {
         nullable cullingLight: const scene::Light*;
     }
 
-    @requireAllocator struct LightBoundsCulling {
+    struct LightBoundsCulling {
         resultIndex: ccstd::pmr::unordered_map<LightBoundsCullingKey, LightBoundsCullingID>;
     }
 
@@ -184,6 +187,7 @@ namespace cc::render {
 
     @moveOnly struct DescriptorSetContext {
         nullable descriptorSet: IntrusivePtr<gfx::DescriptorSet>;
+        constructor();
         constructor(descriptorSet);
     }
 
@@ -192,7 +196,7 @@ namespace cc::render {
         accessFlags: gfx::AccessFlagBit = gfx::AccessFlagBit::NONE;
     }
 
-    @requireAllocator @moveOnly struct DeviceRenderData {
+    @moveOnly struct DeviceRenderData {
         hasConstants: bool = false;
         required: bool = false;
         buffers: PmrFlatMap<NameLocalID, IntrusivePtr<gfx::Buffer>>;
@@ -211,7 +215,7 @@ namespace cc::render {
         }
     }
 
-    @requireAllocator struct PipelineCustomization {
+    struct PipelineCustomization {
         currentContext: std::shared_ptr<CustomPipelineContext>;
         contexts: PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomPipelineContext>>;
         renderPasses: PmrTransparentMap<ccstd::pmr::string, std::shared_ptr<CustomRenderPass>>;

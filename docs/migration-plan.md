@@ -65,7 +65,7 @@ ctest --test-dir build/host --output-on-failure
 | RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。 | 切换引擎公开入口时还需迁移 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
-| PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 在结构体的 `constructor(...) required;` 声明中列出五个字段，TS 继承所选构造重载的必填参数。`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
+| PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 原生与 Web 消费测试覆盖这些类型。 |
 | FGDispatcher | `FGDispatcherFwd.h` 提供前置声明，`FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
 | NativePipeline | `NativePipelineTypes.h/.cpp` 及 `NativePipelineFwd.h`覆盖 28 个记录，包括绘制队列、实例化队列、组合队列和设备渲染数据。原生消费测试使用引擎排序实现核对不透明和透明绘制顺序。 | 剩余记录和实现类涉及构造限制、自定义析构、多重继承和私有状态。 |
 
@@ -93,7 +93,26 @@ C++ 方法可为尾部参数声明默认值，例如 `uint32_t lightByteOffset =
 
 原生 ID 可以直接声明 `explicit operator uint32_t() const { return value; }`。TypeGraph 记录目标类型，C++ 调用方使用 `static_cast<uint32_t>(id)` 取得数值，TypeScript 绑定跳过该操作。三个 ID 均沿用引擎的 `0xFFFFFFFF` 无效值。[裁剪与渲染队列声明](../spec/render/native-pipeline.spec)
 
-原生记录可以声明 `T&` 或 `const T&` 字段，每个 `constructor(...)` 都必须列出这些字段。生成的构造器直接绑定调用方提供的对象。生成器也会省去无参构造器和只接收分配器的构造器。`@immovable` 删除记录的复制、移动及赋值操作。`FrameGraphDispatcher` 通过引用借用资源图、渲染图和布局图，以调用方的分配器原位构造 `resourceAccessGraph` 和 `relationGraph`。其构造器的 `noexcept` 由两张内部图的构造决定。[调度器声明](../spec/render/fg-dispatcher.spec) · [消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
+原生记录可以声明 `T&` 或 `const T&` 字段，每个 `constructor(...)` 都必须列出这些字段。生成的构造器直接绑定调用方提供的对象。生成器也会省去无参构造器和只接收分配器的构造器。`@immovable` 删除记录的复制、移动及赋值操作。`FrameGraphDispatcher` 通过引用借用资源图、渲染图和布局图，以调用方的分配器原位构造 `resourceAccessGraph` 和 `relationGraph`。[调度器声明](../spec/render/fg-dispatcher.spec) · [消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
+
+### 记录构造函数
+
+普通记录的 C++ 和 TS 构造签名来自结构体中的同一条声明。
+
+| 结构体里的写法 | C++ | TypeScript |
+| --- | --- | --- |
+| 省略构造声明 | 普通可复制记录保留聚合初始化。PMR、仅移动或不可移动的记录按需生成构造器。 | 在字段声明处初始化，通常使用隐式构造器。需要安装 `uint64_t` 写入校验时生成无参构造器。 |
+| `constructor();` | 声明零字段参数的构造器。PMR 记录生成 `T(alloc)`。 | 生成显式的零参构造器。 |
+| `constructor(a, b);` | 两个字段参数必填。 | 两个字段参数必填，即使字段本身有初值。 |
+| `constructor(a, b) defaults;` | 每个参数都取字段初值或类型默认值，允许传入零到两个字段参数。无法确定某个默认值时，生成器报告字段名。 | 每个参数都取字段绑定、字段初值或类型默认值。数组、Map 和可无参构造的记录在每次调用时分别创建。无法提供默认值时，生成器报告字段名。 |
+
+PMR 记录由字段推导，分配器由 C++ 后端加入签名。可移动的 PMR 记录和图生成 `T(T&&) noexcept`。异常逃出该移动构造时会调用 `std::terminate`。显式接受分配器的构造函数允许异常传播给调用方，包括 `T(T&&, alloc)`。省略构造声明或只声明 `constructor();` 时，生成 `T(alloc)`，按字段初值或值初始化构造成员，并把资源传给需要分配器的成员。`constructor(a, b);` 要求传入 `a, b, alloc`。`constructor() defaults;` 生成 `T(alloc = boost::container::pmr::get_default_resource())`。[RasterSubpass 声明](../spec/render/render-graph.spec) · [消费测试](../tests/consumer/records/PassConsumer.cpp)
+
+PMR 的 `constructor(a, b) defaults;` 生成两组构造。`T(alloc)` 按字段初值构造，调用方传入分配器。只有在 `.spec` 中另行声明 `constructor() defaults;` 时，分配器才有默认值。`T(std::allocator_arg, alloc, ...)` 要求显式传入分配器，随后可传零个、一个或两个字段参数。若省略的字段是必须传入分配器的嵌套记录，生成的重载会用本次调用的 `alloc` 就地构造该成员。例如，`CopyPair{std::allocator_arg, alloc, "src"}` 使用指定资源构造两个字符串，`target` 取空字符串。引擎的 `ccstd::pmr::vector<CopyPair>` 在 `emplace_back("src")` 时自动传入容器的分配器。[渲染公共类型](../spec/render/render-common.spec) · [C++ 消费测试](../tests/consumer/records/RecordConsumer.cpp)
+
+一个记录可以声明多个 C++ 构造重载。若两个 PMR 字段构造都标了 `defaults`，调用 `T(std::allocator_arg, alloc)` 会有歧义，生成器报告两条冲突的声明。普通记录也会检查省略字段后产生的签名冲突。[生成检查](../tests/RecordTest.cmake)
+
+给原生专用重载加 `@cppOnly`，TS 使用剩下的唯一可见声明。旧绑定仍可用 `constructor(...)` 选择重载。绑定的 `required` 和所选声明的 `defaults` 同时出现时，生成器报错。加入 TS 对象池的记录必须支持 `new T()`。[ProgramInfo 与 ProgramGroup](../spec/render/private-types.spec)
 
 ### 在模块中声明绑定
 
@@ -134,9 +153,9 @@ TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `
 
 `DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型都声明 `reset defaults;`，通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
-`DescriptorDB` 的 `blocks` 和 `groupBlocks` 在 C++ 中分别以 `DescriptorBlockIndex`、`DescriptorGroupBlockIndex` 为键，在 TS 中都绑定为 `Map<string, DescriptorBlock>`。`@requireAllocator` 要求原生调用方在新建记录时提供 allocator。两个 PMR map 都使用传入的资源，带 allocator 的复制和移动构造使用目标资源。[PMR 容器声明](../spec/extern/pmr-containers.spec) · [布局声明](../spec/render/layout-graph.spec)
+`DescriptorDB` 的 `blocks` 和 `groupBlocks` 在 C++ 中分别以 `DescriptorBlockIndex`、`DescriptorGroupBlockIndex` 为键，在 TS 中都绑定为 `Map<string, DescriptorBlock>`。其规格省略构造声明，C++ 调用方通过 `DescriptorDB(alloc)` 传入资源。两个 PMR map 都使用传入的资源，带 allocator 的复制和移动构造使用目标资源。[PMR 容器声明](../spec/extern/pmr-containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
-`RenderPhase.shaders` 在 C++ 中使用引擎的 `PmrTransparentSet<ccstd::pmr::string>`。集合支持以 `std::string_view` 直接查找，带 allocator 的复制和移动构造使集合及其字符串使用目标资源。原生 allocator 构造函数的异常规格取决于集合的构造。TS 将其绑定为 `Set<string>`。[集合声明](../spec/extern/sets.spec) · [布局声明](../spec/render/layout-graph.spec)
+`RenderPhase.shaders` 在 C++ 中使用引擎的 `PmrTransparentSet<ccstd::pmr::string>`。集合支持以 `std::string_view` 直接查找，带 allocator 的复制和移动构造使集合及其字符串使用目标资源。TS 将其绑定为 `Set<string>`。[集合声明](../spec/extern/sets.spec) · [布局声明](../spec/render/layout-graph.spec)
 
 | 层 | 建议实现 |
 | --- | --- |
@@ -251,7 +270,7 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 `ResolveFlags` 的三个低位在 C++ 和 TS 中均保留 `1 << n`。例如 `DEPTH | STENCIL` 等于 `6`。对于 `uint32_t` 的 `1 << 31`，两端输出求值后的整数 `2147483648`，避免 TS 按有符号 32 位整数移位得到负数。TS 输出仍检查安全整数范围。
 
-`LightInfo` 的模型记录字段和两个构造函数的参数顺序。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，它们的 `.spec` 指定原生头文件和 TS 导入路径。
+`LightInfo` 用一条 `constructor(light, level, culledByLight, probe) defaults;` 声明构造函数。C++ 和 TS 均可传入零到四个参数，省略的尾部参数使用字段默认值。外部场景类型由 `Light` 和 `ReflectionProbe` 模块提供，它们的 `.spec` 指定原生头文件和 TS 导入路径。
 
 `ResolvePair` 的两个 PMR 字符串在构造、带分配器的复制和移动时都使用目标内存资源。后端将这些构造函数写入暂存目录的 `native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp`，并按声明上的 `@comparison("==")`生成五个字段的相等比较。TS 从引擎的 gfx 模块导入 `ResolveMode` 作为运行时值，供构造函数和 `createResolvePair()` 的默认参数使用。消费测试逐段对照引擎实现，验证两个 C++ 内存资源之间的复制与移动，以及 TS 对象池复用后五个字段的默认值。[Gfx 声明](../spec/extern/gfx.spec) · [消费测试](../tests/RecordInterop.cmake)
 
@@ -291,7 +310,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 `NameLocalID => number(value)` 将 C++ 结构体的唯一数值字段绑定为 TS 的 `number`。用作字段、Map 键或 Map 值时均可直接传数值。默认值继承自 `value`。`DescriptorData` 在类绑定中用 `field descriptorID default 0;` 保留 TS 构造默认值，C++ 默认构造仍使用 `0xFFFFFFFF`。两端按编号、类型、数量的顺序归档。[布局声明](../spec/render/layout-graph.spec) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 
-`DescriptorBlockData` 在 C++ 中提供 3 个和 7 个业务参数的构造重载，末尾均接收分配器。生成器根据各成员的实际初始化表达式推导带参 PMR 构造的 `noexcept`。该记录先写入类型、可见性、偏移、容量、访问方式、视图维度、采样类型和格式，再写 `descriptors` 数组。TS 的 `reset()` 更新构造参数、将 `offset` 归零，并原地清空数组。[布局声明](../spec/render/layout-graph.spec) · [互读测试](../tests/consumer/records/layout-archive.cjs)
+`DescriptorBlockData` 在 C++ 中提供三个必填字段的末置分配器重载。七个字段的构造由 `defaults` 声明生成，使用前置分配器。该记录先写入类型、可见性、偏移、容量、访问方式、视图维度、采样类型和格式，再写 `descriptors` 数组。TS 的 `reset()` 更新构造参数、将 `offset` 归零，并原地清空数组。[布局声明](../spec/render/layout-graph.spec) · [互读测试](../tests/consumer/records/layout-archive.cjs)
 
 `DescriptorSetLayoutData` 在 C++ 中只支持移动，构造时显式接收 PMR 分配器。TS 构造函数可以接收调用方的数组和两个 Map。`reset(slot, capacity)` 保留这三个容器的引用，清空内容，并将 `uniformBlockCapacity` 和 `samplerTextureCapacity` 归零。[布局声明](../spec/render/layout-graph.spec) · [容器声明](../spec/extern/maps.spec)
 
@@ -371,13 +390,13 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 `ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。[外部 GFX 类型](../spec/extern/gfx.spec)
 
-`binding typescript` 可用 `constructor(...)` 按参数名和顺序选择一个构造重载。两个视图的池化工厂复用嵌套对象，分别调用 `Color.reset()` 和 `ClearValue.reset(0, 0, 0, 0)`。[渲染图声明与绑定](../spec/render/render-graph.spec)
+`RasterView` 和 `ComputeView` 各保留一条带 `defaults` 的共享构造。原生重载用 `@cppOnly` 标记，带第二个槽名或显式 `plane` 的重载要求传齐字段和分配器。两个视图的池化工厂复用嵌套对象，分别调用 `Color.reset()` 和 `ClearValue.reset(0, 0, 0, 0)`。`defaults` 优先使用字段初值。按值存储的外部类型 `T` 省略初值时，生成的 C++ 默认实参为 `T{}`，由编译器检查该表达式。例如 `RasterView` 和 `ClearView` 的 `clearColor` 均使用 `gfx::Color{}`。[渲染图声明与绑定](../spec/render/render-graph.spec) · [外部 GFX 类型](../spec/extern/gfx.spec)
 
 `Subpass` 用三个容器保存光栅视图、计算视图和解析对。TS 对象池在复用时原地清空这三个容器。`SubpassGraph` 用 `incidence_graph` 存储出边，用 `bidirectional_graph` 存储入边，两端都保留插入顺序，允许多个前驱、平行边和自环。按描述符删除一条匹配边，按端点删除该方向的全部匹配边。C++ 的图比较和哈希按顶点顺序使用名称与 `Subpass` 两列，连边不同的图可以命中同一个缓存键。[渲染图规格](../spec/render/render-graph.spec) · [原生用例](../tests/consumer/records/SubpassGraphConsumer.cpp) · [TS 用例](../tests/consumer/records/subpass-graph-consumer.ts)
 
 `ResourceGraph.renderPasses` 在 C++ 中用 `RasterPass` 作键。比较与哈希依次使用 `rasterViews`、`computeViews`、`textures`、`subpassGraph`、`width`、`height`、`count` 和 `quality`。插入缓存时，键中的子通道图和值中的清除颜色都使用资源图的分配器。TS 绑定通过 `mapKey string` 接受调用方提供的字符串，`ResourceGraph.clear()` 原地清空缓存。池中复用的 `RasterPass` 保留四张 Map、子通道图和视口的对象引用，恢复默认值。[规格](../spec/render/render-graph.spec) · [C++ 缓存用例](../tests/consumer/records/RasterPassConsumer.cpp) · [TS 复用用例](../tests/consumer/records/resource-graph-consumer.ts)
 
-`RasterSubpass`、`ComputeSubpass`、`ComputePass`、`ResolvePass`、`CopyPass`、`MovePass` 和 `RaytracePass` 由同一份规格生成。C++ 构造时显式传入分配器，`CopyPass` 通过 `@moveOnly` 保留上传数据的移动语义。TS 对象池复用已有的 Map、数组和视口。两个 Subpass 的工厂接收新的构造参数，省略参数时使用默认值。[C++ 跨分配器用例](../tests/consumer/records/PassConsumer.cpp) · [TS 对象池用例](../tests/consumer/records/pass-consumer.ts)
+`RasterSubpass` 和 `ComputeSubpass` 均可用 `T{alloc}` 在指定资源上初始化，指定字段时使用 `T{std::allocator_arg, alloc, ...}`。`ComputePass`、`ResolvePass`、`CopyPass`、`MovePass` 和 `RaytracePass` 通过 `T(alloc)` 接收指定资源。`CopyPass` 通过 `@moveOnly` 保留上传数据的移动语义。TS 对象池复用已有的 Map、数组和视口。两个 Subpass 的工厂接收新的构造参数，省略参数时使用默认值。[C++ 跨分配器用例](../tests/consumer/records/PassConsumer.cpp) · [TS 对象池用例](../tests/consumer/records/pass-consumer.ts)
 
 `ClearView`、`RenderQueue`、`SceneData`、`Dispatch`、`Blit` 和 `RenderData` 已接入渲染图规格，剔除标志 `CullingFlags` 和绘制类型 `BlitType` 随模块生成。`RenderQueue.viewport` 在 C++ 中按值存储，TS 通过 `field viewport default null` 声明为 `Viewport | null`。`SceneData` 复用 `LightInfo` 时，按声明模块中的参数顺序和默认值调用其重置方法。`RenderData` 通过 `@moveOnly` 声明移动语义，常量字节和四张资源表使用目标分配器。[渲染图规格](../spec/render/render-graph.spec) · [C++ 资源所有权测试](../tests/consumer/records/RenderDataConsumer.cpp) · [TS 对象池测试](../tests/consumer/records/render-node-consumer.ts)
 

@@ -36,5 +36,5 @@ binding typescript {
     Vec4 => Vec4 from "cocos/core/math";
     EffectAsset => EffectAsset from "cocos/asset/assets";
     MacroRecord => MacroRecord from "cocos/render-scene/core/pass-utils";
-    IProgramInfo => IProgramInfo from "cocos/render-scene/core/program-lib";
+    IProgramInfo => extern interface IProgramInfo from "cocos/render-scene/core/program-lib";
 }

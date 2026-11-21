@@ -17,10 +17,9 @@ struct BoundField {
     bool readonly{};
     bool transient{};
     bool usesAllocator{};
+    bool defaultNeedsAllocator{};
     bool containsGraph{};
-    bool scalar{};
     bool safeUnsignedInteger{};
-    bool checkDefaultConstruction{};
     std::string emptyPmrArgument;
     std::string tsReset;
 

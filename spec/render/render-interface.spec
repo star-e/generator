@@ -261,7 +261,6 @@ namespace cc::render {
 }
 
 binding typescript {
-    PipelineCapabilities => class { constructor(); };
     PipelinePassBuilder => interface {
         callback configCamera?(camera: Readonly<scene::Camera>, pplConfigs: Readonly<Record<string, any>>,
                                cameraConfigs: Record<string, any>): void;

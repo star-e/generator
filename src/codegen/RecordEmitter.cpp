@@ -9,7 +9,7 @@
 
 #include <algorithm>
 #include <iterator>
-#include <numeric>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -78,6 +78,18 @@ struct RecordStorage {
     bool containsGraph{};
 };
 
+bool hasAllocatorConstructor(const RecordType& record) {
+    return record.constructors.empty() || std::ranges::any_of(record.constructors, [](const ConstructorInfo& ctor) {
+        return ctor.fields.empty() || ctor.defaults;
+    });
+}
+
+bool hasDefaultAllocator(const RecordType& record) {
+    return std::ranges::any_of(record.constructors, [](const ConstructorInfo& ctor) {
+        return ctor.fields.empty() && ctor.defaults;
+    });
+}
+
 RecordStorage recordStorage(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
     const auto& data = graph.node(id).data;
     if (std::holds_alternative<GraphType>(data)) return {true, true};
@@ -111,9 +123,9 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     }
     const auto& scalar = graph.node(scalarType).qualifiedName;
     if (scalar == "uint64_t" && !m.cppDefault.empty()) m.cppDefault += "ULL";
-    m.scalar = std::holds_alternative<BuiltinType>(node.data) || std::holds_alternative<EnumType>(node.data) ||
-               std::holds_alternative<AliasType>(node.data) || std::holds_alternative<PointerType>(node.data) ||
-               (std::holds_alternative<ExternalTypeNode>(node.data) && (scalar == "uint64_t" || archivePrimitive(graph, field.type.type) == "Number"));
+    const bool isScalar = std::holds_alternative<BuiltinType>(node.data) || std::holds_alternative<EnumType>(node.data) ||
+                          std::holds_alternative<AliasType>(node.data) || std::holds_alternative<PointerType>(node.data) ||
+                          (std::holds_alternative<ExternalTypeNode>(node.data) && (scalar == "uint64_t" || archivePrimitive(graph, field.type.type) == "Number"));
     if (const auto* external = std::get_if<ExternalTypeNode>(&node.data); external && external->isString) {
         if (field.isNullable || !field.initializer.empty()) invalid(field, "expected a default-constructed owning string");
         if (deps.emitCpp && node.cppHeader.empty()) invalid(field, "missing native header for " + node.qualifiedName);
@@ -127,7 +139,6 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         m.usesAllocator = external->isPmr;
         if (node.qualifiedName == "ccstd::pmr::string") {
             m.emptyPmrArgument = "\"\"";
-            m.checkDefaultConstruction = true;
             deps.headers.insert("cocos/base/Pmr.h");
         }
         return m;
@@ -141,10 +152,8 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         m.move = true;
         const auto& container = std::get<ExternalTypeNode>(graph.node(instance->declaration).data);
         m.usesAllocator = container.isPmr;
-        m.checkDefaultConstruction = isAssociativeContainer(container.container);
         if (graph.node(instance->declaration).qualifiedName == "ccstd::pmr::vector") {
             m.emptyPmrArgument = "0U";
-            m.checkDefaultConstruction = true;
             deps.headers.insert("cocos/base/Pmr.h");
         }
         if (emitTs) {
@@ -159,8 +168,13 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     const auto* nestedGraph = std::get_if<GraphType>(&node.data);
     const auto bindObject = [&] {
         const bool nullable = field.typescriptInitializer == "null";
-        m.ts = boundTypeScriptName(graph, field.type, owner, nullable || typeOnly ? deps.typeImports : deps.valueImports);
-        m.tsDefault = nullable ? "null" : "new " + m.ts + "()";
+        const bool needsArgs = record && record->typescriptConstructor && !record->typescriptConstructor->defaults &&
+                               !record->typescriptConstructor->fields.empty();
+        const bool canConstruct = !node.typescriptTypeOnly && !needsArgs;
+        m.ts = boundTypeScriptName(graph, field.type, owner, nullable || typeOnly || !canConstruct ? deps.typeImports : deps.valueImports);
+        if (nullable) m.tsDefault = "null";
+        else if (canConstruct) m.tsDefault = "new " + m.ts + "()";
+        else if (!typeOnly) invalid(field, "no TypeScript default for " + m.ts);
         if (nullable) m.ts += " | null";
     };
     if ((record || nestedGraph) && !field.isNullable && field.initializer.empty()) {
@@ -168,8 +182,8 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         std::set<uint32_t> visited;
         const auto storage = recordStorage(graph, field.type.type, visited);
         m.usesAllocator = storage.usesAllocator;
+        m.defaultNeedsAllocator = record && storage.usesAllocator && hasAllocatorConstructor(*record) && !hasDefaultAllocator(*record);
         m.containsGraph = storage.containsGraph;
-        m.checkDefaultConstruction = true;
         // Pass copyable, single-scalar value records by reference in native constructors.
         if (record && !record->moveOnly && record->fields.size() == 1) {
             const auto inner = record->fields.front().type.type;
@@ -180,7 +194,9 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         if (emitTs) {
             if (record && node.typescriptNumber) {
                 m.ts = "number";
-                m.tsDefault = record->fields.front().initializer;
+                const auto& value = record->fields.front();
+                m.tsDefault = value.typescriptInitializer.empty() ? value.initializer : value.typescriptInitializer;
+                if (m.tsDefault.empty()) m.tsDefault = "0";
                 return m;
             }
             if (node.module != owner && node.typescriptModule.empty()) invalid(field, "missing external record mapping");
@@ -190,20 +206,18 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         return m;
     }
     if (const auto* ext = std::get_if<ExternalTypeNode>(&node.data); ext && !field.isNullable &&
-        (ext->constructorConstRef || (!m.scalar && !node.typescriptModule.empty()) || !node.typescriptArchiveModule.empty())) {
+        (ext->constructorConstRef || (!isScalar && !node.typescriptModule.empty()) || !node.typescriptArchiveModule.empty())) {
         if (!field.initializer.empty()) invalid(field, "expected a default-constructed external value");
         m.cpp = nativeType(graph, module, field.type.type, deps);
         m.byConstReference = ext->constructorConstRef;
         m.move = true;
         m.usesAllocator = ext->isPmr;
-        m.checkDefaultConstruction = true;
         if (emitTs) bindObject();
         return m;
     }
     if (!emitTs && !field.isNullable) {
         m.cpp = nativeType(graph, module, field.type.type, deps);
-        m.move = !m.scalar;
-        m.checkDefaultConstruction = !m.scalar;
+        m.move = !isScalar;
         return m;
     }
     const auto* ptr = std::get_if<PointerType>(&node.data);
@@ -255,15 +269,25 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     m.cpp = cppName(graph, node, module);
     m.ts = *node.typescriptName;
     m.tsDefault = field.initializer;
-    if (std::holds_alternative<EnumType>(node.data)) {
-        const auto pos = field.initializer.rfind("::");
-        if (pos == std::string::npos) invalid(field, "expected a named enum default");
-        const auto member = field.initializer.substr(pos + 2);
-        m.cppDefault = m.cpp + "::" + member;
-        m.tsDefault = m.ts + "." + member;
+    if (m.tsDefault.empty() && m.ts == "boolean") m.tsDefault = "false";
+    if (m.tsDefault.empty() && m.ts == "number") m.tsDefault = "0";
+    if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
         if (node.module != owner) {
             if ((deps.emitCpp && node.cppHeader.empty()) || node.typescriptModule.empty()) invalid(field, "missing external enum mapping");
-            deps.valueImports[node.typescriptModule].insert(m.ts);
+            (typeOnly ? deps.typeImports : deps.valueImports)[node.typescriptModule].insert(m.ts);
+        }
+        if (field.initializer.empty()) {
+            const auto zero = std::ranges::find_if(enumeration->values, [](const Enumerator& e) {
+                return std::visit([](auto value) { return value == 0; }, e.value);
+            });
+            if (zero != enumeration->values.end()) m.tsDefault = m.ts + "." + zero->name;
+            else if (!typeOnly) invalid(field, "enum needs a named default");
+        } else {
+            const auto pos = field.initializer.rfind("::");
+            if (pos == std::string::npos) invalid(field, "expected a named enum default");
+            const auto member = field.initializer.substr(pos + 2);
+            m.cppDefault = m.cpp + "::" + member;
+            m.tsDefault = m.ts + "." + member;
         }
         return m;
     }
@@ -271,8 +295,10 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     m.safeUnsignedInteger = scalar == "uint64_t";
     if (m.safeUnsignedInteger) {
         if (!field.typescriptInitializer.empty()) m.tsDefault = field.typescriptInitializer;
-        if (!safeUnsignedNumber(m.tsDefault))
-            invalid(field, "uint64_t default exceeds the TypeScript safe integer range: " + m.tsDefault);
+        if (!safeUnsignedNumber(m.tsDefault)) {
+            if (!typeOnly) invalid(field, "uint64_t default exceeds the TypeScript safe integer range: " + m.tsDefault);
+            m.tsDefault.clear();
+        }
         return m;
     }
     if (m.ts == "number" && numericDefault(scalar, m.tsDefault)) return m;
@@ -303,6 +329,7 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner
             if (childReset != nestedResets.end()) {
                 std::string args;
                 for (const auto& arg : childReset->second) {
+                    if (arg.expression.empty()) invalid(field, "nested reset argument has no TypeScript default");
                     const auto& type = graph.node(arg.type);
                     if (arg.expression.starts_with("new ") || std::holds_alternative<EnumType>(type.data)) {
                         auto& imports = type.typescriptContainer == ContainerKind::None ? deps.valueImports : deps.typeImports;
@@ -331,39 +358,6 @@ std::vector<BoundField> bindFields(const TypeGraph& graph, const TypeNode& owner
 }
 
 using Order = std::vector<uint32_t>;
-
-ConstructorInfo selectTypeScriptConstructor(const TypeNode& node, const RecordType& record, const RecordOutput& output) {
-    auto constructors = record.constructors;
-    if (constructors.empty()) {
-        auto& order = constructors.emplace_back().fields;
-        order.resize(record.fields.size());
-        std::iota(order.begin(), order.end(), 0U);
-    }
-    const auto visible = static_cast<size_t>(std::ranges::count(record.fields, false, &FieldInfo::cppOnly));
-    if (visible < record.fields.size()) {
-        for (auto& ctor : constructors) std::erase_if(ctor.fields, [&](auto i) { return record.fields[i].cppOnly; });
-    }
-
-    const ConstructorInfo* chosen;
-    if (const auto selected = output.constructors.find(node.name); selected != output.constructors.end()) {
-        if (selected->second.empty() && record.constructors.empty()) return {};
-        const auto it = std::ranges::find_if(constructors, [&](const ConstructorInfo& ctor) {
-            return std::ranges::equal(ctor.fields, selected->second, {}, [&](auto i) -> std::string_view { return record.fields[i].name; });
-        });
-        if (it == constructors.end()) throw std::runtime_error(node.qualifiedName + ": TypeScript constructor does not match a declared constructor");
-        chosen = &*it;
-    } else {
-        chosen = &*std::ranges::max_element(constructors, {}, [](const ConstructorInfo& ctor) { return ctor.fields.size(); });
-        if (chosen->fields.size() < visible && std::ranges::any_of(constructors, [&](const ConstructorInfo& other) {
-                return other.fields.size() == chosen->fields.size() && other.fields != chosen->fields;
-            })) throw std::runtime_error(node.qualifiedName + ": ambiguous partial TypeScript constructor");
-    }
-    if (output.requiredConstructors.contains(node.name)) return {chosen->fields, true};
-    if (!chosen->fields.empty() && std::ranges::any_of(constructors, [&](const ConstructorInfo& other) {
-            return other.fields == chosen->fields && other.required != chosen->required;
-        })) throw std::runtime_error(node.qualifiedName + ": conflicting required flags on the same TypeScript constructor");
-    return *chosen;
-}
 
 void removeCppOnlyFields(const RecordType& record, std::vector<BoundField>& members, Order& order) {
     if (std::ranges::none_of(record.fields, &FieldInfo::cppOnly)) return;
@@ -410,10 +404,94 @@ void writeEnumNames(std::ostream& out, const std::string& name, const EnumType& 
     else out << "    default:\n        return '';\n    }\n}\n";
 }
 
-void inlineConstructors(std::ostream& out, const std::string& name, const RecordType& record,
+bool hasEmptyConstructor(const RecordType& record) {
+    return std::ranges::any_of(record.constructors, [](const ConstructorInfo& ctor) { return ctor.fields.empty(); });
+}
+
+TypeId constructorFieldType(const TypeGraph& graph, TypeId type) {
+    while (const auto* alias = std::get_if<AliasType>(&graph.node(type).data)) type = alias->target;
+    return type;
+}
+
+bool isExternalValue(const TypeData& data) {
+    return std::holds_alternative<ExternalTypeNode>(data) || std::holds_alternative<TemplateInstanceType>(data);
+}
+
+bool hasNativeValueDefault(const TypeGraph& graph, TypeId type, std::map<uint32_t, bool>& knownDefaults) {
+    type = constructorFieldType(graph, type);
+    const auto& node = graph.node(type);
+    if (std::holds_alternative<BuiltinType>(node.data) || std::holds_alternative<EnumType>(node.data) ||
+        std::holds_alternative<PointerType>(node.data) || isExternalValue(node.data)) return true;
+    if (const auto* record = std::get_if<RecordType>(&node.data)) {
+        if (const auto it = knownDefaults.find(type.value); it != knownDefaults.end()) return it->second;
+        std::set<uint32_t> visited;
+        const bool pmr = recordStorage(graph, type, visited).usesAllocator;
+        auto fieldHasDefault = [&](const FieldInfo& field) {
+            return !field.initializer.empty() || hasNativeValueDefault(graph, field.type.type, knownDefaults);
+        };
+        bool available;
+        if (!pmr) {
+            const bool callable = record->constructors.empty() || std::ranges::any_of(record->constructors, [](const ConstructorInfo& ctor) {
+                return ctor.defaults || ctor.fields.empty();
+            });
+            available = callable && std::ranges::all_of(record->fields, fieldHasDefault);
+        } else {
+            available = hasDefaultAllocator(*record);
+        }
+        knownDefaults.emplace(type.value, available);
+        return available;
+    }
+    return false;
+}
+
+std::string constructorSignature(const ConstructorInfo& ctor, const RecordType& record) {
+    std::string result = "constructor(";
+    for (size_t i = 0; i < ctor.fields.size(); ++i) {
+        if (i) result += ", ";
+        result += record.fields[ctor.fields[i]].name;
+    }
+    return result + (ctor.defaults ? ") defaults" : ")");
+}
+
+void validateNativeConstructorDefaults(const TypeGraph& graph, const TypeNode& node, const std::vector<BoundField>& members, bool pmr) {
+    const auto& record = std::get<RecordType>(node.data);
+    std::map<uint32_t, bool> knownDefaults;
+    auto type = [&](uint32_t i) { return constructorFieldType(graph, record.fields[i].type.type); };
+    for (const auto& ctor : record.constructors) {
+        if (!ctor.defaults) continue;
+        for (const auto i : ctor.fields) {
+            const auto& field = record.fields[i];
+            if (field.initializer.empty() && !members[i].defaultNeedsAllocator && !hasNativeValueDefault(graph, type(i), knownDefaults))
+                invalid(field, node.qualifiedName + " " + constructorSignature(ctor, record) +
+                               ": no C++ default for " + qualifiedTypeName(graph, type(i)));
+        }
+        for (const auto& other : record.constructors) {
+            if (&ctor == &other) continue;
+            // Defaulted PMR field overloads all accept (allocator_arg, alloc).
+            // An explicit empty PMR declaration shares the allocator-only overload.
+            const bool sharedDefaults = other.defaults && (!pmr || (!ctor.fields.empty() && !other.fields.empty()));
+            const bool prefix = !pmr && other.fields.size() <= ctor.fields.size() &&
+                std::equal(other.fields.begin(), other.fields.end(), ctor.fields.begin(),
+                           [&](auto lhs, auto rhs) { return type(lhs) == type(rhs); });
+            if (sharedDefaults || prefix) {
+                const auto call = pmr ? " for " + node.name + "(std::allocator_arg, alloc)" :
+                    " at " + std::to_string(other.defaults ? 0 : other.fields.size()) + " arguments";
+                throw std::runtime_error(node.qualifiedName + ": " + constructorSignature(ctor, record) +
+                                         " conflicts with " + constructorSignature(other, record) + call);
+            }
+        }
+    }
+}
+
+std::string nativeDefaultArgument(const TypeGraph& graph, TypeId type, const BoundField& field) {
+    if (!field.cppDefault.empty()) return " = " + field.cppDefault;
+    const auto& node = graph.node(constructorFieldType(graph, type));
+    return isExternalValue(node.data) ? " = " + field.cpp + "{}" : " = {}";
+}
+
+void inlineConstructors(std::ostream& out, const TypeGraph& graph, const std::string& name, const RecordType& record,
                         const std::vector<BoundField>& members, std::set<std::string>& headers) {
-    if ((!record.constructors.empty() || record.moveOnly || record.immovable) &&
-        !std::ranges::any_of(members, &BoundField::referenceMember))
+    if (hasEmptyConstructor(record) || (record.constructors.empty() && (record.moveOnly || record.immovable)))
         out << "    " << name << "() = default;\n";
     for (const auto& declaration : record.constructors) {
         const auto& ctor = declaration.fields;
@@ -423,6 +501,7 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
             const auto& m = members.at(ctor[i]);
             if (i) out << ", ";
             out << m.parameterType() << " " << m.name << "In";
+            if (declaration.defaults) out << nativeDefaultArgument(graph, record.fields[ctor[i]].type.type, m);
         }
         out << (ctor.size() == 1 ? ") noexcept // NOLINT\n" : ") noexcept\n");
         bool first = true;
@@ -443,7 +522,7 @@ void inlineConstructors(std::ostream& out, const std::string& name, const Record
     if (!record.constructors.empty() || record.moveOnly) out << '\n';
 }
 
-enum class CtorArgs { defaults, fields, move, copy };
+enum class CtorArgs { fields, move, copy };
 
 std::string pmrArguments(const BoundField& m, std::string value, bool move) {
     if (value.empty() && m.usesAllocator)
@@ -459,7 +538,7 @@ void pmrInitializers(std::ostream& source, const std::vector<BoundField>& member
         const auto& m = members[i];
         const bool hasArg = args == CtorArgs::move || args == CtorArgs::copy ||
                             (args == CtorArgs::fields && std::ranges::find(fields, i) != fields.end());
-        if (!m.usesAllocator && !hasArg) continue;
+        if (!m.usesAllocator && !hasArg && !m.cppDefault.empty()) continue;
         std::string value;
         if (hasArg) value = args == CtorArgs::fields ? m.name + "In" : "rhs." + m.name;
         const bool moveValue = args == CtorArgs::move || (args == CtorArgs::fields && !m.byConstReference);
@@ -469,49 +548,56 @@ void pmrInitializers(std::ostream& source, const std::vector<BoundField>& member
     source << " {}\n";
 }
 
-std::string pmrExceptionSpec(const std::string& recordName, const std::vector<BoundField>& members, const Order& fields) {
-    std::string checks;
-    for (size_t i = 0; i < members.size(); ++i) {
-        const auto& m = members[i];
-        if (m.referenceMember || (fields.empty() ? !m.checkDefaultConstruction : m.scalar)) continue;
-        const bool supplied = std::ranges::find(fields, i) != fields.end();
-        const auto args = pmrArguments(m, supplied ? m.name + "In" : "", !m.byConstReference);
-        const auto init = args.empty() && !m.cppDefault.empty() ? "{" + m.cppDefault + "}" : "(" + args + ")";
-        if (!checks.empty()) checks += " && ";
-        if (!supplied && !m.emptyPmrArgument.empty()) checks += "noexcept(" + args + ")";
-        else checks += "noexcept(decltype(" + recordName + "::" + m.name + ")" + init + ")";
-    }
-    return checks.empty() ? " noexcept" : " noexcept(" + checks + ")";
-}
-
-void pmrConstructors(std::ostream& header, std::ostream& source, const std::string& name,
+void pmrConstructors(std::ostream& header, std::ostream& source, const TypeGraph& graph, const std::string& name,
                      const RecordType& record, const std::vector<BoundField>& members, const BoundField& allocatorMember,
                      std::set<std::string>& headers) {
     const std::string alloc = "const allocator_type& alloc";
-    const auto allocParameter = record.requireAllocator ? alloc : alloc + " = boost::container::pmr::get_default_resource()";
+    const auto defaultAlloc = alloc + " = boost::container::pmr::get_default_resource()";
     const auto constructor = "\n" + name + "::" + name + "(";
     header << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
            << "    allocator_type get_allocator() const noexcept { // NOLINT\n"
            << "        return {" << allocatorMember.name << ".get_allocator().resource()};\n    }\n\n";
-    if (!std::ranges::any_of(members, &BoundField::referenceMember)) {
-        const auto exceptionSpec = pmrExceptionSpec(name, members, {});
-        header << "    " << name << "(" << allocParameter << ")" << exceptionSpec << "; // NOLINT\n";
-        source << constructor << alloc << ")" << exceptionSpec;
-        pmrInitializers(source, members, CtorArgs::defaults);
-    }
-    for (const auto& ctor : record.constructors) {
-        const auto& order = ctor.fields;
-        if (order.empty()) continue;
-        std::string params;
-        for (auto index : order) {
-            const auto& m = members.at(index);
-            if (m.move) headers.insert("utility");
-            params += m.parameterType() + " " + m.name + "In, ";
-        }
-        const auto fieldSpec = pmrExceptionSpec(name, members, order);
-        header << "    " << name << "(" << params << allocParameter << ")" << fieldSpec << ";\n";
-        source << constructor << params << alloc << ")" << fieldSpec << " // NOLINT";
+    auto writeConstructor = [&](const Order& order, const std::string& declaration, const std::string& params) {
+        header << "    " << name << "(" << declaration << ");" << (params == alloc ? " // NOLINT\n" : "\n");
+        source << constructor << params << ")";
+        if (!order.empty()) source << " // NOLINT";
         pmrInitializers(source, members, CtorArgs::fields, order);
+    };
+    if (hasAllocatorConstructor(record))
+        writeConstructor({}, hasDefaultAllocator(record) ? defaultAlloc : alloc, alloc);
+    for (const auto& ctor : record.constructors) {
+        if (ctor.fields.empty()) continue;
+        std::string params;
+        if (ctor.defaults) {
+            headers.insert("memory");
+            params = "const std::allocator_arg_t&, " + alloc;
+        }
+        auto declaration = params;
+        Order supplied;
+        for (const auto index : ctor.fields) {
+            const auto& m = members.at(index);
+            // A default argument cannot refer to alloc. End the preceding overload
+            // here so its member initializers can construct the omitted field with alloc.
+            if (ctor.defaults && m.defaultNeedsAllocator) {
+                writeConstructor(supplied, declaration, params);
+                declaration = params;
+            }
+            if (m.move) headers.insert("utility");
+            const auto param = m.parameterType() + " " + m.name + "In";
+            if (!params.empty()) {
+                params += ", ";
+                declaration += ", ";
+            }
+            params += param;
+            declaration += param;
+            if (ctor.defaults && !m.defaultNeedsAllocator) declaration += nativeDefaultArgument(graph, record.fields[index].type.type, m);
+            supplied.push_back(index);
+        }
+        if (!ctor.defaults) {
+            params += ", " + alloc;
+            declaration = params;
+        }
+        writeConstructor(supplied, declaration, params);
     }
     if (record.immovable) return;
     for (auto args : {CtorArgs::move, CtorArgs::copy}) {
@@ -678,11 +764,12 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     }
     out << "struct " << node.name << " {\n";
     const auto allocator = std::ranges::find(members, true, &BoundField::usesAllocator);
-    if (allocator == members.end()) {
-        if (record.requireAllocator) throw std::runtime_error(node.qualifiedName + ": @requireAllocator requires a PMR field");
-        inlineConstructors(out, node.name, record, members, deps.headers);
+    const bool usesAllocator = allocator != members.end();
+    validateNativeConstructorDefaults(graph, node, members, usesAllocator);
+    if (!usesAllocator) {
+        inlineConstructors(out, graph, node.name, record, members, deps.headers);
     } else {
-        pmrConstructors(out, source, node.name, record, members, *allocator, deps.headers);
+        pmrConstructors(out, source, graph, node.name, record, members, *allocator, deps.headers);
     }
     if (record.immovable) {
         const auto& name = node.name;
@@ -690,14 +777,14 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
             << "    " << name << "(const " << name << "&) = delete;\n"
             << "    " << name << "& operator=(" << name << "&&) = delete;\n"
             << "    " << name << "& operator=(const " << name << "&) = delete;\n\n";
-    } else if (allocator != members.end() || record.moveOnly) {
+    } else if (usesAllocator || record.moveOnly) {
         const auto& name = node.name;
-        // Moving an embedded graph can allocate storage for its columns.
-        const auto moveSpec = allocator != members.end() && !std::ranges::any_of(members, &BoundField::containsGraph) ? " noexcept" : "";
+        // Move assignment of an embedded graph can allocate storage for its columns.
+        const auto assignmentSpec = usesAllocator && !std::ranges::any_of(members, &BoundField::containsGraph) ? " noexcept" : "";
         const bool assignable = !std::ranges::any_of(members, &BoundField::referenceMember);
-        out << "    " << name << "(" << name << "&& rhs)" << moveSpec << " = default;\n"
+        out << "    " << name << "(" << name << "&& rhs)" << (usesAllocator ? " noexcept" : "") << " = default;\n"
             << "    " << name << "(" << name << " const& rhs) = delete;\n"
-            << "    " << name << "& operator=(" << name << "&& rhs)" << moveSpec << " = " << (assignable ? "default" : "delete") << ";\n"
+            << "    " << name << "& operator=(" << name << "&& rhs)" << assignmentSpec << " = " << (assignable ? "default" : "delete") << ";\n"
             << "    " << name << "& operator=(" << name << " const& rhs) = " << (record.moveOnly || !assignable ? "delete" : "default") << ";\n\n";
     }
     for (const auto& m : members) {
@@ -755,27 +842,29 @@ Order resetParameters(const std::string& name, const std::vector<BoundField>& me
 }
 
 void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& members, const Order& order,
-                           const Order* reset, const std::set<std::string>& keepOnReset, bool hasBase, bool required = false) {
-    const auto params = tsParams(members, order, !required, ", ");
+                           const Order* reset, const std::set<std::string>& keepOnReset, bool hasBase, bool emitConstructor, bool defaults) {
+    const auto params = tsParams(members, order, defaults, ", ");
     const bool multiline = params.size() + std::string_view("    constructor () {").size() > 120;
-    auto signature = [&](const Order& fields, bool defaults) {
-        if (multiline && !fields.empty()) return "\n        " + tsParams(members, fields, defaults, ",\n        ") + ",\n    ";
-        return defaults ? params : tsParams(members, fields, false, ", ");
+    auto signature = [&](const Order& fields, bool withDefaults, const std::string& singleLine) {
+        if (multiline && !fields.empty()) return "\n        " + tsParams(members, fields, withDefaults, ",\n        ") + ",\n    ";
+        return singleLine;
     };
-    ts << "    constructor (" << signature(order, !required) << ") {\n";
-    if (hasBase) ts << "        super();\n";
-    for (uint32_t i = 0; i < members.size(); ++i) {
-        const auto& m = members[i];
-        const bool parameter = std::ranges::find(order, i) != order.end();
-        if (m.safeUnsignedInteger) {
-            ts << "        " << m.tsUint64Initializer(parameter ? m.name : m.tsDefault) << ";\n";
-        } else if (parameter) {
-            ts << "        this." << m.name << " = " << m.name << ";\n";
+    if (emitConstructor) {
+        ts << "    constructor (" << signature(order, defaults, params) << ") {\n";
+        if (hasBase) ts << "        super();\n";
+        for (uint32_t i = 0; i < members.size(); ++i) {
+            const auto& m = members[i];
+            const bool parameter = std::ranges::find(order, i) != order.end();
+            if (m.safeUnsignedInteger) {
+                ts << "        " << m.tsUint64Initializer(parameter ? m.name : m.tsDefault) << ";\n";
+            } else if (parameter) {
+                ts << "        this." << m.name << " = " << m.name << ";\n";
+            }
         }
+        ts << "    }\n";
     }
-    ts << "    }\n";
     if (reset) {
-        ts << "    reset (" << signature(*reset, false) << "): void {\n";
+        ts << "    reset (" << signature(*reset, false, tsParams(members, *reset, false, ", ")) << "): void {\n";
         for (uint32_t i = 0; i < members.size(); ++i) {
             const auto& m = members[i];
             if (keepOnReset.contains(m.name)) {
@@ -795,14 +884,13 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& memb
 }
 
 void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<BoundField>& members, const Order& order,
-              const Order* reset, bool resetToDefaults, const std::set<std::string>& keepOnReset, const std::string& base, bool required) {
-    const bool initializeFields = resetToDefaults && std::get<RecordType>(node.data).constructors.empty();
+              const Order* reset, bool resetToDefaults, const std::set<std::string>& keepOnReset, const std::string& base,
+              bool declaredConstructor, bool defaults) {
     ts << "export class " << node.name;
     if (!base.empty()) ts << " extends " << base;
     ts << " {\n";
-    if (!initializeFields) tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset, !base.empty(), required);
-    else if (std::ranges::any_of(members, &BoundField::safeUnsignedInteger))
-        tsConstructorAndReset(ts, members, {}, nullptr, keepOnReset, !base.empty());
+    const bool emitConstructor = declaredConstructor || std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
+    tsConstructorAndReset(ts, members, order, resetToDefaults ? nullptr : reset, keepOnReset, !base.empty(), emitConstructor, defaults);
     if (resetToDefaults) {
         ts << "    reset (): void {\n";
         for (const auto& m : members) {
@@ -822,7 +910,7 @@ void tsRecord(std::ostream& ts, const TypeNode& node, const std::vector<BoundFie
             ts << "    declare " << (m.readonly ? "readonly " : "") << m.name << ": number;\n";
             continue;
         }
-        if (initializeFields || std::ranges::find(order, i) == order.end()) {
+        if (std::ranges::find(order, i) == order.end()) {
             ts << "    " << (m.readonly ? "readonly " : "") << m.comment << m.name;
             if (!inferTsType(m)) ts << ": " << m.ts;
             ts << " = " << m.tsDefault << ";\n";
@@ -1067,13 +1155,19 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         const auto* record = std::get_if<RecordType>(&node.data);
         if (!record) throw std::runtime_error("expected record or enum: " + node.qualifiedName);
-        const bool emitTsClass = emitTs && !node.typescriptNumber && !output.externalClasses.contains(node.name);
-        auto constructor = emitTsClass ? selectTypeScriptConstructor(node, *record, output) : ConstructorInfo{};
-        if (constructor.required && !constructor.fields.empty() && entry != output.pools.end())
+        const auto& selected = record->typescriptConstructor;
+        auto constructor = selected.value_or(ConstructorInfo{});
+        if (!constructor.defaults && !constructor.fields.empty() && entry != output.pools.end())
             throw std::runtime_error(node.qualifiedName + ": pool requires a TypeScript constructor callable without arguments");
-        const Order noFields;
-        const auto& requiredFields = constructor.required && entry == output.pools.end() && !output.resets.contains(node.name)
-            ? constructor.fields : noFields;
+        auto requiredFields = constructor.defaults ? Order{} : constructor.fields;
+        if (const auto reset = output.resets.find(node.name); reset != output.resets.end()) {
+            // A reset that restores a field needs its default value even when the constructor takes it by argument.
+            const auto& binding = reset->second;
+            std::erase_if(requiredFields, [&](auto i) {
+                return binding.kind == ResetBinding::Kind::defaults || (binding.kind == ResetBinding::Kind::fields &&
+                       std::ranges::find(binding.fields, record->fields[i].name) == binding.fields.end());
+            });
+        }
         auto members = bindFields(graph, node, record->fields, deps, emitTs, nestedResets, requiredFields);
         if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, deps);
         if (record->serializable && (output.serializationHeader || emitTs)) {
@@ -1148,7 +1242,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
         usesUint64Field |= std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
         tsRecord(ts, node, members, order, reset ? &*reset : nullptr, resetToDefaults, retained,
-                 base == output.bases.end() ? "" : base->second.name, constructor.required);
+                 base == output.bases.end() ? "" : base->second.name, selected.has_value(), constructor.defaults);
     }
     if (pool.count != output.pools.size()) throw std::runtime_error("unknown pool type in " + module.name);
     if (!pendingResets.empty()) throw std::runtime_error("unknown reset record " + pendingResets.begin()->first + " in " + module.name);

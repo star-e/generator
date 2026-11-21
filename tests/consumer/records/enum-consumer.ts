@@ -1,7 +1,24 @@
 import { AttachmentType, ClearValueType, LightingMode, ParameterType, ResolveFlags, ResourceFlags, TaskType, UpdateFrequency } from './types';
 import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, ViewDimension } from '../../gfx';
-import { ShiftProbe } from './shift-probe';
+import { DefaultCtor, EmptyCtor, ImplicitCtor, RequiredCtor, ShiftProbe, OverloadedCtor, WrappedCtor } from './shift-probe';
 import { DescriptorTypeOrder, LayoutType, RenderPassType } from './layout-graph';
+
+export function checkConstructors (): boolean {
+    const required = new RequiredCtor(12, true);
+    const defaults = new DefaultCtor(undefined, undefined);
+    return new ImplicitCtor().count === 7 && new EmptyCtor().count === 7 && required.count === 12
+        && defaults.count === 7 && !defaults.enabled && defaults.kind === 0
+        && new WrappedCtor().value.count === 7 && new OverloadedCtor(7, required).value === required;
+}
+
+function checkConstructorArity (): void {
+    // @ts-expect-error Both fields are mandatory even though they have initializers.
+    new RequiredCtor(1);
+    // @ts-expect-error The implicit constructor takes no arguments.
+    new ImplicitCtor(1);
+    // @ts-expect-error The declared empty constructor takes no arguments.
+    new EmptyCtor(1);
+}
 
 export const layoutEnums = {
     LayoutType: [LayoutType.VULKAN, LayoutType.WEBGPU],

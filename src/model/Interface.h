@@ -56,13 +56,13 @@ struct Field {
 struct Constructor {
     SourceLocation location;
     std::vector<std::string> fields;
-    bool required{};
+    bool defaults{};
+    bool cppOnly{};
 };
 
 struct Record {
     bool moveOnly{};
     bool immovable{};
-    bool requireAllocator{};
     bool serializable{};
     std::set<std::string> comparisons;
     bool hashable{};

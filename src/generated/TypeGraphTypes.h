@@ -118,19 +118,20 @@ struct EnumType {
 
 struct ConstructorInfo {
     std::vector<uint32_t> fields;
-    bool required = false;
+    bool defaults = false;
+    bool cppOnly = false;
 };
 
 struct RecordType {
     bool moveOnly = false;
     bool immovable = false;
-    bool requireAllocator = false;
     bool serializable = false;
     bool compareEqual = false;
     bool compareLess = false;
     bool compareGreater = false;
     bool hashable = false;
     std::vector<ConstructorInfo> constructors;
+    std::optional<ConstructorInfo> typescriptConstructor;
     std::vector<TypeId> bases;
     std::vector<FieldInfo> fields;
     std::vector<MethodInfo> methods;
@@ -267,6 +268,7 @@ struct TypeNode {
     ContainerKind typescriptContainer = ContainerKind::None;
     MapKeyKind typescriptMapKey = MapKeyKind::Native;
     bool typescriptNumber = false;
+    bool typescriptTypeOnly = false;
     bool cppOnly = false;
     std::vector<TypeId> templateParameters;
 };

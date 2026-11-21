@@ -26,7 +26,7 @@ namespace cc::render {
         range: gfx::ResourceRange;
     }
 
-    @requireAllocator struct ResourceAccessNode {
+    struct ResourceAccessNode {
         resourceStatus: PmrFlatMap<ccstd::pmr::string, AccessStatus>;
     }
 
@@ -35,13 +35,13 @@ namespace cc::render {
         nextAccess: gfx::AccessFlagBit = gfx::AccessFlagBit::NONE;
     }
 
-    @requireAllocator struct AttachmentInfo {
+    struct AttachmentInfo {
         parentName: ccstd::pmr::string;
         attachmentIndex: uint32_t = 0;
         isResolveView: uint32_t = 0;
     }
 
-    @requireAllocator struct FGRenderPassInfo {
+    struct FGRenderPassInfo {
         colorAccesses: ccstd::vector<LayoutAccess>;
         dsAccess: LayoutAccess;
         dsResolveAccess: LayoutAccess;
@@ -132,7 +132,7 @@ namespace cc::render {
         boost::container::pmr::memory_resource* resource() const noexcept { return get_allocator().resource(); }
     }
 
-    @requireAllocator struct RenderingInfo {
+    struct RenderingInfo {
         renderpassInfo: gfx::RenderPassInfo;
         framebufferInfo: gfx::FramebufferInfo;
         clearColors: ccstd::pmr::vector<gfx::Color>;
@@ -140,7 +140,7 @@ namespace cc::render {
         clearStencil: uint8_t = 0;
     }
 
-    @immovable @requireAllocator struct FrameGraphDispatcher {
+    @immovable struct FrameGraphDispatcher {
         resourceAccessGraph: ResourceAccessGraph;
         resourceGraph: ResourceGraph&;
         renderGraph: const RenderGraph&;

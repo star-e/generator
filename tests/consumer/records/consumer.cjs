@@ -7,9 +7,11 @@ const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
 const { constEnumValues, attachmentUsage, usesStorage, resolveFlags, depthStencil, resolvesColor, highBit,
-    layoutEnums, descriptorBlockArgs, descriptorGroupBlockArgs } = require(path.join(jsDir, 'enum-consumer.js'));
+    layoutEnums, descriptorBlockArgs, descriptorGroupBlockArgs, checkConstructors } = require(path.join(jsDir, 'enum-consumer.js'));
 
-function compareDeclaration(file, firstLine, lastLine, normalize = line => line) {
+assert.ok(checkConstructors());
+
+function compareDeclaration(file, firstLine, lastLine, normalize = line => line, normalizeEngine = line => line) {
     function read(root) {
         const lines = fs.readFileSync(path.join(root, file), 'utf8').split(/\r?\n/);
         const start = lines.indexOf(firstLine);
@@ -18,7 +20,29 @@ function compareDeclaration(file, firstLine, lastLine, normalize = line => line)
         assert.ok(end > start, lastLine);
         return lines.slice(start, end + 1);
     }
-    assert.deepEqual(read(stage).map(normalize), read(engine), firstLine);
+    assert.deepEqual(read(stage).flatMap(normalize), read(engine).map(normalizeEngine), firstLine);
+}
+
+function stripLegacyAllocatorCtorNoexcept(text, name) {
+    const ctor = text.startsWith(`    ${name}(`) || text.startsWith(`${name}::${name}(`);
+    return ctor && text.includes('const allocator_type& alloc') ? text.replace(') noexcept', ')') : text;
+}
+
+function comparePmrRecord(file, name, normalize) {
+    compareDeclaration(file, `struct ${name} {`, '};', normalize, line => stripLegacyAllocatorCtorNoexcept(line, name));
+}
+
+function stripFieldDefaults(line) {
+    return line.replace(/(\w+In) = (?:[\w:]+(?:<[^{}()]*>)?(?:\{\})?|\{\})/g, '$1');
+}
+
+// The engine headers spell out a separate default constructor. Expand a fully defaulted
+// field constructor to compare the original signatures and member initializers.
+function legacyCtor(line) {
+    if (!/^    \w+\(/.test(line) || !line.includes('In = ')) return line;
+    const stripped = stripFieldDefaults(line);
+    const match = /^    (\w+)\([^,]*?In = /.exec(line);
+    return match ? [`    ${match[1]}() = default;`, stripped] : stripped;
 }
 
 const cpp = 'native/cocos/renderer/pipeline/custom/RenderCommonTypes.h';
@@ -33,7 +57,7 @@ for (const [name, values] of Object.entries(layoutEnums)) {
     assert.deepEqual(values, values.map((_, index) => index), name);
     assert.equal(layout[name], undefined, name);
 }
-compareDeclaration(layoutCpp, 'struct Descriptor {', '};');
+compareDeclaration(layoutCpp, 'struct Descriptor {', '};', legacyCtor);
 compareDeclaration(layoutTs, 'export class Descriptor {', '}');
 compareDeclaration(layoutCpp, 'struct DescriptorBlock {', '};');
 compareDeclaration(layoutTs, 'export class DescriptorBlock {', '}');
@@ -67,8 +91,11 @@ compareDeclaration(layoutCpp, 'struct DescriptorBlockFlattened {', '};');
 compareDeclaration(layoutTs, 'export class DescriptorBlockFlattened {', '}');
 compareDeclaration(layoutTs, 'export class DescriptorBlockData {', '}');
 compareDeclaration(layoutTs, 'export class DescriptorSetLayoutData {', '}');
-compareDeclaration(layoutCpp, 'struct DescriptorBlockData {', '};', line => line.replace(
-    'noexcept(noexcept(::cc::detail::makeEmptyPmr<ccstd::pmr::vector<DescriptorData>>(alloc, 0U)))', 'noexcept'));
+function legacyAllocatorOrder(text, defaultAlloc = '') {
+    return text.replace(/\(const std::allocator_arg_t&, const allocator_type& alloc, ([^)]*)\)/,
+        `($1, const allocator_type& alloc${defaultAlloc})`);
+}
+comparePmrRecord(layoutCpp, 'DescriptorBlockData', line => stripFieldDefaults(legacyAllocatorOrder(line)));
 const flat = new layout.DescriptorBlockFlattened();
 const otherFlat = new layout.DescriptorBlockFlattened();
 const elements = { descriptorNames: 'buffer', uniformBlockNames: 'camera', descriptors: new layout.Descriptor(), uniformBlocks: new UniformBlock() };
@@ -101,9 +128,7 @@ const { NestedProbe } = require(path.join(jsDir, 'shift-probe.js'));
 const ordinaryIndex = new layout.DescriptorBlockIndex();
 assert.ok(new NestedProbe().index instanceof layout.DescriptorBlockIndex);
 assert.equal(new NestedProbe(ordinaryIndex).index, ordinaryIndex);
-// Map construction can allocate its sentinel. The C++ consumer checks the platform's exception specification.
-compareDeclaration(layoutCpp, 'struct DescriptorDB {', '};', line => line.replace(
-    'noexcept(noexcept(decltype(DescriptorDB::blocks)(alloc)) && noexcept(decltype(DescriptorDB::groupBlocks)(alloc)))', 'noexcept'));
+comparePmrRecord(layoutCpp, 'DescriptorDB');
 compareDeclaration(layoutTs, 'export class DescriptorDB {', '}');
 const db = new layout.DescriptorDB();
 const otherDB = new layout.DescriptorDB();
@@ -113,7 +138,7 @@ for (const [name, values, field] of [
     ['DescriptorBlockIndex', descriptorBlockArgs, 'blocks'],
     ['DescriptorGroupBlockIndex', descriptorGroupBlockArgs, 'groupBlocks'],
 ]) {
-    compareDeclaration(layoutCpp, `struct ${name} {`, '};');
+    compareDeclaration(layoutCpp, `struct ${name} {`, '};', legacyCtor);
     compareDeclaration(layoutCpp, `inline bool operator<(const ${name}& lhs, const ${name}& rhs) noexcept {`, '}');
     assert.notEqual(db[field], otherDB[field]);
     for (let count = 0; count <= values.length; ++count) {
@@ -132,8 +157,7 @@ assert.equal(db.blocks, blocks);
 assert.equal(db.groupBlocks, groupBlocks);
 assert.equal(blocks.size, 0);
 assert.equal(groupBlocks.size, 0);
-compareDeclaration(layoutCpp, 'struct RenderPhase {', '};', line => line.replace(
-    'noexcept(noexcept(decltype(RenderPhase::shaders)(alloc)))', 'noexcept'));
+comparePmrRecord(layoutCpp, 'RenderPhase');
 compareDeclaration(layoutTs, 'export class RenderPhase {', '}');
 const phase = new layout.RenderPhase();
 const otherPhase = new layout.RenderPhase();
@@ -202,7 +226,8 @@ assert.equal(attachmentUsage, 0x18);
 assert.equal(usesStorage(attachmentUsage), false);
 assert.equal(usesStorage(attachmentUsage | types.ResourceFlags.STORAGE), true);
 assert.equal(types.ResourceFlags[0x200], 'TRANSFER_DST');
-compareDeclaration(cpp, 'struct LightInfo {', '};');
+// LightInfo now shares one defaulted constructor across all arities. Compare its fields with the engine.
+compareDeclaration(cpp, '    IntrusivePtr<scene::Light> light;', '};');
 compareDeclaration(cpp, 'struct RasterPassTag {};', 'struct RaytraceTag {};');
 compareDeclaration(cpp, 'struct BufferTag {};', 'struct TextureTag {};');
 compareDeclaration(ts, 'export class LightInfo {', '}');
@@ -245,19 +270,15 @@ function constructors(root, name) {
         .filter((block) => block.startsWith(`${name}::${name}(`));
 }
 for (const name of ['ResolvePair', 'CopyPair', 'UploadPair', 'MovePair']) {
-    // Moving the target string into a different PMR allocator can allocate.
-    const sourceArgs = name === 'UploadPair' ? 'std::move(sourceIn)' : 'std::move(sourceIn), alloc';
-    const exceptionSpec = ` noexcept(noexcept(decltype(${name}::source)(${sourceArgs})) && noexcept(decltype(${name}::target)(std::move(targetIn), alloc)))`;
     const emptyString = '::cc::detail::makeEmptyPmr<ccstd::pmr::string>(alloc, "")';
-    const emptyStrings = Array(name === 'UploadPair' ? 1 : 2).fill(`noexcept(${emptyString})`);
-    const normalizeSpec = text => text.replace(exceptionSpec, '')
-        .replace(`noexcept(${emptyStrings.join(' && ')})`, 'noexcept')
-        .split(emptyString).join('alloc');
-    compareDeclaration(cpp, `struct ${name} {`, '};', normalizeSpec);
+    comparePmrRecord(cpp, name, line => legacyAllocatorOrder(stripFieldDefaults(line), ' = boost::container::pmr::get_default_resource()')
+        .replace(`    ${name}(const allocator_type& alloc)`, `    ${name}(const allocator_type& alloc = boost::container::pmr::get_default_resource())`));
     compareDeclaration(ts, `export class ${name} {`, '}');
     const definitions = constructors(stage, name);
     assert.equal(definitions.length, name === 'UploadPair' ? 3 : 4, name);
-    assert.deepEqual(definitions.map(normalizeSpec), constructors(engine, name), name);
+    const normalizeDefinition = text => legacyAllocatorOrder(text).split(emptyString).join('alloc')
+        .replace(': source(),\n  target(alloc)', ': target(alloc)');
+    assert.deepEqual(definitions.map(normalizeDefinition), constructors(engine, name).map(text => stripLegacyAllocatorCtorNoexcept(text, name)), name);
 }
 
 for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS', 'COUNT'].entries()) {
