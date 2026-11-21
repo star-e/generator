@@ -33,10 +33,12 @@ const MethodInfo& scratch(const TypeGraph& graph, TypeId owner) {
     throw std::runtime_error("scratch method missing");
 }
 
-Module readModule(const std::filesystem::path& spec) {
+Module readModule(const std::filesystem::path& spec, const std::filesystem::path& typescriptFrom = {}) {
     std::ifstream stream(spec, std::ios::binary);
     if (!stream) throw std::runtime_error("cannot open " + spec.string());
-    return parseModule(spec, {std::istreambuf_iterator<char>(stream), {}});
+    auto module = parseModule(spec, {std::istreambuf_iterator<char>(stream), {}});
+    if (!typescriptFrom.empty()) module.bindings.typescriptFrom = typescriptFrom;
+    return module;
 }
 
 void checkScalarBindings() {
@@ -173,7 +175,7 @@ void checkSettings(const std::filesystem::path& spec) {
     for (const auto* name : {"bool", "uint32_t", "float", "cc::Material",
                              "cc::Texture2D", "cc::IntrusivePtr"}) externals.emplace(name, ExternalType{});
     const auto gfx = spec.parent_path().parent_path() / "extern/gfx.spec";
-    const auto graph = buildTypeGraph({{readModule(gfx), {}, true}, {readModule(spec), {}}}, externals);
+    const auto graph = buildTypeGraph({{readModule(gfx, "cocos/gfx"), {}, true}, {readModule(spec), {}}}, externals);
     const auto bloom = graph.findType("cc::render::Bloom");
     const auto bloomType = graph.findType("cc::render::BloomType");
     auto field = [&](TypeId record, const std::string& name) -> const FieldInfo& {
@@ -201,9 +203,9 @@ void checkSettings(const std::filesystem::path& spec) {
 void checkImports(const std::filesystem::path& specs) {
     const auto commonSpec = specs / "render/render-common.spec";
     std::vector<ModuleInput> inputs{{readModule(commonSpec), {}},
-                                    {readModule(specs / "extern/light.spec"), {}},
-                                    {readModule(specs / "extern/reflection-probe.spec"), {}},
-                                    {readModule(specs / "extern/gfx.spec"), {}, true},
+                                    {readModule(specs / "extern/light.spec", "cocos/render-scene/scene"), {}},
+                                    {readModule(specs / "extern/reflection-probe.spec", "cocos/render-scene/scene/reflection-probe"), {}},
+                                    {readModule(specs / "extern/gfx.spec", "cocos/gfx"), {}, true},
                                     {readModule(specs / "extern/strings.spec"), {}, true},
                                     {readModule(specs / "extern/containers.spec"), {}, true},
                                     {readModule(specs / "render/archive.spec"), {}}};

@@ -49,6 +49,7 @@ struct TypeScriptBinding {
     std::string target;
     std::filesystem::path from;
     std::filesystem::path archiveFrom;
+    bool externalTarget{};
     std::map<std::string, std::string> methods;
     std::map<std::string, InterfaceMethodBinding> methodOptions;
     std::map<std::string, std::string> renamedFrom;
@@ -75,6 +76,7 @@ inline bool isTypedArrayName(std::string_view name) {
 
 struct ModuleBindings {
     std::vector<TypeScriptBinding> typescript;
+    std::filesystem::path typescriptFrom;
     std::map<std::string, SourceLocation> typescriptExports;
     std::filesystem::path poolModule;
     std::vector<PoolDependency> poolDependencies;

@@ -14,11 +14,16 @@ struct ArchiveRequirements {
 const TypeNode& archiveInterface(const TypeGraph& graph, const TypeModule& module, std::string_view name);
 const std::string& archiveMethod(const TypeNode& api, const std::string& method);
 
+struct ArchiveImports {
+    TypeImports& values;
+    std::string defaultCodecModule;
+};
+
 // Emit a value at the current archive cursor. A loading caller can request a fresh local.
 struct ArchiveScript {
     const TypeGraph& graph;
     const TypeNode& api;
-    TypeImports& imports;
+    ArchiveImports& imports;
     bool save;
 
     void value(std::ostream& out, TypeId id, const std::string& expression, const std::string& indent,
@@ -26,7 +31,7 @@ struct ArchiveScript {
 };
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
-                      std::ostream& declarations, std::ostream& definitions, std::ostream* script, TypeImports& imports,
+                      std::ostream& declarations, std::ostream& definitions, std::ostream* script, ArchiveImports& imports,
                       ArchiveRequirements& requirements);
 
 } // namespace cc::codegen

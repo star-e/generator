@@ -190,7 +190,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         return m;
     }
     if (const auto* ext = std::get_if<ExternalTypeNode>(&node.data); ext && !field.isNullable &&
-        (ext->constructorConstRef || !node.typescriptArchiveModule.empty() || (ext->isStruct && !node.typescriptModule.empty()))) {
+        (ext->constructorConstRef || (!m.scalar && !node.typescriptModule.empty()) || !node.typescriptArchiveModule.empty())) {
         if (!field.initializer.empty()) invalid(field, "expected a default-constructed external value");
         m.cpp = nativeType(graph, module, field.type.type, deps);
         m.byConstReference = ext->constructorConstRef;
@@ -858,7 +858,7 @@ struct RecordArchives {
     std::ostringstream declarations, definitions, script;
     ArchiveRequirements requirements;
 
-    void add(const TypeGraph& graph, const TypeModule& archive, const TypeNode& record, const std::vector<ArchiveField>& fields, bool emitTs, TypeImports& imports) {
+    void add(const TypeGraph& graph, const TypeModule& archive, const TypeNode& record, const std::vector<ArchiveField>& fields, bool emitTs, ArchiveImports& imports) {
         const auto& name = record.name;
         declarations << '\n';
         for (bool save : {true, false}) {
@@ -957,6 +957,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         return interfaceType && interfaceType->bases.empty();
     });
     Dependencies deps{.emitCpp = !output.header.empty()};
+    ArchiveImports archiveImports{deps.valueImports, output.typescript ? (output.typescript->parent_path() / "serialization").generic_string() : ""};
     Pool pool;
     RecordArchives archives;
     std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, nameFunctions;
@@ -1021,7 +1022,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (model->serializable && (output.serializationHeader || emitTs)) {
                 if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
                 emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
-                                 emitTs ? &archives.script : nullptr, deps.valueImports, archives.requirements);
+                                 emitTs ? &archives.script : nullptr, archiveImports, archives.requirements);
             }
             continue;
         }
@@ -1067,7 +1068,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
             const bool emitTsArchive = emitTs && !node.typescriptNumber;
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements, emitTsArchive);
-            archives.add(graph, archive->module, node, fields, emitTsArchive, deps.valueImports);
+            archives.add(graph, archive->module, node, fields, emitTsArchive, archiveImports);
         }
         if (deps.emitCpp && (record->hashable || record->compareEqual || record->compareLess)) {
             std::vector<std::string_view> elements;

@@ -349,38 +349,3 @@ namespace cc::gfx {
         class Sampler;
     }
 }
-
-binding typescript {
-    LoadOp => LoadOp from "cocos/gfx";
-    StoreOp => StoreOp from "cocos/gfx";
-    ClearFlagBit => ClearFlagBit from "cocos/gfx";
-    TextureType => TextureType from "cocos/gfx";
-    TextureFlagBit => TextureFlagBit from "cocos/gfx";
-    SampleCount => SampleCount from "cocos/gfx";
-    AccessFlagBit => AccessFlagBit from "cocos/gfx";
-    Type => Type from "cocos/gfx";
-    ResolveMode => ResolveMode from "cocos/gfx";
-    ShaderStageFlagBit => ShaderStageFlagBit from "cocos/gfx";
-    MemoryAccessBit => MemoryAccessBit from "cocos/gfx";
-    ViewDimension => ViewDimension from "cocos/gfx";
-    SampleType => SampleType from "cocos/gfx";
-    Format => Format from "cocos/gfx";
-    ShaderInfo => ShaderInfo from "cocos/gfx";
-    Device => Device from "cocos/gfx";
-    Shader => Shader from "cocos/gfx";
-    Attribute => Attribute from "cocos/gfx";
-    SamplerInfo => SamplerInfo from "cocos/gfx";
-    Viewport => Viewport from "cocos/gfx";
-    Color => Color from "cocos/gfx";
-    RenderPass => RenderPass from "cocos/gfx";
-    Buffer => Buffer from "cocos/gfx";
-    Texture => Texture from "cocos/gfx";
-    Framebuffer => Framebuffer from "cocos/gfx";
-    Sampler => Sampler from "cocos/gfx";
-    Swapchain => Swapchain from "cocos/gfx";
-    UniformBlock => UniformBlock from "cocos/gfx" archive from "cocos/rendering/custom/serialization";
-    DescriptorSetLayoutInfo => DescriptorSetLayoutInfo from "cocos/gfx" archive from "cocos/rendering/custom/serialization";
-    DescriptorSetLayout => DescriptorSetLayout from "cocos/gfx";
-    DescriptorSet => DescriptorSet from "cocos/gfx";
-    PipelineLayout => PipelineLayout from "cocos/gfx";
-}

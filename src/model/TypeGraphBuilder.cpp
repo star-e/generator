@@ -532,7 +532,7 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                     const bool primitive = ts == "number" || ts == "string" || ts == "boolean";
                     dictionary = key.typescriptName == "string" && primitive && rule.target == "Record<string, " + *ts + ">";
                 }
-                if (rule.kind != BindingTarget::type || (!dictionary && !isTypedArrayName(rule.target)) || !rule.from.empty())
+                if (rule.kind != BindingTarget::type || (!dictionary && !isTypedArrayName(rule.target)) || !rule.from.empty() || !rule.archiveFrom.empty())
                     reject(container.container == ContainerKind::Map ? "expected a matching string-keyed Record target without an import" :
                            "expected a built-in ES2015 TypedArray target without an import");
                 node.typescriptContainer = ContainerKind::None;
@@ -545,10 +545,15 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
             } else if (rule.kind == BindingTarget::type) {
                 if (!std::holds_alternative<BuiltinType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data) &&
                     !(isEnum && input.modelOnly)) reject("expected an external type");
-                node.typescriptName = rule.target;
-                node.typescriptModule = rule.from.generic_string();
-                if (!rule.archiveFrom.empty() && !std::holds_alternative<ExternalTypeNode>(node.data))
-                    reject("external archive codec requires an external type");
+                if (!rule.target.empty()) {
+                    node.typescriptName = rule.target;
+                    node.typescriptModule = rule.externalTarget && rule.from.empty() && node.module == owner
+                        ? input.syntax.bindings.typescriptFrom.generic_string() : rule.from.generic_string();
+                }
+                if (!rule.archiveFrom.empty()) {
+                    if (!std::holds_alternative<ExternalTypeNode>(node.data)) reject("external archive codec requires an external type");
+                    if (node.typescriptModule.empty()) reject("external archive codec requires a TypeScript import source");
+                }
                 node.typescriptArchiveModule = rule.archiveFrom.generic_string();
             } else if (rule.kind == BindingTarget::interfaceType && std::holds_alternative<InterfaceType>(node.data)) {
                 if (rule.helpers || !rule.renamedFrom.empty()) reject("editor settings options on an interface method binding");
@@ -753,6 +758,11 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
                 node.typescriptName = decl.name;
             }
             if (external && external->isString && !node.typescriptName) node.typescriptName = "string";
+            const bool namedExternal = external && external->templateParameters.empty() && external->container == ContainerKind::None;
+            if (!module.bindings.typescriptFrom.empty() && !node.typescriptName && (namedExternal || std::holds_alternative<Enum>(decl.data))) {
+                node.typescriptName = decl.name;
+                node.typescriptModule = module.bindings.typescriptFrom.generic_string();
+            }
             auto id = graph.appendNode(std::move(node), parent);
             entry.declarations.push_back(id);
             if (external) {

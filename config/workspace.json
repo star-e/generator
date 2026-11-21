@@ -13,7 +13,7 @@
     { "spec": "../spec/extern/pmr-containers.spec" },
     { "spec": "../spec/extern/sets.spec" },
     { "spec": "../spec/extern/maps.spec" },
-    { "spec": "../spec/extern/gfx.spec" },
+    { "spec": "../spec/extern/gfx.spec", "typescript": "cocos/gfx" },
     { "spec": "../spec/extern/strings.spec" },
     {
       "spec": "../spec/render/archive.spec",
@@ -58,7 +58,7 @@
       }
     },
     { "spec": "../spec/extern/scene.spec" },
-    { "spec": "../spec/extern/render-window.spec" },
+    { "spec": "../spec/extern/render-window.spec", "typescript": "cocos/render-scene/core/render-window" },
     {
       "spec": "../spec/render/render-graph.spec",
       "cpp": {},
@@ -67,8 +67,8 @@
         "native/cocos/base/GraphEdges.h": "../runtime/cpp/GraphEdges.h"
       }
     },
-    { "spec": "../spec/extern/light.spec" },
-    { "spec": "../spec/extern/reflection-probe.spec" },
+    { "spec": "../spec/extern/light.spec", "typescript": "cocos/render-scene/scene" },
+    { "spec": "../spec/extern/reflection-probe.spec", "typescript": "cocos/render-scene/scene/reflection-probe" },
     { "spec": "../spec/extern/pipeline-externals.spec" },
     {
       "spec": "../spec/render/render-interface.spec",

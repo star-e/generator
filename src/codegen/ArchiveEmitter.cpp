@@ -35,7 +35,8 @@ std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
 
 void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context, bool emitTs) {
     const auto& node = graph.node(id);
-    if ((!node.typescriptNumber && !archivePrimitive(graph, id).empty()) || !node.typescriptArchiveModule.empty()) return;
+    if (!node.typescriptNumber && !archivePrimitive(graph, id).empty()) return;
+    if (std::holds_alternative<ExternalTypeNode>(node.data) && !node.typescriptModule.empty()) return;
     if (const auto* record = std::get_if<RecordType>(&node.data); record && record->serializable && node.module == owner) return;
     if (node.typescriptContainer != ContainerKind::None) {
         needsReadSize |= emitTs;
@@ -68,9 +69,10 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
     }
     if (node.typescriptContainer == ContainerKind::None) {
         const auto codec = (save ? "save" : "load") + name;
-        if (!node.typescriptArchiveModule.empty()) {
-            imports[node.typescriptArchiveModule].insert(codec);
-            if (declare) imports[node.typescriptModule].insert(name);
+        if (std::holds_alternative<ExternalTypeNode>(node.data)) {
+            const auto& from = node.typescriptArchiveModule.empty() ? imports.defaultCodecModule : node.typescriptArchiveModule;
+            imports.values[from].insert(codec);
+            if (declare) imports.values[node.typescriptModule].insert(name);
         }
         out << indent << codec << "(a, " << expr << ");\n";
         return;
@@ -107,7 +109,7 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
 }
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
-                      std::ostream& declarations, std::ostream& cpp, std::ostream* ts, TypeImports& imports,
+                      std::ostream& declarations, std::ostream& cpp, std::ostream* ts, ArchiveImports& imports,
                       ArchiveRequirements& requirements) {
     const auto& model = std::get<GraphType>(node.data);
     const auto& name = node.name;

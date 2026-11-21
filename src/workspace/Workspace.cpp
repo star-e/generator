@@ -82,7 +82,7 @@ void checkKeys(const Json& object, std::initializer_list<std::string_view> keys,
 }
 
 // Translate existing workspaces before resolving file names and registering module imports.
-Json moduleConfig(Json config) {
+Json moduleConfig(Json config, bool external) {
     if (config.contains("projection"))
         throw std::runtime_error("move JSON projection rules into .spec binding blocks");
     if (config.contains("backend") || config.contains("includeDir") || config.contains("header")) {
@@ -116,7 +116,7 @@ Json moduleConfig(Json config) {
         } else if (backend == "settings") {
             config["typescript"] = Json{{"file", config.at("typescript")}, {"format", "settings"}};
         } else if (backend == "model") {
-            if (config.contains("typescript")) throw std::runtime_error("model backend cannot request TypeScript output");
+            if (!external && config.contains("typescript")) throw std::runtime_error("model backend cannot request TypeScript output");
         } else {
             throw std::runtime_error("unknown backend " + backend);
         }
@@ -276,17 +276,22 @@ Files plan(const Json& settings, const fs::path& base) {
     for (const auto& entry : modules) {
         const auto spec = base / entry.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
-        const auto config = moduleConfig(entry);
+        const auto config = moduleConfig(entry, module.external);
         auto& output = outputs.emplace_back();
         auto& typesOutput = output.types;
-        const bool generateFiles = config.contains("cpp") || config.contains("typescript");
-        if (module.external && generateFiles)
-            throw std::runtime_error(spec.string() + ": extern module cannot declare generated outputs");
-        if (!generateFiles) {
-            if (module.external) {
-                for (const auto& rule : module.bindings.typescript)
-                    if (rule.kind != BindingTarget::type) invalidBinding(rule, "extern module");
+        if (module.external) {
+            if (config.contains("cpp")) throw std::runtime_error(spec.string() + ": extern module cannot declare generated outputs");
+            if (const auto ts = config.find("typescript"); ts != config.end()) {
+                if (!ts->is_string()) throw std::runtime_error(spec.string() + ": extern module typescript expects an import path string");
+                auto name = ts->get<std::string>();
+                if (name.ends_with(".d.ts")) name.resize(name.size() - 5);
+                else if (name.ends_with(".ts")) name.resize(name.size() - 3);
+                module.bindings.typescriptFrom = parseBindingPath(name, spec.string());
             }
+            for (const auto& rule : module.bindings.typescript)
+                if (rule.kind != BindingTarget::type) invalidBinding(rule, "extern module");
+        }
+        if (module.external || (!config.contains("cpp") && !config.contains("typescript"))) {
             inputs.push_back({std::move(module), loadTypes(config.value("types", Json::object())), true});
             continue;
         }

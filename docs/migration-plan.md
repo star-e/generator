@@ -40,7 +40,7 @@ ctest --test-dir build/host --output-on-failure
 
 ### 按模块选择输出
 
-`modules` 中的每一项引用一个 `.spec`。`extern module` 只需填写 `spec`，它的声明和绑定进入 TypeGraph，供其他模块导入。普通模块可以单独或同时配置 `cpp` 和 `typescript`。例如，`RenderCommon` 的生成配置为
+`modules` 中的每一项引用一个 `.spec`。`extern module` 的 `typescript` 字符串指定已有 TS 模块的导入路径，例如 `{ "spec": "../spec/extern/gfx.spec", "typescript": "cocos/gfx" }`。生成器只在消费方写入导入语句。没有统一 TS 来源的外部模块可以只填 `spec`。普通模块可以单独或同时配置 `cpp` 和 `typescript`。例如，`RenderCommon` 的生成配置为
 
 ```json
 {
@@ -54,7 +54,7 @@ ctest --test-dir build/host --output-on-failure
 
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 
-`typescript` 通常只写文件路径。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。枚举注册、对象池、JSB 导出类型等规则仍写在 `.spec` 的绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。旧版 `forward` 的布尔值按默认规则处理，字符串指定的文件名继续有效。[工作区输出测试](../tests/WorkspaceOutputs.cmake)
+普通模块的 `typescript` 字符串指定要生成的 `.ts` 文件。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。枚举注册、对象池、JSB 导出类型等规则仍写在 `.spec` 的绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。旧版 `forward` 的布尔值按默认规则处理，字符串指定的文件名继续有效。[工作区输出测试](../tests/WorkspaceOutputs.cmake)
 
 独立构建运行 `cocos.typegraph`、`cocos.modules.imports`、`cocos.archive.generate`、`cocos.settings.generate`、`cocos.records.generate` 和 `cocos.selfhost`。配置时设置 `COCOS_CODEGEN_ENGINE_ROOT` 为引擎目录，会额外注册历史基线、归档互读、编辑器设置和 RenderCommon 消费测试。互读测试使用引擎已安装的 TypeScript、Node.js 和 C++17 编译器，Boost.Container 可通过 `CMAKE_PREFIX_PATH` 指向其安装前缀。Windows 从构建目录运行 `cmake -DLEGACY=<旧仓库路径> -DENGINE=<引擎路径> -DDEPS=<x64-windows依赖前缀> -DMSBUILD=<MSBuild.exe路径> -P <generator路径>/tests/LegacyReplay.cmake`，可从固定提交重建 v143 工具并连续核对两次输出。[基线清单](../config/baseline.json) · [历史重建测试](../tests/LegacyReplay.cmake) · [引擎互读测试](../tests/Interop.cmake) · [编辑器消费测试](../tests/SettingsInterop.cmake)
 
@@ -105,7 +105,7 @@ binding typescript {
 
 | 用途 | 模块内的实际规则 |
 | --- | --- |
-| 外部类型 | `cc::gfx::SampleCount => "gfx.SampleCount";` 和 `Light => Light from "cocos/render-scene/scene";`。导入路径相对于工作区输出根目录，后端按消费文件的位置生成相对导入。 |
+| 外部类型 | 工作区的 `"typescript": "cocos/gfx"` 为同名导出指定默认来源。`Camera => Camera from "cocos/render-scene/scene/camera";` 单独指定类型来源。路径相对于工作区输出根目录，后端按消费文件的位置生成相对导入。 |
 | 具体模板实例 | `ccstd::vector<uint8_t> => Uint8Array;` 只匹配该模板和这组类型实参。`ccstd::vector<uint32_t>` 可以单独绑定到 `Uint32Array`。目标使用 ES2015 内置 TypedArray 名称，字段默认值为相应类型的零长度新数组。 |
 | 普通数组 | 在外部类型声明上写 `@container("array") template<T> class vector;`。TypeGraph 递归解析元素的 TS 类型，字段使用 `T[]` 和独立的空数组。具体实例的显式绑定优先，例如 `ccstd::vector<ccstd::vector<uint8_t>>` 对应 `Uint8Array[]`。 |
 | Map | 在外部类型声明上写 `@container("map") template<K, V> class map;`。TypeGraph 按键、值各自的绑定生成 `Map<K, V>`，从两侧递归收集导入。每个字段用 `new Map<K, V>()` 初始化。 |
@@ -118,9 +118,11 @@ binding typescript {
 
 TypeGraph 为已登记的全局标量提供默认 TS 绑定。`void` 映射到 `void`，`bool` 映射到 `boolean`，`double`、`float`、`uint8_t` 和 `uint32_t` 映射到 `number`。需要覆盖默认值时，在 `binding typescript` 中声明显式规则。
 
+外部模块的默认 TS 来源取自工作区，路径从输出根目录算起。可以写目录入口 `cocos/gfx`，也可以写具体的 `.ts` 或 `.d.ts` 文件，消费方的导入省略该后缀。旧 `.spec` 中的 `module Gfx from "...";` 在工作区未指定路径时仍然有效。同一模块内的普通非模板类、结构体、枚举和标志枚举按声明名绑定，消费方用到才导入。`Type => extern enum DeviceType;` 沿用默认来源并改用导出名 `DeviceType`。逐类型的 `from` 可覆盖来源。归档字段使用外部对象时，生成器默认从消费方 `.ts` 文件同目录的 `./serialization` 导入 `save<导出名>` 和 `load<导出名>`。放在其他目录的函数可用 `UniformBlock archive from "cocos/codecs/uniform";` 覆盖路径。TypeScript 编译会检查所需函数是否已导出。[Gfx 声明](../spec/extern/gfx.spec)
+
 在 `extern module` 的无定义 `class` 或 `struct` 上用 `@string` 声明拥有 UTF-8 文本的原生类型。字段默认绑定为 TS `string`，初值为 `''`，序列化使用字符串读写接口。显式 TS 绑定可以指定兼容的字符串别名及其导入路径。需要传递内存资源的字符串另加 `@pmr`。例如 `ccstd::pmr::string` 同时声明这两个注解，`std::string_view` 作为借用视图只声明 TS 绑定。[原生字符串声明](../spec/extern/strings.spec) · [借用视图绑定](../spec/extern/types.spec)
 
-外部模块的声明共用一个 C++ 头文件时，在模块的 `import` 之后写一次 `cpp { header "..."; }`。一个模块涉及多个头文件时，在 `namespace` 内用 `header "..." { ... }` 包住相关声明。固定路径供整组共用，路径中的 `{name}` 替换为声明的非限定名，保留大小写。例如 `GFX{name}.h` 将 `Buffer` 映射到 `GFXBuffer.h`。组内路径优先于模块默认值，组外声明继续使用模块默认值。消费方按模块名导入，TS 绑定仍写在模块级 `binding typescript` 中。[Gfx 默认头文件与分组](../spec/extern/gfx.spec) · [Scene 命名模板](../spec/extern/scene.spec)
+外部模块的声明共用一个 C++ 头文件时，在模块的 `import` 之后写一次 `cpp { header "..."; }`。一个模块涉及多个头文件时，在 `namespace` 内用 `header "..." { ... }` 包住相关声明。固定路径供整组共用，路径中的 `{name}` 替换为声明的非限定名，保留大小写。例如 `GFX{name}.h` 将 `Buffer` 映射到 `GFXBuffer.h`。组内路径优先于模块默认值，组外声明继续使用模块默认值。消费方按模块名导入，TS 默认路径由工作区提供，逐类型例外写在 `binding typescript` 中。[Gfx 默认头文件与分组](../spec/extern/gfx.spec) · [Scene 命名模板](../spec/extern/scene.spec)
 
 `DescriptorBlock` 的两个 Map 以字符串为键，值分别为本模块的 `Descriptor` 和外部的 `UniformBlock`。`DescriptorBlockFlattened` 用四个数组存放名称和值。这两个类型都声明 `reset defaults;`，通过 `.clear()` 清空 Map、通过 `length = 0` 清空数组，保留已有引用并将 `capacity`、`count` 恢复为零。[容器声明](../spec/extern/containers.spec) · [布局声明](../spec/render/layout-graph.spec)
 
@@ -271,7 +273,7 @@ C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 
 
 TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = this.N)` 指定起点，用 `path(v)` 生成绝对路径。路径段取自 `named_graph` 指定的名称组件。同一父节点下有重复名称时，查询返回最先插入的匹配项。查找失败返回 `g.N`，`path(g.N)` 返回空字符串，其他无效的顶点编号触发 `RangeError`。消费测试在 TS 中重建 C++ 用例的顶点和父子关系，逐项比较绝对路径和查询结果。[TS 寻址测试](../tests/consumer/records/layout-graph-consumer.ts.in)
 
-在 `layout-graph.spec` 中，`@serialize graph LayoutGraph` 和相应的 `@serialize struct` 声明共同定义图归档。四个头部数值依次为顶点数、边数、阶段数和相位数。接下来按顶点编号写类别、父编号、名称、描述符库和载荷；根的父编号为 `0xFFFFFFFF`。描述符映射的键在 TS 内存中使用 JSON 字符串，在归档中按索引结构的字段顺序写入。`UniformBlock` 的外部 TS 编解码函数由 `archive from` 指向引擎模块。读入整张图并核对类别和边的计数后，两端才替换目标图。[布局声明](../spec/render/layout-graph.spec) · [外部类型绑定](../spec/extern/gfx.spec)
+在 `layout-graph.spec` 中，`@serialize graph LayoutGraph` 和相应的 `@serialize struct` 声明共同定义图归档。四个头部数值依次为顶点数、边数、阶段数和相位数。接下来按顶点编号写类别、父编号、名称、描述符库和载荷；根的父编号为 `0xFFFFFFFF`。描述符映射的键在 TS 内存中使用 JSON 字符串，在归档中按索引结构的字段顺序写入。`layout-graph.ts` 从同目录的 `./serialization` 导入 `UniformBlock` 和 `DescriptorSetLayoutInfo` 的读写函数。`InputArchive` 和 `OutputArchive` 的导入路径单独取自 `ArchiveInterface` 的工作区配置。读入整张图并核对类别和边的计数后，两端才替换目标图。[布局声明](../spec/render/layout-graph.spec) · [外部 Gfx 声明](../spec/extern/gfx.spec)
 
 互操作测试使用引擎提交 `81f9296d` 的 TS 写入器生成的 628 字节固定样本，包含空图和一片有两个根的森林。C++ 和 TS 均读取该样本，并分别写出与其逐字节一致的数据。用例覆盖同名相位、两种描述符映射、含成员的 uniform block 和着色器集合。字符串沿用引擎 `BinaryArchive` 的单字节编码。[旧格式样本](../tests/consumer/records/fixtures/layout-graph.bin) · [跨版本测试](../tests/consumer/records/layout-archive.cjs)
 

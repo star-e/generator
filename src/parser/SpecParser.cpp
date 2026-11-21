@@ -48,7 +48,7 @@ public:
         bool hasNamespace = false;
         while (!token.empty()) {
             if (accept("binding")) {
-                binding(module.bindings);
+                binding(module);
                 continue;
             }
             if ((hasNamespace && !module.external) || !accept("namespace")) fail("expected namespace or binding block");
@@ -248,12 +248,8 @@ private:
     }
 
     std::filesystem::path bindingPath() {
-        const auto text = quotedString("binding path");
-        const std::filesystem::path path(text);
-        if (text.find_first_of("'\"\\:") != std::string::npos || path.empty() || path.has_root_path() ||
-            path.filename().empty() || path.filename() == ".") fail("expected relative binding path");
-        for (const auto& part : path) if (part == "..") fail("binding path escapes its root");
-        return path.lexically_normal();
+        const auto at = location;
+        return parseBindingPath(quotedString("binding path"), at.describe());
     }
 
     TypeScriptImport bindingImport() {
@@ -351,6 +347,12 @@ private:
 
     TypeScriptBinding typeScriptBinding() {
         TypeScriptBinding rule{.source = type()};
+        if (accept("archive")) {
+            expect("from");
+            rule.archiveFrom = bindingPath();
+            expect(";");
+            return rule;
+        }
         expect("=>");
         if (accept("interface")) rule.kind = BindingTarget::interfaceType;
         else if (accept("class")) {
@@ -359,7 +361,8 @@ private:
         } else if (accept("const")) { expect("enum"); rule.kind = BindingTarget::constEnum; }
         else if (accept("enum")) rule.kind = BindingTarget::enumeration;
         else {
-            if (accept("extern")) {
+            rule.externalTarget = accept("extern");
+            if (rule.externalTarget) {
                 if (!rule.source.arguments.empty()) fail("expected a built-in TypedArray target for a template instance");
                 if (!accept("class") && !accept("interface") && !accept("enum"))
                     fail("expected an external class, interface or enum binding");
@@ -370,15 +373,15 @@ private:
                 rule.kind = BindingTarget::numberField;
                 rule.numberField = identifier();
                 expect(")");
-            } else if (accept("from")) {
+            } else if (rule.externalTarget || token == "from") {
                 if (!identifierStart(rule.target.front()) || !std::ranges::all_of(rule.target, [](char c) {
                         return identifierStart(c) || std::isdigit(static_cast<unsigned char>(c));
                     })) fail("expected a named TypeScript import");
-                rule.from = bindingPath();
-                if (accept("archive")) {
-                    expect("from");
-                    rule.archiveFrom = bindingPath();
-                }
+                if (accept("from")) rule.from = bindingPath();
+            }
+            if (rule.kind == BindingTarget::type && accept("archive")) {
+                expect("from");
+                rule.archiveFrom = bindingPath();
             }
         }
         if (rule.kind != BindingTarget::type && accept("{")) bindingOptions(rule);
@@ -386,11 +389,19 @@ private:
         return rule;
     }
 
-    void binding(ModuleBindings& rules) {
+    void binding(Module& module) {
+        auto& rules = module.bindings;
         if (accept("typescript")) {
             expect("{");
             while (!accept("}")) {
-                if (accept("export")) {
+                if (accept("module")) {
+                    if (!module.external || token != module.name) fail("expected the declaring extern module " + module.name);
+                    if (!rules.typescriptFrom.empty()) fail("duplicate TypeScript module source for " + module.name);
+                    advance();
+                    expect("from");
+                    rules.typescriptFrom = bindingPath();
+                    expect(";");
+                } else if (accept("export")) {
                     expect("{");
                     do {
                         const auto at = location;
@@ -906,6 +917,17 @@ private:
 };
 
 } // namespace
+
+std::filesystem::path parseBindingPath(const std::string& text, const std::string& context) {
+    const std::filesystem::path path(text);
+    if (text.find_first_of("'\"\\:") != std::string::npos ||
+        std::ranges::any_of(text, [](unsigned char ch) { return std::iscntrl(ch); }) ||
+        path.has_root_path() || !path.has_filename() || path.filename() == ".")
+        throw std::runtime_error(context + ": expected relative binding path");
+    for (const auto& part : path)
+        if (part == "..") throw std::runtime_error(context + ": binding path escapes its root");
+    return path.lexically_normal();
+}
 
 Module parseModule(const std::filesystem::path& file, const std::string& source) {
     return Parser(file, source).parse();

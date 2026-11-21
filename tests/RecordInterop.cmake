@@ -6,7 +6,9 @@ file(COPY "${SOURCE}/spec" "${SOURCE}/config" "${SOURCE}/runtime" DESTINATION "$
 file(WRITE "${work}/spec/text.spec" [[extern module Text;
 cpp { header "SampleText.h"; }
 namespace sample { @string class Text; @string struct Label; }
-binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
+binding typescript {
+    Label => Caption from "cocos/rendering/custom/caption";
+}
 ]])
 file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import Gfx; import Text; import ArchiveInterface;
 namespace cc {
@@ -109,7 +111,7 @@ string(JSON config SET "${config}" modules ${count} [[{
 }]])
 math(EXPR count "${count} + 1")
 string(JSON config SET "${config}" modules ${count} [[{
-    "backend": "model", "spec": "../spec/text.spec"
+    "backend": "model", "spec": "../spec/text.spec", "typescript": "cocos/rendering/custom/text"
 }]])
 file(WRITE "${work}/spec/indexed-keys.spec" [[module IndexedKeys;
 import RenderCommon;
