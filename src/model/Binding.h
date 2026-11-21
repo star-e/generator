@@ -75,6 +75,7 @@ inline bool isTypedArrayName(std::string_view name) {
 
 struct ModuleBindings {
     std::vector<TypeScriptBinding> typescript;
+    std::map<std::string, SourceLocation> typescriptExports;
     std::filesystem::path poolModule;
     std::vector<PoolDependency> poolDependencies;
     std::optional<SourceLocation> jsb;

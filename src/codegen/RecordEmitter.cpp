@@ -827,7 +827,7 @@ struct ArchiveField {
 };
 
 std::vector<ArchiveField> archiveFields(const TypeGraph& graph, ModuleId owner, const RecordType& record,
-                                        const std::vector<BoundField>& members, ArchiveRequirements& requirements) {
+                                        const std::vector<BoundField>& members, ArchiveRequirements& requirements, bool emitTs) {
     std::vector<ArchiveField> fields;
     for (size_t i = 0; i < record.fields.size(); ++i) {
         const auto& field = record.fields[i];
@@ -842,7 +842,7 @@ std::vector<ArchiveField> archiveFields(const TypeGraph& graph, ModuleId owner, 
             if (field.typescriptInitializer == "null") invalid(field, "native value archive cannot encode TypeScript null");
             if (field.isReadonly && !archivePrimitive(graph, field.type.type).empty())
                 invalid(field, "archive load requires a writable field");
-            requirements.checkType(graph, owner, field.type.type, field.type.location.describe() + ": " + field.name);
+            requirements.checkType(graph, owner, field.type.type, field.type.location.describe() + ": " + field.name, emitTs);
         }
         fields.push_back(std::move(entry));
     }
@@ -966,6 +966,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (deps.emitCpp && !output.forwardHeader) writeScalarAliases(cpp, graph, module, deps.headers);
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
+        const bool emitTs = output.typescript && node.typescriptName;
+        if (!deps.emitCpp && !emitTs) continue;
         if (std::holds_alternative<AliasType>(node.data)) continue;
         if (std::holds_alternative<TagType>(node.data)) {
             if (!previousTag) cpp << '\n';
@@ -976,12 +978,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         previousTag = false;
         const auto entry = output.pools.find(node.name);
         if (std::holds_alternative<InterfaceType>(node.data)) {
-            if (standaloneInterfaces && id != module.declarations.front()) ts << '\n';
-            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, output.typescript ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
+            if (emitTs && standaloneInterfaces && !ts.view().empty()) ts << '\n';
+            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, emitTs ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
             continue;
         }
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
-            const auto fields = bindFields(graph, node, model->fields, deps, output.typescript.has_value(), nestedResets);
+            const auto fields = bindFields(graph, node, model->fields, deps, emitTs, nestedResets);
             if (deps.emitCpp) {
                 std::string inputArchive;
                 if (output.serializationHeader && model->serializable && (!fields.empty() || model->nameIndex || model->keyComponentIndex) && archive) {
@@ -1003,7 +1005,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                     }
                 }
             }
-            if (output.typescript) {
+            if (emitTs) {
                 emitTypeScriptGraph(graph, id, ts, deps.typeImports, fields);
                 usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
@@ -1012,15 +1014,15 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 }
                 if (model->hierarchy || model->incidence) usesGraphRuntime = true;
             }
-            if (model->serializable && (output.serializationHeader || output.typescript)) {
+            if (model->serializable && (output.serializationHeader || emitTs)) {
                 if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
                 emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
-                                 output.typescript ? &archives.script : nullptr, deps.valueImports, archives.requirements);
+                                 emitTs ? &archives.script : nullptr, deps.valueImports, archives.requirements);
             }
             continue;
         }
         cpp << '\n';
-        ts << '\n';
+        if (emitTs) ts << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             cpp << "enum class " << node.name;
             std::string baseName = "int";
@@ -1031,15 +1033,17 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 cpp << " : " << baseName;
             }
             cpp << (enumeration->isFlags ? " { // NOLINT(performance-enum-size)\n" : " {\n");
-            ts << (pendingConstEnums.erase(node.name) ? "export const enum " : "export enum ") << node.name << " {\n";
             writeEnumMembers(cpp, *enumeration, EnumTarget::cpp);
-            if (output.typescript) writeEnumMembers(ts, *enumeration, EnumTarget::typescript);
+            if (emitTs) {
+                ts << (pendingConstEnums.erase(node.name) ? "export const enum " : "export enum ") << node.name << " {\n";
+                writeEnumMembers(ts, *enumeration, EnumTarget::typescript);
+                ts << "}\n";
+            }
             cpp << "};\n";
             if (enumeration->isFlags) {
                 deps.headers.insert("type_traits");
                 cppFlagOperators(cpp, node.name, baseName);
             }
-            ts << "}\n";
             if (pendingEnums.erase(node.name)) {
                 if (!enumImports.empty()) enumImports += ", ";
                 enumImports += node.name;
@@ -1053,12 +1057,13 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const std::vector<std::string> noFields;
         const auto& requiredFields = requiredConstructor && !output.pools.contains(node.name) && !output.resets.contains(node.name)
             ? output.constructors.at(node.name) : noFields;
-        auto members = bindFields(graph, node, record->fields, deps, output.typescript.has_value(), nestedResets, requiredFields);
+        auto members = bindFields(graph, node, record->fields, deps, emitTs, nestedResets, requiredFields);
         if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, deps);
-        if (record->serializable && (output.serializationHeader || output.typescript)) {
+        if (record->serializable && (output.serializationHeader || emitTs)) {
             if (!archive) throw std::runtime_error(node.qualifiedName + ": serialization requires import ArchiveInterface");
-            const auto fields = archiveFields(graph, owner, *record, members, archives.requirements);
-            archives.add(graph, archive->module, node, fields, output.typescript.has_value() && !node.typescriptNumber, deps.valueImports);
+            const bool emitTsArchive = emitTs && !node.typescriptNumber;
+            const auto fields = archiveFields(graph, owner, *record, members, archives.requirements, emitTsArchive);
+            archives.add(graph, archive->module, node, fields, emitTsArchive, deps.valueImports);
         }
         if (deps.emitCpp && (record->hashable || record->compareEqual || record->compareLess)) {
             std::vector<std::string_view> elements;
@@ -1071,7 +1076,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 cppComparisons(cpp, node.name, elements, *record);
             }
         }
-        if (!output.typescript || node.typescriptNumber) continue;
+        if (!emitTs || node.typescriptNumber) continue;
         if (const auto impl = output.externalClasses.find(node.name); impl != output.externalClasses.end()) {
             deps.valueImports[impl->second.generic_string()].insert(node.name);
             ts << "export { " << node.name << " };\n";
@@ -1207,6 +1212,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
     if (!archives.script.view().empty()) {
         if (!archive->output.typescript) throw std::runtime_error(module.name + ": serialization requires ArchiveInterface TypeScript output");
+        for (const auto name : {"OutputArchive", "InputArchive"}) {
+            if (!archiveInterface(graph, archive->module, name).typescriptName)
+                throw std::runtime_error(module.name + ": serialization requires ArchiveInterface TypeScript export " + name);
+        }
         auto path = *archive->output.typescript;
         script << "import type { OutputArchive, InputArchive } from '" << modulePath(path.replace_extension(), *output.typescript) << "';\n";
     }

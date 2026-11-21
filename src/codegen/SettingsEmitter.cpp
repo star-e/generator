@@ -194,6 +194,7 @@ std::string emitSettings(const TypeGraph& graph, ModuleId owner, const SettingsB
     std::ostringstream body;
     for (const auto id : module.declarations) {
         const auto& node = graph.node(id);
+        if (!node.typescriptName || std::holds_alternative<AliasType>(node.data)) continue;
         body << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             body << "export enum " << node.name << " {\n";

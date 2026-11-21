@@ -33,18 +33,18 @@ std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
     return std::ranges::find(numbers, type) != std::end(numbers) ? "Number" : "";
 }
 
-void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context) {
+void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context, bool emitTs) {
     const auto& node = graph.node(id);
     if ((!node.typescriptNumber && !archivePrimitive(graph, id).empty()) || !node.typescriptArchiveModule.empty()) return;
     if (const auto* record = std::get_if<RecordType>(&node.data); record && record->serializable && node.module == owner) return;
     if (node.typescriptContainer != ContainerKind::None) {
-        needsReadSize = true;
+        needsReadSize |= emitTs;
         const auto& args = std::get<TemplateInstanceType>(node.data).arguments;
         if (node.typescriptContainer == ContainerKind::Map && graph.node(std::get<TypeId>(args.front())).typescriptMapKey == MapKeyKind::String)
             throw std::runtime_error(context + ": mapKey string has no archive encoding for the native key");
         if (node.typescriptContainer == ContainerKind::Array && archivePrimitive(graph, std::get<TypeId>(args.front())) == "Bool")
             needsBoolVectorLoad = true;
-        for (const auto& arg : args) checkType(graph, owner, std::get<TypeId>(arg), context);
+        for (const auto& arg : args) checkType(graph, owner, std::get<TypeId>(arg), context, emitTs);
         return;
     }
     throw std::runtime_error(context + ": unsupported archive field type " + node.qualifiedName);
@@ -114,14 +114,14 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.separateEdges || model.alternatives.empty() ||
         graph.node(model.vertexType).qualifiedName != "uint32_t")
         throw std::runtime_error(node.qualifiedName + ": graph archive requires a mutable uint32_t vertex list with shared edges and polymorphic payloads");
-    requirements.needsReadSize = true;
+    requirements.needsReadSize |= ts != nullptr;
     for (const auto& columns : {&model.components, &model.alternatives})
-        for (const auto& column : *columns) requirements.checkType(graph, node.module, column.valueType, node.qualifiedName + "." + column.name);
+        for (const auto& column : *columns) requirements.checkType(graph, node.module, column.valueType, node.qualifiedName + "." + column.name, ts != nullptr);
     for (const auto& field : model.fields) {
         if (field.transient) continue;
         if (field.isReadonly && !archivePrimitive(graph, field.type.type).empty())
             throw std::runtime_error(node.qualifiedName + "." + field.name + ": archive load requires a writable field");
-        requirements.checkType(graph, node.module, field.type.type, node.qualifiedName + "." + field.name);
+        requirements.checkType(graph, node.module, field.type.type, node.qualifiedName + "." + field.name, ts != nullptr);
     }
     const auto tag = [&](const ComponentInfo& column) { return "::" + graph.node(column.tag).qualifiedName + "{}"; };
     const auto count = model.alternatives.size();

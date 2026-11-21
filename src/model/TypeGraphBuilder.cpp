@@ -468,12 +468,32 @@ void resolveEnum(TypeGraph& graph, TypeId id, const Enum& syntax, const std::str
 using MethodBindings = std::map<std::string, std::string>;
 using InterfaceBindings = std::map<uint32_t, MethodBindings>;
 
+void bindTypeScriptExports(TypeGraph& graph, ModuleId owner, const Module& syntax) {
+    const auto& exports = syntax.bindings.typescriptExports;
+    if (exports.empty()) return;
+    for (const auto& [name, at] : exports) {
+        const auto decl = std::ranges::find(syntax.declarations, name, &Declaration::name);
+        if (syntax.external || decl == syntax.declarations.end() ||
+            !(std::holds_alternative<Record>(decl->data) || std::holds_alternative<Interface>(decl->data) ||
+              std::holds_alternative<Enum>(decl->data) || std::holds_alternative<GraphDeclaration>(decl->data)))
+            throw std::runtime_error(at.describe() + ": expected a local TypeScript export declaration for " + name);
+    }
+    for (const auto id : graph.modules.at(owner.value).declarations) {
+        auto& node = graph.getNode(id.value);
+        if (!exports.contains(node.name)) {
+            node.typescriptName.reset();
+            node.typescriptModule.clear();
+        }
+    }
+}
+
 InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inputs, const std::vector<std::string>& scopes) {
     InterfaceBindings methods;
     std::map<uint32_t, SourceLocation> bound;
     for (uint32_t i = 0; i < inputs.size(); ++i) {
         const auto& input = inputs[i];
         const ModuleId owner{i};
+        bindTypeScriptExports(graph, owner, input.syntax);
         std::set<uint32_t> jsbRecords;
         for (const auto& [name, at] : input.syntax.bindings.jsbRecords) {
             const auto id = resolveName(graph, name, at, scopes[i], owner);
@@ -490,6 +510,11 @@ InterfaceBindings bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& in
                 throw std::runtime_error(at.describe() + ": " + reason + " for " + qualifiedTypeName(graph, id));
             };
             if (node.module != ModuleId{} && node.module != owner) reject("bind the type in its declaring module");
+            const auto& exports = input.syntax.bindings.typescriptExports;
+            if (rule.kind == BindingTarget::numberField && exports.contains(node.name))
+                reject("number(field) has no named TypeScript export");
+            if (rule.kind != BindingTarget::type && rule.kind != BindingTarget::numberField && !exports.empty() && !exports.contains(node.name))
+                reject("binding requires a TypeScript export");
             const auto [first, inserted] = bound.emplace(id.value, at);
             if (!inserted) {
                 throw std::runtime_error(at.describe() + ": duplicate TypeScript binding for " + qualifiedTypeName(graph, id) +

@@ -82,18 +82,13 @@
     { "spec": "../spec/extern/reflection-probe.spec" },
     { "spec": "../spec/extern/pipeline-externals.spec" },
     {
-      "spec": "../spec/render/pipeline-capabilities.spec",
-      "cpp": { "header": "PipelineCapabilities.h", "forward": false },
-      "typescript": "cocos/rendering/custom/pipeline-capabilities.ts"
-    },
-    {
       "spec": "../spec/render/render-interface.spec",
       "cpp": {
         "forwardIncludes": [
-          "cocos/renderer/pipeline/custom/RenderCommonFwd.h",
-          "cocos/renderer/pipeline/custom/PipelineCapabilities.h"
+          "cocos/renderer/pipeline/custom/RenderCommonFwd.h"
         ]
-      }
+      },
+      "typescript": "cocos/rendering/custom/pipeline.ts"
     },
     {
       "spec": "../spec/render/private-interface.spec",

@@ -31,10 +31,8 @@ set(baselineFiles
 set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/rendering/custom/layout-graph.ts
     cocos/rendering/custom/render-graph.ts
     cocos/rendering/custom/private.ts
-    cocos/rendering/custom/pipeline-capabilities.ts
+    cocos/rendering/custom/pipeline.ts
     cocos/rendering/custom/web-types.ts
-    native/cocos/renderer/pipeline/custom/PipelineCapabilities.h
-    native/cocos/renderer/pipeline/custom/PipelineCapabilities.cpp
     native/cocos/renderer/pipeline/custom/Array4.h
     native/cocos/renderer/pipeline/custom/CustomFwd.h
     native/cocos/renderer/pipeline/custom/CustomTypes.h

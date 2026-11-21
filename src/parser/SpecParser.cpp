@@ -390,7 +390,17 @@ private:
         if (accept("typescript")) {
             expect("{");
             while (!accept("}")) {
-                if (accept("poolModule")) {
+                if (accept("export")) {
+                    expect("{");
+                    do {
+                        const auto at = location;
+                        const auto name = identifier();
+                        if (!rules.typescriptExports.emplace(name, at).second)
+                            throw std::runtime_error(at.describe() + ": duplicate TypeScript export " + name);
+                    } while (accept(","));
+                    expect("}");
+                    expect(";");
+                } else if (accept("poolModule")) {
                     if (!rules.poolModule.empty()) fail("duplicate poolModule binding");
                     rules.poolModule = bindingPath();
                     expect(";");

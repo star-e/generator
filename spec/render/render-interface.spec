@@ -8,7 +8,6 @@ import Light;
 import RenderWindow;
 import GfxDescriptorSet;
 import RenderCommon;
-import PipelineCapabilities;
 import PipelineExternals;
 
 namespace cc::render {
@@ -41,6 +40,20 @@ namespace cc::render {
         virtual bool isOcclusionQueryEnabled() const = 0;
         virtual void resetRenderQueue(bool reset) = 0;
         virtual bool isRenderQueueReset() const = 0;
+    }
+
+    enum class PipelineType : uint8_t { BASIC, STANDARD }
+
+    flags SubpassCapabilities : uint32_t {
+        NONE = 0,
+        INPUT_DEPTH_STENCIL = 1 << 0,
+        INPUT_COLOR = 1 << 1,
+        INPUT_COLOR_MRT = 1 << 2,
+        HETEROGENEOUS_SAMPLE_COUNT = 1 << 3,
+    }
+
+    struct PipelineCapabilities {
+        subpass: SubpassCapabilities = SubpassCapabilities::NONE;
     }
 
     interface RenderNode {
@@ -306,9 +319,20 @@ namespace cc::render {
         virtual void onGlobalPipelineStateChanged() = 0;
     }
 
+    interface RenderingModule {
+        virtual uint32_t getPassID(const ccstd::string& name) const = 0;
+        virtual uint32_t getSubpassID(uint32_t passID, const ccstd::string& name) const = 0;
+        virtual uint32_t getPhaseID(uint32_t subpassOrPassID, const ccstd::string& name) const = 0;
+    }
+
     struct Factory {
         static RenderingModule* init(gfx::Device* deviceIn, const ccstd::vector<uint8_t>& bufferIn);
         static void destroy(RenderingModule* renderingModule) noexcept;
         static Pipeline* createPipeline();
     }
+}
+
+binding typescript {
+    export { PipelineType, SubpassCapabilities, PipelineCapabilities, RenderingModule };
+    PipelineCapabilities => class { constructor(); };
 }

@@ -1,7 +1,7 @@
 import { ProgramGroup, ProgramInfo } from './web-types';
 import type * as Legacy from './legacy-web-types';
-import { PipelineCapabilities, PipelineType, SubpassCapabilities } from './pipeline-capabilities';
-import type { RenderingModule } from './pipeline-capabilities';
+import { PipelineCapabilities, PipelineType, SubpassCapabilities } from './pipeline';
+import type { RenderingModule } from './pipeline';
 
 import type { ProgramLibrary, ProgramProxy } from './private';
 import type * as LegacyPrivate from './legacy-private';

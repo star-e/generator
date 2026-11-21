@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 63 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 61 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp`、`graph-dfs.ts` 和 `layout-access.ts`。`GraphTags.h` 提供各图共用的名称和布局组件标签，`GraphTagNames.h` 提供对应的名称查询。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -62,7 +62,7 @@ ctest --test-dir build/host --output-on-failure
 
 | 旧模块 | 当前可生成的内容 | 后续接管条件 |
 | --- | --- | --- |
-| RenderInterface | 19 个原生接口及其继承关系、转发重载、`Factory`、`PipelineCapabilities` 和两个枚举。Web 的四个完整导出位于 `pipeline-capabilities.ts`，其中包括 `RenderingModule`。 | 完整的 `pipeline.ts` 还含可写属性、可选回调及仅 Web 端存在的签名；切换公开入口时也要保留 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
+| RenderInterface | `render-interface.spec` 统一声明原生接口、`Factory` 和管线能力类型，生成 `RenderInterfaceFwd.h` 和 `RenderInterfaceTypes.h/.cpp`。暂存的 `pipeline.ts` 导出 `PipelineType`、`SubpassCapabilities`、`PipelineCapabilities` 和 `RenderingModule`。 | 引擎完整的 `pipeline.ts` 还含可写属性、可选回调及仅 Web 端存在的签名。切换公开入口时也要保留 API 文档。SWIG 的 `render.i` 需要条件宏和对象所有权绑定。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
@@ -92,6 +92,8 @@ C++ 方法可为尾部参数声明默认值，例如 `uint32_t lightByteOffset =
 ### 在模块中声明绑定
 
 在 `module` 和 `import` 之后，把 `binding typescript` 或 `binding jsb` 写在命名空间外。一个文件可以包含多个绑定块。类型规则以分号结束。声明所属模块可以使用短名、限定名或从根命名空间开始的 `::` 名称。每个原生类型只能有一条 TS 绑定，同一类型的选项写在同一个规则内。
+
+默认按模块生成所有支持的 TS 声明。分步迁移时，可以在 `binding typescript` 中用 `export { ... };` 列出本模块这次要导出的类型名。输出顺序沿用声明顺序，C++ 仍生成整个模块。[RenderInterface 的绑定](../spec/render/render-interface.spec)
 
 ```text
 binding typescript {
