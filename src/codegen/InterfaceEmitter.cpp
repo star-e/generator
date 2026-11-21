@@ -29,12 +29,14 @@ void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use
         if (!decl.cppHeader.empty()) headers.insert(decl.cppHeader);
         return qualifyIfShadowed(graph, decl, graph.modules.at(owner.value), decl.qualifiedName);
     });
-    out << type << ' ' << std::string(pointers, '*') << name;
+    out << type;
+    if (pointers || !name.empty()) out << ' ' << std::string(pointers, '*') << name;
 }
 
 void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers) {
     out << "    " << (method.isPureVirtual ? "virtual " : method.isStatic ? "static " : "");
-    cppDeclarator(out, graph, method.result, method.name, owner, headers);
+    if (method.isExplicitConversion) out << "explicit operator ";
+    cppDeclarator(out, graph, method.result, method.isExplicitConversion ? "" : method.name, owner, headers);
     out << '(';
     for (size_t i = 0; i < method.parameters.size(); ++i) {
         const auto& param = method.parameters[i];

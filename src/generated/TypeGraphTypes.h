@@ -47,6 +47,7 @@ struct MethodInfo {
     std::string cppBody;
     bool isStatic = false;
     bool isPureVirtual = false;
+    bool isExplicitConversion = false;
 };
 
 struct FieldInfo {

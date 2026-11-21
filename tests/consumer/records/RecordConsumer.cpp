@@ -102,6 +102,8 @@ static_assert(!ResolveFlags::NONE && static_cast<uint32_t>(ResolveFlags::COLOR) 
 static_assert(static_cast<uint32_t>(ResolveFlags::DEPTH) == 2 && static_cast<uint32_t>(ResolveFlags::STENCIL) == 4);
 constexpr auto depthStencil = ResolveFlags::DEPTH | ResolveFlags::STENCIL;
 static_assert(static_cast<uint32_t>(depthStencil) == 6 && !any(depthStencil & ResolveFlags::COLOR));
+static_assert(noexcept(static_cast<uint32_t>(std::declval<const cc::ConversionProbe&>())));
+static_assert(std::is_abstract_v<cc::ConversionProbe> && !std::is_convertible_v<const cc::ConversionProbe&, bool>);
 static_assert(static_cast<uint32_t>(cc::ShiftProbe::HIGH) == 0x80000000U);
 static_assert(std::is_same_v<decltype(LightInfo::light), cc::IntrusivePtr<cc::scene::Light>>);
 static_assert(std::is_same_v<decltype(LightInfo::probe), cc::scene::ReflectionProbe*>);

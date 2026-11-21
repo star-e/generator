@@ -49,7 +49,7 @@ ctest --test-dir build/host --output-on-failure
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。Web 构造器的五个参数全部必填，`handleMap` 使用 `Record<string, number>`。 | 原生与 Web 消费测试覆盖这些类型。 |
 | FGDispatcher | `FGDispatcherRecords.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
-| NativePipeline | `NativePipelineRecords.h/.cpp` 及前置声明覆盖 16 个记录，含资源池、绘制实例、裁剪结果、自定义管线注册表及级联阴影数据。 | 剩余记录和实现类需要显式转换运算符、带默认参数的方法、禁止默认构造或移动的记录、自定义析构、多重继承或私有状态。 |
+| NativePipeline | `NativePipelineRecords.h/.cpp` 及前置声明覆盖 24 个记录，含裁剪和渲染队列的强类型 ID、索引键、查询记录及两个 PMR 裁剪索引。 | 剩余记录和实现类涉及带默认参数的方法、构造限制、自定义析构、多重继承和私有状态。 |
 
 C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `emplace_vertex(...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
@@ -64,6 +64,8 @@ C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一
 ### 在模块中声明方法
 
 `interface` 中的 `virtual void writeBool(bool value) = 0;` 由 C++ 派生类实现，默认也生成 TS 接口方法。需要只在原生侧公开时写 `@cppOnly virtual ... = 0;`。普通成员采用 `ReturnType name(Type arg)`，支持 `static`、`const`、`noexcept`。以分号结尾会生成 C++ 声明，以花括号提供的 C++ 函数体会随头文件输出。普通成员在 `interface`、`struct`、`graph` 中均只生成 C++；字段和构造器继续使用各自的声明语法。[归档接口](../spec/render/archive.spec) · [原生转发重载](../spec/render/private-interface.spec)
+
+原生 ID 可以直接声明 `explicit operator uint32_t() const { return value; }`。TypeGraph 记录目标类型，C++ 调用方使用 `static_cast<uint32_t>(id)` 取得数值，TypeScript 绑定跳过该操作。三个 ID 均沿用引擎的 `0xFFFFFFFF` 无效值。[裁剪与渲染队列声明](../spec/render/native-pipeline.spec)
 
 原生记录可以声明 `T&` 或 `const T&` 字段，每个 `constructor(...)` 都必须列出这些字段。生成的构造器直接绑定调用方提供的对象。生成器也会省去无参构造器和只接收分配器的构造器。`@immovable` 删除记录的复制、移动及赋值操作。`FrameGraphDispatcher` 通过引用借用资源图、渲染图和布局图，以调用方的分配器原位构造 `resourceAccessGraph` 和 `relationGraph`。其构造器的 `noexcept` 由两张内部图的构造决定。[调度器声明](../spec/render/fg-dispatcher.spec) · [消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 

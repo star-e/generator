@@ -95,6 +95,48 @@ namespace cc::render {
         probePass: bool = false;
     }
 
+    @comparison("==") @hash struct FrustumCullingID {
+        value: uint32_t = 0xFFFFFFFF;
+        explicit operator uint32_t() const { return value; }
+    }
+
+    @requireAllocator struct FrustumCulling {
+        resultIndex: ccstd::pmr::unordered_map<FrustumCullingKey, FrustumCullingID>;
+    }
+
+    @comparison("==") @hash struct LightBoundsCullingID {
+        value: uint32_t = 0xFFFFFFFF;
+        explicit operator uint32_t() const { return value; }
+    }
+
+    @comparison("==") @hash struct LightBoundsCullingKey {
+        frustumCullingID: FrustumCullingID;
+        nullable camera: const scene::Camera*;
+        nullable probe: const scene::ReflectionProbe*;
+        nullable cullingLight: const scene::Light*;
+    }
+
+    @requireAllocator struct LightBoundsCulling {
+        resultIndex: ccstd::pmr::unordered_map<LightBoundsCullingKey, LightBoundsCullingID>;
+    }
+
+    struct NativeRenderQueueID {
+        value: uint32_t = 0xFFFFFFFF;
+        explicit operator uint32_t() const { return value; }
+    }
+
+    @comparison("==") @hash struct NativeRenderQueueKey {
+        frustumCulledResultID: FrustumCullingID;
+        lightBoundsCulledResultID: LightBoundsCullingID;
+        queueLayoutID: uint32_t = 0xFFFFFFFF;
+    }
+
+    struct NativeRenderQueueQuery {
+        frustumCulledResultID: FrustumCullingID;
+        lightBoundsCulledResultID: LightBoundsCullingID;
+        renderQueueTarget: NativeRenderQueueID;
+    }
+
     struct LightBoundsCullingResult {
         instances: ccstd::vector<const scene::Model*>;
         lightByteOffset: uint32_t = 0xFFFFFFFF;

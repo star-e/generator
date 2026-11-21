@@ -26,6 +26,7 @@ namespace codegen {
         cppBody: std::string;
         isStatic: bool = false;
         isPureVirtual: bool = false;
+        isExplicitConversion: bool = false;
     }
     struct FieldInfo {
         type: TypeUse;

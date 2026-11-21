@@ -27,6 +27,7 @@ struct Method {
     std::string cppBody;
     bool isStatic{};
     bool isPureVirtual{};
+    bool isExplicitConversion{};
 };
 
 struct Interface {

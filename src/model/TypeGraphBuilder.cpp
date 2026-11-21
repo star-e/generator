@@ -117,7 +117,16 @@ TypeId canonicalType(const TypeGraph& graph, TypeUse use) {
 MethodInfo resolveMethod(TypeGraph& graph, const Method& method, const std::string& scope, ModuleId owner) {
     MethodInfo member{.result = resolve(graph, method.result, scope, owner), .name = method.name,
                       .isConst = method.isConst, .isNoexcept = method.isNoexcept, .cppOnly = method.cppOnly,
-                      .cppBody = method.cppBody, .isStatic = method.isStatic, .isPureVirtual = method.isPureVirtual};
+                      .cppBody = method.cppBody, .isStatic = method.isStatic, .isPureVirtual = method.isPureVirtual,
+                      .isExplicitConversion = method.isExplicitConversion};
+    if (member.isExplicitConversion) {
+        // Match overloads by their resolved target, including aliases inside references and pointers.
+        member.name = "operator " + formatTypeName(graph, member.result.type, [&](const TypeNode& part) {
+            if (const auto* alias = std::get_if<AliasType>(&part.data))
+                return graph.node(canonicalType(graph, {alias->target, member.result.location})).qualifiedName;
+            return part.qualifiedName;
+        });
+    }
     for (const auto& parameter : method.parameters) {
         member.parameters.push_back({resolve(graph, parameter.type, scope, owner), parameter.name, parameter.byConstReference});
     }
@@ -132,7 +141,7 @@ std::vector<MethodInfo> resolveMemberFunctions(TypeGraph& graph, const std::vect
             if (other.name != resolved.name || (!other.isStatic && !resolved.isStatic && other.isConst != resolved.isConst)) continue;
             if (std::ranges::equal(other.parameters, resolved.parameters, [&](const auto& a, const auto& b) {
                     return a.byConstReference == b.byConstReference && canonicalType(graph, a.type) == canonicalType(graph, b.type);
-                })) throw std::runtime_error(method.result.location.describe() + ": duplicate method signature " + method.name);
+                })) throw std::runtime_error(method.result.location.describe() + ": duplicate method signature " + resolved.name);
         }
         result.push_back(std::move(resolved));
     }

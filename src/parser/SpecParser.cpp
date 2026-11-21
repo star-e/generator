@@ -799,12 +799,19 @@ private:
         if (result.isPureVirtual && !inInterface) fail("pure virtual methods require an interface");
         if ((result.isPureVirtual && result.isStatic) || (result.isStatic && token == "virtual"))
             fail("static method cannot be virtual");
-        result.cppOnly = cppOnly || !result.isPureVirtual;
+        result.isExplicitConversion = accept("explicit");
+        if (result.isExplicitConversion) {
+            if (result.isStatic) fail("a conversion operator cannot be static");
+            expect("operator");
+        }
+        result.cppOnly = cppOnly || result.isExplicitConversion || !result.isPureVirtual;
         result.result = type(nullptr, true);
-        result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
+        if (!result.isExplicitConversion)
+            result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();
         expect("(");
         std::set<std::string> parameters;
         if (!accept(")")) {
+            if (result.isExplicitConversion) fail("a conversion operator cannot take parameters");
             do {
                 bool byConstReference = false;
                 auto parameter = type(&byConstReference, true);

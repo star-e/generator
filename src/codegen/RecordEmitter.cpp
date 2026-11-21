@@ -643,7 +643,10 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
                                Dependencies& deps) {
     std::ostringstream out;
     for (const auto& method : methods) {
-        out << "    " << (method.isStatic ? "static " : "") << methodType(graph, module, method.result.type, deps) << " " << method.name << "(";
+        const auto type = methodType(graph, module, method.result.type, deps);
+        if (method.isExplicitConversion) out << "    explicit operator " << type;
+        else out << "    " << (method.isStatic ? "static " : "") << type << " " << method.name;
+        out << "(";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             if (i) out << ", ";
             const auto& p = method.parameters[i];

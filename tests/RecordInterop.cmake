@@ -10,6 +10,10 @@ binding typescript { Label => Caption from "cocos/rendering/custom/caption"; }
 file(WRITE "${work}/spec/shift.spec" "module ShiftProbe; import GraphTags; import LayoutGraph; import RenderCommon; import Strings; import Containers; import Sets; import GfxUniformBlock; import Text; import ArchiveInterface;
 namespace cc {
     flags ShiftProbe : uint32_t { HIGH = 1 << 31 }
+    interface ConversionProbe {
+        explicit operator uint32_t() const noexcept { return 17; }
+        virtual explicit operator bool() const = 0;
+    }
     struct VectorProbe { bytes: ccstd::vector<uint8_t>; words: ccstd::vector<uint32_t>; constructor(bytes, words); }
     struct AllocatorCtorProbe {
         count: uint32_t = 0;
@@ -133,6 +137,9 @@ run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
 file(WRITE "${stage}/native/SampleText.h" "#pragma once\n#include <string>\nnamespace sample { using Text = std::string; using Label = std::string; }\n")
 file(WRITE "${stage}/cocos/rendering/custom/caption.ts" "export type Caption = string;\n")
 file(READ "${stage}/cocos/rendering/custom/shift-probe.ts" script)
+if(script MATCHES "operator *[(]")
+    message(FATAL_ERROR "C++ conversion operator leaked into the TypeScript interface")
+endif()
 string(FIND "${script}" [[import type { Caption } from './caption';]] captionImport)
 if(captionImport EQUAL -1 OR NOT script MATCHES "label: Caption")
     message(FATAL_ERROR "Explicit TS binding on an owning string was lost")

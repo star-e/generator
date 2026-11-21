@@ -42,6 +42,13 @@ check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
     "subpassGraph: a record containing a move-only graph must declare @moveOnly")
 check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
     "subpassGraph: cannot use an @immovable graph as a value field")
+check_resource_error("void validateSwapchains()" "explicit operator bool(bool value) const" "a conversion operator cannot take parameters")
+check_resource_error("void validateSwapchains()" "static explicit operator bool()"
+    "a conversion operator cannot be static")
+check_resource_error("void validateSwapchains()" "explicit operator Vertex() const; explicit operator uint32_t() const noexcept"
+    "duplicate method signature operator uint32_t")
+check_resource_error("void validateSwapchains()" "explicit operator const Vertex&() const; explicit operator const uint32_t&() const"
+    "duplicate method signature operator const uint32_t&")
 check_resource_error("getColorTexture(scene::RenderWindow* renderWindow)" "getColorTexture(gfx::Swapchain* other)"
     "duplicate method signature getColorTexture")
 check_resource_error("isTextureView(Vertex resID)" "isTexture(uint32_t other)" "duplicate method signature isTexture")
