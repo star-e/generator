@@ -55,17 +55,9 @@ fs::path outputPath(const Json& value) {
     return path.lexically_normal();
 }
 
-TypeTable loadTypes(const Json& json) {
-    TypeTable types;
-    if (!json.is_object()) throw std::runtime_error("expected external type mappings");
-    for (const auto& [name, value] : json.items()) {
-        ExternalType type{value.value("header", std::string{})};
-        type.builtin = value.value("builtin", false);
-        if (value.contains("ts") || value.contains("tsModule"))
-            throw std::runtime_error(name + ": move TypeScript mappings to a .spec binding typescript block");
-        types.emplace(name, std::move(type));
-    }
-    return types;
+void rejectJsonTypes(const Json& config, std::string_view scope) {
+    if (config.contains("types"))
+        throw std::runtime_error(std::string(scope) + ".types was removed. Declare external types in a .spec extern module.");
 }
 
 struct ModuleOutput {
@@ -155,7 +147,7 @@ Json moduleConfig(Json config, bool external) {
         const auto forward = cpp->find("forward");
         if (forward != cpp->end() && forward->is_boolean()) cpp->erase(forward);
     }
-    checkKeys(config, {"spec", "cpp", "typescript", "types", "runtimeFiles"}, "module");
+    checkKeys(config, {"spec", "cpp", "typescript", "runtimeFiles"}, "module");
     return config;
 }
 
@@ -289,8 +281,7 @@ std::string normalizeLines(const std::string& input, bool crlf) {
 }
 
 Files plan(const Json& settings, const fs::path& base) {
-    TypeTable types;
-    if (settings.contains("types")) types = loadTypes(object(base / settings.at("types").get<std::string>()));
+    rejectJsonTypes(settings, "workspace");
     auto preamble = normalizeLines(read(base / settings.at("preamble").get<std::string>()), false);
     const auto eol = settings.at("lineEnding").get<std::string>();
     if (eol != "crlf" && eol != "lf") throw std::runtime_error("lineEnding must be lf or crlf");
@@ -301,6 +292,7 @@ Files plan(const Json& settings, const fs::path& base) {
     std::vector<ModuleInput> inputs;
     std::vector<ModuleOutput> outputs;
     for (const auto& entry : modules) {
+        rejectJsonTypes(entry, "module");
         const auto spec = base / entry.at("spec").get<std::string>();
         auto module = parseModule(spec, read(spec));
         const auto config = moduleConfig(entry, module.external);
@@ -319,10 +311,9 @@ Files plan(const Json& settings, const fs::path& base) {
                 if (rule.kind != BindingTarget::type) invalidBinding(rule, "extern module");
         }
         if (module.external || (!config.contains("cpp") && !config.contains("typescript"))) {
-            inputs.push_back({std::move(module), loadTypes(config.value("types", Json::object())), true});
+            inputs.push_back({std::move(module), {}, true});
             continue;
         }
-        if (config.contains("types")) throw std::runtime_error(spec.string() + ": types mappings require a model-only module");
         if (config.contains("cpp")) loadCppOutput(typesOutput, config.at("cpp"), defaults, module);
         fs::path tsModule;
         if (config.contains("typescript")) {
@@ -355,7 +346,7 @@ Files plan(const Json& settings, const fs::path& base) {
         inputs.push_back({std::move(module), std::move(mappings)});
     }
     std::vector<ModuleId> dependencyOrder;
-    const auto graph = buildTypeGraph(inputs, types, &dependencyOrder);
+    const auto graph = buildTypeGraph(inputs, {}, &dependencyOrder);
     std::set<std::string> outputKeys;
     Files files;
     const auto addFile = [&](const fs::path& path, const std::string& content) {
