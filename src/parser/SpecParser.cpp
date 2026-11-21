@@ -276,16 +276,21 @@ private:
             if (key != "method" && key != "getter" && key != "field" && !options.insert(key).second) fail("duplicate binding option " + key);
             if (rule.kind == BindingTarget::interfaceType && (key == "method" || key == "getter")) {
                 const auto name = identifier();
-                const auto target = accept("=>") ? identifier() : name;
-                if (!rule.methods.emplace(name, target).second) fail("duplicate method binding " + name);
-                InterfaceMethodBinding options{.getter = key == "getter"};
-                if (options.getter && accept("setter")) {
-                    options.setter = identifier();
-                    if (!rule.methods.emplace(options.setter, std::nullopt).second) fail("duplicate method binding " + options.setter);
+                const auto [it, inserted] = rule.methods.try_emplace(name);
+                if (!inserted) fail("duplicate method binding " + name);
+                auto& method = it->second;
+                if (accept("=>")) method.target = identifier();
+                if (key == "getter") {
+                    method.accessor = AccessorKind::Getter;
+                    if (method.target.empty()) method.target = name;
+                    if (accept("setter")) {
+                        const auto setter = identifier();
+                        if (!rule.methods.emplace(setter, InterfaceMethodBinding{.target = method.target, .accessor = AccessorKind::Setter}).second)
+                            fail("duplicate method binding " + setter);
+                    }
                 }
-                if (accept("optional")) options.optional = bindingFields();
-                options.nullable = accept("nullable");
-                if (options.getter || options.nullable || !options.optional.empty()) rule.methodOptions.emplace(name, std::move(options));
+                if (accept("optional")) method.optional = bindingFields();
+                method.nullable = accept("nullable");
             } else if (rule.kind == BindingTarget::interfaceType && key == "helpers") {
                 rule.helpers = true;
             } else if (rule.kind == BindingTarget::interfaceType && key == "field") {
@@ -897,8 +902,14 @@ private:
 
     Method method(std::set<std::string>& names, const std::vector<Method>& methods, bool inInterface = false) {
         Method result;
-        const bool cppOnly = accept("@");
-        if (cppOnly) expect("cppOnly");
+        bool cppOnly = false;
+        while (accept("@")) {
+            const auto annotation = identifier();
+            if (annotation == "cppOnly" && !cppOnly) cppOnly = true;
+            else if (annotation == "getter" && result.accessor == AccessorKind::None) result.accessor = AccessorKind::Getter;
+            else if (annotation == "setter" && result.accessor == AccessorKind::None) result.accessor = AccessorKind::Setter;
+            else fail("unknown or duplicate method annotation @" + annotation);
+        }
         result.isPureVirtual = accept("virtual");
         result.isStatic = accept("static");
         if (result.isPureVirtual && !inInterface) fail("pure virtual methods require an interface");
@@ -910,6 +921,8 @@ private:
             expect("operator");
         }
         result.cppOnly = cppOnly || result.isExplicitConversion || !result.isPureVirtual;
+        if (result.accessor != AccessorKind::None && result.cppOnly)
+            fail("@getter and @setter require a TypeScript-visible pure virtual method");
         result.result = type(nullptr, true);
         if (!result.isExplicitConversion)
             result.name = std::ranges::find(methods, token, &Method::name) == methods.end() ? uniqueName(names) : identifier();

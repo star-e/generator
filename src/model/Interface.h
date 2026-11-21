@@ -29,6 +29,7 @@ struct Method {
     bool isStatic{};
     bool isPureVirtual{};
     bool isExplicitConversion{};
+    AccessorKind accessor{};
 };
 
 enum class ArchiveRole { none, input, output };

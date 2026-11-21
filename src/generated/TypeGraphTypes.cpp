@@ -60,6 +60,13 @@ constexpr bool validateFixedLayout_CocosTypeGraph() {
         static_assert(alignof(CheckedType) == 1ULL, "fixed layout alignment: bool");
     }
     {
+        using CheckedType = ::cc::codegen::AccessorKind;
+        static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::AccessorKind");
+        static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::AccessorKind");
+        static_assert(sizeof(CheckedType) == 4ULL, "fixed layout size: ::cc::codegen::AccessorKind");
+        static_assert(alignof(CheckedType) == 4ULL, "fixed layout alignment: ::cc::codegen::AccessorKind");
+    }
+    {
         using CheckedType = ::cc::codegen::NamespaceType;
         static_assert(std::is_trivially_copyable_v<CheckedType>, "fixed layout trivially copyable: ::cc::codegen::NamespaceType");
         static_assert(std::is_standard_layout_v<CheckedType>, "fixed layout standard layout: ::cc::codegen::NamespaceType");

@@ -16,6 +16,7 @@ namespace codegen {
         byConstReference: bool = false;
         defaultValue: std::string;
     }
+    enum class AccessorKind : uint32_t { None, Getter, Setter }
     struct MethodInfo {
         result: TypeUse;
         name: std::string;
@@ -28,6 +29,7 @@ namespace codegen {
         isStatic: bool = false;
         isPureVirtual: bool = false;
         isExplicitConversion: bool = false;
+        accessor: AccessorKind = AccessorKind::None;
     }
     struct FieldInfo {
         type: TypeUse;

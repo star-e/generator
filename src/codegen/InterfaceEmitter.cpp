@@ -146,7 +146,7 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
     out << " {\n";
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
     for (const auto& method : methods) {
-        if (!method.typescriptName) continue;
+        if (!method.typescriptName || method.accessor == AccessorKind::Setter) continue;
         const InterfaceMethodBinding defaults;
         const auto it = bindings.find({decl.name, method.name});
         const auto& binding = it == bindings.end() ? defaults : it->second;
@@ -155,17 +155,15 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         if (binding.nullable && !std::holds_alternative<PointerType>(graph.node(method.result.type).data))
             throw std::runtime_error(context + ": nullable result requires a pointer");
         const auto suffix = binding.nullable ? " | null;\n" : ";\n";
-        if (binding.getter) {
-            if (!method.isConst || !method.parameters.empty() || result == "void" || !binding.optional.empty())
+        if (method.accessor == AccessorKind::Getter) {
+            if (!binding.optional.empty())
                 throw std::runtime_error(context + ": getter requires a const nullary value method");
-            if (!binding.setter.empty()) {
-                const auto setter = std::ranges::find_if(methods, [&](const MethodInfo& m) { return !m.cppOnly && m.name == binding.setter; });
-                if (setter == methods.end() || setter->isConst || setter->parameters.size() != 1 ||
-                    graph.node(setter->result.type).qualifiedName != "void" ||
-                    tsSignatureType(graph, setter->parameters.front().type, decl.module, imports) != result)
-                    throw std::runtime_error(context + ": setter " + binding.setter + " must return void and accept the property type");
-            }
-            out << (binding.setter.empty() ? "    readonly " : "    ") << *method.typescriptName << ": " << result << suffix;
+            const auto setter = std::ranges::find_if(methods, [&](const MethodInfo& m) {
+                return m.accessor == AccessorKind::Setter && m.typescriptName == method.typescriptName;
+            });
+            if (setter != methods.end() && tsSignatureType(graph, setter->parameters.front().type, decl.module, imports) != result)
+                throw std::runtime_error(context + ": setter " + setter->name + " must return void and accept the property type");
+            out << (setter == methods.end() ? "    readonly " : "    ") << *method.typescriptName << ": " << result << suffix;
             continue;
         }
         if (binding.optional.size() > method.parameters.size()) throw std::runtime_error(context + ": unknown optional parameter");

@@ -147,4 +147,43 @@ expect_failure(2 "unknown method missing" ${generate})
 string(REPLACE "${property}" "${property} method setValue;" invalid "${accessors}")
 file(WRITE "${provider}" "${invalid}")
 expect_failure(2 "duplicate method binding setValue" ${generate})
+
+# Moving the property rule onto the declarations preserves both generated interfaces.
+set(annotated "module Provider; namespace cc { struct Item {} interface Options {
+    @getter virtual int getValue() const = 0; @setter virtual void setValue(int v) = 0;
+} }")
+file(WRITE "${provider}" "${annotated}")
+run(${generate} --check --diff)
+file(WRITE "${provider}" "${annotated} binding typescript { Options => interface { ${property} }; }")
+expect_failure(2 "duplicate accessor binding for getValue" ${generate})
+string(REPLACE "setValue(int v)" "setValue(bool v)" invalid "${annotated}")
+file(WRITE "${provider}" "${invalid}")
+expect_failure(2 "setter setValue must return void and accept the property type" ${generate})
+string(REPLACE "setValue(int v)" "setOther(int v)" invalid "${annotated}")
+file(WRITE "${provider}" "${invalid}")
+expect_failure(2 "setter setOther requires a getter for other" ${generate})
+string(REPLACE "getValue() const" "getValue()" invalid "${annotated}")
+file(WRITE "${provider}" "${invalid}")
+expect_failure(2 "getter requires a const nullary value method" ${generate})
+file(WRITE "${provider}" "${annotated} binding typescript { Options => interface { method setValue nullable; }; }")
+expect_failure(2 "setter cannot have nullable or optional method bindings" ${generate})
+
+file(WRITE "${provider}" "module Provider; namespace cc { struct Item {} interface Options {
+    @setter virtual void setValue(int v) = 0;
+    @getter virtual int getURLValue() const = 0;
+    @getter virtual Item* getItem() const = 0;
+    virtual int getMethod() const = 0;
+    @getter virtual int getValue() const = 0;
+} } binding typescript { Options => interface { method getItem nullable; }; }")
+run(${generate})
+file(READ "${work}/mixed/provider.ts" script)
+foreach(member IN ITEMS "    value: number;" "    readonly urlValue: number;" "    readonly item: Item | null;" "    getMethod (): number;")
+    string(FIND "${script}" "${member}" index)
+    if(index EQUAL -1)
+        message(FATAL_ERROR "Missing TypeScript member ${member}")
+    endif()
+endforeach()
+if(script MATCHES "readonly value|getURLValue|getValue|setValue")
+    message(FATAL_ERROR "TypeScript exposed annotated methods or made a writable property readonly")
+endif()
 finish_workspace("${work}")

@@ -186,7 +186,7 @@ SettingsBinding settingsBinding(const Module& module) {
 InterfaceBindings interfaceBindings(const Module& module) {
     InterfaceBindings result;
     for (const auto& rule : module.bindings.typescript) {
-        for (const auto& [method, binding] : rule.methodOptions)
+        for (const auto& [method, binding] : rule.methods)
             result.emplace(std::make_pair(bindingName(rule.source.name), method), binding);
     }
     return result;

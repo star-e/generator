@@ -83,7 +83,7 @@ C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一
 
 ### 在模块中声明方法
 
-在 `binding typescript` 的接口规则中，`getter getName => name;` 生成只读属性。`getter getName => name setter setName;` 将一对原生方法绑定成同一个可写属性 `name: string`。读取方法须为无参数的 `const` 方法，写入方法须返回 `void`，唯一参数与属性的 TS 类型一致。[管线接口绑定](../spec/render/render-interface.spec)
+在接口的 C++ 风格声明上写 `@getter virtual ccstd::string getName() const = 0;`，TS 会生成只读属性 `readonly name: string`。同一接口再声明 `@setter virtual void setName(const ccstd::string& name) = 0;`，属性就可写。生成器按属性名配对，声明顺序不限。`getURLValue` 对应 `urlValue`。getter 须为无参数、返回值非 `void` 的 `const` 方法。setter 须为非 `const` 方法，返回 `void`，唯一参数与属性的 TS 类型一致。未标注的纯虚方法仍生成普通 TS 方法。已有的 `binding typescript` 属性规则也可继续使用。[管线接口](../spec/render/render-interface.spec) · [只读属性](../spec/render/private-interface.spec)
 
 接口的纯虚方法在参数声明中写默认值。例如 `useLightFrustum` 的末尾两个参数写作 `uint32_t csmLevel = 0, const scene::Camera* optCamera = nullptr`。C++ 生成完整的纯虚签名，以及接收一个或两个参数的非虚转发重载。TS 生成 `useLightFrustum(light: Light, csmLevel?: number, optCamera?: Camera)`，运行时的默认值由 Web 实现提供。仅在 Web 侧可省略的参数仍可使用 `optional(...)`。普通 C++ 成员保留声明上的默认实参。支持数值、布尔值、空指针、字符串字面量、`{}`、枚举成员和同一 flags 类型的按位或组合。[公开接口](../spec/render/render-interface.spec) · [私有接口](../spec/render/private-interface.spec)
 

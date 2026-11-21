@@ -13,19 +13,19 @@ namespace cc::render {
         virtual bool activate(gfx::Swapchain* swapchain) = 0;
         virtual bool destroy() noexcept = 0;
         virtual void render(const ccstd::vector<scene::Camera*>& cameras) = 0;
-        virtual gfx::Device* getDevice() const = 0;
-        virtual const MacroRecord& getMacros() const = 0;
-        virtual pipeline::GlobalDSManager* getGlobalDSManager() const = 0;
-        virtual gfx::DescriptorSetLayout* getDescriptorSetLayout() const = 0;
-        virtual gfx::DescriptorSet* getDescriptorSet() const = 0;
-        virtual const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers() const = 0;
-        virtual pipeline::PipelineSceneData* getPipelineSceneData() const = 0;
-        virtual const ccstd::string& getConstantMacros() const = 0;
-        virtual scene::Model* getProfiler() const = 0;
-        virtual void setProfiler(scene::Model* profiler) = 0;
-        virtual pipeline::GeometryRenderer* getGeometryRenderer() const = 0;
-        virtual float getShadingScale() const = 0;
-        virtual void setShadingScale(float scale) = 0;
+        @getter virtual gfx::Device* getDevice() const = 0;
+        @getter virtual const MacroRecord& getMacros() const = 0;
+        @getter virtual pipeline::GlobalDSManager* getGlobalDSManager() const = 0;
+        @getter virtual gfx::DescriptorSetLayout* getDescriptorSetLayout() const = 0;
+        @getter virtual gfx::DescriptorSet* getDescriptorSet() const = 0;
+        @getter virtual const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers() const = 0;
+        @getter virtual pipeline::PipelineSceneData* getPipelineSceneData() const = 0;
+        @getter virtual const ccstd::string& getConstantMacros() const = 0;
+        @getter virtual scene::Model* getProfiler() const = 0;
+        @setter virtual void setProfiler(scene::Model* profiler) = 0;
+        @getter virtual pipeline::GeometryRenderer* getGeometryRenderer() const = 0;
+        @getter virtual float getShadingScale() const = 0;
+        @setter virtual void setShadingScale(float scale) = 0;
         virtual const ccstd::string& getMacroString(const ccstd::string& name) const = 0;
         virtual int32_t getMacroInt(const ccstd::string& name) const = 0;
         virtual bool getMacroBool(const ccstd::string& name) const = 0;
@@ -55,8 +55,8 @@ namespace cc::render {
     }
 
     interface RenderNode {
-        virtual ccstd::string getName() const = 0;
-        virtual void setName(const ccstd::string& name) = 0;
+        @getter virtual ccstd::string getName() const = 0;
+        @setter virtual void setName(const ccstd::string& name) = 0;
         virtual void setCustomBehavior(const ccstd::string& name) = 0;
     }
 
@@ -105,8 +105,8 @@ namespace cc::render {
         virtual RenderQueueBuilder* addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default", const ccstd::string& passName = "") = 0;
         virtual void setViewport(const gfx::Viewport& viewport) = 0;
         virtual void setVersion(const ccstd::string& name, uint64_t version) = 0;
-        virtual bool getShowStatistics() const = 0;
-        virtual void setShowStatistics(bool enable) = 0;
+        @getter virtual bool getShowStatistics() const = 0;
+        @setter virtual void setShowStatistics(bool enable) = 0;
     }
 
     interface BasicMultisampleRenderPassBuilder : BasicRenderPassBuilder {
@@ -115,12 +115,12 @@ namespace cc::render {
     }
 
     interface BasicPipeline : PipelineRuntime {
-        virtual PipelineType getType() const = 0;
-        virtual PipelineCapabilities getCapabilities() const = 0;
+        @getter virtual PipelineType getType() const = 0;
+        @getter virtual PipelineCapabilities getCapabilities() const = 0;
         virtual void beginSetup() = 0;
         virtual void endSetup() = 0;
-        virtual bool getEnableCpuLightCulling() const = 0;
-        virtual void setEnableCpuLightCulling(bool enable) = 0;
+        @getter virtual bool getEnableCpuLightCulling() const = 0;
+        @setter virtual void setEnableCpuLightCulling(bool enable) = 0;
         virtual bool containsResource(const ccstd::string& name) const = 0;
         virtual uint32_t addRenderWindow(const ccstd::string& name, gfx::Format format, uint32_t width, uint32_t height, scene::RenderWindow* renderWindow, const ccstd::string& depthStencilName = "") = 0;
         virtual void updateRenderWindow(const ccstd::string& name, scene::RenderWindow* renderWindow, const ccstd::string& depthStencilName = "") = 0;
@@ -173,8 +173,8 @@ namespace cc::render {
         virtual void addStorageImage(const ccstd::string& name, AccessType accessType, const ccstd::string& slotName) = 0;
         virtual void setViewport(const gfx::Viewport& viewport) = 0;
         virtual RenderQueueBuilder* addQueue(QueueHint hint = QueueHint::NONE, const ccstd::string& phaseName = "default", const ccstd::string& passName = "") = 0;
-        virtual bool getShowStatistics() const = 0;
-        virtual void setShowStatistics(bool enable) = 0;
+        @getter virtual bool getShowStatistics() const = 0;
+        @setter virtual void setShowStatistics(bool enable) = 0;
         virtual void setCustomShaderStages(const ccstd::string& name, gfx::ShaderStageFlagBit stageFlags) = 0;
     }
 
@@ -264,7 +264,4 @@ binding typescript {
     export { PipelineType, SubpassCapabilities, PipelineCapabilities, RenderNode, Setter, SceneBuilder,
              RenderQueueBuilder, ComputeQueueBuilder, RenderingModule };
     PipelineCapabilities => class { constructor(); };
-    RenderNode => interface {
-        getter getName => name setter setName;
-    };
 }

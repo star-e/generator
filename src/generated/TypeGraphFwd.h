@@ -10,6 +10,7 @@ struct TypeId;
 struct ModuleId;
 struct TypeUse;
 struct ParameterInfo;
+enum class AccessorKind : uint32_t;
 struct MethodInfo;
 struct FieldInfo;
 struct Enumerator;

@@ -37,6 +37,12 @@ struct ParameterInfo {
     std::string defaultValue;
 };
 
+enum class AccessorKind : uint32_t {
+    None,
+    Getter,
+    Setter,
+};
+
 struct MethodInfo {
     TypeUse result;
     std::string name;
@@ -49,6 +55,7 @@ struct MethodInfo {
     bool isStatic = false;
     bool isPureVirtual = false;
     bool isExplicitConversion = false;
+    AccessorKind accessor = AccessorKind::None;
 };
 
 struct FieldInfo {

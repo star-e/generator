@@ -8,8 +8,8 @@ import PipelineExternals;
 
 namespace cc::render {
     interface ProgramProxy : RefCounted {
-        virtual const ccstd::string& getName() const noexcept = 0;
-        virtual gfx::Shader* getShader() const noexcept = 0;
+        @getter virtual const ccstd::string& getName() const noexcept = 0;
+        @getter virtual gfx::Shader* getShader() const noexcept = 0;
     }
 
     interface ProgramLibrary {
@@ -32,10 +32,6 @@ namespace cc::render {
 }
 
 binding typescript {
-    ProgramProxy => interface {
-        getter getName => name;
-        getter getShader => shader;
-    };
     ProgramLibrary => interface {
         method getProgramVariant nullable;
     };
