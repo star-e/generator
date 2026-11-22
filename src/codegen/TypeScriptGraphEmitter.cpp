@@ -116,17 +116,36 @@ void directedEdges(std::ostream& out, const GraphType& model) {
     edge (u: number, v: number): boolean {
         return Number.isInteger(u) && u >= 0 && u < this._outEdges.length && this._outEdges[u].some(e => e.target === v);
     }
-    source (e: ED): number { return e.source as number; }
-    target (e: ED): number { return e.target as number; }
-    oe (v: number): OutEI { return new OutEI(this._outEdges[v].values(), v); }
-    od (v: number): number { return this._outEdges[v].length; }
-    adj (v: number): AdjI { return new AdjI(this, this.oe(v)); }
-    ne (): number { return this._outEdges.reduce((sum, edges) => sum + edges.length, 0); }
+    source (e: ED): number {
+        return e.source as number;
+    }
+    target (e: ED): number {
+        return e.target as number;
+    }
+    oe (v: number): OutEI {
+        return new OutEI(this._outEdges[v].values(), v);
+    }
+    od (v: number): number {
+        return this._outEdges[v].length;
+    }
+    adj (v: number): AdjI {
+        return new AdjI(this, this.oe(v));
+    }
+    ne (): number {
+        return this._outEdges.reduce((sum, edges) => sum + edges.length, 0);
+    }
 )";
     if (model.bidirectional)
-        out << "    ie (v: number): InEI { return new InEI(this._inEdges[v].values(), v); }\n"
-            << "    id (v: number): number { return this._inEdges[v].length; }\n"
-            << "    d (v: number): number { return this.od(v) + this.id(v); }\n";
+        out << R"(    ie (v: number): InEI {
+        return new InEI(this._inEdges[v].values(), v);
+    }
+    id (v: number): number {
+        return this._inEdges[v].length;
+    }
+    d (v: number): number {
+        return this.od(v) + this.id(v);
+    }
+)";
 }
 
 void adjacencyMutation(std::ostream& out, bool references, bool bidirectional) {
@@ -305,9 +324,9 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     }
     if (model.vertexList) {
         if (vertexList.empty())
-            out << "\n    *v (): IterableIterator<number> { for (let v = 0; v < this._vertexCount; ++v) yield v; }\n";
-        else out << "\n    v (): IterableIterator<number> { return " << vertexList << ".keys(); }\n";
-        out << "    nv (): number { return " << vertexCount << "; }\n";
+            out << "\n    *v (): IterableIterator<number> {\n        for (let v = 0; v < this._vertexCount; ++v) yield v;\n    }\n";
+        else out << "\n    v (): IterableIterator<number> {\n        return " << vertexList << ".keys();\n    }\n";
+        out << "    nv (): number {\n        return " << vertexCount << ";\n    }\n";
     }
     if (model.mutableGraph) {
         out << "\n    clear (): void {\n";
@@ -335,7 +354,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
                 << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
             if (model.parentGraph) out << "        this.roots.splice(this.roots.findIndex(e => e.target === v), 1);\n";
             out << "        this._parents[v] = u;\n        return new ED(u, v);\n    }\n"
-                << "    addReference (u: number, v: number): ED | null { return this.addEdge(u, v); }\n";
+                << "    addReference (u: number, v: number): ED | null {\n        return this.addEdge(u, v);\n    }\n";
         }
     }
     for (size_t i = 0; i < components.size(); ++i) {
@@ -361,17 +380,17 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         if (model.mutableGraph) adjacencyMutation(out, false, model.bidirectional);
     }
     if (model.nameIndex)
-        out << "\n    contains (key: string): boolean { return this.nameIndex.has(key); }\n"
+        out << "\n    contains (key: string): boolean {\n        return this.nameIndex.has(key);\n    }\n"
             << "    find (key: string): number {\n        const v = this.nameIndex.get(key);\n"
             << "        return v === undefined ? this.N : v;\n    }\n"
             << "    vertex (key: string): number {\n        const v = this.find(key);\n"
             << "        if (v === this.N) throw new RangeError('Unknown vertex name');\n        return v;\n    }\n";
     if (model.nameComponentIndex)
-        out << "\n    vertexName (v: number): string { return this.get" << components.at(*model.nameComponentIndex).tagName << "(v); }\n";
+        out << "\n    vertexName (v: number): string {\n        return this.get" << components.at(*model.nameComponentIndex).tagName << "(v);\n    }\n";
     if (!alternatives.empty()) {
-        out << "\n    h (id: " << kinds << ", v: number): boolean { return this.w(v) === id; }\n"
-            << "    w (v: number): " << kinds << " { return this._kinds[v]; }\n"
-            << "    object (v: number): " << node.name << "Object { return this._objects[this.w(v)][this._indices[v]]; }\n"
+        out << "\n    h (id: " << kinds << ", v: number): boolean {\n        return this.w(v) === id;\n    }\n"
+            << "    w (v: number): " << kinds << " {\n        return this._kinds[v];\n    }\n"
+            << "    object (v: number): " << node.name << "Object {\n        return this._objects[this.w(v)][this._indices[v]];\n    }\n"
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
             << "        if (this.w(v) !== id) throw new Error('Vertex kind does not match');\n"
             << "        return this._objects[id][this._indices[v]];\n    }\n"
@@ -381,37 +400,83 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             out << "        case " << kinds << "." << alt.tagName << ": return visitor." << alt.visitorMethod()
                 << "(this._objects[" << kinds << "." << alt.tagName << "][index]);\n";
         out << "        default: throw new Error('Unknown vertex kind');\n        }\n    }\n"
-            << "    j<T extends " << node.name << "Object> (v: number): T { return this.object(v) as T; }\n";
+            << "    j<T extends " << node.name << "Object> (v: number): T {\n        return this.object(v) as T;\n    }\n";
     }
     if (model.hierarchy) {
-        out << "\n    parent (e: ED): number { return e.source as number; }\n"
-            << "    children (v: number): OutEI { return new OutEI(this._children[v].values(), v); }\n"
-            << "    child (e: ED): number { return e.target as number; }\n"
-            << "    numChildren (v: number): number { return this._children[v].length; }\n";
+        out << R"(
+    parent (e: ED): number {
+        return e.source as number;
+    }
+    children (v: number): OutEI {
+        return new OutEI(this._children[v].values(), v);
+    }
+    child (e: ED): number {
+        return e.target as number;
+    }
+    numChildren (v: number): number {
+        return this._children[v].length;
+    }
+)";
     }
     if (model.separateEdges) {
-        out << "    parents (v: number): InEI { return new InEI(this._parents[v].values(), v); }\n"
-            << "    numParents (v: number): number { return this._parents[v].length; }\n"
-            << "    getParent (v: number): number {\n        const parents = this._parents[v];\n"
-            << "        return parents && parents.length ? parents[0].target as number : this.N;\n    }\n"
-            << "    reference (u: number, v: number): boolean { return Number.isInteger(u) && !!this._children[u] && this._children[u].some(e => e.target === v); }\n";
+        out << R"(    parents (v: number): InEI {
+        return new InEI(this._parents[v].values(), v);
+    }
+    numParents (v: number): number {
+        return this._parents[v].length;
+    }
+    getParent (v: number): number {
+        const parents = this._parents[v];
+        return parents && parents.length ? parents[0].target as number : this.N;
+    }
+    reference (u: number, v: number): boolean {
+        return Number.isInteger(u) && !!this._children[u] && this._children[u].some(e => e.target === v);
+    }
+)";
         if (model.mutableGraph) adjacencyMutation(out, true, true);
-    } else if (model.hierarchy)
-        out << "\n    getParent (v: number): number { return v === this.N ? this.N : this._parents[v]; }\n"
-            << "    reference (u: number, v: number): boolean { return u !== this.N && !!this._children[v] && this._parents[v] === u; }\n"
-            << "\n    edge (u: number, v: number): boolean { return this.reference(u, v); }\n"
-            << "    source (e: ED): number { return this.parent(e); }\n"
-            << "    target (e: ED): number { return this.child(e); }\n"
-            << "    oe (v: number): OutEI { return this.children(v); }\n"
-            << "    od (v: number): number { return this.numChildren(v); }\n"
-            << "    ie (v: number): InEI {\n"
-            << "        const parent = this.getParent(v);\n"
-            << "        return new InEI((parent === this.N ? [] : [new OutE(parent)]).values(), v);\n    }\n"
-            << "    id (v: number): number { return this.getParent(v) === this.N ? 0 : 1; }\n"
-            << "    d (v: number): number { return this.id(v) + this.od(v); }\n"
-            << "    adj (v: number): AdjI { return new AdjI(this, this.oe(v)); }\n"
-            << (model.parentGraph ? "    ne (): number { return this._children.length - this.roots.length; }\n" :
-                                    "    ne (): number { return this._children.reduce((n, edges) => n + edges.length, 0); }\n");
+    } else if (model.hierarchy) {
+        out << R"(
+    getParent (v: number): number {
+        return v === this.N ? this.N : this._parents[v];
+    }
+    reference (u: number, v: number): boolean {
+        return u !== this.N && !!this._children[v] && this._parents[v] === u;
+    }
+
+    edge (u: number, v: number): boolean {
+        return this.reference(u, v);
+    }
+    source (e: ED): number {
+        return this.parent(e);
+    }
+    target (e: ED): number {
+        return this.child(e);
+    }
+    oe (v: number): OutEI {
+        return this.children(v);
+    }
+    od (v: number): number {
+        return this.numChildren(v);
+    }
+    ie (v: number): InEI {
+        const parent = this.getParent(v);
+        return new InEI((parent === this.N ? [] : [new OutE(parent)]).values(), v);
+    }
+    id (v: number): number {
+        return this.getParent(v) === this.N ? 0 : 1;
+    }
+    d (v: number): number {
+        return this.id(v) + this.od(v);
+    }
+    adj (v: number): AdjI {
+        return new AdjI(this, this.oe(v));
+    }
+    ne (): number {
+)";
+        if (model.parentGraph) out << "        return this._children.length - this.roots.length;\n";
+        else out << "        return this._children.reduce((n, edges) => n + edges.length, 0);\n";
+        out << "    }\n";
+    }
     if (model.parentGraph) {
         out << "\n    locateChild (parent: number, name: string): number {\n"
             << "        if (parent !== this.N && !this._children[parent]) return this.N;\n"
@@ -423,7 +488,9 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     }
     if (model.addressableGraph)
         out << R"(
-    locate (absPath: string): number { return this.locateRelative(absPath); }
+    locate (absPath: string): number {
+        return this.locateRelative(absPath);
+    }
 
     locateRelative (path: string, start: number = this.N): number {
         if (path.length === 0) return this.N;
