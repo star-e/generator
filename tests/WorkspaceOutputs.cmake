@@ -30,6 +30,21 @@ file(WRITE "${workspace}" "${config}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/both")
 file(GLOB_RECURSE all RELATIVE "${work}/both" "${work}/both/*")
 file(READ "${work}/both/cocos/rendering/custom/pipeline.ts" pipeline)
+foreach(signature IN ITEMS
+        [=[    addQueue (phaseName?: string, passName?: string): ComputeQueueBuilder;]=]
+        [=[    addQueue (
+        hint?: QueueHint,
+        phaseName?: string,
+        passName?: string): RenderQueueBuilder;]=]
+        [=[    configCamera? (
+        camera: Readonly<Camera>,
+        pplConfigs: Readonly<Record<string, any>>,
+        cameraConfigs: Record<string, any>): void;]=])
+    string(FIND "${pipeline}" "${signature}" at)
+    if(at EQUAL -1)
+        message(FATAL_ERROR "Unexpected parameter layout for TypeScript signature: ${signature}")
+    endif()
+endforeach()
 file(READ "${work}/both/native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.h" renderHeader)
 if(NOT renderHeader MATCHES "constexpr bool ENABLE_SUBPASS = true;" OR pipeline MATCHES "ENABLE_SUBPASS")
     message(FATAL_ERROR "RenderInterface must publish the subpass switch in its native header")

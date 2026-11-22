@@ -192,6 +192,11 @@ std::string tsCallbackType(const TypeGraph& graph, const CallbackTypeInfo& type,
     return result + ">";
 }
 
+std::string_view tsParameterPrefix(size_t index, size_t count) {
+    if (count <= 2) return index == 0 ? "" : ", ";
+    return index == 0 ? "\n        " : ",\n        ";
+}
+
 void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, TypeImports& imports, const InterfaceBindings& bindings) {
     writeDocumentation(out, decl.documentation);
     out << "export interface " << decl.name;
@@ -234,10 +239,10 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         out << "    " << *method.typescriptName << (method.optionalMethod ? "? (" : " (");
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
-            if (i) out << ", ";
             if (i >= firstExplicit && binding.optional[i - firstExplicit] != param.name)
                 throw std::runtime_error(context + ": optional parameters must match the trailing parameters in order");
-            out << param.name << (i >= firstOptional ? "?: " : ": ") << tsSignatureType(graph, param.type, decl.module, imports);
+            out << tsParameterPrefix(i, method.parameters.size()) << param.name << (i >= firstOptional ? "?: " : ": ")
+                << tsSignatureType(graph, param.type, decl.module, imports);
         }
         out << "): " << result << suffix;
     }
@@ -245,9 +250,9 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         writeDocumentation(out, callback.documentation, "    ");
         out << "    " << callback.name << (callback.optional ? "? (" : " (");
         for (size_t i = 0; i < callback.parameters.size(); ++i) {
-            if (i) out << ", ";
             const auto& param = callback.parameters[i];
-            out << param.name << (param.optional ? "?: " : ": ") << tsCallbackType(graph, param.type, decl.module, imports);
+            out << tsParameterPrefix(i, callback.parameters.size()) << param.name << (param.optional ? "?: " : ": ")
+                << tsCallbackType(graph, param.type, decl.module, imports);
         }
         out << "): " << tsCallbackType(graph, callback.result, decl.module, imports) << (callback.optionalResult ? " | undefined;\n" : ";\n");
     }
