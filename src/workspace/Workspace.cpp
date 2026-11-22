@@ -186,7 +186,8 @@ InterfaceBindings interfaceBindings(const Module& module) {
 
 void loadCppOutput(RecordOutput& output, const Json& cpp, const Json& defaults, const Module& module) {
     checkKeys(cpp, {"root", "dir", "prefix", "header", "forward", "names", "serialization", "jsb",
-                    "swig", "forwardIncludes"}, "cpp");
+                    "swig", "forwardIncludes", "spaceBeforeReference"}, "cpp");
+    output.spaceBeforeReference = cpp.value("spaceBeforeReference", defaults.value("spaceBeforeReference", false));
     output.nativeRoot = outputPath(cpp.value("root", defaults.value("root", std::string{"."})));
     const auto dir = outputPath(cpp.value("dir", defaults.value("dir", std::string{"."})));
     const auto prefix = cpp.value("prefix", module.name);
@@ -363,7 +364,7 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
     const auto& modules = settings.at("modules");
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
     const auto defaults = settings.value("cppDefaults", Json::object());
-    checkKeys(defaults, {"root", "dir"}, "cppDefaults");
+    checkKeys(defaults, {"root", "dir", "spaceBeforeReference"}, "cppDefaults");
     std::vector<ModuleInput> inputs;
     std::vector<ModuleOutput> outputs;
     for (const auto& entry : modules) {

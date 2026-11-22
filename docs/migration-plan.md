@@ -66,6 +66,8 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `"cpp": {}` 生成 `<模块名>Fwd.h`、`<模块名>Types.h` 和 `<模块名>Types.cpp`。`names`、`serialization`、`jsb` 分别启用 `Names.h`、`Serialization.h`、`Jsb.h`，后两项也生成相应的 `.cpp`。每项都可以直接写文件名。`prefix` 覆盖命名前缀，`header` 覆盖主头文件名。文件写到 `<outputRoot>/<root>/<dir>/`，其中 `dir` 是头文件的 include 路径前缀。工作区的 `cppDefaults` 可统一设置 `root` 和 `dir`，单个模块可覆盖它们。每个 C++ 模块的 `Fwd.h` 自动包含 `.spec` 直接 `import` 的、也生成 C++ 的模块的前置头，路径取自依赖模块的输出配置。外部类型按声明的头文件映射按需包含。旧配置中显式指定的 `forwardIncludes` 仍作为补充，与自动包含的头文件去重。
 
+`cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的引用格式。cocos4 工作区将它设为 `true`，让 `.spec` 声明的普通 C++ 方法输出 `T &get()` 和 `void set(const T &value)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
+
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 
 普通模块的 `typescript` 字符串指定要生成的 `.ts` 文件。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。在 `.spec` 的模块声明上用 `@pool` 启用 TS 对象池。枚举注册和 JSB 导出类型写在绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。旧版 `forward` 的布尔值按默认规则处理，字符串指定的文件名继续有效。[工作区输出测试](../tests/WorkspaceOutputs.cmake)

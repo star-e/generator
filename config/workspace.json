@@ -4,7 +4,8 @@
   "preamble": "preamble.txt",
   "cppDefaults": {
     "root": "native",
-    "dir": "cocos/renderer/pipeline/custom"
+    "dir": "cocos/renderer/pipeline/custom",
+    "spaceBeforeReference": true
   },
   "modules": [
     { "spec": "../spec/extern/types.spec" },

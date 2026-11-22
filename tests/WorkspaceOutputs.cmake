@@ -50,7 +50,8 @@ if(NOT renderHeader MATCHES "constexpr bool ENABLE_SUBPASS = true;" OR pipeline 
     message(FATAL_ERROR "RenderInterface must publish the subpass switch in its native header")
 endif()
 foreach(fragment IN ITEMS "class Setter : public RenderNode"
-                          "const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers()"
+                          "const ccstd::vector<gfx::CommandBuffer*> &getCommandBuffers()"
+                          "void addUploadPass(ccstd::vector<UploadPair> &uploadPairs)"
                           "this->addMaterialTexture(resourceName, gfx::ShaderStageFlagBit::VERTEX | gfx::ShaderStageFlagBit::FRAGMENT)")
     string(FIND "${renderHeader}" "${fragment}" index)
     if(index EQUAL -1)
@@ -278,7 +279,7 @@ import Shadow;
 namespace cc {
     /** Native switch. */
     constexpr bool ENABLE_TEST = false;
-    struct Item {}
+    struct Item { Item& assign(const Item& other); }
     using Count = int;
     interface Parent {
         @cppOnly virtual Parent* fork(Count* value) const = 0;
@@ -289,6 +290,7 @@ namespace cc {
     interface Middle : Parent { @cppOnly virtual int count() = 0; }
     interface Child : Middle {
         @cppOnly virtual void borrow(int Count, ::cc::Count* value, ::cc::Item* item, ::vendor::Device* device) = 0;
+        @cppOnly virtual int& revise(int& value, const int& other) = 0;
         @cppOnly virtual Child* fork(int* renamed) const noexcept = 0;
         @cppOnly virtual Child* fork(int* renamed) = 0;
         @cppOnly virtual int inspect(const int& value) = 0;
@@ -298,7 +300,9 @@ namespace cc {
 }]=])
 run(${generate})
 file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
-foreach(line IN ITEMS "Child *fork(int *renamed) const noexcept override = 0;"
+foreach(line IN ITEMS "Item &assign(const Item &other);"
+                      "virtual int &revise(int &value, const int &other) = 0;"
+                      "Child *fork(int *renamed) const noexcept override = 0;"
                       "virtual Child *fork(int *renamed) = 0;"
                       "virtual void borrow(int Count, ::cc::Count *value, ::cc::Item *item, ::vendor::Device *device) = 0;"
                       "virtual int inspect(const int &value) = 0;"
@@ -311,5 +315,23 @@ foreach(line IN ITEMS "Child *fork(int *renamed) const noexcept override = 0;"
 endforeach()
 if(NOT header MATCHES "Native switch[.]\n \\*/\nconstexpr bool ENABLE_TEST = false;")
     message(FATAL_ERROR "Expected documented native constexpr bool in the module header")
+endif()
+string(JSON overrideStyle SET "${config}" modules 0 cpp spaceBeforeReference false)
+file(WRITE "${workspace}" "${overrideStyle}")
+run(${generate})
+set(providerHeader "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h")
+file(READ "${providerHeader}" overridden)
+foreach(line IN ITEMS "Item& assign(const Item& other);" "virtual int& revise(int& value, const int &other) = 0;")
+    string(FIND "${overridden}" "${line}" index)
+    if(index EQUAL -1)
+        message(FATAL_ERROR "Expected original reference spacing after module override: ${line}")
+    endif()
+endforeach()
+string(JSON defaultStyle REMOVE "${config}" cppDefaults spaceBeforeReference)
+file(WRITE "${workspace}" "${defaultStyle}")
+run(${generate})
+file(READ "${providerHeader}" original)
+if(NOT original STREQUAL overridden)
+    message(FATAL_ERROR "Omitting spaceBeforeReference must produce the original reference spacing")
 endif()
 finish_workspace("${work}")

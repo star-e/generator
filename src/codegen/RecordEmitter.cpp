@@ -969,20 +969,23 @@ std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const 
 }
 
 std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module, const std::vector<MethodInfo>& methods,
-                               Dependencies& deps, bool currentPrivate = false) {
+                               const RecordOutput& output, Dependencies& deps, bool currentPrivate = false) {
     std::ostringstream out;
     for (const auto& method : methods) {
         memberAccess(out, currentPrivate, method.cppPrivate);
         writeDocumentation(out, method.documentation, "    ");
-        const auto type = methodType(graph, module, method.result.type, deps);
-        if (method.isExplicitConversion) out << "    explicit operator " << type;
-        else out << "    " << (method.isStatic ? "static " : "") << type << " " << method.name;
+        out << "    ";
+        if (method.isExplicitConversion) out << "explicit operator ";
+        else if (method.isStatic) out << "static ";
+        out << cppMethodDeclarator(methodType(graph, module, method.result.type, deps),
+                                   method.isExplicitConversion ? "" : method.name, output.spaceBeforeReference);
         out << "(";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             if (i) out << ", ";
             const auto& p = method.parameters[i];
-            if (p.byConstReference) out << "const ";
-            out << methodType(graph, module, p.type.type, deps) << (p.byConstReference ? "& " : " ") << p.name;
+            auto type = methodType(graph, module, p.type.type, deps);
+            if (p.byConstReference) type = "const " + type + "&";
+            out << cppMethodDeclarator(std::move(type), p.name, output.spaceBeforeReference);
             if (!p.defaultValue.empty()) out << " = " << p.defaultValue;
         }
         out << ")";
@@ -1016,7 +1019,7 @@ void cppRecordFriends(std::ostream& out, const TypeGraph& graph, const TypeModul
 
 void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, const TypeModule& module,
                const TypeNode& node, const std::vector<BoundField>& members, const std::vector<StaticField>& statics,
-               const TypeModule* archive, Dependencies& deps) {
+               const TypeModule* archive, const RecordOutput& output, Dependencies& deps) {
     const auto& record = std::get<RecordType>(node.data);
     const bool immovable = !recordHierarchySatisfies(graph, record, [](const RecordType& r) { return !r.immovable; });
     const bool moveOnly = record.moveOnly || std::ranges::any_of(record.bases, [&](TypeId id) { return hasMoveOnlyValue(graph, id); });
@@ -1103,7 +1106,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     }
     if (!record.bases.empty() || record.implements) {
         memberAccess(out, currentPrivate, false);
-        emitImplementationMethods(out, graph, node, deps.headers);
+        emitImplementationMethods(out, graph, node, deps.headers, output.spaceBeforeReference);
     }
     if (!record.cppMembers.empty()) memberAccess(out, currentPrivate, false);
     out << record.cppMembers;
@@ -1117,7 +1120,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         if (!m.cppDefault.empty()) out << "{" << m.cppDefault << "}";
         out << ";\n";
     }
-    out << cppMemberFunctions(graph, module, record.methods, deps, currentPrivate) << "};\n";
+    out << cppMemberFunctions(graph, module, record.methods, output, deps, currentPrivate) << "};\n";
 }
 
 std::string tsClassMethods(const TypeScriptClassMethods& methods) {
@@ -1443,7 +1446,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto methods = output.classMethods.find(node.name);
         const auto classMethods = methods == output.classMethods.end() ? std::string{} : tsClassMethods(methods->second);
         if (std::holds_alternative<InterfaceType>(node.data)) {
-            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, emitTs ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
+            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, emitTs ? &ts : nullptr, deps.typeImports, output);
             continue;
         }
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
@@ -1454,7 +1457,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                     deps.headers.insert(archive->output.forwardHeader.generic_string());
                     inputArchive = "::" + graph.node(archive->module.inputArchive).qualifiedName;
                 }
-                const auto methods = cppMemberFunctions(graph, module, model->methods, deps);
+                const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
                 emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, methods, inputArchive);
                 if (model->compareEqual || model->compareLess || model->hashable) {
                     std::vector<std::string_view> elements;
@@ -1534,7 +1537,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             statics.push_back({std::move(member), forwardEnum});
         }
         if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, statics,
-                                    output.serializationHeader ? &archive->module : nullptr, deps);
+                                    output.serializationHeader ? &archive->module : nullptr, output, deps);
         if (record->serializable && (output.serializationHeader || emitTs)) {
             const bool emitTsArchive = emitTs && !node.typescriptNumber;
             const auto fields = archiveFields(graph, owner, *record, members, archives.requirements, emitTsArchive);

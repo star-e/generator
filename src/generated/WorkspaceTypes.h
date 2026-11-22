@@ -56,6 +56,7 @@ struct RecordOutput {
     std::filesystem::path header;
     std::filesystem::path forwardHeader;
     std::set<std::string> forwardIncludes;
+    bool spaceBeforeReference{false};
     std::optional<std::filesystem::path> namesHeader;
     std::vector<std::filesystem::path> importedNamesHeaders;
     std::optional<std::filesystem::path> serializationHeader;

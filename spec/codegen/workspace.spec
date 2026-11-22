@@ -18,6 +18,7 @@ namespace cc::codegen {
         header: std::filesystem::path;
         forwardHeader: std::filesystem::path;
         forwardIncludes: std::set<std::string>;
+        spaceBeforeReference: bool = false;
         namesHeader: std::optional<std::filesystem::path>;
         importedNamesHeaders: std::vector<std::filesystem::path>;
         serializationHeader: std::optional<std::filesystem::path>;

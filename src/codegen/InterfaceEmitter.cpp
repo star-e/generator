@@ -10,8 +10,18 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 
 namespace cc::codegen {
+
+std::string cppMethodDeclarator(std::string type, std::string_view name, bool spaceBeforeReference) {
+    // Only the outer reference belongs next to the function or parameter name.
+    const auto endOfType = spaceBeforeReference ? type.find_last_not_of('&') + 1 : type.size();
+    if (endOfType < type.size() || !name.empty()) type.insert(endOfType, 1, ' ');
+    type += name;
+    return type;
+}
+
 namespace {
 
 constexpr auto lintBegin = "// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
@@ -20,10 +30,12 @@ constexpr auto lintEnd = "// NOLINTEND(misc-include-cleaner, bugprone-easily-swa
 struct ClassScope {
     const TypeGraph& graph;
     const TypeModule& module;
+    bool spaceBeforeReference;
     std::set<const TypeNode*> classes;
     std::set<std::string_view> members;
 
-    ClassScope(const TypeGraph& graph, const TypeNode& owner) : graph(graph), module(graph.modules.at(owner.module.value)) {
+    ClassScope(const TypeGraph& graph, const TypeNode& owner, bool spaceBeforeReference)
+    : graph(graph), module(graph.modules.at(owner.module.value)), spaceBeforeReference(spaceBeforeReference) {
         collect(owner);
     }
 
@@ -78,7 +90,7 @@ void cppDeclarator(std::ostream& out, const ClassScope& scope, const MethodInfo&
         ++pointers;
         id = pointer->pointee;
     }
-    const auto type = formatTypeName(graph, id, [&](const TypeNode& decl) {
+    auto type = formatTypeName(graph, id, [&](const TypeNode& decl) {
         if (decl.qualifiedName.empty()) throw std::runtime_error(use.location.describe() + ": unsupported C++ interface type");
         if (decl.module != ModuleId{} && &graph.modules.at(decl.module.value) != &scope.module && decl.cppHeader.empty()) {
             throw std::runtime_error(use.location.describe() + ": missing C++ header for imported type " + decl.qualifiedName);
@@ -86,8 +98,7 @@ void cppDeclarator(std::ostream& out, const ClassScope& scope, const MethodInfo&
         if (!decl.cppHeader.empty()) headers.insert(decl.cppHeader);
         return scope.name(decl, method);
     });
-    out << type;
-    if (pointers || !name.empty()) out << ' ' << std::string(pointers, '*') << name;
+    out << cppMethodDeclarator(std::move(type), std::string(pointers, '*') + name, scope.spaceBeforeReference);
 }
 
 void cppParameters(std::ostream& out, const ClassScope& scope, const MethodInfo& method, size_t count, bool named,
@@ -197,12 +208,12 @@ void cppForwardingOverloads(std::ostream& out, const ClassScope& scope, const Ty
     }
 }
 
-void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, std::set<std::string>& headers) {
+void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, std::set<std::string>& headers, bool spaceBeforeReference) {
     const auto& name = decl.name;
     writeDocumentation(out, decl.documentation);
     out << "class " << name;
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
-    const ClassScope scope(graph, decl);
+    const ClassScope scope(graph, decl, spaceBeforeReference);
     VirtualMethods inherited;
     for (auto base : bases) {
         collectVirtualMethods(graph, base, inherited);
@@ -316,10 +327,11 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
 
 } // namespace
 
-void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers) {
+void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers,
+                               bool spaceBeforeReference) {
     const auto& record = std::get<RecordType>(node.data);
     if (record.bases.empty() && !record.implements) return;
-    const ClassScope scope(graph, node);
+    const ClassScope scope(graph, node, spaceBeforeReference);
     VirtualMethods overrides, implementation;
     std::map<std::string, TypeId> providers;
     for (auto base : record.bases) {
@@ -363,9 +375,9 @@ void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const 
 }
 
 void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream* cpp, std::set<std::string>& headers,
-                   std::ostream* script, TypeImports& imports, const InterfaceBindings& bindings) {
-    if (cpp) cppInterface(*cpp, graph, node, headers);
-    if (script) tsInterface(*script, graph, node, imports, bindings);
+                   std::ostream* script, TypeImports& imports, const RecordOutput& output) {
+    if (cpp) cppInterface(*cpp, graph, node, headers, output.spaceBeforeReference);
+    if (script) tsInterface(*script, graph, node, imports, output.interfaceBindings);
 }
 
 std::string emitHeaderSource(const TypeModule& module, const std::filesystem::path& header, const std::string& preamble) {
