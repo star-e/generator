@@ -142,9 +142,6 @@ void edgeTraversal(std::ostream& out, bool sharedEdges, bool bidirectional) {
     id (v: number): number {
         return this._parents[v] === this.N ? 0 : 1;
     }
-    d (v: number): number {
-        return this._children[v].length + (this._parents[v] === this.N ? 0 : 1);
-    }
 )";
         else
             out << R"(    ie (v: number): InEI {
@@ -153,8 +150,9 @@ void edgeTraversal(std::ostream& out, bool sharedEdges, bool bidirectional) {
     id (v: number): number {
         return this._inEdges[v].length;
     }
-    d (v: number): number {
-        return this._outEdges[v].length + this._inEdges[v].length;
+)";
+        out << R"(    d (v: number): number {
+        return this.od(v) + this.id(v);
     }
 )";
     }
