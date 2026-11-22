@@ -345,7 +345,7 @@ std::string normalizeLines(const std::string& input, bool crlf) {
     return result;
 }
 
-Files plan(const Json& settings, const fs::path& base) {
+Files plan(const Json& settings, const fs::path& base, std::optional<std::string_view> selectedModule) {
     rejectJsonTypes(settings, "workspace");
     auto preamble = normalizeLines(read(base / settings.at("preamble").get<std::string>()), false);
     const auto eol = settings.at("lineEnding").get<std::string>();
@@ -399,6 +399,8 @@ Files plan(const Json& settings, const fs::path& base) {
     }
     std::vector<ModuleId> dependencyOrder;
     const auto graph = buildTypeGraph(inputs, &dependencyOrder);
+    if (selectedModule && std::ranges::find(graph.modules, *selectedModule, &TypeModule::name) == graph.modules.end())
+        throw std::runtime_error("unknown module: " + std::string(*selectedModule));
     std::set<std::string> outputKeys;
     Files files;
     std::optional<fs::path> manifestRoot;
@@ -407,6 +409,7 @@ Files plan(const Json& settings, const fs::path& base) {
         checkKeys(*option, {"sourceRoot"}, "manifest");
         manifestRoot = (base / option->value("sourceRoot", std::string{"."})).lexically_normal();
     }
+    const bool emitManifest = manifestRoot && !selectedModule;
     const auto sourcePath = [&](const fs::path& source) {
         const auto relative = (base / source).lexically_normal().lexically_relative(*manifestRoot);
         if (relative.empty()) throw std::runtime_error("cannot make manifest source relative: " + source.string());
@@ -417,6 +420,7 @@ Files plan(const Json& settings, const fs::path& base) {
         const auto i = owner.value;
         const auto& syntax = inputs[i].syntax;
         const auto& module = graph.modules.at(i);
+        const bool selected = !selectedModule || module.name == *selectedModule;
         const auto addFile = [&](const fs::path& path, const std::string& content, const fs::path& copiedFrom = {}) {
             const auto relative = path.lexically_normal();
             auto key = relative.generic_string();
@@ -424,8 +428,9 @@ Files plan(const Json& settings, const fs::path& base) {
             if (manifestRoot && std::string_view(key).substr(0, key.find('/')) == manifestName)
                 throw std::runtime_error("reserved manifest output: " + key);
             if (!outputKeys.insert(key).second) throw std::runtime_error("duplicate output " + key);
+            if (!selected) return;
             files.emplace(relative, normalizeLines(content, eol == "crlf"));
-            if (manifestRoot) {
+            if (emitManifest) {
                 auto& entry = manifestFiles[relative.generic_string()];
                 entry = {{"module", module.name}, {"source", sourcePath(modules[i].at("spec").get<std::string>())}};
                 if (!copiedFrom.empty()) entry["copiedFrom"] = sourcePath(copiedFrom);
@@ -461,11 +466,12 @@ Files plan(const Json& settings, const fs::path& base) {
             if (!runtime.is_object()) throw std::runtime_error("expected runtimeFiles output-to-source mapping");
             for (const auto& [destination, source] : runtime.items()) {
                 const fs::path copiedFrom = source.get<std::string>();
-                addFile(outputPath(destination), read(base / copiedFrom), copiedFrom);
+                const auto content = selected ? read(base / copiedFrom) : std::string{};
+                addFile(outputPath(destination), content, copiedFrom);
             }
         }
     }
-    if (manifestRoot) {
+    if (emitManifest) {
         Json manifest = {{"schemaVersion", 1}, {"files", std::move(manifestFiles)}};
         files.emplace(manifestName, manifest.dump(2) + '\n');
     }
@@ -514,12 +520,14 @@ void printDifference(const std::string& expected, const std::string& actual) {
 
 } // namespace
 
-int generate(const fs::path& workspace, const std::optional<fs::path>& output, bool check, bool diff) {
+int generate(const fs::path& workspace, const std::optional<fs::path>& output, bool check, bool diff,
+             std::optional<std::string_view> selectedModule) {
+    if (selectedModule && !check) throw std::runtime_error("--module requires --check");
     auto config = object(workspace);
     const auto base = fs::absolute(workspace).parent_path();
     const auto destination = output.value_or(base / config.at("outputRoot").get<std::string>());
     auto root = fs::weakly_canonical(fs::absolute(destination));
-    const Files files = plan(config, base);
+    const Files files = plan(config, base, selectedModule);
     bool drift = false;
     const auto publish = [&](const fs::path& path, const std::string& bytes) {
         const auto target = root / path;
@@ -542,7 +550,11 @@ int generate(const fs::path& workspace, const std::optional<fs::path>& output, b
         if (it != manifest) publish(it->first, it->second);
     }
     if (manifest != files.end()) publish(manifest->first, manifest->second);
-    if (check && fs::exists(root)) {
+    if (selectedModule) {
+        if (!drift)
+            std::cout << *selectedModule << ": " << files.size()
+                      << (files.size() == 1 ? " file matches\n" : " files match\n");
+    } else if (check && fs::exists(root)) {
         for (const auto& entry : fs::recursive_directory_iterator(root)) {
             if (!entry.is_regular_file()) continue;
             const auto relative = entry.path().lexically_relative(root);

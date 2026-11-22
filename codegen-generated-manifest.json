@@ -1,0 +1,251 @@
+{
+  "files": {
+    "cocos/rendering/custom/archive.ts": {
+      "module": "ArchiveInterface",
+      "source": "spec/render/archive.spec"
+    },
+    "cocos/rendering/custom/graph-dfs.ts": {
+      "copiedFrom": "runtime/typescript/graph-dfs.ts",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "cocos/rendering/custom/layout-graph-names.ts": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "cocos/rendering/custom/layout-graph.ts": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "cocos/rendering/custom/pipeline.ts": {
+      "module": "RenderInterface",
+      "source": "spec/render/render-interface.spec"
+    },
+    "cocos/rendering/custom/private.ts": {
+      "module": "PrivateInterface",
+      "source": "spec/render/private-interface.spec"
+    },
+    "cocos/rendering/custom/render-graph.ts": {
+      "module": "RenderGraph",
+      "source": "spec/render/render-graph.spec"
+    },
+    "cocos/rendering/custom/types-names.ts": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "cocos/rendering/custom/types.ts": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "cocos/rendering/custom/web-types.ts": {
+      "module": "PrivateTypes",
+      "source": "spec/render/private-types.spec"
+    },
+    "editor/assets/default_renderpipeline/builtin-pipeline-types.ts": {
+      "module": "RenderSettings",
+      "source": "spec/render/render-settings.spec"
+    },
+    "native/cocos/base/GraphDFS.h": {
+      "copiedFrom": "runtime/cpp/GraphDFS.h",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/base/GraphEdges.h": {
+      "copiedFrom": "runtime/cpp/GraphEdges.h",
+      "module": "RenderGraph",
+      "source": "spec/render/render-graph.spec"
+    },
+    "native/cocos/base/GraphView.h": {
+      "copiedFrom": "runtime/cpp/GraphView.h",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/base/Pmr.h": {
+      "copiedFrom": "runtime/cpp/Pmr.h",
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/ArchiveFwd.h": {
+      "module": "ArchiveInterface",
+      "source": "spec/render/archive.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/ArchiveTypes.cpp": {
+      "module": "ArchiveInterface",
+      "source": "spec/render/archive.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/ArchiveTypes.h": {
+      "module": "ArchiveInterface",
+      "source": "spec/render/archive.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/Array4.h": {
+      "copiedFrom": "runtime/cpp/Array4.h",
+      "module": "NativePipeline",
+      "source": "spec/render/native-pipeline.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/CustomFwd.h": {
+      "module": "Customization",
+      "source": "spec/render/customization.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/CustomTypes.cpp": {
+      "module": "Customization",
+      "source": "spec/render/customization.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/CustomTypes.h": {
+      "module": "Customization",
+      "source": "spec/render/customization.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/FGDispatcherFwd.h": {
+      "module": "FGDispatcher",
+      "source": "spec/render/fg-dispatcher.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/FGDispatcherTypes.cpp": {
+      "module": "FGDispatcher",
+      "source": "spec/render/fg-dispatcher.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/FGDispatcherTypes.h": {
+      "module": "FGDispatcher",
+      "source": "spec/render/fg-dispatcher.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp": {
+      "copiedFrom": "runtime/cpp/LayoutGraphDescriptorSet.cpp",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.h": {
+      "copiedFrom": "runtime/cpp/LayoutGraphDescriptorSet.h",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphFwd.h": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphNames.h": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp": {
+      "copiedFrom": "runtime/cpp/LayoutGraphPrint.cpp",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.h": {
+      "copiedFrom": "runtime/cpp/LayoutGraphPrint.h",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.h": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h": {
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/NativeFwd.h": {
+      "module": "PrivateTypes",
+      "source": "spec/render/private-types.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/NativePipelineFwd.h": {
+      "module": "NativePipeline",
+      "source": "spec/render/native-pipeline.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/NativePipelineTypes.cpp": {
+      "module": "NativePipeline",
+      "source": "spec/render/native-pipeline.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/NativePipelineTypes.h": {
+      "module": "NativePipeline",
+      "source": "spec/render/native-pipeline.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/NativeTypes.cpp": {
+      "module": "PrivateTypes",
+      "source": "spec/render/private-types.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/NativeTypes.h": {
+      "module": "PrivateTypes",
+      "source": "spec/render/private-types.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/PrivateFwd.h": {
+      "module": "PrivateInterface",
+      "source": "spec/render/private-interface.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/PrivateTypes.cpp": {
+      "module": "PrivateInterface",
+      "source": "spec/render/private-interface.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/PrivateTypes.h": {
+      "module": "PrivateInterface",
+      "source": "spec/render/private-interface.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonFwd.h": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonJsb.cpp": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonJsb.h": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonNames.h": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonSerialization.h": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderCommonTypes.h": {
+      "module": "RenderCommon",
+      "source": "spec/render/render-common.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderGraphFwd.h": {
+      "module": "RenderGraph",
+      "source": "spec/render/render-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp": {
+      "module": "RenderGraph",
+      "source": "spec/render/render-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderGraphTypes.h": {
+      "module": "RenderGraph",
+      "source": "spec/render/render-graph.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderInterfaceFwd.h": {
+      "module": "RenderInterface",
+      "source": "spec/render/render-interface.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.cpp": {
+      "module": "RenderInterface",
+      "source": "spec/render/render-interface.spec"
+    },
+    "native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.h": {
+      "module": "RenderInterface",
+      "source": "spec/render/render-interface.spec"
+    },
+    "native/tools/swig-config/render.i": {
+      "module": "RenderInterface",
+      "source": "spec/render/render-interface.spec"
+    }
+  },
+  "schemaVersion": 1
+}

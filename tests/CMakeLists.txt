@@ -14,6 +14,9 @@ add_test(NAME cocos.workspace.outputs COMMAND "${CMAKE_COMMAND}"
     "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/WorkspaceOutputs.cmake")
 
+add_test(NAME cocos.workspace.module-check COMMAND "${CMAKE_COMMAND}"
+    "-DTOOL=$<TARGET_FILE:CocosCodegen>" -P "${CMAKE_CURRENT_SOURCE_DIR}/ModuleCheck.cmake")
+
 add_test(NAME cocos.archive.generate COMMAND "${CMAKE_COMMAND}"
     "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/ArchiveTest.cmake")

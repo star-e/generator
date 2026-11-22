@@ -40,6 +40,14 @@ ctest --test-dir build/host --output-on-failure
 
 ### 按模块选择输出
 
+从 `generator` 目录运行下面的命令，可在引擎检出中逐字节核对一个模块的产物。
+
+```sh
+build/host/cocos-codegen generate --workspace config/workspace.json --output ../cocos4 --check --module ArchiveInterface
+```
+
+`--module` 取 `.spec` 声明的模块名，区分大小写，只能与 `--check` 一起使用。生成器加载完整工作区以解析导入，按模块归属检查生成文件和 `runtimeFiles` 副本。目标目录可包含手写代码，也可省略工作区清单。匹配时显示文件数，缺失或变化时列出路径并返回 1，加 `--diff` 可查看第一处字节差异。引擎工作区指定 CRLF 换行，因此使用 LF 的检出会报告换行差异。未知模块返回 2。
+
 引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `cocos/rendering/custom/graph-dfs.ts` 来源于 `runtime/typescript/graph-dfs.ts`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序、采用 LF，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
 
 工作区通过 `ModuleInput` 把每个模块的声明、C++ 定义头、前置声明头和 TS 输出信息交给建图器。建图时，标量别名使用前置声明头，模板实例别名和图标签使用定义头。外部类型的头文件和 TS 导入来源沿用 `extern module` 的声明与配置。[建图输入](../src/model/TypeGraphBuilder.h) · [工作区](../src/workspace/Workspace.cpp)
