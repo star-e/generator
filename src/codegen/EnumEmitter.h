@@ -3,7 +3,9 @@
 #include "codegen/Documentation.h"
 #include "generated/TypeGraphTypes.h"
 
+#include <algorithm>
 #include <ostream>
+#include <ranges>
 #include <stdexcept>
 #include <string_view>
 #include <utility>
@@ -14,6 +16,7 @@ enum class EnumTarget { cpp, typescript };
 
 inline std::string enumInitializer(const Enumerator& member, EnumTarget target) {
     auto init = member.initializer;
+    if (init.empty()) init = std::visit([](auto n) { return std::to_string(n); }, member.value);
     if (init.find(" << ") != std::string::npos) {
         const auto value = std::visit([](auto n) { return static_cast<uint64_t>(n); }, member.value);
         // A positive result fitting int32_t also guarantees a shift count below 31.
@@ -32,6 +35,9 @@ inline std::string enumInitializer(const Enumerator& member, EnumTarget target) 
 }
 
 inline void writeEnumMembers(std::ostream& out, const EnumType& enumeration, EnumTarget target) {
+    // A later explicit initializer (including an alias) makes this a fully numbered C++ enum.
+    const bool numberAll = target == EnumTarget::cpp && std::ranges::any_of(
+        enumeration.values | std::views::drop(1), [](const Enumerator& member) { return !member.initializer.empty(); });
     for (const auto& member : enumeration.values) {
         if (target == EnumTarget::typescript) {
             const bool safe = std::visit([](auto n) {
@@ -42,7 +48,7 @@ inline void writeEnumMembers(std::ostream& out, const EnumType& enumeration, Enu
         }
         writeDocumentation(out, member.documentation, "    ");
         out << "    " << member.name;
-        if (!member.initializer.empty()) {
+        if (numberAll || !member.initializer.empty()) {
             out << " = " << enumInitializer(member, target);
         }
         out << ",\n";

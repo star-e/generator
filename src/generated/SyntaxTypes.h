@@ -27,7 +27,7 @@
  * The following section is auto-generated.
  * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
  */
-#pragma once
+#pragma once // NOLINT(portability-avoid-pragma-once)
 #include <filesystem>
 #include <map>
 #include <optional>

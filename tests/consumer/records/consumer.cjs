@@ -18,7 +18,7 @@ function compareDeclaration(file, firstLine, lastLine, normalize = line => line,
         assert.ok(start >= 0, firstLine);
         const end = lines.indexOf(lastLine, start + 1);
         assert.ok(end > start, lastLine);
-        return lines.slice(start, end + 1);
+        return lines.slice(start, end + 1).map(line => line.replace(/ \/\/ NOLINT(?:\(google-explicit-constructor\))?$/, ''));
     }
     assert.deepEqual(read(stage).flatMap(normalize), read(engine).map(normalizeEngine), firstLine);
 }
@@ -28,8 +28,8 @@ function stripLegacyAllocatorCtorNoexcept(text, name) {
     return ctor && text.includes('const allocator_type& alloc') ? text.replace(') noexcept', ')') : text;
 }
 
-function comparePmrRecord(file, name, normalize) {
-    compareDeclaration(file, `struct ${name} {`, '};', normalize, line => stripLegacyAllocatorCtorNoexcept(line, name));
+function comparePmrRecord(file, name, normalize = line => line) {
+    compareDeclaration(file, `struct ${name} {`, '};', normalize, line => normalize(stripLegacyAllocatorCtorNoexcept(line, name)));
 }
 
 function stripFieldDefaults(line) {
@@ -92,7 +92,7 @@ compareDeclaration(layoutTs, 'export class DescriptorBlockFlattened {', '}');
 compareDeclaration(layoutTs, 'export class DescriptorBlockData {', '}');
 compareDeclaration(layoutTs, 'export class DescriptorSetLayoutData {', '}');
 function legacyAllocatorOrder(text, defaultAlloc = '') {
-    return text.replace(/\(const std::allocator_arg_t&, const allocator_type& alloc, ([^)]*)\)/,
+    return text.replace(/\(const std::allocator_arg_t&(?: \/\*tag\*\/)?, const allocator_type& alloc, ([^)]*)\)/,
         `($1, const allocator_type& alloc${defaultAlloc})`);
 }
 comparePmrRecord(layoutCpp, 'DescriptorBlockData', line => stripFieldDefaults(legacyAllocatorOrder(line)));
@@ -186,7 +186,11 @@ for (const line of fs.readFileSync(path.join(stage, ts), 'utf8').split(/\r?\n/))
     if (line.startsWith('import ')) assert.ok(engineTypes.includes(line), line);
 }
 function compareEnum(name, tsKind) {
-    compareDeclaration(cpp, `enum class ${name} : uint8_t {`, '};');
+    // The legacy QueueHint starts with consecutive implicit values, followed by named aliases.
+    const numberValue = name === 'QueueHint'
+        ? (line, index) => line.replace(/^(    \w+),$/, `$1 = ${index - 1},`)
+        : undefined;
+    compareDeclaration(cpp, `enum class ${name} : uint8_t {`, '};', numberValue, numberValue);
     compareDeclaration(ts, `export ${tsKind} ${name} {`, '}');
 }
 for (const [name, values] of Object.entries(constEnumValues)) {
@@ -277,7 +281,8 @@ for (const name of ['ResolvePair', 'CopyPair', 'UploadPair', 'MovePair']) {
     assert.equal(definitions.length, name === 'UploadPair' ? 3 : 4, name);
     const normalizeDefinition = text => legacyAllocatorOrder(text)
         .replace(': source(),\n  target(alloc)', ': target(alloc)');
-    assert.deepEqual(definitions.map(normalizeDefinition), constructors(engine, name).map(text => stripLegacyAllocatorCtorNoexcept(text, name)), name);
+    const reference = constructors(engine, name).map(text => normalizeDefinition(stripLegacyAllocatorCtorNoexcept(text, name)));
+    assert.deepEqual(definitions.map(normalizeDefinition), reference, name);
 }
 
 for (const [value, name] of ['PER_INSTANCE', 'PER_BATCH', 'PER_PHASE', 'PER_PASS', 'COUNT'].entries()) {

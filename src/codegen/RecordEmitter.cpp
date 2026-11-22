@@ -693,11 +693,13 @@ void inlineConstructors(std::ostream& out, const TypeGraph& graph, const std::st
             out << m.parameterType() << " " << m.name << "In";
             if (declaration.defaults) out << nativeDefaultArgument(graph, record.fields[ctor[i]].type.type, m);
         }
-        if (declaration.custom) {
-            out << ')' << (declaration.isNoexcept ? " noexcept" : "") << ";\n";
-            return;
-        }
-        out << ')' << (prefix.nothrow ? " noexcept" : "") << (prefix.types.size() + ctor.size() == 1 ? " // NOLINT\n" : "\n");
+        // Field constructors allow implicit list initialization, including when all fields have defaults.
+        const auto required = prefix.types.size() + (declaration.defaults ? 0 : ctor.size());
+        out << ')' << ((declaration.custom ? declaration.isNoexcept : prefix.nothrow) ? " noexcept" : "");
+        if (declaration.custom) out << ';';
+        if (required <= 1) out << " // NOLINT(google-explicit-constructor)";
+        out << '\n';
+        if (declaration.custom) return;
         bool first = true;
         for (const auto& base : prefix.bases) {
             if (base.arguments.empty()) continue;
@@ -782,7 +784,7 @@ void pmrFieldConstructors(std::ostream& header, std::ostream& source, const Type
         std::string params;
         if (ctor.defaults) {
             headers.insert("memory");
-            params = "const std::allocator_arg_t&, " + alloc;
+            params = "const std::allocator_arg_t& /*tag*/, " + alloc;
         }
         if (!prefix.parameters.empty()) appendArgument(params, prefix.parameters);
         auto declaration = params;
@@ -1606,7 +1608,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             emitInterfaceHeaders(files, graph, module, output, cpp.view(), deps.headers, preamble);
         } else {
             std::ostringstream header;
-            header << preamble << "#pragma once\n";
+            header << preamble << "#pragma once // NOLINT(portability-avoid-pragma-once)\n";
             const auto include = output.forwardHeader.lexically_relative(output.header.parent_path());
             cppIncludes(header, deps.headers, {include.generic_string()});
             for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
@@ -1673,7 +1675,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (standaloneInterfaces && !deps.typeImports.empty()) script << '\n';
     script << runtimeImports.str();
     if (pool.count) {
-        ts << "\nfunction createPool<T> (Constructor: new() => T): RecyclePool<T> {\n"
+        ts << "\nfunction createPool<T> (Constructor: new () => T): RecyclePool<T> {\n"
            << "    return new RecyclePool<T>(() => new Constructor(), 16);\n}\n"
            << "\nexport class " << module.name << "ObjectPool {\n    constructor (";
         std::string params;
