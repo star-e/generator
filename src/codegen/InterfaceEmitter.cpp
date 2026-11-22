@@ -182,11 +182,12 @@ void cppForwardingOverloads(std::ostream& out, const ClassScope& scope, const Ty
     const auto& graph = scope.graph;
     const auto& params = method.parameters;
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
+    const auto shadowingParameter = std::ranges::find(params, method.name, &ParameterInfo::name);
     for (size_t count = requiredParameterCount(method); count < params.size(); ++count) {
         out << "    ";
         cppDeclarator(out, scope, method, method.result, method.name, headers);
         cppParameters(out, scope, method, count, true, headers);
-        out << " { ";
+        out << " {\n        ";
         if (graph.node(method.result.type).qualifiedName != "void") out << "return ";
         if (std::ranges::count(methods, method.name, &MethodInfo::name) > 1) {
             // A literal such as nullptr or {} need not select this overload on its own.
@@ -195,7 +196,8 @@ void cppForwardingOverloads(std::ostream& out, const ClassScope& scope, const Ty
             cppParameters(out, scope, method, params.size(), false, headers);
             out << ">(&" << decl.name << "::" << method.name << "))";
         } else {
-            out << "this->" << method.name;
+            if (shadowingParameter < params.begin() + count) out << "this->";
+            out << method.name;
         }
         out << '(';
         for (size_t i = 0; i < params.size(); ++i) {
@@ -204,7 +206,7 @@ void cppForwardingOverloads(std::ostream& out, const ClassScope& scope, const Ty
             if (i >= count) out << scope.defaultValue(p, method);
             else forwardArgument(out, graph, p, headers);
         }
-        out << "); }\n";
+        out << ");\n    }\n";
     }
 }
 

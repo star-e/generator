@@ -73,10 +73,15 @@ endif()
 foreach(fragment IN ITEMS "class Setter : public RenderNode"
                           "const ccstd::vector<gfx::CommandBuffer*> &getCommandBuffers()"
                           "void addUploadPass(ccstd::vector<UploadPair> &uploadPairs)"
-                          "this->addMaterialTexture(resourceName, gfx::ShaderStageFlagBit::VERTEX | gfx::ShaderStageFlagBit::FRAGMENT)")
+                          [=[    void addMaterialTexture(const ccstd::string &resourceName) {
+        addMaterialTexture(resourceName, gfx::ShaderStageFlagBit::VERTEX | gfx::ShaderStageFlagBit::FRAGMENT);
+    }]=]
+                          [=[    ComputeQueueBuilder *addQueue() {
+        return addQueue("default", "");
+    }]=])
     string(FIND "${renderHeader}" "${fragment}" index)
     if(index EQUAL -1)
-        message(FATAL_ERROR "Expected namespace-relative C++ output: ${fragment}")
+        message(FATAL_ERROR "Expected C++ interface output: ${fragment}")
     endif()
 endforeach()
 string(REGEX MATCHALL "export (enum|interface|class) [A-Za-z0-9_]+" pipelineExports "${pipeline}")
@@ -305,6 +310,7 @@ namespace cc {
     interface Parent {
         @cppOnly virtual Parent* fork(Count* value) const = 0;
         @cppOnly virtual int inspect(const int& value, int mode = 1) = 0;
+        @cppOnly virtual int select(int select = 2, int mode = 3) = 0;
         static int helper() { return 1; }
         static int Item() { return 0; }
     }
@@ -322,6 +328,8 @@ namespace cc {
 run(${generate})
 file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
 foreach(line IN ITEMS "Item &assign(const Item &other);"
+                      "    return select(2, 3);"
+                      "    return this->select(select, 3);"
                       "virtual int &revise(int &value, const int &other) = 0;"
                       "Child *fork(int *renamed) const noexcept override = 0;"
                       "virtual Child *fork(int *renamed) = 0;"
