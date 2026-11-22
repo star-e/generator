@@ -85,7 +85,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 | RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。`render.i` 按 C++ 方法的 `@getter`、`@setter`、`@cppOnly` 生成属性和忽略项。`binding swig` 中的 `macro` 引用属性或方法，`releaseInGC` 指定由 JS GC 释放返回对象的方法。 | 公开 API 的中英文说明随声明输出到 C++ 和 TS，包括方法绑定成的 TS 属性。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h/.cpp` 和 `private.ts` 已接入 cocos4。`getProgramVariant` 和 `getComputePipelineState` 省略 `key` 时均转发 `nullptr`。Web 仅公开前者，返回值可为 `null`。 | 用 `--module PrivateInterface --output ../cocos4 --check --diff` 核对四个产物。原生实现为 `NativeProgramProxy` 和 `NativeProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h/.cpp` 已接入 cocos4。六组回调使用 `RenderGraphVertex`。该别名在 .spec 中引用新版 `RenderGraph::Vertex`，生成的前置声明头将其展开为 `uint32_t`，与旧图的 `vertex_descriptor` 一致。 | 用 `--module Customization --output ../cocos4 --check --diff` 核对三个产物。原生消费者包括 `NativePipeline.cpp` 的两个自定义渲染命令和 `NativeExecutor.cpp` 的回调调用点。 |
-| PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 原生与 Web 消费测试覆盖这些类型。 |
+| PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 已接入 cocos4。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 用 `--module PrivateTypes --output ../cocos4 --check --diff` 核对四个产物。原生消费测试按 `NativeProgramLibrary` 的插入方式验证分配器传递，Web 消费测试覆盖五参数构造和 Map 的实例隔离。 |
 | FGDispatcher | `FGDispatcherFwd.h` 提供前置声明，`FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
 | NativePipeline | `NativePipelineFwd.h` 和 `NativePipelineTypes.h/.cpp` 覆盖旧版全部 50 个顶层类型，包括 9 个具体构建器、原生管线、程序库、资源上下文和绘制队列。 | 引擎切换时，手写执行器和管线代码中引用旧图自由函数与嵌套标签的调用仍需适配。 |
 
@@ -416,7 +416,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 4 | PrivateInterface | 4 | 4 | `PrivateFwd.h`、`PrivateTypes.h/.cpp`、`private.ts`。使用 `RenderInterface` 和外部 `ProgramLib` 核对签名。 |
 | 4 | Customization | 3 | 3 | `CustomFwd.h`、`CustomTypes.h/.cpp`。用引擎自定义渲染命令的派生类验证虚接口。 |
 | 4 | FGDispatcher | 3 | 2 | `FGDispatcherTypes.h/.cpp`。用手写 `FrameGraphDispatcher.cpp` 验证索引与遍历，显式启用 pass 重排并对照顶点间的可达关系。 |
-| 4 | PrivateTypes | 4 | 4 | `NativeFwd.h`、`NativeTypes.h/.cpp`、`web-types.ts`。此时 `LayoutGraph`、两个接口模块均已就绪。 |
+| 4 | PrivateTypes | 4 | 4 | `NativeFwd.h`、`NativeTypes.h/.cpp`、`web-types.ts`。`NativePipelineTypes.h` 按值使用 `LayoutGraphData`，直接包含 `LayoutGraphTypes.h`。 |
 | 5 | NativePipeline | 4 | 3 | `NativePipelineFwd.h`、`NativePipelineTypes.h/.cpp`。编译并链接手写 `NativePipeline.cpp` 与执行器，运行一次最小原生管线。 |
 
 `CocosCommon` 提供外部类型登记，`RenderInterfaceDocument` 提供注释。`RenderSceneInterface` 在旧入口参与登记，其输出调用已注释。`RenderCompiler`、`ExecutorExample`、`RenderExample` 的构建和输出受关闭的分支控制。这些状态纳入基线，已有的同名引擎文件按其实际来源登记。[模块入口](../../cocos-engine-generator/Cocos/CocosBuilder/CocosBuilder.cpp) · [旧外部类型登记](../../cocos-engine-generator/Cocos/CocosBuilder/CocosCommon.cpp)

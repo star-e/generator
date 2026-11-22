@@ -7,6 +7,7 @@
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <limits>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -115,6 +116,31 @@ bool checkNativeContext(boost::container::pmr::memory_resource* memory) {
            context.lightResources.get_allocator().resource() == memory;
 }
 
+bool checkProgramGroup() {
+    boost::container::pmr::monotonic_buffer_resource source, destination;
+    ProgramInfo input{&source};
+    input.programInfo.effectName = "builtin";
+    input.shaderInfo.name = "lighting";
+    input.attributes.emplace_back();
+    input.attributes.front().name = "a_position";
+    input.blockSizes.push_back(64);
+    input.handleMap.emplace("color", 7);
+
+    cc::PmrFlatMap<uint32_t, ProgramGroup> phases{&destination};
+    auto& group = phases.emplace(std::piecewise_construct, std::forward_as_tuple(3U), std::forward_as_tuple()).first->second;
+    const auto inserted = group.programInfos.emplace(
+        std::piecewise_construct, std::forward_as_tuple("lighting"),
+        std::forward_as_tuple(std::move(input.programInfo), std::move(input.shaderInfo), std::move(input.attributes),
+                              std::move(input.blockSizes), std::move(input.handleMap)));
+    const auto& program = inserted.first->second;
+    return inserted.second && group.programInfos.get_allocator().resource() == &destination &&
+           group.programProxies.get_allocator().resource() == &destination &&
+           program.attributes.get_allocator().resource() == &destination &&
+           program.programInfo.effectName == "builtin" && program.shaderInfo.name == "lighting" &&
+           program.attributes.size() == 1 && program.attributes.front().name == "a_position" &&
+           program.blockSizes.size() == 1 && program.blockSizes.front() == 64 && program.handleMap.at("color") == 7;
+}
+
 bool checkCullingIndices() {
     const auto invalid = (std::numeric_limits<uint32_t>::max)();
     const NativeRenderQueueQuery empty{};
@@ -153,14 +179,14 @@ bool checkRenderQueues();
 
 bool checkMigratedModules() {
     boost::container::pmr::monotonic_buffer_resource memory;
-    ProgramGroup programs(&memory);
     PipelineCustomization customization(&memory);
     FGRenderPassInfo pass(&memory);
     pass.orderedViews.emplace_back("color");
     FGRenderPassInfo copy(pass, &memory);
     Barrier barrier;
     CustomRenderGraphContext context;
-    return checkForwardedConstructors() && checkNativeContext(&memory) && checkDispatcherGraphs() && checkRenderQueues() && checkCullingIndices() && programs.programInfos.empty() && customization.contexts.empty() && context.renderGraph == nullptr &&
+    return checkForwardedConstructors() && checkNativeContext(&memory) && checkDispatcherGraphs() && checkRenderQueues() &&
+           checkCullingIndices() && checkProgramGroup() && customization.contexts.empty() && context.renderGraph == nullptr &&
            copy.orderedViews == pass.orderedViews && copy.get_allocator().resource() == &memory &&
            barrier.type == cc::gfx::BarrierType::FULL && PipelineCapabilities{}.subpass == SubpassCapabilities::NONE;
 }
