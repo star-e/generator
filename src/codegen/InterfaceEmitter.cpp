@@ -210,6 +210,7 @@ void cppForwardingOverloads(std::ostream& out, const ClassScope& scope, const Ty
 
 void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, std::set<std::string>& headers, bool spaceBeforeReference) {
     const auto& name = decl.name;
+    out << '\n';
     writeDocumentation(out, decl.documentation);
     out << "class " << name;
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
@@ -233,7 +234,7 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     for (const auto& method : methods) {
         if (method.isPureVirtual) cppForwardingOverloads(out, scope, decl, method, headers);
     }
-    out << "};\n\n";
+    out << "};\n";
 }
 
 const std::string& tsSignatureType(const TypeGraph& graph, const TypeUse& use, ModuleId owner, TypeImports& imports) {
@@ -399,12 +400,12 @@ void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule
     header << "#include \"" << output.forwardHeader.generic_string() << "\"\n";
     for (auto* out : {&fwd, &header}) {
         for (const auto& name : module.namespaces) *out << "\nnamespace " << name << " {\n";
-        *out << '\n';
     }
+    fwd << '\n';
     for (auto id : module.declarations) fwd << "class " << graph.node(id).name << ";\n";
     header << body;
-    fwd << '\n';
     for (auto* out : {&fwd, &header}) {
+        *out << '\n';
         for (auto it = module.namespaces.rbegin(); it != module.namespaces.rend(); ++it) {
             *out << "} // namespace " << *it << "\n\n";
         }
