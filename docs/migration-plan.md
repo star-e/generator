@@ -339,7 +339,7 @@ C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 
 
 `addressable_graph;` 在 `parent_graph;` 上启用 `locate(refPath, start)`、`exists(refPath, start)` 和 `path(v)`。查找从指定顶点开始，起点默认为虚根 `null_vertex()`，前导 `/` 始终从虚根开始。`.` 保留当前位置，`..` 向上一级，连续和末尾的分隔符会被跳过。空字符串、缺失的路径段、越过虚根均返回 `null_vertex()`。`path(v)` 用图的内存资源返回绝对路径，传入虚根得到空字符串，其他越界编号会触发 `std::out_of_range`。路径按当前的节点名称计算，祖先改名对后代立即生效。[引擎路径规则](../../cocos4/cocos/rendering/custom/graph.ts) · [C++17 路径测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
-TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = this.N)` 指定起点，用 `path(v)` 生成绝对路径。路径段取自 `named_graph` 指定的名称组件。同一父节点下有重复名称时，查询返回最先插入的匹配项。查找失败返回 `g.N`，`path(g.N)` 返回空字符串，其他无效的顶点编号触发 `RangeError`。消费测试在 TS 中重建 C++ 用例的顶点和父子关系，逐项比较绝对路径和查询结果。[TS 寻址测试](../tests/consumer/records/layout-graph-consumer.ts.in)
+TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = this.N)` 指定起点，用 `path(v)` 生成绝对路径。起点可以是图中的顶点或虚根 `g.N`。路径段取自 `named_graph` 指定的名称组件。同一父节点下有重复名称时，查询返回最先插入的匹配项。查找失败返回 `g.N`，`path(g.N)` 返回空字符串。消费测试在 TS 中重建 C++ 用例的顶点和父子关系，逐项比较绝对路径和查询结果。[TS 寻址测试](../tests/consumer/records/layout-graph-consumer.ts.in)
 
 在 `layout-graph.spec` 中，`@serialize graph LayoutGraph` 和相应的 `@serialize struct` 声明共同定义图归档。四个头部数值依次为顶点数、边数、阶段数和相位数。接下来按顶点编号写类别、父编号、名称、描述符库和载荷；根的父编号为 `0xFFFFFFFF`。描述符映射的键在 TS 内存中使用 JSON 字符串，在归档中按索引结构的字段顺序写入。`layout-graph.ts` 从同目录的 `./serialization` 导入 `UniformBlock` 和 `DescriptorSetLayoutInfo` 的读写函数。`InputArchive` 和 `OutputArchive` 的导入路径单独取自 `ArchiveInterface` 的工作区配置。读入整张图并核对类别和边的计数后，两端才替换目标图。[布局声明](../spec/render/layout-graph.spec) · [外部 Gfx 声明](../spec/extern/gfx.spec)
 
@@ -425,17 +425,17 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 TS 图按引擎 `graph.ts` 的 concept 顺序输出成员，只为当前图具备的能力生成分组。共享父子边的图把 `source`、`target` 放在 `IncidenceGraph`，把 `ne` 放在 `EdgeListGraph`。普通边和父子引用的修改接口分别归入 `MutableGraph` 和 `MutableReferenceGraph`。
 
-TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数组，名称取自 `.spec` 的 `member`，例如 `member: names;` 生成 `_names`。组件读写直接以顶点编号作为数组下标，调用者负责传入有效编号。父子关系和入出边按图声明分别存储。多态图将同一标签的载荷放入同一数组，顶点用类型标签和该数组的下标定位载荷。归档仍按顶点顺序读写。
+TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数组，名称取自 `.spec` 的 `member`，例如 `member: names;` 生成 `_names`。组件读写、边的查询与修改、路径操作都由调用者保证顶点编号有效。父子关系和入出边按图声明分别存储。多态图按标签存放载荷，`value(id, v)` 直接用给定标签和顶点在该标签下的下标读取载荷。调用者可用 `h(id, v)` 判断标签是否匹配，或用 `object(v)` 按实际标签读取。归档读取器在添加顶点前校验标签和父编号。
 
 对照旧清单，`LayoutGraph` 的九个文件对应八个生成产物。原 `LayoutGraphGraphs.h` 的图操作迁入类型成员。C++ 可遍历入边、出边、邻接顶点和全图边，TS 提供 `ie/id/d/adj/ne`、多态类别名称和 `setUpdate`。顶点和组件存储由图持有，调用方用 `object(v)` 或 `value(tag, v)` 读取载荷。旧 TS 写入器访问内部数组 `x[v].j`，跨版本测试分别运行对应写入器，并用旧读取器读回新图。[生成接口测试](../tests/consumer/records/LayoutGraphConsumer.cpp) · [归档对照](../tests/consumer/records/layout-archive.cjs)
 
 `cocos.records.interop` 从引擎 Git 仓库导出 `config/baseline.json` 的 `engineCommit`，在测试临时目录编译旧版 C++ 和 TS 的布局图与归档实现。运行测试的引擎检出需要包含该提交。新版使用当前生成的图和序列化代码。测试让旧版 C++ 读入新版 TS 写出的 `LayoutGraph`，再写给新版 C++，并与已登记的二进制样本逐字节核对。`LayoutGraphData` 也覆盖新旧 C++ 和 TS 的交叉读写。[基线提交](../config/baseline.json) · [互读测试](../tests/RecordInterop.cmake)
 
-两张布局图的归档为每个顶点保存一个父编号。C++ `add_edge(u, v)` 和 TS `addEdge(u, v)`、`addReference(u, v)` 可将已有根节点挂到编号更小的父节点。第二个父节点、重复边、自环、前向父引用和无效编号都会被拒绝。C++ 返回的成功标志为 `false`，TS 返回 `null`。新挂接的节点按编号插入兄弟序列，保证同名节点的查找结果在归档往返后稳定。C++ `remove_edge(e)` 可将整棵子树拆为独立的树。
+两张布局图的归档为每个顶点保存一个父编号。C++ `add_edge(u, v)` 和 TS `addEdge(u, v)`、`addReference(u, v)` 可将已有根节点挂到编号更小的父节点。第二个父节点、重复边、自环和前向父引用都会被拒绝。C++ 返回的成功标志为 `false`，TS 返回 `null`。C++ 也会拒绝无效编号。新挂接的节点按编号插入兄弟序列，保证同名节点的查找结果在归档往返后稳定。C++ `remove_edge(e)` 可将整棵子树拆为独立的树。
 
 `ResourceGraph` 支持按编号遍历顶点、访问 Name、Desc、Traits、States、Sampler 五个组件。C++ 的 `Kind` 和 TS 的 `ResourceGraphValue` 沿用旧版的 0–8 顺序，依次为 Managed、ManagedBuffer、ManagedTexture、PersistentBuffer、PersistentTexture、Framebuffer、Swapchain、FormatView、SubresourceView。Framebuffer 在 C++ 中持有 `IntrusivePtr<gfx::Framebuffer>`，TS 直接保存传入的 GFX 对象。四类缓冲与纹理记录的 `fenceValue` 在 C++ 中保留完整的 `uint64_t`，TS 接受 0 到 `Number.MAX_SAFE_INTEGER` 的整数。TS 通过 `RenderGraphObjectPool` 复用图和记录。[资源图声明](../spec/render/render-graph.spec)
 
-`name_index;` 为 `named_graph` 选定的名称组件建立全图唯一索引。`ResourceGraph` 在两端都提供 `contains(name)`、`find(name)`、`vertex(name)`。名称缺失时分别返回 `false`、无效顶点编号或抛出异常。空字符串也是合法键。添加顶点或通过 `setName(v, name)` 改名遇到重名时，操作失败，原顶点和索引保持一致。C++ 使用支持 `std::string_view` 查询的 PMR 有序映射，TS 使用随图清空的 `Map`。
+`name_index;` 为 `named_graph` 选定的名称组件建立全图唯一索引。`ResourceGraph` 在两端都提供 `contains(name)`、`find(name)`、`vertex(name)`。名称缺失时，`contains` 返回 `false`，`find` 返回无效顶点编号。TS 的 `vertex` 由调用者保证名称已存在，C++ 的 `vertex` 在名称缺失时抛出异常。空字符串也是合法键。添加顶点或通过 `setName(v, name)` 改名遇到重名时，操作失败，原顶点和索引保持一致。C++ 使用支持 `std::string_view` 查询的 PMR 有序映射，TS 使用随图清空的 `Map`。
 
 `ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。
 

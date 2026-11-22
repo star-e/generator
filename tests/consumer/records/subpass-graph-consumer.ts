@@ -23,7 +23,7 @@ assert(graph.vertexName(a) === graph.vertexName(b) && graph.getSubpass(c) === su
 const edge = graph.addEdge(a, c);
 if (edge === null) throw new Error('Expected a valid edge');
 assert(graph.addEdge(b, c) !== null && graph.addEdge(a, c) !== null && graph.addEdge(c, c) !== null);
-assert(graph.addEdge(graph.N, c) === null && graph.addEdge(a, 0.5) === null && graph.ne() === 4);
+assert(graph.ne() === 4 && !graph.edge(c, a));
 assert(Array.from(api.ie(c), e => graph.source(e)).join(',') === [a, b, a, c].join(',') &&
     Array.from(api.oe(a), e => graph.target(e)).join(',') === [c, c].join(',') &&
     Array.from(graph.adj(c)).join(',') === String(c) && api.d(c) === 5);

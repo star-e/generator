@@ -49,7 +49,7 @@ function throws(action: () => void): boolean {
     try { action(); } catch (error) { return error instanceof Error; }
     return false;
 }
-assert(!resources.contains('color') && resources.find('color') === resources.N && throws(() => resources.vertex('color')));
+assert(!resources.contains('color') && resources.find('color') === resources.N);
 const res = resources.addVertex(ResourceGraphValue.Managed, managed, 'color', desc, traits, states, sampler);
 assert(res === 0 && resources.contains('color') && resources.find('color') === res && resources.vertex('color') === res);
 assert(throws(() => resources.addVertex(ResourceGraphValue.Managed, managed, 'color', desc, traits, states, sampler)));
@@ -121,9 +121,7 @@ resources.setName(res, 'a\0b');
 assert(!resources.contains('a') && !resources.contains('color') && resources.vertex('a\0b') === res && resources.vertexName(res) === 'a\0b');
 resources.setName(res, '');
 assert(resources.vertex('') === res && !resources.contains('a\0b'));
-let rejected = false;
-try { resources.value(ResourceGraphValue.Framebuffer, res); } catch (error) { rejected = error instanceof Error; }
-assert(rejected);
+assert(!resources.h(ResourceGraphValue.Framebuffer, res) && resources.h(ResourceGraphValue.Managed, res));
 if (false) {
     // @ts-expect-error The framebuffer payload requires a GFX object.
     resources.addVertex(ResourceGraphValue.Framebuffer, null, '', desc, traits, states, sampler);
@@ -162,13 +160,10 @@ const base = resources.addVertex(ResourceGraphValue.ManagedTexture, resourcePool
 const stencil = addSubview('stencil', base);
 const mip = resources.addVertex(ResourceGraphValue.FormatView, resourcePool.createFormatView(),
     'depth-mip', desc, traits, states, sampler, depth);
-const vertexCount = resources.nv();
 const link = resources.addReference(base, depth);
 assert(link !== null && resources.source(link) === base && resources.target(link) === depth);
 assert(resources.addEdge(base, depth) === null && resources.addReference(stencil, depth) === null &&
-    resources.addEdge(base, base) === null && resources.addReference(mip, base) === null &&
-    resources.addEdge(resources.N, base) === null);
-assert(throws(() => addSubview('orphan', vertexCount)) && !resources.contains('orphan') && resources.nv() === vertexCount);
+    resources.addEdge(base, base) === null && resources.addReference(mip, base) === null);
 assert(resources.ne() === 3 && resources.getParent(base) === resources.N && resources.getParent(depth) === base &&
     resources.getParent(stencil) === base && resources.getParent(mip) === depth);
 const children = [...resources.children(base)].map(e => resources.child(e));

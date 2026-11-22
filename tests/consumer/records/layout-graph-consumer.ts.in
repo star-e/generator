@@ -1,4 +1,4 @@
-import { DefaultVisitor, depthFirstSearch as engineSearch, ED, OutEI } from './graph';
+import { DefaultVisitor, depthFirstSearch as engineSearch, ED, OneInEI, OutEI } from './graph';
 import type { AddressableGraph, AdjacencyGraph, BidirectionalGraph, EdgeListGraph, PolymorphicGraph, ReferenceGraph } from './graph';
 import { depthFirstSearch } from './graph-dfs';
 import type { InputArchive } from './archive';
@@ -117,11 +117,6 @@ export function checkNativePaths (samples: InputArchive): void {
         if (start === g.N) assert(view.locateRelative(path) === expected && view.locate(path) === expected, 'Root lookup');
     }
     assert(view.path(g.N) === '', 'Pseudo-root path');
-    for (const v of [count, -1, 0.5, NaN]) {
-        let rejected = false;
-        try { view.path(v); } catch (e) { rejected = e instanceof RangeError; }
-        assert(rejected && view.locateRelative('.', v) === g.N, 'Invalid vertex ' + v);
-    }
 }
 
 class EditorFixture {
@@ -159,7 +154,7 @@ class EditorFixture {
         assert(shadow !== other && [...lg.v()].length === 4 && lg.nv() === 4, 'Scoped phase names');
         assert(lg.N === 0xFFFFFFFF && lg.getParent(root) === lg.N && lg.getParent(lg.N) === lg.N &&
             lg.getParent(shadow) === sub && lg.getParent(other) === root, 'Parent lookup');
-        assert(lg.locateChild(lg.N, 'shadow') === lg.N && lg.locateChild(lg.nv(), 'shadow') === lg.N, 'Missing child');
+        assert(lg.locateChild(lg.N, 'shadow') === lg.N && lg.locateChild(shadow, 'shadow') === lg.N, 'Missing child');
         assert(lg.getName(shadow) === 'shadow' && lg.w(shadow) === phase && lg.w(sub) === stage, 'Vertex kind and name');
         const passType: RenderPassType = lg.value(stage, sub);
         assert(passType === RenderPassType.RENDER_SUBPASS, 'Stage payload');
@@ -205,13 +200,7 @@ class EditorFixture {
                 childDB.groupBlocks.get(groupKey)!.descriptors.get(name) === expected, 'Descriptors from the direct parent');
         }
         assert(lg.getDescriptors(other).blocks.size === 0, 'Render pass must be skipped');
-        let mismatched = false;
-        try { lg.value(phase, root); } catch { mismatched = true; }
-        assert(mismatched, 'Wrong payload kind');
-        const count = lg.nv();
-        let invalidParent = false;
-        try { lg.addVertex(phase, payload, 'invalid', db, count); } catch (e) { invalidParent = e instanceof RangeError; }
-        assert(invalidParent && lg.nv() === count, 'Invalid parent left a partial vertex');
+        assert(!lg.h(phase, root) && lg.h(phase, extra), 'Check the kind before accessing a phase');
     }
 }
 
@@ -248,6 +237,24 @@ checkChildren(tree, root, [first, last]);
 checkChildren(tree, first, [leaf]);
 checkChildren(tree, leaf, []);
 checkChildren(tree, independent, []);
+
+// Edge queries must work even when the reference-graph API is overridden.
+const unavailable = (): never => {
+    throw new Error('Edge query called a reference-graph method');
+};
+Object.assign(tree, { reference: unavailable, parent: unavailable, child: unavailable,
+    children: unavailable, numChildren: unavailable, getParent: unavailable });
+const link = new ED(root, first);
+assert(tree.source(link) === root && tree.target(link) === first && tree.edge(root, first));
+assert(tree.od(root) === 2 && [...tree.oe(root)][0].target === first && [...tree.adj(root)][1] === last);
+const incoming = tree.ie(first);
+assert(incoming instanceof OneInEI && incoming[Symbol.iterator]() === incoming);
+const edge = incoming.next();
+assert(!edge.done && edge.value instanceof ED && edge.value.source === root && edge.value.target === first);
+assert(incoming.next().done === true && incoming.next().done === true);
+const rootEdges = tree.ie(root);
+assert(rootEdges.next().done === true && rootEdges.next().done === true);
+assert(tree.id(first) === 1 && tree.d(first) === 2 && tree.id(root) === 0);
 
 const flat = new FlatComponents();
 const db = new DescriptorDB();

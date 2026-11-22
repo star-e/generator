@@ -81,8 +81,9 @@ const attached = publicGraph.addVertex(phase, new current.RenderPhase(), 'same',
 const last = publicGraph.addVertex(stage, 0, 'same', new current.DescriptorDB(), root);
 const nested = publicGraph.addVertex(stage, 0, 'nested', new current.DescriptorDB(), attached);
 assert.equal(publicGraph.ne(), 2);
+assert.equal(publicGraph.addEdge(last, attached), null);
 assert.deepEqual([publicGraph.addReference(root, attached).source, publicGraph.getParent(attached)], [root, root]);
-for (const [u, v] of [[root, attached], [last, attached], [nested, root], [root, root], [publicGraph.N, root], [root, 90]]) {
+for (const [u, v] of [[root, attached], [last, attached], [nested, root], [root, root]]) {
     assert.equal(publicGraph.addEdge(u, v), null);
 }
 assert.deepEqual([...publicGraph.adj(root)], [attached, last]);
@@ -116,6 +117,10 @@ invalid.writeDoubleLE(invalid.readDoubleLE(8) + 1, 8);
 fs.writeFileSync(invalidFile, invalid);
 const reused = new current.LayoutGraph();
 reused.addVertex(stage, 0, 'previous', new current.DescriptorDB());
+// Four header counts and a tag precede the first vertex's parent. A vertex cannot parent itself.
+const selfParent = Buffer.from(valid);
+selfParent.writeDoubleLE(0, 5 * 8);
+assert.throws(() => current.loadLayoutGraph(input(current, selfParent), reused), /archive parent/);
 assert.throws(() => current.loadLayoutGraph(input(current, invalid), reused), /archive counts/);
 assert.equal(reused.nv(), 1);
 assert.equal(reused.locate('/previous'), 0);

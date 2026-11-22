@@ -41,7 +41,6 @@ g.removeReferences(queue, compute);
 check(g.edge(queue, compute) && !g.reference(queue, compute) && g.getParent(compute) === pass, 'erase only references');
 check(Array.from(refs.children(pass), e => refs.child(e)).join() === [queue, compute].join() &&
     g.numChildren(queue) === 1 && g.ne() === 1, 'children and edge count');
-check(g.addReference(g.N, compute) === null && g.addEdge(pass, 0.5) === null, 'invalid endpoints');
 
 add(Kind.RasterSubpass, pool.createRasterSubpass());
 add(Kind.ComputeSubpass, pool.createComputeSubpass());

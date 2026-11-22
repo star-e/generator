@@ -313,6 +313,8 @@ bool checkGraphPaths(const char* sampleFile) {
     const auto binary = graph.add_vertex(RenderPhase_{}, binaryName, ui);
     const auto uiLeaf = graph.add_vertex(RenderPhase_{}, "leaf", ui);
     const auto invalid = view.num_vertices();
+    if (view.locate("..", invalid) != none || view.exists("..", invalid) ||
+        view.locate("/ui", invalid) != ui || !view.exists("/ui", invalid)) return false;
     if (view.path(main) != "/main" || view.path(leaf) != "/main/shadow/leaf" ||
         std::string_view{view.path(binary)} != binaryPath) return false;
     try {
@@ -323,8 +325,8 @@ bool checkGraphPaths(const char* sampleFile) {
     struct Query { std::string_view text; Vertex start; Vertex expected; };
     const Query queries[] = {
         {"/main/shadow/leaf", ui, leaf}, {"shadow/leaf", main, leaf}, {"../lighting", shadow, light},
-        {"//main/./shadow//leaf/", none, leaf}, {"/ui", invalid, ui}, {"../../ui", shadow, ui},
-        {"../../../ui", shadow, none}, {".", shadow, shadow}, {"..", main, none}, {"..", invalid, none},
+        {"//main/./shadow//leaf/", none, leaf}, {"/ui", main, ui}, {"../../ui", shadow, ui},
+        {"../../../ui", shadow, none}, {".", shadow, shadow}, {"..", main, none},
         {"", shadow, none}, {"/", main, none}, {"./", none, none}, {"missing/../lighting", main, none},
         {"lighting", ui, none}, {binaryPath, none, binary}, {"main/shadow/leaf", none, leaf},
         {"/ui/leaf", shadow, uiLeaf}, {"../leaf", binary, uiLeaf},

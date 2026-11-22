@@ -78,9 +78,6 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     out << "    ): number {\n"
         << "        const v = " << vertexCount << ";\n"
         << "        if (v >= this.N) throw new RangeError('Vertex limit exceeded');\n";
-    if (model.hierarchy)
-        out << "        if (parent !== this.N && (!Number.isInteger(parent) || parent < 0 || parent >= v)) {\n"
-            << "            throw new RangeError('Invalid parent vertex');\n        }\n";
     if (columns.empty()) {
         out << "        ++this._vertexCount;\n        return v;\n    }\n";
         return;
@@ -91,6 +88,10 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     }
     if (polymorphic)
         out << "        const objects = this._objects[id];\n        const objectIndex = objects.length;\n";
+    if (model.parentGraph)
+        out << "        const siblings = parent === this.N ? this.roots : this._children[parent];\n";
+    else if (model.hierarchy && !model.separateEdges)
+        out << "        const siblings = this._children[parent];\n";
     out << "        try {\n";
     if (polymorphic) out << "            objects.push(object);\n";
     for (const auto& column : columns)
@@ -98,12 +99,11 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     if (model.nameIndex)
         out << "            this.nameIndex.set(component" << components.at(*model.nameComponentIndex).tagName << ", v);\n";
     if (model.parentGraph)
-        out << "            const siblings = parent === this.N ? this.roots : this._children[parent];\n"
-            << "            siblings.push(new OutE(v));\n";
+        out << "            siblings.push(new OutE(v));\n";
     else if (model.separateEdges)
         out << "            if (parent !== this.N) this.addReference(parent, v);\n";
     else if (model.hierarchy)
-        out << "            if (parent !== this.N) this._children[parent].push(new OutE(v));\n";
+        out << "            if (parent !== this.N) siblings.push(new OutE(v));\n";
     out << "        } catch (error) {\n";
     if (model.nameIndex) out << "            this.nameIndex.delete(component" << components.at(*model.nameComponentIndex).tagName << ");\n";
     if (polymorphic) out << "            objects.length = objectIndex;\n";
@@ -112,28 +112,13 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
 }
 
 void edgeTraversal(std::ostream& out, bool sharedEdges, bool bidirectional) {
-    out << "\n    // IncidenceGraph\n";
+    const auto outgoing = sharedEdges ? "_children" : "_outEdges";
+    out << "\n    // IncidenceGraph\n    edge (u: number, v: number): boolean {\n";
     if (sharedEdges)
-        out << R"(    edge (u: number, v: number): boolean {
-        return this.reference(u, v);
-    }
-    source (e: ED): number {
-        return this.parent(e);
-    }
-    target (e: ED): number {
-        return this.child(e);
-    }
-    oe (v: number): OutEI {
-        return this.children(v);
-    }
-    od (v: number): number {
-        return this.numChildren(v);
-    }
-)";
+        out << "        return this._parents[v] === u;\n";
     else
-        out << R"(    edge (u: number, v: number): boolean {
-        return Number.isInteger(u) && u >= 0 && u < this._outEdges.length && this._outEdges[u].some(e => e.target === v);
-    }
+        out << "        return this._outEdges[u].some(e => e.target === v);\n";
+    out << R"(    }
     source (e: ED): number {
         return e.source as number;
     }
@@ -141,25 +126,24 @@ void edgeTraversal(std::ostream& out, bool sharedEdges, bool bidirectional) {
         return e.target as number;
     }
     oe (v: number): OutEI {
-        return new OutEI(this._outEdges[v].values(), v);
+        return new OutEI(this.)" << outgoing << R"([v].values(), v);
     }
     od (v: number): number {
-        return this._outEdges[v].length;
+        return this.)" << outgoing << R"([v].length;
     }
 )";
 
     if (bidirectional || sharedEdges) {
         out << "\n    // BidirectionalGraph\n";
         if (sharedEdges)
-            out << R"(    ie (v: number): InEI {
-        const parent = this.getParent(v);
-        return new InEI((parent === this.N ? [] : [new OutE(parent)]).values(), v);
+            out << R"(    ie (v: number): OneInEI {
+        return new OneInEI(this._parents[v], v, this.N);
     }
     id (v: number): number {
-        return this.getParent(v) === this.N ? 0 : 1;
+        return this._parents[v] === this.N ? 0 : 1;
     }
     d (v: number): number {
-        return this.id(v) + this.od(v);
+        return this._children[v].length + (this._parents[v] === this.N ? 0 : 1);
     }
 )";
         else
@@ -170,13 +154,13 @@ void edgeTraversal(std::ostream& out, bool sharedEdges, bool bidirectional) {
         return this._inEdges[v].length;
     }
     d (v: number): number {
-        return this.od(v) + this.id(v);
+        return this._outEdges[v].length + this._inEdges[v].length;
     }
 )";
     }
     out << "\n    // AdjacencyGraph\n"
         << R"(    adj (v: number): AdjI {
-        return new AdjI(this, this.oe(v));
+        return new AdjI(this, new OutEI(this.)" << outgoing << R"([v].values(), v));
     }
 )";
 }
@@ -185,12 +169,12 @@ void referenceQueries(std::ostream& out, bool separateEdges) {
     out << "\n    // ReferenceGraph\n";
     if (separateEdges)
         out << R"(    reference (u: number, v: number): boolean {
-        return Number.isInteger(u) && !!this._children[u] && this._children[u].some(e => e.target === v);
+        return this._children[u].some(e => e.target === v);
     }
 )";
     else
         out << R"(    reference (u: number, v: number): boolean {
-        return u !== this.N && !!this._children[v] && this._parents[v] === u;
+        return this._parents[v] === u;
     }
 )";
     out << R"(    parent (e: ED): number {
@@ -220,13 +204,14 @@ void referenceQueries(std::ostream& out, bool separateEdges) {
 )";
     if (separateEdges)
         out << R"(    getParent (v: number): number {
+        if (v === this.N) return this.N;
         const parents = this._parents[v];
-        return parents && parents.length ? parents[0].target as number : this.N;
+        return parents.length ? parents[0].target as number : this.N;
     }
 )";
     else
         out << R"(    getParent (v: number): number {
-        return v === this.N ? this.N : this._parents[v];
+        return this._parents[v] ?? this.N;
     }
 )";
 }
@@ -236,8 +221,6 @@ void adjacencyMutation(std::ostream& out, bool references, bool bidirectional) {
     const auto outgoing = references ? "_children" : "_outEdges";
     const auto incoming = references ? "_parents" : "_inEdges";
     out << "    add" << operation << R"( (u: number, v: number): ED | null {
-        if (!Number.isInteger(u) || !Number.isInteger(v) || u < 0 || v < 0 ||
-            u >= this.)" << outgoing << R"(.length || v >= this.)" << outgoing << R"(.length) return null;
         const edge = new ED(u, v);
         const out = this.)" << outgoing << R"([u];
         out.push(new OutE(v));
@@ -253,7 +236,6 @@ void adjacencyMutation(std::ostream& out, bool references, bool bidirectional) {
     }
     remove)" << operation << R"( (e: ED): void {
         const u = e.source as number, v = e.target as number;
-        if (!Number.isInteger(u) || u < 0 || u >= this.)" << outgoing << R"(.length) return;
         const out = this.)" << outgoing << R"([u];
         const index = out.findIndex(other => other.target === v);
         if (index < 0) return;
@@ -263,8 +245,6 @@ void adjacencyMutation(std::ostream& out, bool references, bool bidirectional) {
                                 << "        incoming.splice(incoming.findIndex(other => other.target === u), 1);\n";
     out << R"(    }
     remove)" << operation << R"(s (u: number, v: number): void {
-        if (!Number.isInteger(u) || !Number.isInteger(v) || u < 0 || v < 0 ||
-            u >= this.)" << outgoing << R"(.length || v >= this.)" << outgoing << R"(.length) return;
         const compact = (list: OutE[], neighbor: number): void => {
             let count = 0;
             for (const edge of list) if (edge.target !== neighbor) list[count++] = edge;
@@ -301,9 +281,9 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         auto& values = valueImports[runtime];
         values.insert("OutEI");
         (model.mutableGraph ? values : typeImports[runtime]).insert("ED");
-        (model.mutableGraph || sharedEdges ? values : typeImports[runtime]).insert("OutE");
+        (model.mutableGraph ? values : typeImports[runtime]).insert("OutE");
         if (model.incidence || sharedEdges) values.insert("AdjI");
-        if (model.hierarchy || model.bidirectional) values.insert("InEI");
+        if (model.hierarchy || model.bidirectional) values.insert(sharedEdges ? "OneInEI" : "InEI");
         if (model.addressableGraph) values.insert({"findRelative", "getPath"});
     }
     if (model.mutableGraph && model.hierarchy) api.insert("addReference");
@@ -395,13 +375,12 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         addVertex(out, model, kinds, components, columns, vertexCount);
         if (sharedEdges) {
             out << "\n    addEdge (u: number, v: number): ED | null {\n"
-                << "        if (!Number.isInteger(u) || !Number.isInteger(v) || !this._children[u] || this._parents[v] !== this.N"
-                << (model.serializable ? " || u >= v" : "") << ") return null;\n";
+                << "        if (this._parents[v] !== this.N" << (model.serializable ? " || u >= v" : "") << ") return null;\n"
+                << "        const children = this._children[u];\n"
+                << "        const index = children.findIndex(e => (e.target as number) > v);\n";
             if (!model.serializable)
                 out << "        for (let p = u; p !== this.N; p = this._parents[p]) if (p === v) return null;\n";
-            out << "        const children = this._children[u];\n"
-                << "        const index = children.findIndex(e => (e.target as number) > v);\n"
-                << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
+            out << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
             if (model.parentGraph) out << "        this.roots.splice(this.roots.findIndex(e => e.target === v), 1);\n";
             out << "        this._parents[v] = u;\n        return new ED(u, v);\n    }\n";
         } else if (model.incidence) {
@@ -434,7 +413,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "    w (v: number): " << kinds << " {\n        return this._kinds[v];\n    }\n"
             << "    object (v: number): " << node.name << "Object {\n        return this._objects[this.w(v)][this._indices[v]];\n    }\n"
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
-            << "        if (this.w(v) !== id) throw new Error('Vertex kind does not match');\n"
             << "        return this._objects[id][this._indices[v]];\n    }\n"
             << "    visitVertex (visitor: " << node.name << "Visitor, v: number): unknown {\n"
             << "        const index = this._indices[v];\n        switch (this.w(v)) {\n";
@@ -457,7 +435,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     }
     if (model.parentGraph) {
         out << "\n    // ParentGraph\n    locateChild (parent: number, name: string): number {\n"
-            << "        if (parent !== this.N && !this._children[parent]) return this.N;\n"
             << "        const children = parent === this.N ? this.roots : this._children[parent];\n"
             << "        for (const edge of children) {\n"
             << "            const v = edge.target as number;\n"
@@ -473,12 +450,10 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
 
     locateRelative (path: string, start: number = this.N): number {
         if (path.length === 0) return this.N;
-        if (path[0] !== '/' && start !== this.N && !this._children[start]) return this.N;
         return findRelative(this, start, path) as number;
     }
 
     path (v: number): string {
-        if (v !== this.N && !this._children[v]) throw new RangeError('Invalid vertex');
         return getPath(this, v);
     }
 )";
@@ -488,13 +463,10 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         return this.nameIndex.has(key);
     }
     vertex (key: string): number {
-        const v = this.find(key);
-        if (v === this.N) throw new RangeError('Unknown vertex name');
-        return v;
+        return this.nameIndex.get(key)!;
     }
     find (key: string): number {
-        const v = this.nameIndex.get(key);
-        return v === undefined ? this.N : v;
+        return this.nameIndex.get(key) ?? this.N;
     }
 )";
 

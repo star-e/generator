@@ -417,9 +417,9 @@ foreach(capability IN ITEMS mutable_graph vertex_list_graph)
         message(FATAL_ERROR "TS graph did not bind the renamed component independently of the native tags")
     endif()
     if(capability STREQUAL "mutable_graph")
-        if(NOT script MATCHES "import type [{] ED [}] from './graph';" OR
-           NOT script MATCHES "import [{] AdjI, InEI, OutE, OutEI, findRelative, getPath [}] from './graph';")
-            message(FATAL_ERROR "Read-only layout graphs must import ED as a type and their iterators and path helpers as values")
+        if(NOT script MATCHES "import type [{] ED, OutE [}] from './graph';" OR
+           NOT script MATCHES "import [{] AdjI, OneInEI, OutEI, findRelative, getPath [}] from './graph';")
+            message(FATAL_ERROR "Read-only layout graphs must import edge types separately from their iterators and path helpers")
         endif()
         if(script MATCHES "addVertex|createLayoutGraph(Data)? [(]" OR NOT script MATCHES "nv [(]")
             message(FATAL_ERROR "TS graph did not respect mutable_graph")
