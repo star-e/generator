@@ -60,11 +60,6 @@
       "module": "LayoutGraph",
       "source": "spec/render/layout-graph.spec"
     },
-    "native/cocos/base/Pmr.h": {
-      "copiedFrom": "runtime/cpp/Pmr.h",
-      "module": "RenderCommon",
-      "source": "spec/render/render-common.spec"
-    },
     "native/cocos/renderer/pipeline/custom/ArchiveFwd.h": {
       "module": "ArchiveInterface",
       "source": "spec/render/archive.spec"

@@ -23,12 +23,7 @@ struct BoundField {
     bool defaultNeedsAllocator{};
     bool containsGraph{};
     bool safeUnsignedInteger{};
-    std::string emptyPmrArgument;
     std::string tsReset;
-
-    std::string allocatorArguments() const {
-        return emptyPmrArgument.empty() ? "alloc" : "::cc::detail::makeEmptyPmr<" + cpp + ">(alloc, " + emptyPmrArgument + ")";
-    }
 
     std::string parameterType() const { return byConstReference ? "const " + cpp + "&" : cpp; }
 

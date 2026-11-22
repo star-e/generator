@@ -33,10 +33,7 @@
         "serialization": true,
         "jsb": true
       },
-      "typescript": "cocos/rendering/custom/types.ts",
-      "runtimeFiles": {
-        "native/cocos/base/Pmr.h": "../runtime/cpp/Pmr.h"
-      }
+      "typescript": "cocos/rendering/custom/types.ts"
     },
     {
       "spec": "../spec/render/layout-graph.spec",

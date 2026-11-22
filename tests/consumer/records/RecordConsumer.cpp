@@ -466,7 +466,7 @@ bool checkRenderPhase() {
 
 bool checkLayoutGraph(const char* pathSamples);
 bool checkLayoutNames();
-int checkStageAllocation(unsigned count, int failAfter);
+int checkLayoutAllocation(const std::string& sample, int failAfter);
 bool writeDfsCases(const char* path);
 bool exchangeLayoutArchive(std::string_view mode, const char* path);
 bool exchangeBlockArchives(bool writing, const char* path);
@@ -488,8 +488,8 @@ int main(int argc, char** argv) {
         return checkLayoutDescriptors(argv[2], argv[3]) ? 0 : 1;
     if (argc == 4 && std::string_view(argv[1]) == "layout-print")
         return printLayoutArchive(argv[2], argv[3]) ? 0 : 1;
-    if (argc == 4 && std::string_view(argv[1]) == "stage-allocation")
-        return checkStageAllocation(std::stoul(argv[2]), std::stoi(argv[3]));
+    if (argc == 4 && std::string_view(argv[1]) == "layout-allocation")
+        return checkLayoutAllocation(argv[2], std::stoi(argv[3]));
     if (argc == 3) {
         const std::string_view mode(argv[1]);
         if (mode == "layout-write" || mode == "layout-read" || mode == "layout-invalid")

@@ -255,17 +255,6 @@ InsertionResult insertWithFailure(unsigned count, int failAfter) {
     return InsertionResult::complete;
 }
 
-bool checkMoveOnlyGrowth() {
-    for (const auto count : {3U, 15U, 31U}) {
-        for (int failAfter = 0; ; ++failAfter) {
-            const auto result = insertWithFailure(count, failAfter);
-            if (result == InsertionResult::complete) break;
-            if (result != InsertionResult::retried) return false;
-        }
-    }
-    return true;
-}
-
 bool checkChildLookup() {
     using cc::render::Name_;
     FailingResource resource;
@@ -381,7 +370,7 @@ bool checkGraphPaths(const char* sampleFile) {
            view.locate(newPath) == leaf && view.exists(newPath) && !view.exists("/main/shadow/leaf");
 }
 
-bool checkFailedAssignment(bool move) {
+InsertionResult assignWithFailure(bool move, int failAfter) {
     boost::container::pmr::monotonic_buffer_resource arena;
     FailingResource resource;
     LayoutGraph source{&arena};
@@ -389,29 +378,33 @@ bool checkFailedAssignment(bool move) {
     const auto leaf = source.add_vertex(RenderPhase_{}, "leaf", root);
     source.value(RenderPhase_{}, leaf).shaders.emplace("original");
     source.getDescriptors(leaf).blocks[{}].count = 42;
-    for (int failAfter = 0; ; ++failAfter) {
+    LayoutGraph target{&resource};
+    target.add_vertex("previous");
+    target.getDescriptors(0).groupBlocks[{}].capacity = 8;
+    const auto assign = [&] {
+        if (move) target = std::move(source);
+        else target = source;
+    };
+    auto result = InsertionResult::complete;
+    resource.allocationsBeforeFailure = failAfter;
+    try {
+        assign();
+    } catch (const InjectedFailure&) {
+        if (target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
+            source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf}) ||
+            !target.holds<RenderStage_>(0) || source.value(RenderPhase_{}, leaf).shaders.size() != 1 ||
+            target.getDescriptors(0).groupBlocks.at({}).capacity != 8 || source.getDescriptors(leaf).blocks.at({}).count != 42)
+            return InsertionResult::mismatch;
         resource.allocationsBeforeFailure = -1;
-        LayoutGraph target{&resource};
-        target.add_vertex("previous");
-        target.getDescriptors(0).groupBlocks[{}].capacity = 8;
-        resource.allocationsBeforeFailure = failAfter;
-        try {
-            if (move) target = std::move(source);
-            else target = source;
-            return hasChildren(target, root, {leaf}) && target.getName(leaf) == "leaf" &&
-                   target.getName(leaf).get_allocator().resource() == &resource &&
-                   target.value(RenderPhase_{}, leaf).shaders.size() == 1 &&
-                   target.value(RenderPhase_{}, leaf).get_allocator().resource() == &resource &&
-                   target.getDescriptors(leaf).blocks.at({}).count == 42 && usesResource(target.getDescriptors(leaf), target);
-        } catch (const std::bad_alloc&) {
-            if (resource.allocationsBeforeFailure != 0) throw;
-            if (target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
-                source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf}) ||
-                !target.holds<RenderStage_>(0) || source.value(RenderPhase_{}, leaf).shaders.size() != 1 ||
-                target.getDescriptors(0).groupBlocks.at({}).capacity != 8 || source.getDescriptors(leaf).blocks.at({}).count != 42)
-                return false;
-        }
+        assign();
+        result = InsertionResult::retried;
     }
+    if (!hasChildren(target, root, {leaf}) || target.getName(leaf) != "leaf" ||
+        target.getName(leaf).get_allocator().resource() != &resource || target.value(RenderPhase_{}, leaf).shaders.size() != 1 ||
+        target.value(RenderPhase_{}, leaf).get_allocator().resource() != &resource ||
+        target.getDescriptors(leaf).blocks.at({}).count != 42 || !usesResource(target.getDescriptors(leaf), target))
+        return InsertionResult::mismatch;
+    return result;
 }
 
 bool checkIndexedNames() {
@@ -478,9 +471,9 @@ bool checkFlatComponents() {
 }
 } // namespace
 
-int checkStageAllocation(unsigned count, int failAfter) {
+int checkLayoutAllocation(const std::string& sample, int failAfter) {
 #if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL != 0
-    // The process is isolated because unordered_map's noexcept _Hash_vec allocates a debug proxy.
+    // Some noexcept STL constructors allocate an iterator proxy.
     std::set_terminate([] {
         if (auto exception = std::current_exception()) {
             try { std::rethrow_exception(exception); }
@@ -490,7 +483,9 @@ int checkStageAllocation(unsigned count, int failAfter) {
         std::_Exit(static_cast<int>(InsertionResult::mismatch));
     });
 #endif
-    return static_cast<int>(insertWithFailure(count, failAfter));
+    if (sample == "copy" || sample == "move")
+        return static_cast<int>(assignWithFailure(sample == "move", failAfter));
+    return static_cast<int>(insertWithFailure(std::stoul(sample), failAfter));
 }
 
 static bool checkLayoutEdges() {
@@ -526,8 +521,8 @@ static bool checkLayoutEdges() {
 
 bool checkLayoutGraph(const char* pathSamples) {
     if (!checkLayoutEdges()) return false;
-    if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkIndexedNames() || !checkMoveOnlyGrowth()) return false;
-    if (!checkHierarchy() || !checkFailedInsertion() || !checkFailedAssignment(false) || !checkFailedAssignment(true)) return false;
+    if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkIndexedNames()) return false;
+    if (!checkHierarchy() || !checkFailedInsertion()) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;
     using Name = ccstd::pmr::string;

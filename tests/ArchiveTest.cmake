@@ -56,7 +56,6 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     native/cocos/base/GraphDFS.h
     native/cocos/base/GraphView.h
     native/cocos/base/GraphEdges.h
-    native/cocos/base/Pmr.h
     native/cocos/renderer/pipeline/custom/LayoutGraphFwd.h
     native/cocos/renderer/pipeline/custom/LayoutGraphNames.h
     native/cocos/renderer/pipeline/custom/LayoutGraphPrint.h native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp

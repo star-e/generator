@@ -270,13 +270,12 @@ function constructors(root, name) {
         .filter((block) => block.startsWith(`${name}::${name}(`));
 }
 for (const name of ['ResolvePair', 'CopyPair', 'UploadPair', 'MovePair']) {
-    const emptyString = '::cc::detail::makeEmptyPmr<ccstd::pmr::string>(alloc, "")';
     comparePmrRecord(cpp, name, line => legacyAllocatorOrder(stripFieldDefaults(line), ' = boost::container::pmr::get_default_resource()')
         .replace(`    ${name}(const allocator_type& alloc)`, `    ${name}(const allocator_type& alloc = boost::container::pmr::get_default_resource())`));
     compareDeclaration(ts, `export class ${name} {`, '}');
     const definitions = constructors(stage, name);
     assert.equal(definitions.length, name === 'UploadPair' ? 3 : 4, name);
-    const normalizeDefinition = text => legacyAllocatorOrder(text).split(emptyString).join('alloc')
+    const normalizeDefinition = text => legacyAllocatorOrder(text)
         .replace(': source(),\n  target(alloc)', ': target(alloc)');
     assert.deepEqual(definitions.map(normalizeDefinition), constructors(engine, name).map(text => stripLegacyAllocatorCtorNoexcept(text, name)), name);
 }

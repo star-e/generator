@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 59 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十一个文件，含 PMR 容器构造辅助头 `Pmr.h`。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 58 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -369,7 +369,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 `LayoutGraphObjectPool` 的 24 个工厂由模块的 `@pool` 生成。`import RenderCommon;` 会推导出构造参数和只读属性 `renderCommon: RenderCommonObjectPool`。`reset()` 只重置本地子池的取用位置。下次取出时，普通记录调用自己的 `reset(...)`，两个描述符索引用 `assign;` 按构造参数逐字段赋值，可修改的图调用 `clear()`，外部实现的空记录 `Layout` 直接复用。消费测试用同一套用例对照旧引擎和新生成的池。[布局绑定](../spec/render/layout-graph.spec) · [对象池测试](../tests/consumer/records/layout-pool.cjs)
 
-MSVC 14.52 的调试迭代器实现会在 `noexcept` 的 `_Hash_vec` 构造中为 `std::unordered_map` 分配代理。`RenderStageData::descriptorVisibility` 沿用这个引擎容器，若该笔分配抛错，标准库会终止进程。Windows Debug 和 Release 都对两种载荷逐笔注入分配失败。stage 用例在独立进程中执行每一次注入，单独记录 Debug 代理的终止，并验证其他分配点的回滚和原图重试。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+PMR 字符串和 vector 直接用分配器构造。图插入用 `std::apply` 将参数元组转发给组件列和载荷列的 `emplace_back`；元组为空时直接无参插入。MSVC Debug 的字符串、vector 和 unordered_map 在某些 `noexcept` 构造中会分配迭代器代理，该次分配失败会终止进程。布局图消费测试在独立进程中逐笔注入分配失败，分别记录这种终止和可恢复异常，并核对回滚后的图和重试结果。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `RenderCommon` 的十二个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash` 生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。测试核对两个共享标签的前置声明和名称查询、对 `ArchiveFwd.h` 的导入，以及这两个头文件其余内容与历史基线的一致性，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 

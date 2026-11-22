@@ -176,10 +176,6 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         }
         m.move = true;
         m.usesAllocator = external->isPmr;
-        if (node.qualifiedName == "ccstd::pmr::string") {
-            m.emptyPmrArgument = "\"\"";
-            deps.headers.insert("cocos/base/Pmr.h");
-        }
         return m;
     }
     const auto* instance = std::get_if<TemplateInstanceType>(&node.data);
@@ -191,10 +187,6 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         m.move = true;
         const auto& container = std::get<ExternalTypeNode>(graph.node(instance->declaration).data);
         m.usesAllocator = container.isPmr;
-        if (graph.node(instance->declaration).qualifiedName == "ccstd::pmr::vector") {
-            m.emptyPmrArgument = "0U";
-            deps.headers.insert("cocos/base/Pmr.h");
-        }
         if (emitTs) {
             m.ts = boundTypeScriptName(graph, field.type, owner, deps.typeImports);
             m.tsDefault = typeScriptContainerInitializer(node);
@@ -732,8 +724,6 @@ void inlineConstructors(std::ostream& out, const TypeGraph& graph, const std::st
 enum class CtorArgs { fields, move, copy };
 
 std::string pmrArguments(const BoundField& m, std::string value, bool move) {
-    if (value.empty() && m.usesAllocator)
-        return m.allocatorArguments();
     if (!value.empty() && m.move && move) value = "std::move(" + value + ")";
     if (m.usesAllocator) value += value.empty() ? "alloc" : ", alloc";
     return value;
