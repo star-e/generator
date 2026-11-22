@@ -358,6 +358,7 @@ struct TypeNode {
     ModuleId module;
     TypeData data;
     std::string cppHeader;
+    std::string cppForwardHeader;
     std::optional<std::string> typescriptName;
     std::string typescriptModule;
     std::string typescriptArchiveModule;

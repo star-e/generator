@@ -922,7 +922,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<Mod
             }
             const auto* external = std::get_if<ExternalDeclaration>(&decl.data);
             TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl),
-                          .cppHeader = decl.cppHeader, .documentation = decl.documentation};
+                          .cppHeader = decl.cppHeader, .cppForwardHeader = decl.cppForwardHeader, .documentation = decl.documentation};
             const bool tag = std::holds_alternative<TagType>(node.data);
             if (input.modelOnly()) {
                 if (decl.externalScope.empty() && !tag && !external) node.typescriptName = decl.name;

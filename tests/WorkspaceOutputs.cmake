@@ -363,4 +363,49 @@ file(READ "${providerHeader}" original)
 if(NOT original STREQUAL overridden)
     message(FATAL_ERROR "Omitting spaceBeforeReference must produce the original reference spacing")
 endif()
+
+file(WRITE "${work}/spec/shadow.spec" [=[extern module Shadow;
+cpp { header "vendor/Fwd.h"; }
+namespace vendor {
+    header "vendor/{name}.h" forward { class Device; struct Options; class State; }
+    header "vendor/Other.h" { class Other; }
+}]=])
+string(JSON forwardConfig SET "${config}" modules [[ [{"spec":"../spec/shadow.spec"},{"spec":"../spec/provider.spec","cpp":{}}] ]])
+file(WRITE "${workspace}" "${forwardConfig}")
+set(forwardSpec [=[module Provider; import Shadow;
+namespace cc {
+    interface API {
+        virtual const vendor::Device* get() const = 0;
+        virtual void bind(const vendor::Device& dev, vendor::State* state, vendor::Other* other) = 0;
+        virtual void configure(const vendor::Options& opts = {}) = 0;
+        virtual vendor::State snapshot() const = 0;
+    }
+}]=])
+file(WRITE "${provider}" "${forwardSpec}")
+run(${generate})
+file(READ "${providerHeader}" header)
+foreach(path IN ITEMS Fwd Options State Other)
+    if(NOT header MATCHES "vendor/${path}[.]h")
+        message(FATAL_ERROR "Missing required interface header vendor/${path}.h")
+    endif()
+endforeach()
+if(header MATCHES "vendor/Device[.]h")
+    message(FATAL_ERROR "A plain pointer or reference to Device only needs vendor/Fwd.h")
+endif()
+file(WRITE "${work}/spec/use.spec" [=[module Use; import Provider;
+namespace cc { interface Reader : API { int read() const { return get()->status(); } } }]=])
+string(JSON forwardConfig SET "${forwardConfig}" modules 2 [[{"spec":"../spec/use.spec","cpp":{}}]])
+file(WRITE "${workspace}" "${forwardConfig}")
+run(${generate})
+file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/UseTypes.h" reader)
+if(NOT reader MATCHES "vendor/Device[.]h")
+    message(FATAL_ERROR "An opaque body using an inherited getter needs the definition in the consuming header")
+endif()
+string(REPLACE "interface API {" "interface API { int inspect() const { return get()->status(); }" withBody "${forwardSpec}")
+file(WRITE "${provider}" "${withBody}")
+run(${generate})
+file(READ "${providerHeader}" header)
+if(NOT header MATCHES "vendor/Device[.]h")
+    message(FATAL_ERROR "Opaque inline member bodies must retain complete interface dependencies")
+endif()
 finish_workspace("${work}")

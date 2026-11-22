@@ -28,6 +28,39 @@ struct Dependencies {
     TypeImports valueImports;
 };
 
+bool hasHandwrittenCpp(const TypeNode& node) {
+    const auto hasBody = [](const auto& methods) {
+        return std::ranges::any_of(methods, [](const MethodInfo& method) { return !method.cppBody.empty(); });
+    };
+    if (const auto* iface = std::get_if<InterfaceType>(&node.data)) return hasBody(iface->methods);
+    if (const auto* record = std::get_if<RecordType>(&node.data)) return !record->cppMembers.empty() || hasBody(record->methods);
+    if (const auto* graph = std::get_if<GraphType>(&node.data)) return hasBody(graph->methods);
+    return false;
+}
+
+void resolveInterfaceHeaders(const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
+                             const std::set<const TypeNode*>& forwardTypes, std::set<std::string>& headers,
+                             OmittedDefinitionHeaders& omittedHeaders) {
+    std::set<std::string> definitions;
+    for (const auto& include : headers) {
+        if (const auto it = omittedHeaders.find(include); it != omittedHeaders.end())
+            definitions.insert(it->second.begin(), it->second.end());
+    }
+    for (const auto* type : forwardTypes) definitions.insert(type->cppHeader);
+    if (definitions.empty()) return;
+    // An opaque body may use a type returned by an imported or inherited method.
+    if (std::ranges::any_of(module.declarations, [&](TypeId id) { return hasHandwrittenCpp(graph.node(id)); })) {
+        headers.merge(definitions);
+        return;
+    }
+    std::set<std::string> forwardHeaders;
+    for (const auto* type : forwardTypes) {
+        if (!headers.contains(type->cppHeader)) forwardHeaders.insert(type->cppForwardHeader);
+    }
+    headers.merge(forwardHeaders);
+    for (const auto& include : headers) definitions.erase(include);
+    if (!definitions.empty()) omittedHeaders.emplace(output.header.generic_string(), std::move(definitions));
+}
 
 [[noreturn]] void invalid(const FieldInfo& field, const std::string& reason) {
     throw std::runtime_error(field.type.location.describe() + ": " + field.name + ": " + reason);
@@ -1404,13 +1437,14 @@ void writeRecordImports(std::ostream& script, const TypeImports& values, TypeImp
 } // namespace
 
 Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, std::optional<ArchiveOutput> archive,
-                  const std::string& preamble, NestedResets& nestedResets) {
+                  const std::string& preamble, NestedResets& nestedResets, OmittedDefinitionHeaders& omittedHeaders) {
     const auto& module = graph.modules.at(owner.value);
     const bool standaloneInterfaces = !module.declarations.empty() && std::ranges::all_of(module.declarations, [&](TypeId id) {
         const auto* interfaceType = std::get_if<InterfaceType>(&graph.node(id).data);
         return interfaceType && interfaceType->bases.empty();
     });
     Dependencies deps{.emitCpp = !output.header.empty()};
+    std::set<const TypeNode*> forwardTypes;
     ArchiveImports archiveImports{deps.valueImports, output.typescript ? (output.typescript->parent_path() / "serialization").generic_string() : ""};
     Pool pool;
     RecordArchives archives;
@@ -1446,7 +1480,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto methods = output.classMethods.find(node.name);
         const auto classMethods = methods == output.classMethods.end() ? std::string{} : tsClassMethods(methods->second);
         if (std::holds_alternative<InterfaceType>(node.data)) {
-            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, emitTs ? &ts : nullptr, deps.typeImports, output);
+            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, forwardTypes,
+                          emitTs ? &ts : nullptr, deps.typeImports, output);
             continue;
         }
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
@@ -1601,6 +1636,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
 
     Files files;
     if (deps.emitCpp) {
+        resolveInterfaceHeaders(graph, module, output, forwardTypes, deps.headers, omittedHeaders);
         deps.headers.erase(output.header.generic_string());
         deps.headers.erase(output.forwardHeader.generic_string());
         if (standaloneInterfaces && output.forwardIncludes.empty()) {

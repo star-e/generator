@@ -321,7 +321,7 @@ namespace cc::gfx {
     struct UniformBlock;
     struct DescriptorSetLayoutInfo;
 
-    header "cocos/renderer/gfx-base/GFX{name}.h" {
+    header "cocos/renderer/gfx-base/GFX{name}.h" forward {
         class CommandBuffer;
         class Shader;
         class PipelineState;
@@ -337,7 +337,7 @@ namespace cc::gfx {
         class PipelineLayout;
     }
 
-    header "cocos/renderer/gfx-base/GFXObject.h" {
+    header "cocos/renderer/gfx-base/GFXObject.h" forward {
         class GFXObject;
     }
     header "cocos/renderer/gfx-base/GFXDevice.h" {
@@ -348,7 +348,7 @@ namespace cc::gfx {
         @constRef struct Color;
     }
 
-    header "cocos/renderer/gfx-base/states/GFXSampler.h" {
+    header "cocos/renderer/gfx-base/states/GFXSampler.h" forward {
         class Sampler;
     }
 }

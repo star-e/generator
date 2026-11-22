@@ -180,6 +180,7 @@ namespace cc::codegen {
         module: ModuleId;
         data: TypeData;
         cppHeader: std::string;
+        cppForwardHeader: std::string;
         typescriptName: std::optional<std::string>;
         typescriptModule: std::string;
         typescriptArchiveModule: std::string;

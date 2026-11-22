@@ -165,6 +165,7 @@ namespace cc::codegen {
         data: std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration>;
         externalScope: std::string;
         cppHeader: std::string;
+        cppForwardHeader: std::string;
         cppOnly: bool = false;
         documentation: std::string;
     }

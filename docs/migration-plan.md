@@ -66,6 +66,8 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `"cpp": {}` 生成 `<模块名>Fwd.h`、`<模块名>Types.h` 和 `<模块名>Types.cpp`。`names`、`serialization`、`jsb` 分别启用 `Names.h`、`Serialization.h`、`Jsb.h`，后两项也生成相应的 `.cpp`。每项都可以直接写文件名。`prefix` 覆盖命名前缀，`header` 覆盖主头文件名。文件写到 `<outputRoot>/<root>/<dir>/`，其中 `dir` 是头文件的 include 路径前缀。工作区的 `cppDefaults` 可统一设置 `root` 和 `dir`，单个模块可覆盖它们。每个 C++ 模块的 `Fwd.h` 自动包含 `.spec` 直接 `import` 的、也生成 C++ 的模块的前置头，路径取自依赖模块的输出配置。外部类型按声明的头文件映射按需包含。旧配置中显式指定的 `forwardIncludes` 仍作为补充，与自动包含的头文件去重。
 
+外部模块可以用 `header "path/{name}.h" forward { ... }` 声明一组普通类或结构体。分组路径指向定义头，模块的 `cpp.header` 必须已声明组内所有类型。生成接口时，裸指针和引用可以使用模块公共头。按值使用、作为模板实参或通过 `{}` 构造默认实参时，生成器保留定义头。模块含手写 C++ 函数体时也保留原有定义头。[Gfx 分组](../spec/extern/gfx.spec)
+
 `cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的引用格式。cocos4 工作区将它设为 `true`，让 `.spec` 声明的普通 C++ 方法输出 `T &get()` 和 `void set(const T &value)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
 
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。

@@ -427,6 +427,7 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
         return relative.generic_string();
     };
     NestedResets nestedResets;
+    OmittedDefinitionHeaders omittedHeaders;
     for (const auto owner : dependencyOrder) {
         const auto i = owner.value;
         const auto& syntax = inputs[i].syntax;
@@ -469,7 +470,7 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
                 if (records.namesHeader && dependency.namesHeader)
                     records.importedNamesHeaders.push_back(*dependency.namesHeader);
             }
-            const auto emitted = emitRecords(graph, owner, records, resolveArchive(graph, owner, outputs), preamble, nestedResets);
+            const auto emitted = emitRecords(graph, owner, records, resolveArchive(graph, owner, outputs), preamble, nestedResets, omittedHeaders);
             for (const auto& [path, content] : emitted) addFile(path, content);
         }
         if (modules[i].contains("runtimeFiles")) {

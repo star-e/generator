@@ -219,6 +219,7 @@ struct Declaration {
     std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration> data;
     std::string externalScope;
     std::string cppHeader;
+    std::string cppForwardHeader;
     bool cppOnly{false};
     std::string documentation;
 };
