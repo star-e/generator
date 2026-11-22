@@ -267,7 +267,8 @@ string(JSON config SET "${config}" modules ${count} [[{
     "backend": "records", "spec": "../spec/indexed-keys.spec", "nativeRoot": "native",
     "header": "IndexedKeys.h", "serializationHeader": "IndexedKeysSerialization.h"
 }]])
-file(WRITE "${workspace}" "${config}")
+string(JSON transactionalConfig SET "${config}" transactionalGraphLoad true)
+file(WRITE "${workspace}" "${transactionalConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
 file(WRITE "${stage}/native/SampleText.h" [[#pragma once
 #include <string>
@@ -710,4 +711,23 @@ run("${consumer}" layout-read "${work}/layout-legacy.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy.bin")
 run("${consumer}" layout-read "${legacyFixture}")
 run("${consumer}" layout-invalid "${work}/layout-invalid.bin")
+
+# Reuse the same consumers and archive bytes with the default in-place loader.
+file(WRITE "${workspace}" "${config}")
+run("${TOOL}" generate --workspace "${workspace}" --output "${work}/in-place")
+foreach(file IN ITEMS "${webCustom}/layout-graph.ts" "${nativeCustom}/LayoutGraphTypes.h"
+                      "${nativeCustom}/LayoutGraphTypes.cpp" "${nativeCustom}/LayoutGraphSerialization.h" "${nativeCustom}/LayoutGraphSerialization.cpp")
+    configure_file("${work}/in-place/${file}" "${stage}/${file}" COPYONLY)
+endforeach()
+if(CONFIG)
+    set(buildConfig --config "${CONFIG}")
+endif()
+run("${CMAKE_COMMAND}" --build "${build}" ${buildConfig} --target RecordConsumer)
+run("${consumer}" layout-read "${legacyFixture}")
+run("${consumer}" layout-invalid-in-place "${work}/layout-invalid.bin")
+run("${consumer}" pipeline-read "${work}/pipeline-web.bin")
+run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs --outDir "${work}/js"
+    --rootDir "${stage}/cocos" ${declarations} "${custom}/layout-graph.ts")
+run("${node}" "${SOURCE}/tests/consumer/records/pipeline-archive.cjs" "${work}/js/rendering/custom"
+    "${work}/pipeline-native.bin" "${work}/pipeline-web.bin" "${work}/pipeline-legacy.bin" "${work}/converted-layout.bin" "${work}/print-layout.bin" in-place)
 finish_workspace("${work}")

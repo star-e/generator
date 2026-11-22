@@ -326,7 +326,7 @@ void adjacencyMutation(std::ostream& out, const GraphStorageNames& names, bool r
 
 void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& valueImports, TypeImports& typeImports,
                          const std::vector<BoundField>& fields, std::string_view classMethods, std::set<std::string> api,
-                         bool compactGraphNames) {
+                         bool compactGraphNames, bool transactionalLoad) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     if (model.keyComponentIndex || model.removeVertex)
@@ -404,8 +404,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
 
     // Array indices stop at 2^32 - 2. Reserve the null descriptor for narrower index types too.
     const auto limit = std::min<uint64_t>(indexedVertexLimit(graph.node(model.vertexType).qualifiedName).value(), UINT32_MAX);
-    if (model.serializable) out << "const adopt" << node.name << " = Symbol(); // eslint-disable-line symbol-description\n\n";
-    const auto storage = model.serializable ? "private " : "private readonly ";
+    if (transactionalLoad) out << "const adopt" << node.name << " = Symbol(); // eslint-disable-line symbol-description\n\n";
+    const auto storage = transactionalLoad ? "private " : "private readonly ";
     writeDocumentation(out, node.documentation);
     out << "export class " << node.name;
     writeGraphInterfaces(out, model, sharedEdges, typeImports[runtime]);
@@ -426,16 +426,18 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "    }\n";
     }
     if (model.mutableGraph) {
-        out << "\n    // MutableGraph\n    clear (): void {\n";
+        const bool skipTransients = model.serializable && !transactionalLoad && std::ranges::any_of(fields, &BoundField::transient);
+        out << "\n    // MutableGraph\n    clear (" << (skipTransients ? "includeTransient = true" : "") << "): void {\n";
         if (model.parentGraph) out << "        this." << names.roots << ".length = 0;\n";
         if (vertexList.empty()) out << "        this." << names.vertexCount << " = 0;\n";
         for (const auto& column : columns) out << "        this." << column.name << ".length = 0;\n";
         if (model.nameIndex) out << "        this." << names.nameIndex << ".clear();\n";
         for (const auto& f : fields) {
-            if (!f.tsReset.empty()) out << "        " << f.tsReset << ";\n";
-            else if (!f.readonly) out << "        this." << f.name << " = " << f.tsDefault << ";\n";
+            const auto prefix = skipTransients && f.transient ? "        if (includeTransient) " : "        ";
+            if (!f.tsReset.empty()) out << prefix << f.tsReset << ";\n";
+            else if (!f.readonly) out << prefix << "this." << f.name << " = " << f.tsDefault << ";\n";
             else if (f.tsDefault.starts_with("new "))
-                out << "        Object.assign(this." << f.name << ", " << f.tsDefault << ");\n";
+                out << prefix << "Object.assign(this." << f.name << ", " << f.tsDefault << ");\n";
         }
         out << "    }\n";
         addVertex(out, model, kinds, components, columns, vertexCount, names);
@@ -555,7 +557,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << ";\n";
     }
     if (!initializers.empty()) out << "\n    constructor () {\n" << initializers << "    }\n";
-    if (model.serializable) {
+    if (transactionalLoad) {
         out << "\n    [adopt" << node.name << "] (decoded: " << node.name << "): void {\n";
         if (model.parentGraph) out << "        this." << names.roots << " = decoded." << names.roots << ";\n";
         if (vertexList.empty()) out << "        this." << names.vertexCount << " = decoded." << names.vertexCount << ";\n";

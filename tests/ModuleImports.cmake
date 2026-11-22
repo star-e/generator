@@ -180,8 +180,8 @@ file(WRITE "${layout}" "${probe}")
 file(APPEND "${gfx}" [[binding typescript { UniformBlock archive from "cocos/codecs/uniform"; }]])
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/codecs")
 file(READ "${work}/codecs/cocos/client/layout.ts" script)
-if(script MATCHES "readSize")
-    message(FATAL_ERROR "TypeScript archive loads must call the bound reader directly")
+if(script MATCHES "readSize|adoptLayoutGraph")
+    message(FATAL_ERROR "Default graph loads must use the bound reader and update the destination directly")
 endif()
 foreach(fragment IN ITEMS
         [[import { loadColor, loadDescriptorSetLayoutInfo, saveColor, saveDescriptorSetLayoutInfo } from './serialization';]]
@@ -198,11 +198,10 @@ foreach(fragment IN ITEMS
         [[for (let i = 0; i < n; ++i) {]]
         [[v.descriptorNames[i] = a.s();]]
         [[for (let left0 = a.readScalar(); left0 > 0; --left0)]]
-        [[const adoptLayoutGraph = Symbol(); // eslint-disable-line symbol-description]]
-        [[const adoptLayoutGraphData = Symbol(); // eslint-disable-line symbol-description]]
-        [[g[adoptLayoutGraph](decoded);]]
+        [[g.clear();]]
+        [[g.clear(false);]]
         [[saveColor(a, g.archivedColor);]]
-        [[loadColor(a, decoded.archivedColor);]])
+        [[loadColor(a, g.archivedColor);]])
     string(FIND "${script}" "${fragment}" at)
     if(at EQUAL -1)
         message(FATAL_ERROR "Missing relocated archive import or call: ${fragment}")

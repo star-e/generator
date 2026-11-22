@@ -1504,14 +1504,17 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
             const auto fields = bindFields(graph, node, model->fields, deps, emitTs, nestedResets);
+            const bool transactionalLoad = model->serializable && archive && archive->transactionalGraphLoad;
+            std::string nativeLoadReset;
             if (deps.emitCpp) {
                 std::string inputArchive;
-                if (output.serializationHeader && model->serializable && (!fields.empty() || model->nameIndex || model->keyComponentIndex) && archive) {
+                if (output.serializationHeader && model->serializable && archive) {
                     deps.headers.insert(archive->output.forwardHeader.generic_string());
                     inputArchive = "::" + graph.node(archive->module.inputArchive).qualifiedName;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
-                emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods, inputArchive);
+                nativeLoadReset = emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods,
+                                              inputArchive, transactionalLoad);
                 if (model->compareEqual || model->compareLess || model->hashable) {
                     std::vector<std::string_view> elements;
                     for (const auto& component : model->components) elements.push_back(component.name);
@@ -1533,7 +1536,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                         if (const auto* declaration = std::get_if<TypeScriptClassMethod>(&method)) methodNames.insert(declaration->name);
                 }
                 emitTypeScriptGraph(graph, id, ts, deps.valueImports, deps.typeImports, fields, classMethods, std::move(methodNames),
-                                    output.compactGraphNames);
+                                    output.compactGraphNames, transactionalLoad);
                 usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
                     if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");
@@ -1542,7 +1545,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             if (model->serializable && (output.serializationHeader || emitTs)) {
                 emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
-                                 emitTs ? &archives.script : nullptr, archiveImports, archives.requirements);
+                                 emitTs ? &archives.script : nullptr, archiveImports, archives.requirements, transactionalLoad, nativeLoadReset);
             }
             continue;
         }

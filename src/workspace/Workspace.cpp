@@ -63,7 +63,8 @@ void rejectJsonTypes(const Json& config, std::string_view scope) {
         throw std::runtime_error(std::string(scope) + ".types was removed. Declare external types in a .spec extern module.");
 }
 
-std::optional<ArchiveOutput> resolveArchive(const TypeGraph& graph, ModuleId owner, const std::vector<ModuleOutput>& outputs) {
+std::optional<ArchiveOutput> resolveArchive(const TypeGraph& graph, ModuleId owner, const std::vector<ModuleOutput>& outputs,
+                                           bool transactionalGraphLoad) {
     const auto& module = graph.modules.at(owner.value);
     const auto& output = outputs.at(owner.value).types;
     const auto emitsTypeScriptArchive = [&](TypeId id) {
@@ -82,7 +83,7 @@ std::optional<ArchiveOutput> resolveArchive(const TypeGraph& graph, ModuleId own
         if (provider.inputArchive == TypeId{}) continue;
         if (archive)
             throw std::runtime_error(module.name + ": ambiguous archive providers " + archive->module.name + " and " + provider.name);
-        archive.emplace(outputs.at(imported.value).types, provider);
+        archive.emplace(outputs.at(imported.value).types, provider, transactionalGraphLoad);
     }
     if (!archive)
         throw std::runtime_error(module.name + ": serialization requires a direct import providing @archive(input) and @archive(output)");
@@ -368,6 +369,7 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
     const auto tsDefaults = settings.value("typescriptDefaults", Json::object());
     checkKeys(tsDefaults, {"compactGraphNames"}, "typescriptDefaults");
     const bool compactGraphNames = tsDefaults.value("compactGraphNames", false);
+    const bool transactionalGraphLoad = settings.value("transactionalGraphLoad", false);
     std::vector<ModuleInput> inputs;
     std::vector<ModuleOutput> outputs;
     for (const auto& entry : modules) {
@@ -474,7 +476,8 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
                 if (records.namesHeader && dependency.namesHeader)
                     records.importedNamesHeaders.push_back(*dependency.namesHeader);
             }
-            const auto emitted = emitRecords(graph, owner, records, resolveArchive(graph, owner, outputs), preamble, nestedResets, omittedHeaders);
+            const auto archive = resolveArchive(graph, owner, outputs, transactionalGraphLoad);
+            const auto emitted = emitRecords(graph, owner, records, archive, preamble, nestedResets, omittedHeaders);
             for (const auto& [path, content] : emitted) addFile(path, content);
         }
         if (modules[i].contains("runtimeFiles")) {

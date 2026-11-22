@@ -274,8 +274,9 @@ bool exchangePipelineArchives(bool writing, const char* path) {
     load(archive, records.renderPhase);
     graph.add_vertex("old");
     graph.valueNames.emplace_back("stale");
+    graph.attributeIndex.emplace("stale", NameLocalID{7});
     load(archive, graph);
-    if (graph.num_vertices() || !graph.valueNames.empty() || graph.constantMacros != "reader macros") return false;
+    if (graph.num_vertices() || !graph.valueNames.empty() || !graph.attributeIndex.empty() || graph.constantMacros != "reader macros") return false;
     load(archive, graph);
     if (!checkGraph(graph) || graph.constantMacros != "reader macros") return false;
     LayoutGraphData movedGraph{std::move(graph), &arena};

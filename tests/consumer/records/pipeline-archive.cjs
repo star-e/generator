@@ -2,7 +2,7 @@ const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
 const flags = require('./platform.cjs');
-const [jsDir, nativeFile, webFile, legacyFile, convertedFile, printFile] = process.argv.slice(2);
+const [jsDir, nativeFile, webFile, legacyFile, convertedFile, printFile, loadMode] = process.argv.slice(2);
 const loadLayoutArchive = require('./layout-archive-api.cjs');
 const current = loadLayoutArchive(jsDir);
 assert.ok(Object.hasOwn(current.PipelineLayoutData.prototype, 'getSets'));
@@ -97,8 +97,10 @@ function checkArchive(api, bytes) {
     const graph = new api.LayoutGraphData();
     graph.constantMacros = 'reader macros';
     const names = graph.valueNames, effects = graph.effects;
+    if (api === current) effects.set('stale', new api.EffectData());
     api.loadLayoutGraphData(archive, graph);
     assert.equal(graph.nv(), 0);
+    assert.equal(effects.size, 0);
     const graphOffset = archive.offset;
     api.loadLayoutGraphData(archive, graph);
     assert.deepEqual(graphValues(graph), graphValues(graphData(api, records(api))));
@@ -111,9 +113,11 @@ function checkArchive(api, bytes) {
         const effect = graph.effects.get('post');
         graph.valueNames.push('keep');
         assert.throws(() => api.loadLayoutGraphData(input, graph));
-        assert.deepEqual(graph.valueNames, ['camera', 'bloom', 'keep']);
-        assert.equal(graph.nv(), 2);
-        assert.strictEqual(graph.effects.get('post'), effect);
+        if (loadMode !== 'in-place') {
+            assert.deepEqual(graph.valueNames, ['camera', 'bloom', 'keep']);
+            assert.equal(graph.nv(), 2);
+            assert.strictEqual(graph.effects.get('post'), effect);
+        }
     }
     assert.equal(archive.offset, bytes.length);
 }

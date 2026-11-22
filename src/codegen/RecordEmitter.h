@@ -14,6 +14,7 @@ namespace cc::codegen {
 struct ArchiveOutput {
     const RecordOutput& output;
     const TypeModule& module;
+    bool transactionalGraphLoad;
 };
 
 struct ResetArgument {

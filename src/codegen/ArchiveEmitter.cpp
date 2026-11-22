@@ -114,7 +114,7 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
                       std::ostream& declarations, std::ostream& cpp, std::ostream* ts, ArchiveImports& imports,
-                      ArchiveRequirements& requirements) {
+                      ArchiveRequirements& requirements, bool transactionalLoad, const std::string& nativeLoadReset) {
     const auto& model = std::get<GraphType>(node.data);
     const auto& name = node.name;
     if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.separateEdges || model.alternatives.empty() ||
@@ -136,7 +136,9 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         return graph.modules.at(node.module.value).namespaces == archive.namespaces ? api.name : "::" + api.qualifiedName;
     };
     const std::string save = "void save(" + archiveName(output) + "& ar, const " + name + "& g)";
-    const std::string load = "void load(" + archiveName(input) + "& ar, " + name + "& g)";
+    const std::string destination = transactionalLoad ? "target" : "g";
+    const std::string load = "void load(" + archiveName(input) + "& ar, " + name + "& " + destination + ")";
+    const bool hasTransients = std::ranges::any_of(model.fields, &FieldInfo::transient);
     const bool takesName = model.nameComponentIndex || (!model.components.empty() &&
         graph.node(model.components.front().valueType).qualifiedName == "ccstd::pmr::string");
     declarations << '\n' << save << ";\n" << load << ";\n";
@@ -152,9 +154,10 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         cpp << "        case " << name << "::Kind::" << c.publicName << ": save(ar, g.value(" << tag(c) << ", v)); break;\n";
     cpp << "        }\n    }\n";
     for (const auto& f : model.fields) if (!f.transient) cpp << "    save(ar, g." << f.name << ");\n";
-    cpp << "}\n\n" << load << " {\n"
-        << "    " << name << " decoded{g.get_allocator()};\n"
-        << R"(    const auto readSize = [&ar]() -> uint32_t {
+    cpp << "}\n\n" << load << " {\n";
+    if (transactionalLoad) cpp << "    " << name << " g{target.get_allocator()};\n";
+    else cpp << nativeLoadReset;
+    cpp << R"(    const auto readSize = [&ar]() -> uint32_t {
         const auto n = ar.readNumber();
         if (!(n >= 0 && n <= UINT32_MAX) || n != static_cast<uint32_t>(n))
             throw std::runtime_error("Invalid graph archive size");
@@ -166,34 +169,33 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "    uint32_t counts[" << count << "];\n    for (auto& n : counts) n = readSize();\n"
         << "    for (uint32_t i = 0; i < size; ++i) {\n        const auto kind = readSize();\n        const auto parent = readSize();\n"
         << "        if (kind >= " << count << " || counts[kind] == 0) throw std::runtime_error(\"Invalid graph archive kind\");\n"
-        << "        --counts[kind];\n        if (parent != decoded.null_vertex()) {\n"
+        << "        --counts[kind];\n        if (parent != g.null_vertex()) {\n"
         << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n"
         << "        const auto readVertex = [&](auto tag) {\n";
     if (model.nameIndex || model.keyComponentIndex) {
-        cpp << "            const auto v = decoded.appendVertex(&tag, ";
+        cpp << "            const auto v = g.appendVertex(&tag, ";
         for (size_t i = 0; i < model.components.size(); ++i) cpp << "std::tuple<>{}, ";
         cpp << "std::tuple<>{}, false, parent);\n";
     } else
-        cpp << "            const auto v = decoded.add_vertex(tag, " << (takesName ? "{}, " : "") << "parent);\n";
+        cpp << "            const auto v = g.add_vertex(tag, " << (takesName ? "{}, " : "") << "parent);\n";
     for (size_t i = 0; i < model.components.size(); ++i) {
         const auto& c = model.components[i];
         if (model.nameIndex && i == model.nameComponentIndex) {
-            cpp << "            auto& key = decoded." << c.name << "[v];\n            load(ar, key);\n"
-                << "            if (!decoded.nameIndex_.emplace(key, v).second) throw std::invalid_argument(\"duplicate vertex name\");\n";
+            cpp << "            auto& key = g." << c.name << "[v];\n            load(ar, key);\n"
+                << "            if (!g.nameIndex_.emplace(key, v).second) throw std::invalid_argument(\"duplicate vertex name\");\n";
         } else if (i == model.keyComponentIndex) {
-            cpp << "            auto& componentKey = decoded." << c.name << "[v];\n            load(ar, componentKey);\n"
-                << "            if (!decoded.componentIndex_.emplace(componentKey, v).second) throw std::invalid_argument(\"duplicate vertex key\");\n";
+            cpp << "            auto& componentKey = g." << c.name << "[v];\n            load(ar, componentKey);\n"
+                << "            if (!g.componentIndex_.emplace(componentKey, v).second) throw std::invalid_argument(\"duplicate vertex key\");\n";
         } else {
-            cpp << "            load(ar, decoded.get" << c.publicName << "(v));\n";
+            cpp << "            load(ar, g.get" << c.publicName << "(v));\n";
         }
     }
-    cpp << "            load(ar, decoded.value(tag, v));\n        };\n        switch (kind) {\n";
+    cpp << "            load(ar, g.value(tag, v));\n        };\n        switch (kind) {\n";
     for (size_t i = 0; i != count; ++i) cpp << "        case " << i << ": readVertex(" << tag(model.alternatives[i]) << "); break;\n";
     cpp << "        }\n    }\n    if (edges) throw std::runtime_error(\"Invalid graph archive edge count\");\n"
         << "    for (auto n : counts) if (n) throw std::runtime_error(\"Invalid graph archive kind count\");\n";
-    for (const auto& f : model.fields) if (!f.transient) cpp << "    load(ar, decoded." << f.name << ");\n";
-    if (model.fields.empty()) cpp << "    g = std::move(decoded);\n";
-    else cpp << "    g.swapStorage(decoded" << (std::ranges::any_of(model.fields, &FieldInfo::transient) ? ", false" : "") << ");\n";
+    for (const auto& f : model.fields) if (!f.transient) cpp << "    load(ar, g." << f.name << ");\n";
+    if (transactionalLoad) cpp << "    target.swapStorage(g" << (hasTransients ? ", false" : "") << ");\n";
     cpp << "}\n";
     if (!ts) return;
 
@@ -217,12 +219,14 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     *ts << "        }\n    }\n";
     for (const auto& f : model.fields) if (!f.transient) writer.value(*ts, f.type.type, "g." + f.name, "    ");
     const auto readNumber = "a." + archiveMethod(input, "readNumber") + "()";
-    *ts << "}\n\nexport function load" << name << " (a: " << input.name << ", g: " << name << "): void {\n"
-        << "    const decoded = new " << name << "();\n    const size = " << readNumber << ";\n    let edges = " << readNumber << ";\n"
+    *ts << "}\n\nexport function load" << name << " (a: " << input.name << ", " << destination << ": " << name << "): void {\n";
+    if (transactionalLoad) *ts << "    const g = new " << name << "();\n";
+    else *ts << "    g.clear(" << (hasTransients ? "false" : "") << ");\n";
+    *ts << "    const size = " << readNumber << ";\n    let edges = " << readNumber << ";\n"
         << "    const counts = Array.from({ length: " << count << " }, () => " << readNumber << ");\n"
         << "    for (let i = 0; i < size; ++i) {\n        const kind = " << readNumber << ";\n        const parent = " << readNumber << ";\n"
         << "        if (kind >= counts.length || !counts[kind]) throw new RangeError('Invalid graph archive kind');\n        --counts[kind];\n"
-        << "        if (parent !== decoded.N) {\n            if (parent >= i || !edges) throw new RangeError('Invalid graph archive parent');\n            --edges;\n        }\n";
+        << "        if (parent !== g.N) {\n            if (parent >= i || !edges) throw new RangeError('Invalid graph archive parent');\n            --edges;\n        }\n";
     std::string arguments;
     for (const auto& c : model.components) {
         const auto component = "component" + c.publicName;
@@ -234,11 +238,12 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         const auto kind = kinds + c.publicName;
         *ts << "        case " << kind << ": {\n";
         reader.value(*ts, c.valueType, "payload", "            ", true, 1);
-        *ts << "            decoded.addVertex(" << kind << ", payload" << arguments << ", parent);\n            break;\n        }\n";
+        *ts << "            g.addVertex(" << kind << ", payload" << arguments << ", parent);\n            break;\n        }\n";
     }
     *ts << "        }\n    }\n    if (edges || counts.some(n => n !== 0)) throw new RangeError('Invalid graph archive counts');\n";
-    for (const auto& f : model.fields) if (!f.transient) reader.value(*ts, f.type.type, "decoded." + f.name, "    ");
-    *ts << "    g[adopt" << name << "](decoded);\n}\n";
+    for (const auto& f : model.fields) if (!f.transient) reader.value(*ts, f.type.type, "g." + f.name, "    ");
+    if (transactionalLoad) *ts << "    target[adopt" << name << "](g);\n";
+    *ts << "}\n";
 }
 
 } // namespace cc::codegen

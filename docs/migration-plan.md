@@ -72,6 +72,8 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 工作区可设置 `"typescriptDefaults": { "compactGraphNames": true }` 缩短 TS 图的私有存储名。默认关闭，cocos4 工作区已开启。出边和入边用 `o/i`，子节点和父节点用 `c/p`，载荷标签用 `t`，载荷数组用 `a`。短名与已声明成员重名时按顺序追加数字。组件数组沿用 `.spec` 的 `member` 名，字段和方法沿用公开名称。绑定方法中直接使用的私有存储名也会保留。
 
+工作区顶层的 `transactionalGraphLoad` 控制 C++ 和 TS 的图反序列化，默认值为 `false`。默认模式直接用归档内容覆盖目标图，保留图上的 `@transient` 字段。读取失败后应丢弃目标图。设置 `"transactionalGraphLoad": true` 后，读取器先填充临时图，全部读取成功后再替换目标图。读取失败时，调用方仍可使用原图。两种模式使用相同的归档格式。
+
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 
 普通模块的 `typescript` 字符串指定要生成的 `.ts` 文件。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。在 `.spec` 的模块声明上用 `@pool` 启用 TS 对象池。枚举注册和 JSB 导出类型写在绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。旧版 `forward` 的布尔值按默认规则处理，字符串指定的文件名继续有效。[工作区输出测试](../tests/WorkspaceOutputs.cmake)

@@ -1,3 +1,4 @@
+#include "codegen/ArchiveEmitter.h"
 #include "codegen/Documentation.h"
 #include "codegen/GraphEmitter.h"
 #include "model/TypeName.h"
@@ -320,7 +321,18 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
 
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
                        const std::vector<std::string>& storage, const std::set<std::string>& moveOnlyColumns,
-                       const std::vector<BoundField>& fields, const GraphType& model) {
+                       const std::vector<BoundField>& fields, const GraphType& model, bool transactionalArchive) {
+    const auto writeSwap = [&] {
+        const bool skipTransients = transactionalArchive && std::ranges::any_of(fields, &BoundField::transient);
+        source << "\nvoid " << name << "::swapStorage(" << name << "& other"
+               << (skipTransients ? ", bool includeTransient" : "") << ")" << (fields.empty() ? " noexcept" : "") << " {\n";
+        for (const auto& field : storage) source << "    this->" << field << ".swap(other." << field << ");\n";
+        if (!fields.empty()) source << "    using std::swap;\n";
+        for (const auto& f : fields)
+            source << "    " << (skipTransients && f.transient ? "if (includeTransient) " : "")
+                   << "swap(this->" << f.name << ", other." << f.name << ");\n";
+        source << "}\n";
+    };
     const auto& member = storage.front();
     const bool copyable = moveOnlyColumns.empty();
     out << "    explicit " << name << "(const allocator_type& alloc)";
@@ -335,6 +347,7 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
             << "    " << name << "& operator=(const " << name << "&) = delete;\n"
             << "    " << name << "& operator=(" << name << "&&) = delete;\n"
             << "    allocator_type get_allocator() const noexcept { return {this->" << member << ".get_allocator().resource()}; }\n";
+        if (transactionalArchive) writeSwap();
         return;
     }
     out << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc)" << (copyable ? ";\n" : " = delete;\n")
@@ -381,14 +394,8 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
         }
     }
     for (const auto& field : storage) source << "        rhs." << field << ".clear();\n";
-    const bool transients = std::ranges::any_of(fields, &BoundField::transient);
-    source << "    }\n}\n\nvoid " << name << "::swapStorage(" << name << "& other"
-           << (transients ? ", bool includeTransient" : "") << ")" << (fields.empty() ? " noexcept" : "") << " {\n";
-    for (const auto& field : storage) source << "    this->" << field << ".swap(other." << field << ");\n";
-    if (!fields.empty()) source << "    using std::swap;\n";
-    for (const auto& f : fields)
-        source << "    " << (f.transient ? "if (includeTransient) " : "") << "swap(this->" << f.name << ", other." << f.name << ");\n";
-    source << "}\n";
+    source << "    }\n}\n";
+    writeSwap();
     for (bool move : {false, true}) {
         if (!move && !copyable) continue;
         source << "\n" << name << "& " << name << "::operator=(" << (move ? "" : "const ") << name << (move ? "&&" : "&") << " rhs) {\n"
@@ -684,9 +691,10 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id) {
     return hasMoveOnlyValue(graph, id, visited);
 }
 
-void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
-                  std::set<std::string>& headers, std::set<const TypeNode*>& forwards,
-                  const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive) {
+std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
+                         std::set<std::string>& headers, std::set<const TypeNode*>& forwards,
+                         const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive,
+                         bool transactionalLoad) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     if (!model.indexedVertices || (model.components.empty() && model.alternatives.empty()))
@@ -852,7 +860,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
             out << ";\n";
         }
         out << "};\n";
-        return;
+        return {};
     }
     const auto internalColumn = [&](std::string field) {
         while (!members.insert(field).second) field += "0";
@@ -887,7 +895,8 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     out << "struct " << name << " {\n"
         << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    graphConstructors(out, source, name, allStorage, moveOnlyColumns, fields, model);
+    const bool transactionalArchive = transactionalLoad && !inputArchive.empty();
+    graphConstructors(out, source, name, allStorage, moveOnlyColumns, fields, model, transactionalArchive);
     if (model.vertexList) {
         headers.insert("cstddef");
         headers.insert("iterator");
@@ -1017,10 +1026,12 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
     if (model.keyComponentIndex)
         out << "    ccstd::pmr::unordered_map<" << keyType << ", " << vertex << "> componentIndex_;\n";
     out << insertion.str();
-    if (!model.immovable && (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty()))
+    if (transactionalArchive || (!model.immovable && (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty()))) {
+        const bool skipTransients = transactionalArchive && std::ranges::any_of(fields, &BoundField::transient);
         out << "    void swapStorage(" << name << "& other"
-            << (std::ranges::any_of(fields, &BoundField::transient) ? ", bool includeTransient = true" : "")
+            << (skipTransients ? ", bool includeTransient = true" : "")
             << ")" << (fields.empty() ? " noexcept" : "") << ";\n";
+    }
     if (!inputArchive.empty()) out << "    friend void load(" << inputArchive << "&, " << name << "&);\n";
     if (!fields.empty()) out << "\npublic:\n";
     for (const auto& f : fields) {
@@ -1028,6 +1039,17 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         out << "    " << f.cpp << " " << f.name << (f.cppDefault.empty() ? "" : "{" + f.cppDefault + "}") << ";\n";
     }
     out << "};\n";
+    if (inputArchive.empty() || transactionalLoad) return {};
+    std::ostringstream reset;
+    for (const auto& member : allStorage) reset << "    g." << member << ".clear();\n";
+    for (size_t i = 0; i < fields.size(); ++i) {
+        const auto& f = fields[i];
+        const auto type = model.fields[i].type.type;
+        if (f.transient || !archivePrimitive(graph, type).empty()) continue;
+        if (graph.node(type).typescriptContainer != ContainerKind::None) reset << "    g." << f.name << ".clear();\n";
+        else reset << "    g." << f.name << " = decltype(g." << f.name << "){" << (f.usesAllocator ? "g.get_allocator()" : "") << "};\n";
+    }
+    return reset.str();
 }
 
 } // namespace cc::codegen

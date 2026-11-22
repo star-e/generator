@@ -224,9 +224,11 @@ bool exchangeLayoutArchive(std::string_view mode, const char* path) {
     file.exceptions(std::ios::badbit | std::ios::failbit);
     BinaryInputArchive archive(file, &arena);
     g.add_vertex("previous");
-    if (mode == "layout-invalid") {
+    if (mode == "layout-invalid" || mode == "layout-invalid-in-place") {
         try { load(archive, g); }
-        catch (const std::runtime_error&) { return g.num_vertices() == 1 && g.locate("/previous") == 0; }
+        catch (const std::runtime_error&) {
+            return mode == "layout-invalid-in-place" || (g.num_vertices() == 1 && g.locate("/previous") == 0);
+        }
         return false;
     }
     load(archive, g);

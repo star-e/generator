@@ -492,7 +492,7 @@ int main(int argc, char** argv) {
         return checkLayoutAllocation(argv[2], std::stoi(argv[3]));
     if (argc == 3) {
         const std::string_view mode(argv[1]);
-        if (mode == "layout-write" || mode == "layout-read" || mode == "layout-invalid")
+        if (mode == "layout-write" || mode == "layout-read" || mode == "layout-invalid" || mode == "layout-invalid-in-place")
             return exchangeLayoutArchive(mode, argv[2]) ? 0 : 1;
         if (mode == "blocks-write" || mode == "blocks-read")
             return exchangeBlockArchives(mode == "blocks-write", argv[2]) ? 0 : 1;

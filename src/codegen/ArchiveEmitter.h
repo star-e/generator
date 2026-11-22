@@ -30,6 +30,6 @@ struct ArchiveScript {
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
                       std::ostream& declarations, std::ostream& definitions, std::ostream* script, ArchiveImports& imports,
-                      ArchiveRequirements& requirements);
+                      ArchiveRequirements& requirements, bool transactionalLoad, const std::string& nativeLoadReset);
 
 } // namespace cc::codegen

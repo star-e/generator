@@ -35,12 +35,12 @@ string(JSON readableConfig REMOVE "${config}" typescriptDefaults)
 file(WRITE "${workspace}" "${readableConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/readable")
 file(READ "${work}/readable/${layoutTs}" readableLayout)
-if(NOT compactLayout MATCHES "private r: OutE[^}]*private c: OutE" OR NOT readableLayout MATCHES "private roots: OutE[^}]*private _children: OutE"
-   OR NOT compactLayout MATCHES "private _names: string" OR NOT readableLayout MATCHES "private _names: string")
+if(NOT compactLayout MATCHES "private readonly r: OutE[^}]*private readonly c: OutE" OR NOT readableLayout MATCHES "private readonly roots: OutE[^}]*private readonly _children: OutE"
+   OR NOT compactLayout MATCHES "private readonly _names: string" OR NOT readableLayout MATCHES "private readonly _names: string")
     message(FATAL_ERROR "Unexpected graph storage or component names in compact or default mode")
 endif()
-if(NOT compactLayout MATCHES "private a: LayoutGraphObject\\[\\]" OR compactLayout MATCHES "private x: number\\[\\]"
-   OR NOT readableLayout MATCHES "private _objects: LayoutGraphObject\\[\\]" OR readableLayout MATCHES "private _indices:")
+if(NOT compactLayout MATCHES "private readonly a: LayoutGraphObject\\[\\]" OR compactLayout MATCHES "private (readonly )?x: number\\[\\]"
+   OR NOT readableLayout MATCHES "private readonly _objects: LayoutGraphObject\\[\\]" OR readableLayout MATCHES "private (readonly )?_indices:")
     message(FATAL_ERROR "Polymorphic payloads must be a single vertex-indexed column in both naming modes")
 endif()
 if(NOT compactLayout MATCHES "return this[.]a\\[v\\] as T;" OR NOT readableLayout MATCHES "return this[.]_objects\\[v\\] as T;")
