@@ -52,9 +52,16 @@ void checkSyntaxDeclarations() {
         namespace sample {
             struct Entry {
                 items: List<Tuple<>>;
+                nullable: bool;
+                nullable texture: Texture;
                 constructor(items) defaults;
                 void replace(const Item& item, uint32_t count = 1);
             }
+            struct Empty {}
+        }
+        binding typescript {
+            Entry => class;
+            Empty => class { constructor(); };
         }
     )");
     const auto& imported = module.imports.at(0);
@@ -65,12 +72,18 @@ void checkSyntaxDeclarations() {
     require(field.name == "items" && field.type.name == "List" && field.type.hasTemplateArguments &&
             argument.name == "Tuple" && argument.hasTemplateArguments && argument.arguments.empty() &&
             argument.location.file == "members.spec", "lost nested template syntax");
+    require(record.fields.at(1).name == "nullable" && !record.fields.at(1).isNullable &&
+            record.fields.at(2).name == "texture" && record.fields.at(2).isNullable,
+            "nullable field name confused with nullable modifier");
     const auto& ctor = record.constructors.at(0);
     require(ctor.defaults && ctor.fields == std::vector<std::string>{"items"}, "lost constructor syntax");
     const auto& method = record.methods.at(0);
     require(method.accessor == AccessorKind::None && method.resultPresence == ResultPresence::Required &&
             method.parameters.at(0).byConstReference && method.parameters.at(1).defaultValue == "1",
             "lost method defaults or parameter syntax");
+    const auto& bindings = module.bindings.typescript;
+    require(!bindings.at(0).constructor && bindings.at(1).constructor && bindings.at(1).constructor->empty(),
+            "unspecified and empty TypeScript constructors must stay distinct");
 }
 
 const MethodInfo& scratch(const TypeGraph& graph, TypeId owner) {

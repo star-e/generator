@@ -56,6 +56,23 @@ struct GraphComponent;
 struct GraphDeclaration;
 struct Declaration;
 struct ModuleImport;
+struct PoolBinding;
+struct PoolDependency;
+
+enum class BindingTarget;
+
+struct TypeScriptImport;
+struct TypeScriptNamedImport;
+struct InterfaceMethodBinding;
+struct CallbackParameter;
+struct Callback;
+struct TypeScriptMethodParameter;
+struct TypeScriptClassMethod;
+struct TypeScriptBinding;
+struct SwigMember;
+struct SwigBindings;
+struct ModuleBindings;
+struct Module;
 
 } // namespace codegen
 

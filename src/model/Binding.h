@@ -1,107 +1,11 @@
 #pragma once
 
-#include "model/TypeRef.h"
-#include "generated/TypeGraphFwd.h"
+#include <generated/SyntaxTypes.h> // IWYU pragma: export
 #include <algorithm>
-#include <filesystem>
-#include <map>
-#include <optional>
-#include <set>
-#include <string>
+#include <iterator>
 #include <string_view>
-#include <variant>
-#include <vector>
 
 namespace cc::codegen {
-
-struct PoolBinding {
-    std::string member;
-    std::set<std::string> keepOnReset;
-    bool assignFields{};
-};
-
-struct PoolDependency {
-    std::string member;
-    std::string module;
-};
-
-enum class BindingTarget { type, interfaceType, classType, enumeration, constEnum, numberField };
-
-struct TypeScriptImport {
-    std::string name;
-    std::filesystem::path from;
-};
-
-struct TypeScriptNamedImport {
-    std::set<std::string> names;
-    std::string from;
-    bool typeOnly{};
-};
-
-struct InterfaceMethodBinding {
-    std::string target;
-    AccessorKind accessor{};
-    bool nullable{};
-    std::vector<std::string> optional;
-};
-using MethodBindings = std::map<std::string, InterfaceMethodBinding>;
-using InterfaceBindings = std::map<std::pair<std::string, std::string>, InterfaceMethodBinding>;
-
-struct CallbackParameter {
-    std::string name;
-    bool optional{};
-    TypeRef type;
-};
-
-struct Callback {
-    std::string name;
-    bool optional{};
-    std::vector<CallbackParameter> parameters;
-    TypeRef result;
-    bool optionalResult{};
-    std::string documentation;
-};
-
-struct TypeScriptMethodParameter {
-    std::string name;
-    std::string type;
-    bool optional{};
-};
-
-struct TypeScriptClassMethod {
-    std::string name;
-    std::vector<TypeScriptMethodParameter> parameters;
-    std::string result;
-    std::string body;
-    std::string documentation;
-};
-
-// A raw methods block from an older spec occupies its original position in the class.
-using TypeScriptClassMethods = std::vector<std::variant<TypeScriptClassMethod, std::string>>;
-
-struct TypeScriptBinding {
-    TypeRef source;
-    BindingTarget kind{};
-    std::string target;
-    std::filesystem::path from;
-    std::filesystem::path archiveFrom;
-    bool externalTarget{};
-    bool externalInterface{};
-    MethodBindings methods;
-    std::vector<Callback> callbacks;
-    std::map<std::string, std::string> renamedFrom;
-    std::string numberField;
-    std::map<std::string, std::string> fieldDefaults;
-    std::optional<TypeScriptImport> base;
-    TypeScriptClassMethods classMethods;
-    std::optional<PoolBinding> pool;
-    std::optional<std::vector<std::string>> constructor;
-    bool requiredConstructor{};
-    MapKeyKind mapKey{};
-    bool names{};
-    bool registerEnum{};
-    bool helpers{};
-};
 
 inline bool isUnclampedIntegerTypedArrayName(std::string_view name) {
     static constexpr std::string_view names[]{
@@ -112,30 +16,5 @@ inline bool isUnclampedIntegerTypedArrayName(std::string_view name) {
 inline bool isTypedArrayName(std::string_view name) {
     return isUnclampedIntegerTypedArrayName(name) || name == "Uint8ClampedArray" || name == "Float32Array" || name == "Float64Array";
 }
-
-struct SwigMember {
-    SourceLocation location;
-    std::string owner;
-    std::string name;
-};
-
-struct SwigBindings {
-    std::vector<std::filesystem::path> includes;
-    std::vector<std::pair<SwigMember, std::string>> macros;
-    std::vector<SwigMember> releaseInGC;
-};
-
-struct ModuleBindings {
-    std::vector<TypeScriptBinding> typescript;
-    std::vector<TypeScriptNamedImport> typescriptImports;
-    std::filesystem::path typescriptFrom;
-    std::map<std::string, SourceLocation> typescriptExports;
-    std::filesystem::path poolModule;
-    std::vector<PoolDependency> poolDependencies;
-    std::optional<SourceLocation> jsb;
-    std::map<std::string, SourceLocation> jsbRecords;
-    std::set<std::filesystem::path> jsbIncludes;
-    std::optional<SwigBindings> swig;
-};
 
 } // namespace cc::codegen

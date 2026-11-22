@@ -28,11 +28,14 @@
  * ========================= !DO NOT CHANGE THE FOLLOWING SECTION MANUALLY! =========================
  */
 #pragma once
+#include <filesystem>
 #include "generated/SourceLocation.h"
 #include "generated/TypeGraphTypes.h"
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 #include "SyntaxFwd.h"
@@ -40,6 +43,12 @@
 namespace cc {
 
 namespace codegen {
+
+using MethodBindings = std::map<std::string, InterfaceMethodBinding>;
+
+using InterfaceBindings = std::map<std::pair<std::string, std::string>, InterfaceMethodBinding>;
+
+using TypeScriptClassMethods = std::vector<std::variant<TypeScriptClassMethod, std::string>>;
 
 struct TypeRef {
     SourceLocation location;
@@ -217,6 +226,133 @@ struct Declaration {
 struct ModuleImport {
     SourceLocation location;
     std::string name;
+};
+
+struct PoolBinding {
+    std::string member;
+    std::set<std::string> keepOnReset;
+    bool assignFields{false};
+};
+
+struct PoolDependency {
+    std::string member;
+    std::string module;
+};
+
+enum class BindingTarget {
+    type,
+    interfaceType,
+    classType,
+    enumeration,
+    constEnum,
+    numberField,
+};
+
+struct TypeScriptImport {
+    std::string name;
+    std::filesystem::path from;
+};
+
+struct TypeScriptNamedImport {
+    std::set<std::string> names;
+    std::string from;
+    bool typeOnly{false};
+};
+
+struct InterfaceMethodBinding {
+    std::string target;
+    AccessorKind accessor{AccessorKind::None};
+    bool nullable{false};
+    std::vector<std::string> optional;
+};
+
+struct CallbackParameter {
+    std::string name;
+    bool optional{false};
+    TypeRef type;
+};
+
+struct Callback {
+    std::string name;
+    bool optional{false};
+    std::vector<CallbackParameter> parameters;
+    TypeRef result;
+    bool optionalResult{false};
+    std::string documentation;
+};
+
+struct TypeScriptMethodParameter {
+    std::string name;
+    std::string type;
+    bool optional{false};
+};
+
+struct TypeScriptClassMethod {
+    std::string name;
+    std::vector<TypeScriptMethodParameter> parameters;
+    std::string result;
+    std::string body;
+    std::string documentation;
+};
+
+struct TypeScriptBinding {
+    TypeRef source;
+    BindingTarget kind{BindingTarget::type};
+    std::string target;
+    std::filesystem::path from;
+    std::filesystem::path archiveFrom;
+    bool externalTarget{false};
+    bool externalInterface{false};
+    MethodBindings methods;
+    std::vector<Callback> callbacks;
+    std::map<std::string, std::string> renamedFrom;
+    std::string numberField;
+    std::map<std::string, std::string> fieldDefaults;
+    std::optional<TypeScriptImport> base;
+    TypeScriptClassMethods classMethods;
+    std::optional<PoolBinding> pool;
+    std::optional<std::vector<std::string>> constructor;
+    bool requiredConstructor{false};
+    MapKeyKind mapKey{MapKeyKind::Native};
+    bool names{false};
+    bool registerEnum{false};
+    bool helpers{false};
+};
+
+struct SwigMember {
+    SourceLocation location;
+    std::string owner;
+    std::string name;
+};
+
+struct SwigBindings {
+    std::vector<std::filesystem::path> includes;
+    std::vector<std::pair<SwigMember, std::string>> macros;
+    std::vector<SwigMember> releaseInGC;
+};
+
+struct ModuleBindings {
+    std::vector<TypeScriptBinding> typescript;
+    std::vector<TypeScriptNamedImport> typescriptImports;
+    std::filesystem::path typescriptFrom;
+    std::map<std::string, SourceLocation> typescriptExports;
+    std::filesystem::path poolModule;
+    std::vector<PoolDependency> poolDependencies;
+    std::optional<SourceLocation> jsb;
+    std::map<std::string, SourceLocation> jsbRecords;
+    std::set<std::filesystem::path> jsbIncludes;
+    std::optional<SwigBindings> swig;
+};
+
+struct Module {
+    std::string name;
+    std::vector<std::string> namespaces;
+    std::vector<Declaration> declarations;
+    std::vector<ModuleImport> imports;
+    ModuleBindings bindings;
+    std::string cppHeader;
+    bool external{false};
+    bool pool{false};
 };
 
 } // namespace codegen

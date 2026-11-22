@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model/Interface.h"
+#include "generated/SyntaxTypes.h"
 
 namespace cc::codegen {
 

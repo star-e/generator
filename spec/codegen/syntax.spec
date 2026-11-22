@@ -173,4 +173,130 @@ namespace cc::codegen {
         location: SourceLocation;
         name: std::string;
     }
+
+    struct PoolBinding {
+        member: std::string;
+        keepOnReset: std::set<std::string>;
+        assignFields: bool = false;
+    }
+
+    struct PoolDependency {
+        member: std::string;
+        module: std::string;
+    }
+
+    enum class BindingTarget { type, interfaceType, classType, enumeration, constEnum, numberField }
+
+    struct TypeScriptImport {
+        name: std::string;
+        from: std::filesystem::path;
+    }
+
+    struct TypeScriptNamedImport {
+        names: std::set<std::string>;
+        from: std::string;
+        typeOnly: bool = false;
+    }
+
+    struct InterfaceMethodBinding {
+        target: std::string;
+        accessor: AccessorKind = AccessorKind::None;
+        nullable: bool = false;
+        optional: std::vector<std::string>;
+    }
+
+    using MethodBindings = std::map<std::string, InterfaceMethodBinding>;
+    using InterfaceBindings = std::map<std::pair<std::string, std::string>, InterfaceMethodBinding>;
+
+    struct CallbackParameter {
+        name: std::string;
+        optional: bool = false;
+        type: TypeRef;
+    }
+
+    struct Callback {
+        name: std::string;
+        optional: bool = false;
+        parameters: std::vector<CallbackParameter>;
+        result: TypeRef;
+        optionalResult: bool = false;
+        documentation: std::string;
+    }
+
+    struct TypeScriptMethodParameter {
+        name: std::string;
+        type: std::string;
+        optional: bool = false;
+    }
+
+    struct TypeScriptClassMethod {
+        name: std::string;
+        parameters: std::vector<TypeScriptMethodParameter>;
+        result: std::string;
+        body: std::string;
+        documentation: std::string;
+    }
+
+    // A raw methods block from an older spec occupies its original position in the class.
+    using TypeScriptClassMethods = std::vector<std::variant<TypeScriptClassMethod, std::string>>;
+
+    struct TypeScriptBinding {
+        source: TypeRef;
+        kind: BindingTarget = BindingTarget::type;
+        target: std::string;
+        from: std::filesystem::path;
+        archiveFrom: std::filesystem::path;
+        externalTarget: bool = false;
+        externalInterface: bool = false;
+        methods: MethodBindings;
+        callbacks: std::vector<Callback>;
+        renamedFrom: std::map<std::string, std::string>;
+        numberField: std::string;
+        fieldDefaults: std::map<std::string, std::string>;
+        base: std::optional<TypeScriptImport>;
+        classMethods: TypeScriptClassMethods;
+        pool: std::optional<PoolBinding>;
+        constructor: std::optional<std::vector<std::string>>;
+        requiredConstructor: bool = false;
+        mapKey: MapKeyKind = MapKeyKind::Native;
+        names: bool = false;
+        registerEnum: bool = false;
+        helpers: bool = false;
+    }
+
+    struct SwigMember {
+        location: SourceLocation;
+        owner: std::string;
+        name: std::string;
+    }
+
+    struct SwigBindings {
+        includes: std::vector<std::filesystem::path>;
+        macros: std::vector<std::pair<SwigMember, std::string>>;
+        releaseInGC: std::vector<SwigMember>;
+    }
+
+    struct ModuleBindings {
+        typescript: std::vector<TypeScriptBinding>;
+        typescriptImports: std::vector<TypeScriptNamedImport>;
+        typescriptFrom: std::filesystem::path;
+        typescriptExports: std::map<std::string, SourceLocation>;
+        poolModule: std::filesystem::path;
+        poolDependencies: std::vector<PoolDependency>;
+        jsb: std::optional<SourceLocation>;
+        jsbRecords: std::map<std::string, SourceLocation>;
+        jsbIncludes: std::set<std::filesystem::path>;
+        swig: std::optional<SwigBindings>;
+    }
+
+    struct Module {
+        name: std::string;
+        namespaces: std::vector<std::string>;
+        declarations: std::vector<Declaration>;
+        imports: std::vector<ModuleImport>;
+        bindings: ModuleBindings;
+        cppHeader: std::string;
+        external: bool = false;
+        pool: bool = false;
+    }
 }

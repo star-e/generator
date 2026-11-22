@@ -210,7 +210,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 生成器自举
 
-日常构建编译 `src/generated/` 里的自举快照。运行 `cocos-codegen generate --workspace config/self-host.json` 会在 `build/self-host/generated/` 生成 `SourceLocation`、`TypeGraph` 和 `Syntax` 三个模块的九个 C++ 文件。解析器用 `Syntax` 中的 `ModuleImport` 保存模块导入，用 `Declaration` 保存接口、记录、枚举、外部类型、标签、图和别名声明。各声明通过 `TypeRef` 记录类型名、源码位置和嵌套模板实参。建图器解析这些引用后，各后端从 `TypeGraph` 读取语义类型。[自举配置](../config/self-host.json) · [语法声明](../spec/codegen/syntax.spec) · [类型图声明](../spec/codegen/typegraph.spec)
+日常构建编译 `src/generated/` 里的自举快照。运行 `cocos-codegen generate --workspace config/self-host.json` 会在 `build/self-host/generated/` 生成 `SourceLocation`、`TypeGraph` 和 `Syntax` 三个模块的九个 C++ 文件。解析器返回 `Syntax` 中的 `Module`，其中 `ModuleImport` 保存导入，`Declaration` 保存声明，`ModuleBindings` 保存 TypeScript、对象池、JSB 和 SWIG 的绑定。各声明通过 `TypeRef` 记录类型名、源码位置和嵌套模板实参。建图器解析这些引用后，各后端从 `TypeGraph` 读取语义类型。[自举配置](../config/self-host.json) · [语法声明](../spec/codegen/syntax.spec) · [类型图声明](../spec/codegen/typegraph.spec)
 
 开始修改生成器自身的声明前，运行 `cmake --build build/host --target begin-codegen-update`。该目标构建当前生成器，验证其可执行文件副本，通过自举测试后将副本保存为本轮的 A，放在 `build/bootstrap/`。若构建或验证失败，上一次保存的 A 仍可用。
 

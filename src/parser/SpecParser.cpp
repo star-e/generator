@@ -1018,7 +1018,10 @@ private:
         }
         if (isStatic) *isStatic = accept("static");
         result.isReadonly = accept("readonly");
-        result.isNullable = accept("nullable");
+        if (token == "nullable" && !followedBy(":")) {
+            result.isNullable = true;
+            advance();
+        }
         result.name = uniqueName(names);
         expect(":");
         result.type = type(nullptr, record);

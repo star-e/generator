@@ -6,6 +6,7 @@ namespace std {
     header "string" { @string class string; }
     header "vector" { @container("array") template<T> class vector; }
     header "optional" { template<T> class optional; }
+    header "utility" { template<First, Second> struct pair; }
     header "variant" { template<First, Rest...> class variant; }
     header "map" { @container("map") template<K, V> class map; }
     header "set" { @container("set") template<T> class set; }

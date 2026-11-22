@@ -1,4 +1,5 @@
 #include "model/TypeGraphBuilder.h"
+#include "model/Binding.h"
 #include "model/NumericLiteral.h"
 #include "model/TypeName.h"
 
