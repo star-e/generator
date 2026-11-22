@@ -256,9 +256,6 @@ flat.setCount(index, 43);
 assert(flat.getCount(index) === 43);
 flat.setCount(index, 42);
 assert(flat.getDescriptors(index) === db && flat.getCount(index) === 42 && flat.getName(index) === 'flat', 'Component order');
-let invalidWrite = false;
-try { flat.setCount(index + 1, 99); } catch (e) { invalidWrite = e instanceof RangeError; }
-assert(invalidWrite && flat.nv() === 1, 'Invalid setter must not extend a component column');
 flat.version = 9;
 flat.clear();
 assert(flat.nv() === 0 && flat.version === 1, 'Flat graph scalar default');

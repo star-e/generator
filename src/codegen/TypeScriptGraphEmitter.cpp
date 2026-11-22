@@ -195,9 +195,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (!columns.empty()) vertexList = "this." + columns.front().name;
     else if (!components.empty()) vertexList = "this." + components.front().componentStorage();
     const auto vertexCount = vertexList.empty() ? "this._vertexCount" : vertexList + ".length";
-    const bool checkVertex = !components.empty() || !alternatives.empty() || (model.hierarchy && !model.separateEdges);
     std::set<std::string> api{"constructor", "N"};
-    if (checkVertex) api.insert("checkVertex");
     if (vertexList.empty()) api.insert("_vertexCount");
     if (!components.empty()) api.insert("_components");
     if (!alternatives.empty()) api.insert("_objects");
@@ -313,10 +311,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         }
         out << "    }\n";
     }
-    if (checkVertex)
-        out << "\n    private checkVertex (v: number): number {\n"
-            << "        if (!Number.isInteger(v) || v < 0 || v >= " << vertexCount << ") throw new RangeError('Invalid vertex');\n"
-            << "        return v;\n    }\n";
     if (model.vertexList) {
         if (vertexList.empty())
             out << "\n    *v (): IterableIterator<number> { for (let v = 0; v < this._vertexCount; ++v) yield v; }\n";
@@ -356,17 +350,17 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     for (size_t i = 0; i < components.size(); ++i) {
         const auto& component = components[i];
         out << "\n    get" << component.tagName << " (v: number): " << component.type << " {\n"
-            << "        return this." << component.componentStorage() << "[this.checkVertex(v)];\n    }\n";
+            << "        return this." << component.componentStorage() << "[v];\n    }\n";
         if (hasSetter(i)) {
             out << "    set" << component.tagName << " (v: number, value: " << component.type << "): void {\n";
             if (model.nameIndex && i == model.nameComponentIndex) {
-                out << "        const previous = this." << component.componentStorage() << "[this.checkVertex(v)];\n"
+                out << "        const previous = this." << component.componentStorage() << "[v];\n"
                     << "        if (previous === value) return;\n"
                     << "        if (this.nameIndex.has(value)) throw new Error('Duplicate vertex name');\n"
                     << "        this.nameIndex.set(value, v);\n        this.nameIndex.delete(previous);\n"
                     << "        this." << component.componentStorage() << "[v] = value;\n";
             } else {
-                out << "        this." << component.componentStorage() << "[this.checkVertex(v)] = value;\n";
+                out << "        this." << component.componentStorage() << "[v] = value;\n";
             }
             out << "    }\n";
         }
@@ -385,7 +379,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "\n    vertexName (v: number): string { return this.get" << components.at(*model.nameComponentIndex).tagName << "(v); }\n";
     if (!alternatives.empty()) {
         out << "\n    h (id: " << kinds << ", v: number): boolean { return this.w(v) === id; }\n"
-            << "    w (v: number): " << kinds << " { return this._kinds[this.checkVertex(v)]; }\n"
+            << "    w (v: number): " << kinds << " { return this._kinds[v]; }\n"
             << "    object (v: number): " << node.name << "Object { return this._objects[this.w(v)][this._indices[v]]; }\n"
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
             << "        if (this.w(v) !== id) throw new Error('Vertex kind does not match');\n"
@@ -412,7 +406,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "    reference (u: number, v: number): boolean { return Number.isInteger(u) && !!this._children[u] && this._children[u].some(e => e.target === v); }\n";
         if (model.mutableGraph) adjacencyMutation(out, true, true);
     } else if (model.hierarchy)
-        out << "\n    getParent (v: number): number { return v === this.N ? this.N : this._parents[this.checkVertex(v)]; }\n"
+        out << "\n    getParent (v: number): number { return v === this.N ? this.N : this._parents[v]; }\n"
             << "    reference (u: number, v: number): boolean { return u !== this.N && !!this._children[v] && this._parents[v] === u; }\n"
             << "\n    edge (u: number, v: number): boolean { return this.reference(u, v); }\n"
             << "    source (e: ED): number { return this.parent(e); }\n"

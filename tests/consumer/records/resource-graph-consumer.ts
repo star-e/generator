@@ -116,7 +116,6 @@ check(ResourceGraphValue.FormatView, view, 7, 'FormatView');
 check(ResourceGraphValue.SubresourceView, sub, 8, 'SubresourceView');
 assert(throws(() => resources.setName(res, 'SubresourceView')) && resources.getName(res) === 'color' &&
     resources.vertex('color') === res && resources.vertex('SubresourceView') !== res);
-assert(throws(() => resources.setName(resources.N, 'missing')) && !resources.contains('missing'));
 resources.setName(res, 'color');
 resources.setName(res, 'a\0b');
 assert(!resources.contains('a') && !resources.contains('color') && resources.vertex('a\0b') === res && resources.vertexName(res) === 'a\0b');

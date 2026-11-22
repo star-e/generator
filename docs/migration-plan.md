@@ -423,7 +423,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 ## 当前图接口覆盖
 
-TS 索引图默认按列存储（SoA）。每个组件有独立数组，用顶点编号访问。父子关系和入出边按图声明分别存储。多态图将同一标签的载荷放入同一数组，顶点用类型标签和该数组的下标定位载荷。归档仍按顶点顺序读写。
+TS 索引图默认按列存储（SoA）。组件读写直接以顶点编号作为数组下标，调用者负责传入有效编号。父子关系和入出边按图声明分别存储。多态图将同一标签的载荷放入同一数组，顶点用类型标签和该数组的下标定位载荷。归档仍按顶点顺序读写。
 
 对照旧清单，`LayoutGraph` 的九个文件对应八个生成产物。原 `LayoutGraphGraphs.h` 的图操作迁入类型成员。C++ 可遍历入边、出边、邻接顶点和全图边，TS 提供 `ie/id/d/adj/ne`、多态类别名称和 `setUpdate`。顶点和组件存储由图持有，调用方用 `object(v)` 或 `value(tag, v)` 读取载荷。旧 TS 写入器访问内部数组 `x[v].j`，跨版本测试分别运行对应写入器，并用旧读取器读回新图。[生成接口测试](../tests/consumer/records/LayoutGraphConsumer.cpp) · [归档对照](../tests/consumer/records/layout-archive.cjs)
 
