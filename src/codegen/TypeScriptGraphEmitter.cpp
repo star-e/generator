@@ -230,7 +230,7 @@ void edgeTraversal(std::ostream& out, const GraphStorageNames& names, bool share
     }
     out << "\n    // AdjacencyGraph\n"
         << R"(    adj (v: number): AdjI {
-        return new AdjI(this, new OutEI(this.)" << outgoing << R"([v].values(), v));
+        return new AdjI(this, this.oe(v));
     }
 )";
 }
@@ -458,7 +458,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         }
     }
     if (model.nameComponentIndex)
-        out << "\n    // NamedGraph\n    vertexName (v: number): string {\n        return this.get" << components.at(*model.nameComponentIndex).tagName << "(v);\n    }\n";
+        out << "\n    // NamedGraph\n    vertexName (v: number): string {\n"
+            << "        return this." << components.at(*model.nameComponentIndex).storageName << "[v];\n    }\n";
     if (!components.empty()) out << "\n    // ComponentGraph\n";
     for (size_t i = 0; i < components.size(); ++i) {
         const auto& component = components[i];
