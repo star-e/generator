@@ -271,13 +271,19 @@ const toggles = new Toggles();
 const toggle = toggles.addVertex(TogglesValue.ComputeTag, false);
 assert(toggles.w(toggle) === TogglesValue.ComputeTag && toggles.value(TogglesValue.ComputeTag, toggle) === false,
     'Distinct tags sharing a payload type');
-const count = toggles.addVertex(TogglesValue.Count, false);
+const count = toggles.addVertex(TogglesValue.Count, true);
 const visitToggle = { count: () => 'count', computeTag: () => 'compute', layout: () => 'layout' };
 assert(toggles.visitVertex(visitToggle, toggle) === 'compute' && toggles.visitVertex(visitToggle, count) === 'count',
     'Visit by tag when two payload types are identical');
 const nested = new LayoutGraph();
 const layout = toggles.addVertex(TogglesValue.Layout, nested);
 assert(toggles.value(TogglesValue.Layout, layout) === nested, 'Imported graph payload');
+const payloads = toggles['a'];
+assert(payloads.length === toggles.nv() && payloads[toggle] === false && payloads[count] === true && payloads[layout] === nested,
+    'All payloads share one vertex-indexed column');
+toggles.clear();
+assert(payloads.length === 0 && toggles.nv() === 0 && toggles.addVertex(TogglesValue.Layout, nested) === 0 &&
+    toggles.object(0) === nested, 'Clear and reuse the payload column');
 const tiny = new TinyNames();
 for (let i = 0; i < 255; ++i) assert(tiny.addVertex('v') === i);
 assert(tiny._labels(0) === 'v', 'Component storage must preserve bound methods with the same name');
@@ -300,8 +306,7 @@ try { indexed.addVertex(IndexedNamesValue.Count, 31, 37, 'child', 0); }
 catch (e) { rolledBack = e === linkFailure; }
 finally { Reflect.deleteProperty(children, 'push'); }
 assert(rolledBack && !indexed.contains('child') && indexed.numChildren(0) === 0);
-assert([indexed['c1'], indexed['p'], indexed['t'], indexed['_indices'],
-    indexed['_labels'], indexed['_counts'], indexed['j1'][IndexedNamesValue.Count]]
+assert([indexed['c1'], indexed['p'], indexed['t'], indexed['_objects'], indexed['_labels'], indexed['_counts']]
     .every(column => column.length === 1), 'Failed insertion must restore every column');
 assert(indexed.addVertex(IndexedNamesValue.Count, 19, 29, 'child', 0) === 1);
 const writer = new BinaryOutputArchive();
@@ -313,5 +318,5 @@ try { loadIndexedNames({ b: () => corrupt.b(), n: () => corrupt.n(), s: () => { 
 catch (e) { duplicate = e instanceof Error; }
 assert(duplicate && indexed.find('replaced') === 0 && indexed.find('child') === 1 && !indexed.contains(''));
 loadIndexedNames(new BinaryInputArchive(writer.data), indexed);
-assert(indexed.c === 7 && indexed.slot(1) === 1 && !indexed.contains('replaced') && indexed.vertex('') === 0 && indexed.find('child') === 1 &&
+assert(indexed.c === 7 && indexed.storedValue(1) === 19 && !indexed.contains('replaced') && indexed.vertex('') === 0 && indexed.find('child') === 1 &&
     indexed.getParent(1) === 0 && indexed.getCount(1) === 29 && indexed.value(IndexedNamesValue.Count, 1) === 19);

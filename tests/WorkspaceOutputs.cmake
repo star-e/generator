@@ -39,6 +39,10 @@ if(NOT compactLayout MATCHES "private c: OutE" OR NOT readableLayout MATCHES "pr
    OR NOT compactLayout MATCHES "private _names: string" OR NOT readableLayout MATCHES "private _names: string")
     message(FATAL_ERROR "Unexpected graph storage or component names in compact or default mode")
 endif()
+if(NOT compactLayout MATCHES "private a: LayoutGraphObject\\[\\]" OR compactLayout MATCHES "private x: number\\[\\]"
+   OR NOT readableLayout MATCHES "private _objects: LayoutGraphObject\\[\\]" OR readableLayout MATCHES "private _indices:")
+    message(FATAL_ERROR "Polymorphic payloads must be a single vertex-indexed column in both naming modes")
+endif()
 string(JSON readableConfig SET "${config}" typescriptDefaults compactGraphNames false)
 file(WRITE "${workspace}" "${readableConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/readable" --check)

@@ -50,7 +50,7 @@ struct VertexColumn {
 
 struct GraphStorageNames {
     std::string outEdges, inEdges, children, parents;
-    std::string kinds, indices, objects;
+    std::string kinds, objects;
     std::string roots, nameIndex, vertexCount;
 };
 
@@ -86,15 +86,14 @@ GraphStorageNames graphStorageNames(const GraphType& model, bool compact, std::s
         .children = name(model.hierarchy, "_children", "c"),
         .parents = name(model.hierarchy, "_parents", "p"),
         .kinds = name(polymorphic, "_kinds", "t"),
-        .indices = name(polymorphic, "_indices", "x"),
-        .objects = name(polymorphic, "_objects", "j"),
+        .objects = name(polymorphic, "_objects", "a"),
         .roots = name(model.parentGraph, "roots", "r"),
         .nameIndex = name(model.nameIndex, "nameIndex", "m"),
         .vertexCount = name(needsCount, "_vertexCount", "n"),
     };
 }
 
-std::vector<VertexColumn> vertexMetadataColumns(const GraphType& model, const GraphStorageNames& names, const std::string& kinds) {
+std::vector<VertexColumn> vertexMetadataColumns(const GraphType& model, const GraphStorageNames& names, const std::string& graphName) {
     std::vector<VertexColumn> columns;
     if (model.incidence) columns.push_back({names.outEdges, "OutE[][]", "[]"});
     if (model.bidirectional) columns.push_back({names.inEdges, "OutE[][]", "[]"});
@@ -104,8 +103,8 @@ std::vector<VertexColumn> vertexMetadataColumns(const GraphType& model, const Gr
         else columns.push_back({names.parents, "number[]", "parent"});
     }
     if (!model.alternatives.empty()) {
-        columns.push_back({names.kinds, kinds + "[]", "id"});
-        columns.push_back({names.indices, "number[]", "objectIndex"});
+        columns.push_back({names.kinds, graphName + "Value[]", "id"});
+        columns.push_back({names.objects, graphName + "Object[]", "object"});
     }
     return columns;
 }
@@ -132,14 +131,11 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
         const auto key = "component" + components.at(*model.nameComponentIndex).tagName;
         out << "        if (this." << names.nameIndex << ".has(" << key << ")) throw new Error('Duplicate vertex name');\n";
     }
-    if (polymorphic)
-        out << "        const objects = this." << names.objects << "[id];\n        const objectIndex = objects.length;\n";
     if (model.parentGraph)
         out << "        const siblings = parent === this.N ? this." << names.roots << " : this." << names.children << "[parent];\n";
     else if (model.hierarchy && !model.separateEdges)
         out << "        const siblings = this." << names.children << "[parent];\n";
     out << "        try {\n";
-    if (polymorphic) out << "            objects.push(object);\n";
     for (const auto& column : columns)
         out << "            this." << column.name << ".push(" << column.initialValue << ");\n";
     if (model.nameIndex)
@@ -152,7 +148,6 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
         out << "            if (parent !== this.N) siblings.push(new OutE(v));\n";
     out << "        } catch (error) {\n";
     if (model.nameIndex) out << "            this." << names.nameIndex << ".delete(component" << components.at(*model.nameComponentIndex).tagName << ");\n";
-    if (polymorphic) out << "            objects.length = objectIndex;\n";
     for (const auto& column : columns) out << "            this." << column.name << ".length = v;\n";
     out << "            throw error;\n        }\n        return v;\n    }\n";
 }
@@ -351,7 +346,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     }
     api.insert("__proto__");
     const auto names = graphStorageNames(model, compactGraphNames, api, node.qualifiedName, classMethods);
-    auto columns = vertexMetadataColumns(model, names, kinds);
+    auto columns = vertexMetadataColumns(model, names, node.name);
     for (auto& component : components) {
         while (!api.insert(component.storageName).second) component.storageName += '_';
         columns.push_back({component.storageName, typeScriptArrayName(component.type), "component" + component.tagName});
@@ -405,7 +400,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "\n    // MutableGraph\n    clear (): void {\n";
         if (vertexList.empty()) out << "        this." << names.vertexCount << " = 0;\n";
         for (const auto& column : columns) out << "        this." << column.name << ".length = 0;\n";
-        for (const auto& alt : alternatives) out << "        this." << names.objects << "[" << kinds << "." << alt.tagName << "].length = 0;\n";
         if (model.nameIndex) out << "        this." << names.nameIndex << ".clear();\n";
         if (model.parentGraph) out << "        this." << names.roots << ".length = 0;\n";
         for (const auto& f : fields) {
@@ -454,14 +448,14 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (!alternatives.empty()) {
         out << "\n    // PolymorphicGraph\n    h (id: " << kinds << ", v: number): boolean {\n        return this.w(v) === id;\n    }\n"
             << "    w (v: number): " << kinds << " {\n        return this." << names.kinds << "[v];\n    }\n"
-            << "    object (v: number): " << node.name << "Object {\n        return this." << names.objects << "[this.w(v)][this." << names.indices << "[v]];\n    }\n"
+            << "    object (v: number): " << node.name << "Object {\n        return this." << names.objects << "[v];\n    }\n"
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
-            << "        return this." << names.objects << "[id][this." << names.indices << "[v]];\n    }\n"
+            << "        return this." << names.objects << "[v] as " << kinds << "Type[typeof id];\n    }\n"
             << "    visitVertex (visitor: " << node.name << "Visitor, v: number): unknown {\n"
-            << "        const index = this." << names.indices << "[v];\n        switch (this.w(v)) {\n";
+            << "        const object = this." << names.objects << "[v];\n        switch (this.w(v)) {\n";
         for (const auto& alt : alternatives)
             out << "        case " << kinds << "." << alt.tagName << ": return visitor." << alt.visitorMethod()
-                << "(this." << names.objects << "[" << kinds << "." << alt.tagName << "][index]);\n";
+                << "(object as " << alt.type << ");\n";
         out << "        default: throw new Error('Unknown vertex kind');\n        }\n    }\n"
             << "    j<T extends " << node.name << "Object> (v: number): T {\n        return this.object(v) as T;\n    }\n";
     }
@@ -517,11 +511,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (vertexList.empty()) out << "    private " << names.vertexCount << " = 0;\n";
     for (const auto& column : columns)
         out << "    " << storage << column.name << ": " << column.arrayType << " = [];\n";
-    if (!alternatives.empty()) {
-        out << "    " << storage << names.objects << ": { [K in " << kinds << "]: " << kinds << "Type[K][] } = {\n";
-        for (const auto& alt : alternatives) out << "        [" << kinds << "." << alt.tagName << "]: [],\n";
-        out << "    };\n";
-    }
     if (model.nameIndex) out << "    " << storage << names.nameIndex << " = new Map<string, number>();\n";
     if (model.parentGraph) out << "    " << storage << names.roots << ": OutE[] = [];\n";
     std::string initializers;
@@ -537,7 +526,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "\n    [adopt" << node.name << "] (decoded: " << node.name << "): void {\n";
         if (vertexList.empty()) out << "        this." << names.vertexCount << " = decoded." << names.vertexCount << ";\n";
         for (const auto& column : columns) out << "        this." << column.name << " = decoded." << column.name << ";\n";
-        if (!alternatives.empty()) out << "        this." << names.objects << " = decoded." << names.objects << ";\n";
         if (model.nameIndex) out << "        this." << names.nameIndex << " = decoded." << names.nameIndex << ";\n";
         if (model.parentGraph) out << "        this." << names.roots << " = decoded." << names.roots << ";\n";
         for (const auto& f : model.fields) {

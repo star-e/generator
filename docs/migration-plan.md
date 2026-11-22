@@ -70,7 +70,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的声明格式。cocos4 工作区将它设为 `true`，让接口和普通成员函数写成 `T *get()`、`void set(const T &value)` 和 `const std::vector<T *> &items`。记录的指针和引用字段也使用这个设置，例如 `const RenderGraph *renderGraph`。接口的拷贝、移动声明和 flags 赋值运算符也使用这个设置，例如 `T &operator=(T &&rhs)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
 
-工作区可设置 `"typescriptDefaults": { "compactGraphNames": true }` 缩短 TS 图的私有存储名。默认关闭，cocos4 工作区已开启。出边和入边用 `o/i`，子节点和父节点用 `c/p`，载荷标签和下标用 `t/x`。短名与已声明成员重名时按顺序追加数字，例如公开方法 `j(v)` 已占用 `j`，载荷数组就用 `j1`。组件数组沿用 `.spec` 的 `member` 名，字段和方法沿用公开名称。绑定方法中直接使用的私有存储名也会保留。
+工作区可设置 `"typescriptDefaults": { "compactGraphNames": true }` 缩短 TS 图的私有存储名。默认关闭，cocos4 工作区已开启。出边和入边用 `o/i`，子节点和父节点用 `c/p`，载荷标签用 `t`，载荷数组用 `a`。短名与已声明成员重名时按顺序追加数字。组件数组沿用 `.spec` 的 `member` 名，字段和方法沿用公开名称。绑定方法中直接使用的私有存储名也会保留。
 
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 
@@ -427,7 +427,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 TS 图按引擎 `graph.ts` 的 concept 顺序输出成员，只为当前图具备的能力生成分组。共享父子边的图把 `source`、`target` 放在 `IncidenceGraph`，把 `ne` 放在 `EdgeListGraph`。普通边和父子引用的修改接口分别归入 `MutableGraph` 和 `MutableReferenceGraph`。
 
-TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数组，名称取自 `.spec` 的 `member`，例如 `member: names;` 生成 `_names`。组件读写、边的查询与修改、路径操作都由调用者保证顶点编号有效。父子关系和入出边按图声明分别存储。多态图按标签存放载荷，`value(id, v)` 直接用给定标签和顶点在该标签下的下标读取载荷。调用者可用 `h(id, v)` 判断标签是否匹配，或用 `object(v)` 按实际标签读取。归档读取器在添加顶点前校验标签和父编号。
+TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数组，名称取自 `.spec` 的 `member`，例如 `member: names;` 生成 `_names`。组件读写、边的查询与修改、路径操作都由调用者保证顶点编号有效。父子关系和入出边按图声明分别存储。多态图用两个与顶点数等长的数组保存标签和载荷。同一个顶点编号 `v` 直接索引两列。`object(v)` 返回该顶点的载荷，`value(id, v)` 用调用者提供的标签确定返回类型，`visitVertex` 按存储的标签分派。归档读取器在添加顶点前校验标签和父编号。
 
 对照旧清单，`LayoutGraph` 的九个文件对应八个生成产物。原 `LayoutGraphGraphs.h` 的图操作迁入类型成员。C++ 可遍历入边、出边、邻接顶点和全图边，TS 提供 `ie/id/d/adj/ne`、多态类别名称和 `setUpdate`。顶点和组件存储由图持有，调用方用 `object(v)` 或 `value(tag, v)` 读取载荷。旧 TS 写入器访问内部数组 `x[v].j`，跨版本测试分别运行对应写入器，并用旧读取器读回新图。[生成接口测试](../tests/consumer/records/LayoutGraphConsumer.cpp) · [归档对照](../tests/consumer/records/layout-archive.cjs)
 

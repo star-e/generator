@@ -206,7 +206,7 @@ binding typescript {
     import { RecyclePool } from "../../core/memop";
     import type { InputArchive } from "./archive";
     IndexedNames => class {
-        slot (v: number): number { return this._indices[v]; }
+        storedValue (v: number): number { return this._objects[v]; }
     };
     TinyNames => class {
         _labels (v: number): string { return this.getName(v); }
