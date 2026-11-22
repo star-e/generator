@@ -338,9 +338,13 @@ void bindRecordOutput(std::vector<ModuleOutput>& outputs, const Module& module, 
 std::string normalizeLines(const std::string& input, bool crlf) {
     std::string result;
     for (size_t i = 0; i < input.size(); ++i) {
-        if (input[i] == '\r' && i + 1 < input.size() && input[i + 1] == '\n') continue;
-        if (input[i] == '\n' && crlf) result += '\r';
-        result += input[i];
+        if (input[i] != '\r' && input[i] != '\n') {
+            result += input[i];
+            continue;
+        }
+        if (input[i] == '\r' && i + 1 < input.size() && input[i + 1] == '\n') ++i;
+        if (crlf) result += '\r';
+        result += '\n';
     }
     return result;
 }
@@ -348,8 +352,14 @@ std::string normalizeLines(const std::string& input, bool crlf) {
 Files plan(const Json& settings, const fs::path& base, std::optional<std::string_view> selectedModule) {
     rejectJsonTypes(settings, "workspace");
     auto preamble = normalizeLines(read(base / settings.at("preamble").get<std::string>()), false);
-    const auto eol = settings.at("lineEnding").get<std::string>();
-    if (eol != "crlf" && eol != "lf") throw std::runtime_error("lineEnding must be lf or crlf");
+    const auto eol = settings.value("lineEnding", std::string{"native"});
+    if (eol != "native" && eol != "crlf" && eol != "lf")
+        throw std::runtime_error("lineEnding must be native, lf or crlf");
+#ifdef _WIN32
+    const bool crlf = eol != "lf";
+#else
+    const bool crlf = eol == "crlf";
+#endif
     const auto& modules = settings.at("modules");
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
     const auto defaults = settings.value("cppDefaults", Json::object());
@@ -429,7 +439,7 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
                 throw std::runtime_error("reserved manifest output: " + key);
             if (!outputKeys.insert(key).second) throw std::runtime_error("duplicate output " + key);
             if (!selected) return;
-            files.emplace(relative, normalizeLines(content, eol == "crlf"));
+            files.emplace(relative, normalizeLines(content, crlf));
             if (emitManifest) {
                 auto& entry = manifestFiles[relative.generic_string()];
                 entry = {{"module", module.name}, {"source", sourcePath(modules[i].at("spec").get<std::string>())}};
@@ -473,7 +483,7 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
     }
     if (emitManifest) {
         Json manifest = {{"schemaVersion", 1}, {"files", std::move(manifestFiles)}};
-        files.emplace(manifestName, manifest.dump(2) + '\n');
+        files.emplace(manifestName, normalizeLines(manifest.dump(2) + '\n', crlf));
     }
     return files;
 }

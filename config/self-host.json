@@ -1,7 +1,6 @@
 {
   "outputRoot": "../build/self-host",
   "manifest": { "sourceRoot": ".." },
-  "lineEnding": "lf",
   "preamble": "preamble.txt",
   "modules": [
     { "spec": "../spec/codegen/host-types.spec" },

@@ -1,0 +1,26 @@
+include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
+test_workspace(work)
+file(WRITE "${work}/api.spec" "module Api; namespace cc { struct Item {} }")
+file(WRITE "${work}/preamble.txt" "")
+file(CONFIGURE OUTPUT "${work}/windows.txt" CONTENT "one\ntwo\n" NEWLINE_STYLE CRLF)
+file(CONFIGURE OUTPUT "${work}/unix.txt" CONTENT "one\ntwo\n" NEWLINE_STYLE LF)
+set(config [[{
+    "outputRoot": "out", "preamble": "preamble.txt", "manifest": {},
+    "modules": [{"spec":"api.spec", "typescript":"api.ts",
+                 "runtimeFiles":{"a.txt":"windows.txt","b.txt":"unix.txt"}}]
+}]])
+set(workspace "${work}/workspace.json")
+set(generate "${TOOL}" generate --workspace "${workspace}")
+foreach(style IN ITEMS lf crlf native)
+    string(JSON settings SET "${config}" lineEnding "\"${style}\"")
+    file(WRITE "${workspace}" "${settings}")
+    run(${generate})
+    foreach(path IN ITEMS api.ts a.txt b.txt codegen-generated-manifest.json)
+        check_line_endings("${work}/out/${path}" "${style}")
+    endforeach()
+    run("${CMAKE_COMMAND}" -E compare_files "${work}/out/a.txt" "${work}/out/b.txt")
+    run(${generate} --check --diff)
+endforeach()
+file(WRITE "${workspace}" "${config}")
+run(${generate} --check --diff)
+finish_workspace("${work}")

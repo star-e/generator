@@ -1,3 +1,2 @@
-src/generated/** text eol=lf
-src/codegen-generated-manifest.json text eol=lf
-/codegen-generated-manifest.json text eol=lf
+src/generated/** text
+codegen-generated-manifest.json text

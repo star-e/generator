@@ -46,9 +46,9 @@ ctest --test-dir build/host --output-on-failure
 build/host/cocos-codegen generate --workspace config/workspace.json --output ../cocos4 --check --module ArchiveInterface
 ```
 
-`--module` 取 `.spec` 声明的模块名，区分大小写，只能与 `--check` 一起使用。生成器加载完整工作区以解析导入，按模块归属检查生成文件和 `runtimeFiles` 副本。目标目录可包含手写代码，也可省略工作区清单。匹配时显示文件数，缺失或变化时列出路径并返回 1，加 `--diff` 可查看第一处字节差异。引擎工作区指定 CRLF 换行，因此使用 LF 的检出会报告换行差异。未知模块返回 2。
+`--module` 取 `.spec` 声明的模块名，区分大小写，只能与 `--check` 一起使用。生成器加载完整工作区以解析导入，按模块归属检查生成文件和 `runtimeFiles` 副本。目标目录可包含手写代码，也可省略工作区清单。匹配时显示文件数，缺失或变化时列出路径并返回 1，加 `--diff` 可查看第一处字节差异。引擎代码、自举代码、运行时副本和 JSON 清单默认使用运行生成器的平台换行，Windows 为 CRLF，其他平台为 LF。工作区可用 `lineEnding` 显式选择 `native`、`lf` 或 `crlf`。未知模块返回 2。
 
-引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `cocos/rendering/custom/graph-dfs.ts` 来源于 `runtime/typescript/graph-dfs.ts`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序、采用 LF，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
+引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `cocos/rendering/custom/graph-dfs.ts` 来源于 `runtime/typescript/graph-dfs.ts`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序，与同一工作区的源码采用相同的换行规则，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
 
 工作区通过 `ModuleInput` 把每个模块的声明、C++ 定义头、前置声明头和 TS 输出信息交给建图器。建图时，标量别名使用前置声明头，模板实例别名和图标签使用定义头。外部类型的头文件和 TS 导入来源沿用 `extern module` 的声明与配置。[建图输入](../src/model/TypeGraphBuilder.h) · [工作区](../src/workspace/Workspace.cpp)
 
@@ -232,7 +232,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 `TypeGraph` 用 `vertex_storage: indexed(graph::BidirectionalStorage<uint32_t>);` 指定宿主的双向边存储。它适用于声明了顶点遍历、出边和入边的平面组件图。存储模板按顶点编号类型实例化，提供顶点与边的遍历、查询和 `reserve`。生成器为每个组件生成 `std::vector` 和访问方法，为图生成字段和方法声明。`appendNode` 的登记与回滚、按名称查找和类型复用由 `TypeGraph.cpp` 实现。[图存储](../src/model/GraphSupport.h) · [图操作](../src/model/TypeGraph.cpp)
 
-1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在空目录生成第一轮，逐文件检查路径、LF 换行和快照字节。
+1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在空目录生成第一轮，逐文件检查路径和平台换行，再与 Git 中的快照核对内容。
 2. 在新的构建目录将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮输出，用该目录中的模型编译候选生成器。
 3. 候选生成器在第二个空目录再生成一次，逐字节比较两轮的自举文件，并核对引擎工作区的生成结果，然后运行当前配置启用的其余回归测试。[自举测试](../tests/SelfHost.cmake)
 
