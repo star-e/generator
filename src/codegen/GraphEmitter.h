@@ -15,6 +15,6 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& header, std::
                   std::set<std::string>& headers, std::set<const TypeNode*>& forwardTypes,
                   const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive);
 void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& valueImports, TypeImports& typeImports,
-                         const std::vector<BoundField>& fields, std::string_view classMethods);
+                         const std::vector<BoundField>& fields, std::string_view classMethods, std::set<std::string> memberNames);
 
 } // namespace cc::codegen

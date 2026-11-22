@@ -273,6 +273,7 @@ const layout = toggles.addVertex(TogglesValue.Layout, nested);
 assert(toggles.value(TogglesValue.Layout, layout) === nested, 'Imported graph payload');
 const tiny = new TinyNames();
 for (let i = 0; i < 255; ++i) assert(tiny.addVertex('v') === i);
+assert(tiny._labels(0) === 'v', 'Component storage must preserve bound methods with the same name');
 let full = false;
 try { tiny.addVertex('overflow'); } catch (e) { full = e instanceof RangeError; }
 assert(full && tiny.nv() === tiny.N, 'Narrow vertex descriptor');
@@ -293,7 +294,7 @@ catch (e) { rolledBack = e === linkFailure; }
 finally { Reflect.deleteProperty(children, 'push'); }
 assert(rolledBack && !indexed.contains('child') && indexed.numChildren(0) === 0);
 assert([indexed['_children'], indexed['_parents'], indexed['_kinds'], indexed['_indices'],
-    indexed['_components'].Name, indexed['_components'].Count, indexed['_objects'][IndexedNamesValue.Count]]
+    indexed['_labels'], indexed['_counts'], indexed['_objects'][IndexedNamesValue.Count]]
     .every(column => column.length === 1), 'Failed insertion must restore every column');
 assert(indexed.addVertex(IndexedNamesValue.Count, 19, 29, 'child', 0) === 1);
 const writer = new BinaryOutputArchive();

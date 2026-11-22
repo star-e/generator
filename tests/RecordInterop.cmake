@@ -205,6 +205,7 @@ binding typescript {
     import { RecyclePool } from "../../core/memop";
     import type { InputArchive } from "./archive";
     TinyNames => class {
+        _labels (v: number): string { return this.getName(v); }
         describe (text: string, rate: UpdateFrequency): string {
             // } and )ts" belong to the method, as do braces in regular expressions.
             if (rate < 0) { return text; }

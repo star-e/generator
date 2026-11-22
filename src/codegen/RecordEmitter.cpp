@@ -1526,7 +1526,12 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             if (emitTs) {
                 if (model->mutableGraph) validateObjectResets(node, model->fields, fields, keepNone);
-                emitTypeScriptGraph(graph, id, ts, deps.valueImports, deps.typeImports, fields, classMethods);
+                std::set<std::string> methodNames;
+                if (methods != output.classMethods.end()) {
+                    for (const auto& method : methods->second)
+                        if (const auto* declaration = std::get_if<TypeScriptClassMethod>(&method)) methodNames.insert(declaration->name);
+                }
+                emitTypeScriptGraph(graph, id, ts, deps.valueImports, deps.typeImports, fields, classMethods, std::move(methodNames));
                 usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
                     if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");

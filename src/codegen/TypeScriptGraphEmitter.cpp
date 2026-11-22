@@ -10,9 +10,8 @@ namespace {
 struct Column {
     std::string tagName;
     std::string type;
+    std::string storageName;
     bool scalar;
-
-    std::string componentStorage() const { return "_components." + tagName; }
 
     std::string visitorMethod() const {
         auto method = tagName;
@@ -37,7 +36,7 @@ std::vector<Column> bindColumns(const TypeGraph& graph, const TypeNode& owner,
             (std::holds_alternative<RecordType>(value.data) || std::holds_alternative<GraphType>(value.data)))
             throw std::runtime_error(context + ": missing TypeScript import mapping for " + value.qualifiedName);
         const auto& type = boundTypeScriptName(graph, id, owner.module, imports, context);
-        result.push_back({column.publicName, type,
+        result.push_back({column.publicName, type, "_" + column.name,
                           type == "number" || type == "boolean" || type == "string" || std::holds_alternative<EnumType>(value.data)});
     }
     return result;
@@ -82,7 +81,7 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     if (model.hierarchy)
         out << "        if (parent !== this.N && (!Number.isInteger(parent) || parent < 0 || parent >= v)) {\n"
             << "            throw new RangeError('Invalid parent vertex');\n        }\n";
-    if (columns.empty() && components.empty()) {
+    if (columns.empty()) {
         out << "        ++this._vertexCount;\n        return v;\n    }\n";
         return;
     }
@@ -94,8 +93,6 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
         out << "        const objects = this._objects[id];\n        const objectIndex = objects.length;\n";
     out << "        try {\n";
     if (polymorphic) out << "            objects.push(object);\n";
-    for (const auto& component : components)
-        out << "            this." << component.componentStorage() << ".push(component" << component.tagName << ");\n";
     for (const auto& column : columns)
         out << "            this." << column.name << ".push(" << column.initialValue << ");\n";
     if (model.nameIndex)
@@ -110,7 +107,6 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     out << "        } catch (error) {\n";
     if (model.nameIndex) out << "            this.nameIndex.delete(component" << components.at(*model.nameComponentIndex).tagName << ");\n";
     if (polymorphic) out << "            objects.length = objectIndex;\n";
-    for (const auto& component : components) out << "            this." << component.componentStorage() << ".length = v;\n";
     for (const auto& column : columns) out << "            this." << column.name << ".length = v;\n";
     out << "            throw error;\n        }\n        return v;\n    }\n";
 }
@@ -181,23 +177,18 @@ void adjacencyMutation(std::ostream& out, bool references, bool bidirectional) {
 } // namespace
 
 void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, TypeImports& valueImports, TypeImports& typeImports,
-                         const std::vector<BoundField>& fields, std::string_view classMethods) {
+                         const std::vector<BoundField>& fields, std::string_view classMethods, std::set<std::string> api) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     if (model.keyComponentIndex || model.removeVertex)
         throw std::runtime_error(node.qualifiedName + ": component_index and remove_vertex currently require C++ graph output");
-    const auto components = bindColumns(graph, node, model.components, typeImports);
+    auto components = bindColumns(graph, node, model.components, typeImports);
     const auto alternatives = bindColumns(graph, node, model.alternatives, typeImports);
     const auto hasSetter = [&](size_t i) { return components[i].scalar && (i != model.nameComponentIndex || ((model.nameIndex || model.incidence) && model.mutableGraph)); };
     const std::string kinds = node.name + "Value";
-    const auto columns = vertexMetadataColumns(model, kinds);
-    std::string vertexList;
-    if (!columns.empty()) vertexList = "this." + columns.front().name;
-    else if (!components.empty()) vertexList = "this." + components.front().componentStorage();
-    const auto vertexCount = vertexList.empty() ? "this._vertexCount" : vertexList + ".length";
-    std::set<std::string> api{"constructor", "N"};
-    if (vertexList.empty()) api.insert("_vertexCount");
-    if (!components.empty()) api.insert("_components");
+    auto columns = vertexMetadataColumns(model, kinds);
+    api.insert({"constructor", "N"});
+    if (columns.empty() && components.empty()) api.insert("_vertexCount");
     if (!alternatives.empty()) api.insert("_objects");
     for (const auto& column : columns) api.insert(column.name);
     if (model.vertexList) api.insert({"v", "nv"});
@@ -232,8 +223,16 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         api.insert("get" + components[i].tagName);
         if (hasSetter(i)) api.insert("set" + components[i].tagName);
     }
-    for (const auto& field : fields)
-        if (api.contains(field.name)) throw std::runtime_error(node.qualifiedName + ": graph field collides with TypeScript member " + field.name);
+    for (const auto& field : fields) {
+        if (!api.insert(field.name).second) throw std::runtime_error(node.qualifiedName + ": graph field collides with TypeScript member " + field.name);
+    }
+    api.insert("__proto__");
+    for (auto& component : components) {
+        while (!api.insert(component.storageName).second) component.storageName += '_';
+        columns.push_back({component.storageName, typeScriptArrayName(component.type), "component" + component.tagName});
+    }
+    const auto vertexList = columns.empty() ? std::string{} : "this." + columns.front().name;
+    const auto vertexCount = columns.empty() ? "this._vertexCount" : vertexList + ".length";
     if (model.hierarchy && std::ranges::find(components, "Parent", &Column::tagName) != components.end())
         throw std::runtime_error(node.qualifiedName + ": component accessor collides with TypeScript getParent");
     if (!alternatives.empty()) {
@@ -265,12 +264,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (vertexList.empty()) out << "    private _vertexCount = 0;\n";
     for (const auto& column : columns)
         out << "    " << storage << column.name << ": " << column.arrayType << " = [];\n";
-    if (!components.empty()) {
-        out << "    " << storage << "_components = {\n";
-        for (const auto& component : components)
-            out << "        " << component.tagName << ": new Array<" << component.type << ">(),\n";
-        out << "    };\n";
-    }
     if (!alternatives.empty()) {
         out << "    " << storage << "_objects: { [K in " << kinds << "]: " << kinds << "Type[K][] } = {\n";
         for (const auto& alt : alternatives) out << "        [" << kinds << "." << alt.tagName << "]: [],\n";
@@ -291,7 +284,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "\n    [adopt" << node.name << "] (decoded: " << node.name << "): void {\n";
         if (vertexList.empty()) out << "        this._vertexCount = decoded._vertexCount;\n";
         for (const auto& column : columns) out << "        this." << column.name << " = decoded." << column.name << ";\n";
-        if (!components.empty()) out << "        this._components = decoded._components;\n";
         if (!alternatives.empty()) out << "        this._objects = decoded._objects;\n";
         if (model.nameIndex) out << "        this.nameIndex = decoded.nameIndex;\n";
         if (model.parentGraph) out << "        this.roots = decoded.roots;\n";
@@ -321,7 +313,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "\n    clear (): void {\n";
         if (vertexList.empty()) out << "        this._vertexCount = 0;\n";
         for (const auto& column : columns) out << "        this." << column.name << ".length = 0;\n";
-        for (const auto& component : components) out << "        this." << component.componentStorage() << ".length = 0;\n";
         for (const auto& alt : alternatives) out << "        this._objects[" << kinds << "." << alt.tagName << "].length = 0;\n";
         if (model.nameIndex) out << "        this.nameIndex.clear();\n";
         if (model.parentGraph) out << "        this.roots.length = 0;\n";
@@ -350,17 +341,17 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     for (size_t i = 0; i < components.size(); ++i) {
         const auto& component = components[i];
         out << "\n    get" << component.tagName << " (v: number): " << component.type << " {\n"
-            << "        return this." << component.componentStorage() << "[v];\n    }\n";
+            << "        return this." << component.storageName << "[v];\n    }\n";
         if (hasSetter(i)) {
             out << "    set" << component.tagName << " (v: number, value: " << component.type << "): void {\n";
             if (model.nameIndex && i == model.nameComponentIndex) {
-                out << "        const previous = this." << component.componentStorage() << "[v];\n"
+                out << "        const previous = this." << component.storageName << "[v];\n"
                     << "        if (previous === value) return;\n"
                     << "        if (this.nameIndex.has(value)) throw new Error('Duplicate vertex name');\n"
                     << "        this.nameIndex.set(value, v);\n        this.nameIndex.delete(previous);\n"
-                    << "        this." << component.componentStorage() << "[v] = value;\n";
+                    << "        this." << component.storageName << "[v] = value;\n";
             } else {
-                out << "        this." << component.componentStorage() << "[v] = value;\n";
+                out << "        this." << component.storageName << "[v] = value;\n";
             }
             out << "    }\n";
         }

@@ -93,6 +93,15 @@ inline const TypeNode& typeScriptElement(const TypeGraph& graph, TypeId id) {
     return graph.node(typeScriptElementId(graph, id));
 }
 
+inline std::string typeScriptArrayName(const std::string& element, ContainerKind container = ContainerKind::None) {
+    if (container != ContainerKind::None ||
+        element.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$.") == std::string::npos) {
+        return element + "[]";
+    }
+    // Preserve grouping in explicit bindings such as "A | B".
+    return "Array<" + element + ">";
+}
+
 inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph, const TypeNode& container) {
     const auto& arguments = std::get<TemplateInstanceType>(container.data).arguments;
     const auto& first = typeScriptElement(graph, std::get<TypeId>(arguments.front()));
@@ -104,12 +113,7 @@ inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph
         if (!value.typescriptName) return std::nullopt;
         return "Map<" + (usesStringMapKey(container, 0, first) ? "string" : name) + ", " + *value.typescriptName + ">";
     }
-    if (first.typescriptContainer != ContainerKind::None ||
-        name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$.") == std::string::npos) {
-        return name + "[]";
-    }
-    // Preserve grouping in explicit bindings such as "A | B".
-    return "Array<" + name + ">";
+    return typeScriptArrayName(name, first.typescriptContainer);
 }
 
 inline std::string formatCppDeclarator(std::string type, std::string_view name, bool spaceBeforeReference) {
