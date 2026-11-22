@@ -61,6 +61,7 @@ struct FrameGraphDispatcher;
 )",
         .mHeader = R"(#include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
+#include "cocos/renderer/pipeline/custom/RenderInterfaceTypes.h"
 
 #ifdef _MSC_VER
     #pragma warning(push)
