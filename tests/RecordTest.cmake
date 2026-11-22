@@ -513,7 +513,9 @@ foreach(output IN ITEMS cpp ts)
         message(FATAL_ERROR "Missing deprecation comment on MODIFY in ${output}")
     endif()
 endforeach()
-foreach(fragment IN ITEMS "enum class AccessType : uint32_t" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
+foreach(fragment IN ITEMS "#include <utility>\n#include \"RenderCommonFwd.h\"\n#include \"cocos/base/Ptr.h\""
+                          "namespace cc::scene {\nclass ReflectionProbe;\n}"
+                          "enum class AccessType : uint32_t" "MODIFY = 0x10," "LEGACY_CHANGE = CHANGE," "uint32_t level{11};"
                           "uint8_t sourceFirstSlice{0XfF};" "uint32_t mipLevels{0xFFFFFFFF};"
                           "gfx::ResolveMode mode{gfx::ResolveMode::AVERAGE};" "ResolvePair(const std::allocator_arg_t&, const allocator_type& alloc, ccstd::pmr::string targetIn = ccstd::pmr::string{}, ccstd::pmr::string sourceIn = ccstd::pmr::string{},"
                           "LightInfo(IntrusivePtr<scene::Light> lightIn = IntrusivePtr<scene::Light>{}, scene::ReflectionProbe* probeIn = nullptr, uint32_t levelIn = 11, bool culledByLightIn = false)")

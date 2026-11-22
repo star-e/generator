@@ -38,6 +38,13 @@ inline void collectCppHeader(const TypeGraph& graph, const TypeModule& consumer,
     }
 }
 
+inline std::string cppForwardDeclaration(const TypeNode& type, std::string keyword) {
+    const auto declaration = keyword + " " + type.name + ";";
+    const auto scope = type.qualifiedName.rfind("::");
+    if (scope == std::string::npos) return declaration;
+    return "namespace " + type.qualifiedName.substr(0, scope) + " {\n" + declaration + "\n}";
+}
+
 inline bool isAssociativeContainer(ContainerKind kind) {
     return kind == ContainerKind::Map || kind == ContainerKind::Set;
 }

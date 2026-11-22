@@ -57,11 +57,8 @@ std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId 
 }
 
 std::string pointerType(const TypeGraph& graph, const TypeModule& module, TypeId id, const TypeNode& resource, Dependencies& deps) {
-    const auto ns = resource.qualifiedName.rfind("::");
-    std::string decl = std::get<ExternalTypeNode>(resource.data).isStruct ? "struct " : "class ";
-    decl += resource.name + ";";
-    if (ns != std::string::npos) decl = "namespace " + resource.qualifiedName.substr(0, ns) + " { " + decl + " }";
-    deps.forwardDeclarations.insert(decl);
+    const auto keyword = std::get<ExternalTypeNode>(resource.data).isStruct ? "struct" : "class";
+    deps.forwardDeclarations.insert(cppForwardDeclaration(resource, keyword));
     return formatTypeName(graph, id, [&](const TypeNode& type) { return cppName(graph, type, module); });
 }
 
@@ -864,11 +861,12 @@ void cppHash(std::ostream& declarations, std::ostream& definitions, const TypeNo
     definitions << "    return seed;\n}\n";
 }
 
-void cppIncludes(std::ostream& out, const std::set<std::string>& includes) {
+void cppIncludes(std::ostream& out, const std::set<std::string>& includes, std::set<std::string> quoted = {}) {
     for (const auto& include : includes) {
         if (include.find('/') == std::string::npos) out << "#include <" << include << ">\n";
-        else out << "#include \"" << include << "\"\n";
+        else quoted.insert(include);
     }
+    for (const auto& include : quoted) out << "#include \"" << include << "\"\n";
 }
 
 void writeNamespace(std::ostream& out, const TypeModule& module, const std::ostringstream& body) {
@@ -1609,9 +1607,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         } else {
             std::ostringstream header;
             header << preamble << "#pragma once\n";
-            cppIncludes(header, deps.headers);
             const auto include = output.forwardHeader.lexically_relative(output.header.parent_path());
-            header << "#include \"" << include.generic_string() << "\"\n";
+            cppIncludes(header, deps.headers, {include.generic_string()});
             for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
             writeNamespace(header, module, cpp);
             if (!hashDefinitions.view().empty()) {

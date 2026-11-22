@@ -29,8 +29,6 @@
  */
 #pragma once
 #include <filesystem>
-#include "generated/SourceLocation.h"
-#include "generated/TypeGraphTypes.h"
 #include <map>
 #include <optional>
 #include <set>
@@ -39,6 +37,8 @@
 #include <variant>
 #include <vector>
 #include "SyntaxFwd.h"
+#include "generated/SourceLocation.h"
+#include "generated/TypeGraphTypes.h"
 
 namespace cc {
 

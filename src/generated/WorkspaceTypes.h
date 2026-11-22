@@ -29,7 +29,6 @@
  */
 #pragma once
 #include <filesystem>
-#include "generated/SyntaxTypes.h"
 #include <map>
 #include <optional>
 #include <set>
@@ -37,6 +36,7 @@
 #include <utility>
 #include <vector>
 #include "WorkspaceFwd.h"
+#include "generated/SyntaxTypes.h"
 
 namespace cc {
 

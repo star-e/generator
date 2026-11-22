@@ -29,9 +29,7 @@
  */
 #pragma once
 #include <cstdint>
-#include "generated/SourceLocation.h"
 #include <map>
-#include "model/GraphSupport.h"
 #include <optional>
 #include <string>
 #include <tuple>
@@ -39,6 +37,8 @@
 #include <variant>
 #include <vector>
 #include "TypeGraphFwd.h"
+#include "generated/SourceLocation.h"
+#include "model/GraphSupport.h"
 
 namespace cc {
 

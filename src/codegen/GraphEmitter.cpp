@@ -727,9 +727,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (tag.module != node.module && !tag.cppHeader.empty()) {
             headers.insert(tag.cppHeader);
         } else if (component.tag.value > id.value || tag.module != node.module) {
-            const auto ns = tag.qualifiedName.rfind("::");
-            const auto declaration = "struct " + tag.name + ";";
-            forwards.insert(ns == std::string::npos ? declaration : "namespace " + tag.qualifiedName.substr(0, ns) + " { " + declaration + " }");
+            forwards.insert(cppForwardDeclaration(tag, "struct"));
         }
         return formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
             collectCppHeader(graph, graph.modules.at(node.module.value), type, headers);
