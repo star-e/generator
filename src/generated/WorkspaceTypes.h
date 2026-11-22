@@ -65,6 +65,7 @@ struct RecordOutput {
     std::set<std::string> jsbRecords;
     std::set<std::filesystem::path> jsbIncludes;
     std::optional<std::filesystem::path> typescript;
+    bool compactGraphNames{false};
     std::set<std::string> namedEnums;
     std::set<std::string> runtimeEnums;
     InterfaceBindings interfaceBindings;

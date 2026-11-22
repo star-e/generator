@@ -2,6 +2,7 @@
   "outputRoot": "../build/staging/cocos4",
   "manifest": { "sourceRoot": ".." },
   "preamble": "preamble.txt",
+  "typescriptDefaults": { "compactGraphNames": true },
   "cppDefaults": {
     "root": "native",
     "dir": "cocos/renderer/pipeline/custom",

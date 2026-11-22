@@ -365,6 +365,9 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
     if (!modules.is_array() || modules.empty()) throw std::runtime_error("expected modules array");
     const auto defaults = settings.value("cppDefaults", Json::object());
     checkKeys(defaults, {"root", "dir", "spaceBeforeReference"}, "cppDefaults");
+    const auto tsDefaults = settings.value("typescriptDefaults", Json::object());
+    checkKeys(tsDefaults, {"compactGraphNames"}, "typescriptDefaults");
+    const bool compactGraphNames = tsDefaults.value("compactGraphNames", false);
     std::vector<ModuleInput> inputs;
     std::vector<ModuleOutput> outputs;
     for (const auto& entry : modules) {
@@ -393,6 +396,7 @@ Files plan(const Json& settings, const fs::path& base, std::optional<std::string
         if (config.contains("cpp")) loadCppOutput(typesOutput, config.at("cpp"), defaults, module);
         fs::path tsModule;
         if (config.contains("typescript")) {
+            typesOutput.compactGraphNames = compactGraphNames;
             const auto& ts = config.at("typescript");
             if (!ts.is_string()) checkKeys(ts, {"file", "format"}, "typescript");
             const auto path = outputPath(ts.is_string() ? ts : ts.at("file"));

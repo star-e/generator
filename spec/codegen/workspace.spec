@@ -27,6 +27,7 @@ namespace cc::codegen {
         jsbRecords: std::set<std::string>;
         jsbIncludes: std::set<std::filesystem::path>;
         typescript: std::optional<std::filesystem::path>;
+        compactGraphNames: bool = false;
         namedEnums: std::set<std::string>;
         runtimeEnums: std::set<std::string>;
         interfaceBindings: InterfaceBindings;

@@ -70,6 +70,8 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的声明格式。cocos4 工作区将它设为 `true`，让接口和普通成员函数写成 `T *get()`、`void set(const T &value)` 和 `const std::vector<T *> &items`。记录的指针和引用字段也使用这个设置，例如 `const RenderGraph *renderGraph`。接口的拷贝、移动声明和 flags 赋值运算符也使用这个设置，例如 `T &operator=(T &&rhs)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
 
+工作区可设置 `"typescriptDefaults": { "compactGraphNames": true }` 缩短 TS 图的私有存储名。默认关闭，cocos4 工作区已开启。出边和入边用 `o/i`，子节点和父节点用 `c/p`，载荷标签和下标用 `t/x`。短名与已声明成员重名时按顺序追加数字，例如公开方法 `j(v)` 已占用 `j`，载荷数组就用 `j1`。组件数组沿用 `.spec` 的 `member` 名，字段和方法沿用公开名称。绑定方法中直接使用的私有存储名也会保留。
+
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 
 普通模块的 `typescript` 字符串指定要生成的 `.ts` 文件。编辑器设置使用 `{ "file": ".../builtin-pipeline-types.ts", "format": "settings" }`，可与同一模块的 C++ 输出组合。在 `.spec` 的模块声明上用 `@pool` 启用 TS 对象池。枚举注册和 JSB 导出类型写在绑定块里。`runtimeFiles` 按显式列出的源和目标复制配套文件。旧工作区的 `backend` 和扁平文件路径仍可读取。旧版 `forward` 的布尔值按默认规则处理，字符串指定的文件名继续有效。[工作区输出测试](../tests/WorkspaceOutputs.cmake)

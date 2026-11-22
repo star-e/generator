@@ -171,6 +171,7 @@ namespace cc {
         name_index;
         named_graph { component: cc::render::Name_; }
         polymorphic_graph { Count_: uint32_t { member: values; } }
+        @transient c: uint32_t = 7;
     }
     graph HierarchyOnly {
         vertex_descriptor Index = uint32_t;
@@ -204,6 +205,9 @@ binding typescript {
     import type { UpdateFrequency } from "./types";
     import { RecyclePool } from "../../core/memop";
     import type { InputArchive } from "./archive";
+    IndexedNames => class {
+        slot (v: number): number { return this._indices[v]; }
+    };
     TinyNames => class {
         _labels (v: number): string { return this.getName(v); }
         describe (text: string, rate: UpdateFrequency): string {
@@ -220,6 +224,7 @@ binding typescript {
         }
         methods R"ts(
     legacy (): number { return 1; }
+    o (): number { return this.nv(); }
 )ts";
     };
 }
