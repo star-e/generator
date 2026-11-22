@@ -1,6 +1,12 @@
 include("${CMAKE_CURRENT_LIST_DIR}/TestSupport.cmake")
 test_workspace(work)
 set(stage "${work}/engine")
+set(legacy "${work}/baseline")
+set(nativeCustom "native/cocos/renderer/pipeline/custom")
+set(webCustom "cocos/rendering/custom")
+file(READ "${SOURCE}/config/baseline.json" manifest)
+string(JSON engineCommit GET "${manifest}" engineCommit)
+export_engine_baseline("${engineCommit}" "${legacy}" "${nativeCustom}" "${webCustom}")
 # Compile a uint32_t high bit alongside the production enums in both consumer languages.
 file(COPY "${SOURCE}/spec" "${SOURCE}/config" "${SOURCE}/runtime" DESTINATION "${work}")
 file(WRITE "${work}/spec/text.spec" [[extern module Text;
@@ -380,8 +386,8 @@ file(WRITE "${stage}/DispatcherQueries.cpp" [[
 namespace cc::render {
 ]] "${dispatcherQueries}\n}\n")
 # Compile the engine's original printer and visibility formatter against its own graph types.
-file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/LayoutGraphUtils.cpp" nativeLayoutUtils)
-source_between(nativeLayoutUtils "ccstd::string getName(gfx::ShaderStageFlagBit" "gfx::TextureType getTextureType(" legacyPrint)
+file(READ "${legacy}/${nativeCustom}/LayoutGraphUtils.cpp" legacyLayoutUtils)
+source_between(legacyLayoutUtils "ccstd::string getName(gfx::ShaderStageFlagBit" "gfx::TextureType getTextureType(" legacyPrint)
 file(WRITE "${stage}/LegacyLayoutGraphPrint.cpp" [[
 #include "cocos/renderer/pipeline/custom/LayoutGraphGraphs.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphNames.h"
@@ -390,23 +396,23 @@ file(WRITE "${stage}/LegacyLayoutGraphPrint.cpp" [[
 namespace cc::render {
 namespace {
 ]] "${legacyPrint}\n} // namespace cc::render\n")
-# The descriptor type mapping is still provided by the engine for both consumers.
+file(READ "${ENGINE}/${nativeCustom}/LayoutGraphUtils.cpp" nativeLayoutUtils)
 source_between(nativeLayoutUtils "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" descriptorTypeMapping)
 file(WRITE "${stage}/DescriptorTypeMapping.cpp" [[
 #include "cocos/base/Log.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 namespace cc::render {
 ]] "${descriptorTypeMapping}\n}\n")
-source_between(nativeLayoutUtils "void initializeDescriptorSetLayoutInfo(" "\nnamespace {" legacyBindings)
-source_between(nativeLayoutUtils "gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(" "void generateConstantMacros(" legacyPerPass)
+source_between(legacyLayoutUtils "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" legacyMapping)
+source_between(legacyLayoutUtils "void initializeDescriptorSetLayoutInfo(" "\nnamespace {" legacyBindings)
+source_between(legacyLayoutUtils "gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(" "void generateConstantMacros(" legacyPerPass)
 file(WRITE "${stage}/LegacyLayoutDescriptorSet.cpp" [[
 #include "gfx-base/GFXDevice.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphGraphs.h"
 namespace cc::render {
-gfx::DescriptorType getGfxDescriptorType(DescriptorTypeOrder type);
-]] "${legacyBindings}\n${legacyPerPass}\n}\n")
+]] "${legacyMapping}\n${legacyBindings}\n${legacyPerPass}\n}\n")
 set(build "${work}/build")
-build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}")
+build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}" "-DLEGACY_ENGINE=${legacy}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)
 run("${consumer}" pmr-move-termination)
 set(pathCases "${work}/layout-paths.bin")
@@ -483,6 +489,12 @@ set(tsc "${ENGINE}/node_modules/typescript/bin/tsc")
 run("${node}" "${tsc}" --strict --noImplicitAny false --skipLibCheck --target es6 --module commonjs --declaration
     --declarationDir "${stage}/cocos/rendering/custom" --outDir "${work}/js/rendering/custom"
     "${ENGINE}/cocos/rendering/custom/graph.ts")
+set(legacyWeb "${stage}/cocos/rendering/legacy")
+run("${node}" "${tsc}" --strict --noImplicitAny false --skipLibCheck --target es6 --module commonjs --declaration
+    --declarationDir "${legacyWeb}" --outDir "${work}/js/rendering/legacy" "${legacy}/${webCustom}/graph.ts")
+foreach(module IN ITEMS layout-graph layout-graph-names types types-names serialization archive binary-archive)
+    configure_file("${legacy}/${webCustom}/${module}.ts" "${legacyWeb}/${module}.ts" COPYONLY)
+endforeach()
 # Isolate the engine's exported enums without loading its graphics device at runtime.
 file(READ "${ENGINE}/cocos/gfx/base/define.ts" gfx)
 file(MAKE_DIRECTORY "${stage}/cocos/gfx")
@@ -524,8 +536,6 @@ file(WRITE "${stage}/cocos/gfx/index.ts" "${gfxEnums}${gfxClasses}"
 set(constants "${stage}/cocos/internal-constants.d.ts")
 file(WRITE "${constants}" "declare module 'internal:constants' { export const COCOS_RUNTIME: boolean; export const HTML5: boolean; }\n")
 list(APPEND declarations "${constants}")
-file(READ "${ENGINE}/cocos/rendering/custom/layout-graph.ts" layout)
-# Compile the old graph and its archive functions separately from the generated implementation.
 function(ts_definition source symbol result)
     string(REGEX MATCH "${symbol} [^\n]+[{]\n([ \t][^\n]*\n|\n)*[}]" body "${${source}}")
     if(NOT body)
@@ -574,56 +584,30 @@ foreach(type IN ITEMS Uniform UniformBlock DescriptorSetLayoutBinding Descriptor
 endforeach()
 file(WRITE "${custom}/serialization.ts" "import { Uniform, UniformBlock, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo } from '../../gfx';\n"
     "import type { InputArchive, OutputArchive } from './archive';\n${gfxCodec}")
-source_between(layout "function resetDescriptorSetLayoutInfo " "export function saveDescriptor (" legacyGraph)
-string(FIND "${layout}" "export function saveDescriptor (" codecStart)
-if(codecStart EQUAL -1)
-    message(FATAL_ERROR "Missing engine layout graph codecs")
-endif()
-string(SUBSTRING "${layout}" ${codecStart} -1 legacyArchive)
-string(REGEX MATCH "import [{][^\n]* from './graph';" graphImports "${layout}")
-file(WRITE "${custom}/legacy-layout.ts" "${graphImports}\nimport { ParameterType, UpdateFrequency, RenderCommonObjectPool } from './types';\n"
-    "import { RecyclePool } from '../../core/memop';\n"
-    "import { COCOS_RUNTIME, HTML5 } from 'internal:constants';\n"
-    "import { DescriptorSet, DescriptorSetLayout, DescriptorSetLayoutInfo, PipelineLayout, Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, UniformBlock, ViewDimension } from '../../gfx';\n"
-    "import type { InputArchive, OutputArchive } from './archive';\n"
-    "import { saveUniformBlock, loadUniformBlock, saveDescriptorSetLayoutInfo, loadDescriptorSetLayoutInfo } from './serialization';\n${legacyGraph}\n${legacyArchive}")
-foreach(name IN ITEMS DescriptorBlockIndex DescriptorGroupBlockIndex)
-    string(REGEX MATCH "export class ${name} [^\n]+(\n[ \t][^\n]*)*\n}" definition "${layout}")
-    if(NOT definition)
-        message(FATAL_ERROR "Missing ${name} class in engine layout-graph.ts")
-    endif()
-    string(APPEND engineIndices "${definition}\n")
-endforeach()
-set(baseline "${stage}/cocos/rendering/custom/engine-index.ts")
-file(WRITE "${baseline}" "import { ParameterType, UpdateFrequency } from './types';\n"
-    "import { DescriptorTypeOrder } from './layout-graph';\n"
-    "import { Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, ViewDimension } from '../../gfx';\n${engineIndices}")
 set(names "cocos/rendering/custom/types-names.ts")
 run("${CMAKE_COMMAND}" -E compare_files "${stage}/${names}" "${ENGINE}/${names}")
 set(layoutNames "cocos/rendering/custom/layout-graph-names.ts")
-run("${CMAKE_COMMAND}" -E compare_files "${stage}/${layoutNames}" "${ENGINE}/${layoutNames}")
-file(READ "${ENGINE}/${layoutNames}" legacyNames)
-string(REPLACE "from './layout-graph'" "from './legacy-layout'" legacyNames "${legacyNames}")
-file(WRITE "${custom}/legacy-layout-names.ts" "${legacyNames}")
+run("${CMAKE_COMMAND}" -E compare_files --ignore-eol "${stage}/${layoutNames}" "${legacy}/${layoutNames}")
 set(enumConsumer "${stage}/cocos/rendering/custom/enum-consumer.ts")
 configure_file("${SOURCE}/tests/consumer/records/enum-consumer.ts" "${enumConsumer}" COPYONLY)
 
 # Compile the editor's lookup, traversal and descriptor propagation against the generated graph.
-file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-editor.ts" editor)
-file(READ "${ENGINE}/cocos/rendering/custom/layout-graph-utils.ts" layoutUtils)
-source_between(layoutUtils "export function sortDescriptorBlocks<" "function createDescriptorInfo (" layoutConversionUtils)
-ts_definition(layoutUtils "export function getGfxDescriptorType" gfxDescriptorType)
-source_between(layoutUtils "function createDescriptorInfo (" "function getDescriptorBlockData (" gfxDescriptorSets)
-source_between(editor "function getGfxTypeName (" "function convertDescriptorBlock (" layoutPrintHelpers)
-ts_definition(editor "class VectorGraphColorMap" colorMap)
-source_between(editor "function convertDescriptorBlock (" "// cache of descriptor blocks" flattenBlock)
-source_between(editor "function buildLayoutGraphDataImpl (" "export function printLayoutGraphData (" layoutConversion)
-ts_definition(editor "export function printLayoutGraphData" printLayoutData)
-foreach(layoutModule IN ITEMS layout-graph legacy-layout)
-    set(conversionFile "${custom}/${layoutModule}-conversion.ts")
-    configure_file("${SOURCE}/tests/consumer/records/layout-conversion.ts.in" "${conversionFile}" @ONLY)
-    list(APPEND conversionFiles "${conversionFile}")
-endforeach()
+function(write_layout_conversion engineRoot destination dfsModule)
+    file(READ "${engineRoot}/${webCustom}/layout-graph-editor.ts" editor)
+    file(READ "${engineRoot}/${webCustom}/layout-graph-utils.ts" layoutUtils)
+    source_between(layoutUtils "export function sortDescriptorBlocks<" "function createDescriptorInfo (" layoutConversionUtils)
+    ts_definition(layoutUtils "export function getGfxDescriptorType" gfxDescriptorType)
+    source_between(layoutUtils "function createDescriptorInfo (" "function getDescriptorBlockData (" gfxDescriptorSets)
+    source_between(editor "function getGfxTypeName (" "function convertDescriptorBlock (" layoutPrintHelpers)
+    ts_definition(editor "class VectorGraphColorMap" colorMap)
+    source_between(editor "function convertDescriptorBlock (" "// cache of descriptor blocks" flattenBlock)
+    source_between(editor "function buildLayoutGraphDataImpl (" "export function printLayoutGraphData (" layoutConversion)
+    ts_definition(editor "export function printLayoutGraphData" printLayoutData)
+    configure_file("${SOURCE}/tests/consumer/records/layout-conversion.ts.in" "${destination}/layout-graph-conversion.ts" @ONLY)
+endfunction()
+write_layout_conversion("${ENGINE}" "${custom}" graph-dfs)
+write_layout_conversion("${legacy}" "${legacyWeb}" graph)
+file(READ "${ENGINE}/${webCustom}/layout-graph-editor.ts" editor)
 file(READ "${ENGINE}/cocos/rendering/custom/web-program-library.ts" webPrograms)
 source_between(webPrograms "    constructor (lg: LayoutGraphData) {" "    init (deviceIn: Device): void {" programLibraryConstructor)
 ts_definition(editor "class LayoutGraphPrintVisitor" layoutGraphPrintVisitor)
@@ -670,7 +654,8 @@ set(binaryArchive "cocos/rendering/custom/binary-archive.ts")
 configure_file("${ENGINE}/${binaryArchive}" "${stage}/${binaryArchive}" COPYONLY)
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs
     --outDir "${work}/js" --rootDir "${stage}/cocos" ${declarations} "${stage}/${names}" "${stage}/${layoutNames}"
-    "${custom}/program-consumer.ts" "${pipelineContract}" "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${subpassConsumer}" "${passConsumer}" "${nodeConsumer}" "${renderGraphConsumer}" "${dfsConsumer}" "${baseline}" "${variant}" "${stage}/${binaryArchive}" ${conversionFiles})
+    "${custom}/program-consumer.ts" "${pipelineContract}" "${enumConsumer}" "${graphConsumer}" "${resourceConsumer}" "${subpassConsumer}" "${passConsumer}" "${nodeConsumer}" "${renderGraphConsumer}" "${dfsConsumer}" "${variant}" "${stage}/${binaryArchive}"
+    "${custom}/layout-graph-conversion.ts" "${legacyWeb}/layout-graph-conversion.ts")
 run("${node}" "${work}/js/rendering/custom/program-consumer.js")
 run("${node}" "${work}/js/rendering/custom/resource-graph-consumer.js")
 run("${node}" "${work}/js/rendering/custom/subpass-graph-consumer.js")
@@ -678,7 +663,7 @@ run("${node}" "${work}/js/rendering/custom/pass-consumer.js")
 run("${node}" "${work}/js/rendering/custom/render-node-consumer.js")
 run("${node}" "${work}/js/rendering/custom/render-graph-consumer.js")
 run("${consumer}" write "${work}/native.bin")
-run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${work}/native.bin" "${work}/web.bin" "${pathCases}" "${dfsCases}")
+run("${node}" "${SOURCE}/tests/consumer/records/consumer.cjs" "${work}/js/rendering/custom" "${stage}" "${ENGINE}" "${legacy}" "${work}/native.bin" "${work}/web.bin" "${pathCases}" "${dfsCases}")
 run("${node}" "${SOURCE}/tests/consumer/records/layout-pool.cjs" "${work}/js/rendering/custom")
 run("${consumer}" read "${work}/web.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${work}/native.bin" "${work}/web.bin")
@@ -708,7 +693,10 @@ foreach(sample IN ITEMS print-layout converted-layout)
 endforeach()
 configure_file("${SOURCE}/tests/consumer/records/fixtures/layout-print.txt" "${work}/print-expected.txt" @ONLY NEWLINE_STYLE UNIX)
 run("${CMAKE_COMMAND}" -E compare_files "${work}/print-expected.txt" "${work}/print-layout-current.txt")
-run("${legacyConsumer}" "${work}/pipeline-native.bin" "${work}/pipeline-legacy-native.bin")
+run("${legacyConsumer}" layout "${work}/layout-web.bin" "${work}/layout-legacy-native.bin")
+run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy-native.bin")
+run("${consumer}" layout-read "${work}/layout-legacy-native.bin")
+run("${legacyConsumer}" pipeline "${work}/pipeline-native.bin" "${work}/pipeline-legacy-native.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${work}/pipeline-web.bin" "${work}/pipeline-legacy-native.bin")
 run("${consumer}" pipeline-read "${work}/pipeline-legacy-native.bin")
 run("${consumer}" layout-read "${work}/layout-web.bin")

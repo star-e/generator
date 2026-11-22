@@ -1,14 +1,15 @@
 import { DescriptorSet, DescriptorSetInfo, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
     Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, Uniform, UniformBlock, ViewDimension } from '../../gfx';
 import { BinaryInputArchive, BinaryOutputArchive } from './binary-archive';
-import { DefaultVisitor, depthFirstSearch, GraphColor, MutableVertexPropertyMap } from './graph';
-import { getDescriptorTypeOrderName } from './@layoutModule@-names';
+import { DefaultVisitor, GraphColor, MutableVertexPropertyMap } from './graph';
+import { depthFirstSearch } from './@dfsModule@';
+import { getDescriptorTypeOrderName } from './layout-graph-names';
 import { ParameterType, UpdateFrequency } from './types';
 import { getUpdateFrequencyName } from './types-names';
 import { Descriptor, DescriptorBlock, DescriptorBlockData, DescriptorBlockFlattened, DescriptorBlockIndex, DescriptorData,
     DescriptorDB, DescriptorGroupBlockIndex, DescriptorSetData, DescriptorSetLayoutData, DescriptorTypeOrder, LayoutGraph, LayoutGraphData,
     LayoutGraphDataValue, LayoutGraphValue, PipelineLayoutData, RenderPassType, RenderPhase, RenderPhaseData,
-    RenderStageData, ShaderProgramData, loadLayoutGraph, saveLayoutGraph, saveLayoutGraphData } from './@layoutModule@';
+    RenderStageData, ShaderProgramData, loadLayoutGraph, saveLayoutGraph, saveLayoutGraphData } from './layout-graph';
 
 function assert (ok: boolean): void { if (!ok) throw new Error('Invalid editor layout'); }
 function error (message: string): never { throw new Error(message); }

@@ -3,11 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const flags = require('./platform.cjs');
 const [jsDir, nativeFile, webFile, legacyFile, convertedFile, printFile] = process.argv.slice(2);
-const current = require(path.join(jsDir, 'layout-graph.js'));
+const loadLayoutArchive = require('./layout-archive-api.cjs');
+const current = loadLayoutArchive(jsDir);
 assert.ok(Object.hasOwn(current.PipelineLayoutData.prototype, 'getSets'));
 assert.ok(Object.hasOwn(current.PipelineLayoutData.prototype, 'getSet'));
-const legacy = require(path.join(jsDir, 'legacy-layout.js'));
-const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
+const legacy = loadLayoutArchive(path.join(jsDir, '../legacy'));
 const { RenderCommonObjectPool, UpdateFrequency } = require(path.join(jsDir, 'types.js'));
 const { DescriptorSetLayoutBinding, DescriptorType, ShaderStageFlagBit } = require(path.resolve(jsDir, '../../gfx'));
 const pass = UpdateFrequency.PER_PASS, phase = UpdateFrequency.PER_PHASE;
@@ -72,7 +72,7 @@ function graphValues(g) {
 }
 
 function encode(api) {
-    const values = records(api), archive = new BinaryOutputArchive();
+    const values = records(api), archive = new api.BinaryOutputArchive();
     attachHandles(values, [{}, {}, {}, {}]);
     roots.forEach((type, i) => api['save' + type](archive, values[i]));
     api.saveLayoutGraphData(archive, new api.LayoutGraphData());
@@ -81,7 +81,7 @@ function encode(api) {
 }
 
 function checkArchive(api, bytes) {
-    const archive = new BinaryInputArchive(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length));
+    const archive = new api.BinaryInputArchive(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length));
     const values = roots.map(type => new api[type]());
     const handles = [{}, {}, {}, {}];
     attachHandles(values, handles);
@@ -107,7 +107,7 @@ function checkArchive(api, bytes) {
     assert.strictEqual(graph.effects, effects);
     if (api === current) {
         const truncated = bytes.subarray(graphOffset, bytes.length - 1);
-        const input = new BinaryInputArchive(truncated.buffer.slice(truncated.byteOffset, truncated.byteOffset + truncated.length));
+        const input = new api.BinaryInputArchive(truncated.buffer.slice(truncated.byteOffset, truncated.byteOffset + truncated.length));
         const effect = graph.effects.get('post');
         graph.valueNames.push('keep');
         assert.throws(() => api.loadLayoutGraphData(input, graph));
@@ -129,7 +129,7 @@ fs.writeFileSync(webFile, web);
 fs.writeFileSync(legacyFile, old);
 
 const editor = require(path.join(jsDir, 'layout-graph-conversion.js'));
-const oldEditor = require(path.join(jsDir, 'legacy-layout-conversion.js'));
+const oldEditor = require(path.join(jsDir, '../legacy/layout-graph-conversion.js'));
 const input = oldEditor.makeInput();
 assert.deepEqual(Buffer.from(editor.makeInput()), Buffer.from(input), 'Editor input archives differ');
 const converted = Buffer.from(editor.convert(input));

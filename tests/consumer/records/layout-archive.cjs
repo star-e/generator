@@ -3,9 +3,9 @@ require('./platform.cjs');
 const fs = require('fs');
 const path = require('path');
 const [jsDir, nativeFile, webFile, legacyFile, invalidFile, legacyFixture, blocksNativeFile, blocksWebFile, blocksLegacyFile] = process.argv.slice(2);
-const current = require(path.join(jsDir, 'layout-graph.js'));
-const legacy = require(path.join(jsDir, 'legacy-layout.js'));
-const { BinaryInputArchive, BinaryOutputArchive } = require(path.join(jsDir, 'binary-archive.js'));
+const loadLayoutArchive = require('./layout-archive-api.cjs');
+const current = loadLayoutArchive(jsDir);
+const legacy = loadLayoutArchive(path.join(jsDir, '../legacy'));
 const { UpdateFrequency } = require(path.join(jsDir, 'types.js'));
 const { descriptorBlockDataArgs } = require(path.join(jsDir, 'enum-consumer.js'));
 const { Format, Type, Uniform, UniformBlock } = require(path.resolve(jsDir, '../../gfx'));
@@ -39,18 +39,18 @@ function fixture(api) {
 }
 
 function encode(api) {
-    const out = new BinaryOutputArchive();
+    const out = new api.BinaryOutputArchive();
     api.saveLayoutGraph(out, new api.LayoutGraph());
     api.saveLayoutGraph(out, fixture(api));
     return Buffer.from(out.data);
 }
 
-function input(bytes) {
-    return new BinaryInputArchive(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+function input(api, bytes) {
+    return new api.BinaryInputArchive(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 }
 
 function verify(api, bytes) {
-    const archive = input(bytes);
+    const archive = input(api, bytes);
     const g = new api.LayoutGraph();
     api.loadLayoutGraph(archive, g);
     assert.equal(g.nv(), 0);
@@ -70,9 +70,9 @@ function verify(api, bytes) {
 
 const previousBytes = encode(legacy);
 // The legacy writer reads its private vertex array for payloads. Its reader consumes the public graph API.
-const oldEmpty = new BinaryOutputArchive();
+const oldEmpty = new legacy.BinaryOutputArchive();
 legacy.saveLayoutGraph(oldEmpty, new current.LayoutGraph());
-const currentEmpty = new BinaryOutputArchive();
+const currentEmpty = new current.BinaryOutputArchive();
 current.saveLayoutGraph(currentEmpty, new current.LayoutGraph());
 assert.deepEqual(Buffer.from(oldEmpty.data), Buffer.from(currentEmpty.data));
 const publicGraph = new current.LayoutGraph();
@@ -89,10 +89,10 @@ assert.deepEqual([...publicGraph.adj(root)], [attached, last]);
 assert.equal(publicGraph.locate('/root/same'), attached);
 assert.equal(publicGraph.path(nested), '/root/same/nested');
 assert.equal(publicGraph.ne(), 3);
-const attachedBytes = new BinaryOutputArchive();
+const attachedBytes = new current.BinaryOutputArchive();
 current.saveLayoutGraph(attachedBytes, publicGraph);
 const decoded = new current.LayoutGraph();
-legacy.loadLayoutGraph(input(Buffer.from(attachedBytes.data)), decoded);
+legacy.loadLayoutGraph(input(legacy, Buffer.from(attachedBytes.data)), decoded);
 assert.deepEqual([...decoded.adj(root)], [attached, last]);
 assert.equal(decoded.path(nested), publicGraph.path(nested));
 assert.equal(decoded.ne(), publicGraph.ne());
@@ -116,10 +116,10 @@ invalid.writeDoubleLE(invalid.readDoubleLE(8) + 1, 8);
 fs.writeFileSync(invalidFile, invalid);
 const reused = new current.LayoutGraph();
 reused.addVertex(stage, 0, 'previous', new current.DescriptorDB());
-assert.throws(() => current.loadLayoutGraph(input(invalid), reused), /archive counts/);
+assert.throws(() => current.loadLayoutGraph(input(current, invalid), reused), /archive counts/);
 assert.equal(reused.nv(), 1);
 assert.equal(reused.locate('/previous'), 0);
-current.loadLayoutGraph(input(valid), reused);
+current.loadLayoutGraph(input(current, valid), reused);
 assert.equal(reused.nv(), 5);
 assert.equal(reused.locate('/main/shadow'), 2);
 
@@ -182,7 +182,7 @@ function setLayout(api, size) {
 }
 
 function encodeBlocks(api, layoutSizes = setSizes) {
-    const output = new BinaryOutputArchive();
+    const output = new api.BinaryOutputArchive();
     for (const size of sizes) {
         api.saveDescriptorBlockFlattened(output, flattened(api, size));
         api.saveUniformBlockData(output, uniformBlock(api, size));
@@ -197,7 +197,7 @@ function encodeBlocks(api, layoutSizes = setSizes) {
 }
 
 function verifyBlocks(api, bytes) {
-    const archive = input(bytes);
+    const archive = input(api, bytes);
     const value = flattened(api, 2);
     const fields = ['descriptorNames', 'uniformBlockNames', 'descriptors', 'uniformBlocks'];
     const refs = fields.map(field => value[field]);

@@ -3,7 +3,7 @@ const path = require('path');
 require('./platform.cjs');
 const jsDir = process.argv[2];
 const current = require(path.join(jsDir, 'layout-graph.js'));
-const legacy = require(path.join(jsDir, 'legacy-layout.js'));
+const legacy = require(path.join(jsDir, '../legacy/layout-graph.js'));
 const { RenderCommonObjectPool, UpdateFrequency } = require(path.join(jsDir, 'types.js'));
 const { descriptorBlockArgs, descriptorGroupBlockArgs, descriptorBlockDataArgs } = require(path.join(jsDir, 'enum-consumer.js'));
 const { DescriptorSetLayoutBinding, Type } = require(path.resolve(jsDir, '../../gfx'));

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const flags = require('./platform.cjs');
 const [jsDir, convertedFile] = process.argv.slice(2);
-const { BinaryInputArchive } = require(path.join(jsDir, 'binary-archive.js'));
+const loadLayoutArchive = require('./layout-archive-api.cjs');
 const { UpdateFrequency } = require(path.join(jsDir, 'types.js'));
 const { DescriptorSetInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType, Format,
     MemoryAccessBit, SampleType, ShaderStageFlagBit, ViewDimension } = require(path.resolve(jsDir, '../../gfx'));
@@ -29,7 +29,7 @@ const groups = [
 function checkBindings(api, utils, webGPU, withDevice) {
     api.Layout.isWebGPU = webGPU;
     const graph = new api.LayoutGraphData();
-    api.loadLayoutGraphData(new BinaryInputArchive(bytes), graph);
+    api.loadLayoutGraphData(new api.BinaryInputArchive(bytes), graph);
     const device = {
         createDescriptorSetLayout(info) {
             assert.ok(info instanceof DescriptorSetLayoutInfo);
@@ -67,12 +67,12 @@ function checkBindings(api, utils, webGPU, withDevice) {
     return result;
 }
 
-function exercise(moduleName) {
-    const api = require(path.join(jsDir, moduleName + '.js'));
-    const utils = require(path.join(jsDir, moduleName + '-conversion.js'));
+function exercise(directory) {
+    const api = loadLayoutArchive(directory);
+    const utils = require(path.join(directory, 'layout-graph-conversion.js'));
     const graph = new api.LayoutGraphData();
     assert.equal(utils.printLayoutGraphData(graph), '');
-    api.loadLayoutGraphData(new BinaryInputArchive(bytes), graph);
+    api.loadLayoutGraphData(new api.BinaryInputArchive(bytes), graph);
     const printed = utils.printLayoutGraphData(graph);
     assert.equal(new utils.LayoutGraphBuilder2(graph).print(), printed);
     assert.deepEqual(printed.split('\n').filter(line => /: Render(Stage|Phase) \{$/.test(line)), [
@@ -90,4 +90,4 @@ function exercise(moduleName) {
 }
 
 flags.HTML5 = true;
-assert.deepEqual(exercise('layout-graph'), exercise('legacy-layout'));
+assert.deepEqual(exercise(jsDir), exercise(path.join(jsDir, '../legacy')));

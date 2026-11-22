@@ -2,7 +2,7 @@ const assert = require('assert').strict;
 require('./platform.cjs');
 const fs = require('fs');
 const path = require('path');
-const [jsDir, stage, engine, nativeFile, webFile, pathCases, dfsCases] = process.argv.slice(2);
+const [jsDir, stage, engine, legacy, nativeFile, webFile, pathCases, dfsCases] = process.argv.slice(2);
 const types = require(path.join(jsDir, 'types.js'));
 const { UpdateFrequency, QueueHint, SceneFlags, AccessType, LightInfo, RenderCommonObjectPool } = types;
 const { getUpdateFrequencyName } = require(path.join(jsDir, 'types-names.js'));
@@ -20,7 +20,8 @@ function compareDeclaration(file, firstLine, lastLine, normalize = line => line,
         assert.ok(end > start, lastLine);
         return lines.slice(start, end + 1).map(line => line.replace(/ \/\/ NOLINT(?:\(google-explicit-constructor\))?$/, ''));
     }
-    assert.deepEqual(read(stage).flatMap(normalize), read(engine).map(normalizeEngine), firstLine);
+    const reference = file === layoutTs || file === layoutCpp ? legacy : engine;
+    assert.deepEqual(read(stage).flatMap(normalize), read(reference).map(normalizeEngine), firstLine);
 }
 
 function stripLegacyAllocatorCtorNoexcept(text, name) {
@@ -123,7 +124,7 @@ assert.deepEqual(layoutEnums.DescriptorTypeOrder.map(getDescriptorTypeOrderName)
 ]);
 assert.equal(getDescriptorTypeOrderName(255), '');
 const { Type } = require(path.resolve(jsDir, '../../gfx'));
-const engineIndices = require(path.join(jsDir, 'engine-index.js'));
+const engineIndices = require(path.join(jsDir, '../legacy/layout-graph.js'));
 const { NestedProbe } = require(path.join(jsDir, 'shift-probe.js'));
 const ordinaryIndex = new layout.DescriptorBlockIndex();
 assert.ok(new NestedProbe().index instanceof layout.DescriptorBlockIndex);

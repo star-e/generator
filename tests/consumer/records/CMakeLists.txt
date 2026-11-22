@@ -34,7 +34,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     "${STAGING}/native/IndexedKeys.cpp"
     "${STAGING}/native/IndexedKeysSerialization.cpp"
-    "${STAGING}/DispatcherQueries.cpp"
+    "${STAGING}/DispatcherQueries.cpp" "${STAGING}/DescriptorTypeMapping.cpp"
     DispatcherGraphConsumer.cpp
     MigrationConsumer.cpp
     RenderQueueConsumer.cpp
@@ -50,12 +50,14 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp")
-set(custom "${native}/cocos/renderer/pipeline/custom")
+set(legacyNative "${LEGACY_ENGINE}/native")
+set(custom "${legacyNative}/cocos/renderer/pipeline/custom")
 add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${STAGING}/LegacyLayoutDescriptorSet.cpp"
     "${STAGING}/LegacyLayoutGraphPrint.cpp"
     "${custom}/ArchiveTypes.cpp" "${custom}/RenderCommonTypes.cpp" "${custom}/LayoutGraphTypes.cpp"
     "${custom}/LayoutGraphSerialization.cpp")
 target_compile_definitions(LegacyArchiveConsumer PRIVATE CC_TEST_LEGACY_LAYOUT=1)
+target_include_directories(LegacyArchiveConsumer PRIVATE "${legacyNative}" "${legacyNative}/cocos" "${legacyNative}/cocos/renderer")
 # NativeData.cpp inherits the adjacent generated header's include directory.
 set_property(SOURCE "${STAGING}/NativeData.cpp" PROPERTY INCLUDE_DIRECTORIES "${STAGING}/native/cocos/renderer/pipeline/custom")
 add_library(NativeLibraryConstructor STATIC "${STAGING}/NativeLibraryConstructor.cpp")
@@ -73,10 +75,8 @@ if(WIN32 AND containerType STREQUAL "SHARED_LIBRARY")
     add_custom_command(TARGET RecordConsumer POST_BUILD COMMAND "${CMAKE_COMMAND}" -E
         copy_if_different "$<TARGET_FILE:Boost::container>" "$<TARGET_FILE_DIR:RecordConsumer>")
 endif()
-# Both readers use the same printer declaration but resolve their graph and archive types separately.
-set_property(SOURCE LayoutPrintConsumer.cpp PROPERTY INCLUDE_DIRECTORIES "${STAGING}/native/cocos/renderer/pipeline/custom")
 foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer)
-    target_sources(${target} PRIVATE LayoutPrintConsumer.cpp LayoutDescriptorConsumer.cpp "${STAGING}/DescriptorTypeMapping.cpp")
+    target_sources(${target} PRIVATE LayoutPrintConsumer.cpp LayoutDescriptorConsumer.cpp)
     target_link_libraries(${target} PRIVATE DescriptorTestGfx)
 endforeach()
 foreach(target IN ITEMS RecordConsumer LegacyArchiveConsumer DescriptorTestGfx NativeLibraryConstructor)

@@ -410,7 +410,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 1 | ArchiveInterface | 4 | 4 | `ArchiveFwd.h`、`ArchiveTypes.h`、`ArchiveTypes.cpp`、`archive.ts`。验证虚方法、原生 `scratch()` 与 TS 的 `b/n/s`。 |
 | 2 | RenderSettings | 1 | 1 | 编辑器的 `editor/assets/default_renderpipeline/builtin-pipeline-types.ts`。用旧设置调用 `fillRequiredBloom`，验证 `material` 迁移到 `kawaseFilterMaterial`。 |
 | 2 | RenderCommon | 10 | 10 | `RenderCommon*`、`types.ts`、`types-names.ts`。覆盖枚举数值、构造默认值、对象池复用、归档筛选和 `RenderCommonJsb` 转换。 |
-| 3 | LayoutGraph | 9 | 8 | `LayoutGraphFwd.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphNames.h`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts`、`layout-graph-names.ts`。验证父子引用、名称与路径索引、多态顶点及已有布局数据的读取。 |
+| 3 | LayoutGraph | 9 | 8 | 八个生成产物和七个配套运行时文件已接入 cocos4，`--module LayoutGraph --output ../cocos4 --check` 核对全部 15 个文件。原生调用方使用成员接口，布局编辑器使用迭代 DFS，`LayoutGraphGraphs.h` 已退役。 |
 | 3 | RenderGraph | 5 | 4 | `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp`、`render-graph.ts`。分别验证 `ResourceGraph` 的别名引用关系、`RenderGraph` 的独立引用关系，以及 TS 可执行的组件访问和对象池。 |
 | 4 | RenderInterface | 5 | 5 | `RenderInterface*`、`pipeline.ts`、`native/tools/swig-config/render.i`。覆盖重载、getter、条件宏、返回对象的 GC 规则和公开注释。 |
 | 4 | PrivateInterface | 4 | 4 | `PrivateFwd.h`、`PrivateTypes.h/.cpp`、`private.ts`。使用 `RenderInterface` 和外部 `ProgramLib` 核对签名。 |
@@ -419,11 +419,13 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 4 | PrivateTypes | 4 | 4 | `NativeFwd.h`、`NativeTypes.h/.cpp`、`web-types.ts`。`NativePipelineTypes.h` 按值使用 `LayoutGraphData`，直接包含 `LayoutGraphTypes.h`。 |
 | 5 | NativePipeline | 4 | 3 | `NativePipelineFwd.h`、`NativePipelineTypes.h/.cpp`。编译并链接手写 `NativePipeline.cpp` 与执行器，运行一次最小原生管线。 |
 
-`CocosCommon` 提供外部类型登记，`RenderInterfaceDocument` 提供注释。`RenderSceneInterface` 在旧入口参与登记，其输出调用已注释。`RenderCompiler`、`ExecutorExample`、`RenderExample` 的构建和输出受关闭的分支控制。这些状态纳入基线，已有的同名引擎文件按其实际来源登记。[模块入口](../../cocos-engine-generator/Cocos/CocosBuilder/CocosBuilder.cpp) · [旧外部类型登记](../../cocos-engine-generator/Cocos/CocosBuilder/CocosCommon.cpp)
+当前旧生成器保留模块注册以解析类型依赖，只向 cocos4 写入 `RenderGraph`、`FGDispatcher` 和 `NativePipeline` 的 12 个文件。更新原生 CMake 清单时只补缺少的条目。其余八个模块由新生成器输出。`CocosCommon` 提供外部类型登记，`RenderInterfaceDocument` 提供注释，`RenderSceneInterface` 仅参与登记。`RenderCompiler`、`ExecutorExample`、`RenderExample` 的构建和输出受关闭的分支控制。[模块入口](../../cocos-engine-generator/Cocos/CocosBuilder/CocosBuilder.cpp) · [旧外部类型登记](../../cocos-engine-generator/Cocos/CocosBuilder/CocosCommon.cpp)
 
 ## 当前图接口覆盖
 
 对照旧清单，`LayoutGraph` 的九个文件对应八个生成产物。原 `LayoutGraphGraphs.h` 的图操作迁入类型成员。C++ 可遍历入边、出边、邻接顶点和全图边，TS 提供 `ie/id/d/adj/ne`、多态类别名称和 `setUpdate`。顶点和组件存储由图持有，调用方用 `object(v)` 或 `value(tag, v)` 读取载荷。旧 TS 写入器访问内部数组 `x[v].j`，跨版本测试分别运行对应写入器，并用旧读取器读回新图。[生成接口测试](../tests/consumer/records/LayoutGraphConsumer.cpp) · [归档对照](../tests/consumer/records/layout-archive.cjs)
+
+`cocos.records.interop` 从引擎 Git 仓库导出 `config/baseline.json` 的 `engineCommit`，在测试临时目录编译旧版 C++ 和 TS 的布局图与归档实现。运行测试的引擎检出需要包含该提交。新版使用当前生成的图和序列化代码。测试让旧版 C++ 读入新版 TS 写出的 `LayoutGraph`，再写给新版 C++，并与已登记的二进制样本逐字节核对。`LayoutGraphData` 也覆盖新旧 C++ 和 TS 的交叉读写。[基线提交](../config/baseline.json) · [互读测试](../tests/RecordInterop.cmake)
 
 两张布局图的归档为每个顶点保存一个父编号。C++ `add_edge(u, v)` 和 TS `addEdge(u, v)`、`addReference(u, v)` 可将已有根节点挂到编号更小的父节点。第二个父节点、重复边、自环、前向父引用和无效编号都会被拒绝。C++ 返回的成功标志为 `false`，TS 返回 `null`。新挂接的节点按编号插入兄弟序列，保证同名节点的查找结果在归档往返后稳定。C++ `remove_edge(e)` 可将整棵子树拆为独立的树。
 

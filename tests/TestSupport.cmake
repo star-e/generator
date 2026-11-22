@@ -4,6 +4,13 @@ function(run)
     execute_process(COMMAND ${ARGV} COMMAND_ERROR_IS_FATAL ANY)
 endfunction()
 
+function(export_engine_baseline commit destination)
+    find_package(Git REQUIRED)
+    message(STATUS "Engine reference commit: ${commit}")
+    run("${GIT_EXECUTABLE}" -C "${ENGINE}" archive --format=tar -o "${destination}.tar" "${commit}" -- ${ARGN})
+    file(ARCHIVE_EXTRACT INPUT "${destination}.tar" DESTINATION "${destination}")
+endfunction()
+
 function(expect_failure code pattern)
     execute_process(COMMAND ${ARGN} RESULT_VARIABLE rc ERROR_VARIABLE error)
     if(NOT rc STREQUAL "${code}" OR NOT error MATCHES "${pattern}")
@@ -40,7 +47,7 @@ function(build_consumer project build stage)
         set(configArg --config "${CONFIG}")
     endif()
     execute_process(COMMAND "${CMAKE_COMMAND}" -S "${project}" -B "${build}"
-        ${args} "-DSTAGING=${stage}" "-DENGINE=${ENGINE}" "-DCMAKE_PREFIX_PATH=${PREFIX}" "-DCMAKE_BUILD_TYPE=${CONFIG}"
+        ${args} "-DSTAGING=${stage}" "-DENGINE=${ENGINE}" "-DCMAKE_PREFIX_PATH=${PREFIX}" "-DCMAKE_BUILD_TYPE=${CONFIG}" ${ARGN}
         COMMAND_ERROR_IS_FATAL ANY)
     run("${CMAKE_COMMAND}" --build "${build}" ${configArg})
 endfunction()
