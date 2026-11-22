@@ -1286,7 +1286,7 @@ void tsRecord(std::ostream& ts, std::ostream& staticInitializers, const TypeNode
         const auto declaration = std::string(field.readonly ? "static readonly " : "static ") + field.name + ": " + field.ts;
         if (field.safeUnsignedInteger) {
             ts << "    declare " << declaration << ";\n";
-            staticInitializers << "cc$defineUint64(" << node.name << ", '" << field.name << "', " << field.tsDefault << ");\n";
+            staticInitializers << "defineUint64(" << node.name << ", '" << field.name << "', " << field.tsDefault << ");\n";
         } else if (forwardEnum || field.tsDefault.starts_with("new ")) {
             // Initialize after local classes and enums are available.
             ts << "    declare " << declaration << ";\n";
@@ -1747,7 +1747,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     if (!staticInitializers.view().empty()) script << '\n' << staticInitializers.str();
     if (usesUint64Field) {
         script << R"(
-function cc$defineUint64 (target: object, key: string, initial: number): void {
+function defineUint64 (target: object, key: string, initial: number): void {
     let value: number;
     const set = (next: number): void => {
         if (!Number.isSafeInteger(next) || next < 0) throw new RangeError(key + ' requires a safe unsigned integer');
@@ -1760,7 +1760,7 @@ function cc$defineUint64 (target: object, key: string, initial: number): void {
     }
     if (archives.requirements.needsReadSize) {
         const auto& input = graph.node(archive->module.inputArchive);
-        script << "\nfunction cc$readSize (a: " << input.name << "): number {\n"
+        script << "\nfunction readSize (a: " << input.name << "): number {\n"
                << "    const n = a." << archiveMethod(input, "readNumber") << "();\n"
                << "    if (!Number.isInteger(n) || n < 0 || n > 0xFFFFFFFF) throw new RangeError('Invalid archive size');\n"
                << "    return n;\n}\n";

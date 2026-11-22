@@ -222,7 +222,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
 
     // Array indices stop at 2^32 - 2. Reserve the null descriptor for narrower index types too.
     const auto limit = std::min<uint64_t>(indexedVertexLimit(graph.node(model.vertexType).qualifiedName).value(), UINT32_MAX);
-    if (model.serializable) out << "const cc$adopt" << node.name << " = Symbol();\n\n";
+    if (model.serializable) out << "const adopt" << node.name << " = Symbol(); // eslint-disable-line symbol-description\n\n";
     const auto storage = model.serializable ? "private " : "private readonly ";
     writeDocumentation(out, node.documentation);
     out << "export class " << node.name << " {\n    readonly N = " << limit << ";\n"
@@ -248,7 +248,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     }
     if (!initializers.empty()) out << "\n    constructor () {\n" << initializers << "    }\n";
     if (model.serializable) {
-        out << "\n    [cc$adopt" << node.name << "] (decoded: " << node.name << "): void {\n"
+        out << "\n    [adopt" << node.name << "] (decoded: " << node.name << "): void {\n"
             << "        this.vertices = decoded.vertices;\n";
         if (model.nameIndex) out << "        this.nameIndex = decoded.nameIndex;\n";
         if (model.parentGraph) out << "        this.roots = decoded.roots;\n";

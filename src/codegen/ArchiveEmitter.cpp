@@ -85,10 +85,10 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
     } else {
         const auto i = (array ? "index" : "left") + std::to_string(depth);
         if (array) {
-            out << indent << expr << ".length = cc$readSize(a);\n"
+            out << indent << expr << ".length = readSize(a);\n"
                 << indent << "for (let " << i << " = 0; " << i << " < " << expr << ".length; ++" << i << ") {\n";
         } else {
-            out << indent << "for (let " << i << " = cc$readSize(a); " << i << " > 0; --" << i << ") {\n";
+            out << indent << "for (let " << i << " = readSize(a); " << i << " > 0; --" << i << ") {\n";
         }
         if (map) value(out, keyType, key, inner, true, depth + 1);
         value(out, element, item, inner, true, depth + 1);
@@ -206,9 +206,9 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     *ts << "        }\n    }\n";
     for (const auto& f : model.fields) if (!f.transient) writer.value(*ts, f.type.type, "g." + f.name, "    ");
     *ts << "}\n\nexport function load" << name << " (a: " << input.name << ", g: " << name << "): void {\n"
-        << "    const decoded = new " << name << "();\n    const size = cc$readSize(a);\n    let edges = cc$readSize(a);\n"
-        << "    const counts = Array.from({ length: " << count << " }, () => cc$readSize(a));\n"
-        << "    for (let i = 0; i < size; ++i) {\n        const kind = cc$readSize(a);\n        const parent = cc$readSize(a);\n"
+        << "    const decoded = new " << name << "();\n    const size = readSize(a);\n    let edges = readSize(a);\n"
+        << "    const counts = Array.from({ length: " << count << " }, () => readSize(a));\n"
+        << "    for (let i = 0; i < size; ++i) {\n        const kind = readSize(a);\n        const parent = readSize(a);\n"
         << "        if (kind >= counts.length || !counts[kind]) throw new RangeError('Invalid graph archive kind');\n        --counts[kind];\n"
         << "        if (parent !== decoded.N) {\n            if (parent >= i || !edges) throw new RangeError('Invalid graph archive parent');\n            --edges;\n        }\n";
     std::string arguments;
@@ -226,7 +226,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     }
     *ts << "        }\n    }\n    if (edges || counts.some(n => n !== 0)) throw new RangeError('Invalid graph archive counts');\n";
     for (const auto& f : model.fields) if (!f.transient) reader.value(*ts, f.type.type, "decoded." + f.name, "    ");
-    *ts << "    g[cc$adopt" << name << "](decoded);\n}\n";
+    *ts << "    g[adopt" << name << "](decoded);\n}\n";
 }
 
 } // namespace cc::codegen

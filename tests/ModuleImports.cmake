@@ -187,7 +187,10 @@ foreach(fragment IN ITEMS
         [[function loadDescriptor (a: Reader, v: Descriptor)]]
         [[function saveLayoutGraph (a: Writer, g: LayoutGraph)]]
         [[function loadLayoutGraph (a: Reader, g: LayoutGraph)]]
-        [[function cc$readSize (a: Reader)]]
+        [[function readSize (a: Reader)]]
+        [[const adoptLayoutGraph = Symbol(); // eslint-disable-line symbol-description]]
+        [[const adoptLayoutGraphData = Symbol(); // eslint-disable-line symbol-description]]
+        [[g[adoptLayoutGraph](decoded);]]
         [[saveColor(a, g.archivedColor);]]
         [[loadColor(a, decoded.archivedColor);]])
     string(FIND "${script}" "${fragment}" at)

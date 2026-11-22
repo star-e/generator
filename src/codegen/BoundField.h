@@ -28,7 +28,7 @@ struct BoundField {
     std::string parameterType() const { return byConstReference ? "const " + cpp + "&" : cpp; }
 
     std::string tsUint64Initializer(const std::string& initial) const {
-        return "cc$defineUint64(this, '" + name + "', " + initial + ")";
+        return "defineUint64(this, '" + name + "', " + initial + ")";
     }
 };
 
