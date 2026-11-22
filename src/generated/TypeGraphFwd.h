@@ -72,6 +72,7 @@ struct FunctionType;
 struct TemplateParameterType;
 struct TemplateInstanceType;
 struct TypeNode;
+struct CppBoolConstant;
 struct TypeModule;
 struct Node_;
 struct TypeGraph;

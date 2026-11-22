@@ -38,26 +38,65 @@ void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use
 }
 
 void cppParameters(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, size_t count, bool named,
-                   ModuleId owner, std::set<std::string>& headers, bool defaults = true) {
+                   ModuleId owner, std::set<std::string>& headers) {
     out << '(';
     for (size_t i = 0; i < count; ++i) {
         const auto& param = method.parameters[i];
         if (i) out << ", ";
         if (param.byConstReference) out << "const ";
         cppDeclarator(out, graph, param.type, (param.byConstReference ? "&" : "") + (named ? param.name : ""), owner, headers);
-        if (defaults && !method.isPureVirtual && !param.defaultValue.empty()) out << " = " << param.defaultValue;
+        if (!method.isPureVirtual && !param.defaultValue.empty()) out << " = " << param.defaultValue;
     }
     out << ')';
     if (method.isConst) out << " const";
 }
 
-void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers) {
+using VirtualMethods = std::map<std::string, const MethodInfo*>;
+
+std::string methodSignature(const TypeGraph& graph, const MethodInfo& method) {
+    std::set<const TypeNode*> expanding;
+    auto typeName = [&](auto& self, const TypeNode& type) -> std::string {
+        const auto* alias = std::get_if<AliasType>(&type.data);
+        if (!alias) return type.qualifiedName;
+        if (!expanding.insert(&type).second) throw std::runtime_error(method.result.location.describe() + ": cyclic type alias " + type.qualifiedName);
+        auto name = formatTypeName(graph, alias->target, [&](const TypeNode& part) { return self(self, part); });
+        expanding.erase(&type);
+        return name;
+    };
+    // Return types may be covariant. Conversion operators already include their target in the name.
+    std::string key = method.name + "(";
+    for (size_t i = 0; i < method.parameters.size(); ++i) {
+        const auto& param = method.parameters[i];
+        if (i) key += ", ";
+        if (param.byConstReference) key += "const ";
+        key += formatTypeName(graph, param.type.type, [&](const TypeNode& part) { return typeName(typeName, part); });
+        if (param.byConstReference) key += "&";
+    }
+    return key + (method.isConst ? ") const" : ")");
+}
+
+void collectVirtualMethods(const TypeGraph& graph, TypeId id, VirtualMethods& methods) {
+    const auto& data = graph.node(id).data;
+    if (const auto* iface = std::get_if<InterfaceType>(&data)) {
+        for (auto base : iface->bases) collectVirtualMethods(graph, base, methods);
+        for (const auto& method : iface->methods)
+            if (method.isPureVirtual) methods[methodSignature(graph, method)] = &method;
+    } else if (const auto* base = std::get_if<RecordType>(&data)) {
+        for (auto parent : base->bases) collectVirtualMethods(graph, parent, methods);
+        if (base->implements) collectVirtualMethods(graph, *base->implements, methods);
+    }
+}
+
+void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers,
+               const VirtualMethods& inherited) {
+    const bool overrides = !method.isStatic && !inherited.empty() && inherited.contains(methodSignature(graph, method));
     writeDocumentation(out, method.documentation, "    ");
-    out << "    " << (method.isPureVirtual ? "virtual " : method.isStatic ? "static " : "");
+    out << "    " << (method.isPureVirtual && !overrides ? "virtual " : method.isStatic ? "static " : "");
     if (method.isExplicitConversion) out << "explicit operator ";
     cppDeclarator(out, graph, method.result, method.isExplicitConversion ? "" : method.name, owner, headers);
     cppParameters(out, graph, method, method.parameters.size(), true, owner, headers);
     if (method.isNoexcept) out << " noexcept";
+    if (overrides) out << " override";
     if (method.isPureVirtual) out << " = 0";
     if (method.cppBody.empty()) out << ";\n";
     else out << ' ' << method.cppBody << '\n';
@@ -109,7 +148,9 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     writeDocumentation(out, decl.documentation);
     out << "class " << name;
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
+    VirtualMethods inherited;
     for (auto base : bases) {
+        collectVirtualMethods(graph, base, inherited);
         const auto& type = graph.node(base);
         collectCppHeader(graph, graph.modules.at(decl.module.value), type, headers);
         out << (base == bases.front() ? " : public " : ", public ") << qualifyIfShadowed(graph, type, graph.modules.at(decl.module.value), type.qualifiedName);
@@ -122,7 +163,7 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
         << "    " << name << "& operator=(" << name << " const& rhs) = delete;\n"
         << "    virtual ~" << name << "() noexcept = default;\n\n";
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
-    for (const auto& method : methods) cppMethod(out, graph, method, decl.module, headers);
+    for (const auto& method : methods) cppMethod(out, graph, method, decl.module, headers, inherited);
     for (const auto& method : methods) {
         if (method.isPureVirtual) cppForwardingOverloads(out, graph, decl, method, headers);
     }
@@ -218,41 +259,23 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
 void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers) {
     const auto& record = std::get<RecordType>(node.data);
     if (record.bases.empty() && !record.implements) return;
-    using Methods = std::map<std::string, const MethodInfo*>;
-    auto signature = [&](const MethodInfo& method) {
-        std::ostringstream key;
-        key << method.name;
-        cppParameters(key, graph, method, method.parameters.size(), false, node.module, headers, false);
-        return key.str();
-    };
-    auto collect = [&](auto& self, TypeId id, Methods& methods) -> void {
-        const auto& data = graph.node(id).data;
-        if (const auto* iface = std::get_if<InterfaceType>(&data)) {
-            for (auto base : iface->bases) self(self, base, methods);
-            for (const auto& method : iface->methods)
-                if (method.isPureVirtual) methods[signature(method)] = &method;
-        } else if (const auto* base = std::get_if<RecordType>(&data)) {
-            for (auto parent : base->bases) self(self, parent, methods);
-            if (base->implements) self(self, *base->implements, methods);
-        }
-    };
-    Methods overrides, implementation;
+    VirtualMethods overrides, implementation;
     std::map<std::string, TypeId> providers;
     for (auto base : record.bases) {
         if (std::holds_alternative<InterfaceType>(graph.node(base).data)) {
-            collect(collect, base, overrides);
+            collectVirtualMethods(graph, base, overrides);
         } else {
-            Methods supplied;
-            collect(collect, base, supplied);
+            VirtualMethods supplied;
+            collectVirtualMethods(graph, base, supplied);
             for (const auto& [key, method] : supplied) {
                 auto [it, inserted] = providers.try_emplace(key, base);
                 if (!inserted) it->second = TypeId{};
             }
         }
     }
-    if (record.implements) collect(collect, *record.implements, implementation);
+    if (record.implements) collectVirtualMethods(graph, *record.implements, implementation);
     implementation.insert(overrides.begin(), overrides.end());
-    for (const auto& method : record.methods) implementation.erase(signature(method));
+    for (const auto& method : record.methods) implementation.erase(methodSignature(graph, method));
     for (const auto& [key, candidate] : implementation) {
         const bool overrideMethod = overrides.contains(key);
         const auto provider = providers.find(key);

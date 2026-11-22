@@ -193,6 +193,13 @@ namespace cc::codegen {
         documentation: std::string;
     }
 
+    struct CppBoolConstant {
+        name: std::string;
+        value: bool = false;
+        location: SourceLocation;
+        documentation: std::string;
+    }
+
     struct TypeModule {
         name: std::string;
         namespaces: std::vector<std::string>;
@@ -200,6 +207,7 @@ namespace cc::codegen {
         imports: std::vector<ModuleId>;
         inputArchive: TypeId;
         outputArchive: TypeId;
+        cppConstants: std::vector<CppBoolConstant>;
     }
 
     @tag struct Node_ {}

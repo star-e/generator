@@ -68,13 +68,28 @@ public:
                 for (const auto& part : parts) scope += (scope.empty() ? "" : "::") + part;
                 parseExternalDeclarations(module, scope, names);
             } else {
-                while (!accept("}")) module.declarations.push_back(declaration(names));
+                while (!accept("}")) {
+                    if (token == "constexpr") module.cppConstants.push_back(cppBoolConstant(names));
+                    else module.declarations.push_back(declaration(names));
+                }
             }
         }
         return module;
     }
 
 private:
+    CppBoolConstant cppBoolConstant(std::set<std::string>& names) {
+        CppBoolConstant result{.location = location, .documentation = documentation()};
+        expect("constexpr");
+        expect("bool");
+        result.name = uniqueName(names);
+        expect("=");
+        if (accept("true")) result.value = true;
+        else expect("false");
+        expect(";");
+        return result;
+    }
+
     static std::string expandHeader(std::string path, std::string_view name) {
         constexpr std::string_view placeholder = "{name}";
         for (size_t pos = 0; (pos = path.find(placeholder, pos)) != std::string::npos; pos += name.size())

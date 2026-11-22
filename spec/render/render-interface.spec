@@ -9,6 +9,8 @@ import RenderCommon;
 import PipelineExternals;
 
 namespace cc::render {
+    constexpr bool ENABLE_SUBPASS = true;
+
     /**
      * @engineInternal
      * @en PipelineRuntime is the runtime of both classical and custom pipelines.

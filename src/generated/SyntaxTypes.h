@@ -353,6 +353,7 @@ struct Module {
     std::string cppHeader;
     bool external{false};
     bool pool{false};
+    std::vector<CppBoolConstant> cppConstants;
 };
 
 } // namespace codegen

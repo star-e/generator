@@ -371,6 +371,13 @@ struct TypeNode {
     std::string documentation;
 };
 
+struct CppBoolConstant {
+    std::string name;
+    bool value{false};
+    SourceLocation location;
+    std::string documentation;
+};
+
 struct TypeModule {
     std::string name;
     std::vector<std::string> namespaces;
@@ -378,6 +385,7 @@ struct TypeModule {
     std::vector<ModuleId> imports;
     TypeId inputArchive;
     TypeId outputArchive;
+    std::vector<CppBoolConstant> cppConstants;
 };
 
 struct Node_ {};

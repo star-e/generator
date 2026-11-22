@@ -908,7 +908,8 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<Mod
         const auto& module = input.syntax;
         const ModuleId owner{static_cast<uint32_t>(graph.modules.size())};
         if (!moduleNames.emplace(module.name, owner).second) throw std::runtime_error("duplicate module " + module.name);
-        auto& entry = graph.modules.emplace_back(TypeModule{.name = module.name, .namespaces = module.namespaces});
+        auto& entry = graph.modules.emplace_back(TypeModule{.name = module.name, .namespaces = module.namespaces,
+                                                           .cppConstants = module.cppConstants});
         std::string scope;
         for (const auto& part : module.namespaces) scope = qualify(scope, part);
         const auto moduleNamespace = ensureNamespace(graph, scope);
@@ -979,6 +980,14 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<Mod
             throw std::runtime_error(module.name + ": missing @archive(" + missing + ") interface");
         }
         scopes.push_back(std::move(scope));
+    }
+    std::set<std::string> constantNames;
+    for (size_t i = 0; i < graph.modules.size(); ++i) {
+        for (const auto& constant : graph.modules[i].cppConstants) {
+            const auto name = qualify(scopes[i], constant.name);
+            if (!constantNames.insert(name).second || graph.findType(name) != TypeId{})
+                throw std::runtime_error(constant.location.describe() + ": duplicate name " + name);
+        }
     }
     auto order = bindImports(graph.modules, inputs, moduleNames);
     // Link all alias targets before resolving uses, including forward references in the same module.

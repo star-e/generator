@@ -30,6 +30,10 @@ file(WRITE "${workspace}" "${config}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/both")
 file(GLOB_RECURSE all RELATIVE "${work}/both" "${work}/both/*")
 file(READ "${work}/both/cocos/rendering/custom/pipeline.ts" pipeline)
+file(READ "${work}/both/native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.h" renderHeader)
+if(NOT renderHeader MATCHES "constexpr bool ENABLE_SUBPASS = true;" OR pipeline MATCHES "ENABLE_SUBPASS")
+    message(FATAL_ERROR "RenderInterface must publish the subpass switch in its native header")
+endif()
 string(REGEX MATCHALL "export (enum|interface|class) [A-Za-z0-9_]+" pipelineExports "${pipeline}")
 list(LENGTH pipelineExports count)
 if(NOT count EQUAL 22 OR pipeline MATCHES "(Factory|isOcclusionQueryEnabled|resetRenderQueue|setValue \\()")
@@ -229,5 +233,41 @@ foreach(member IN ITEMS "    value: number;" "    readonly urlValue: number;" " 
 endforeach()
 if(script MATCHES "readonly value|getURLValue|getValue|setValue")
     message(FATAL_ERROR "TypeScript exposed annotated methods or made a writable property readonly")
+endif()
+
+file(WRITE "${provider}" [=[module Provider;
+namespace cc {
+    /** Native switch. */
+    constexpr bool ENABLE_TEST = false;
+    struct Item {}
+    using Count = int;
+    interface Parent {
+        @cppOnly virtual Parent* fork(Count* value) const = 0;
+        @cppOnly virtual int inspect(const int& value, int mode = 1) = 0;
+        static int helper() { return 1; }
+    }
+    interface Middle : Parent { @cppOnly virtual int count() = 0; }
+    interface Child : Middle {
+        @cppOnly virtual Child* fork(int* renamed) const noexcept = 0;
+        @cppOnly virtual Child* fork(int* renamed) = 0;
+        @cppOnly virtual int inspect(const int& value) = 0;
+        @cppOnly virtual int helper() = 0;
+        int count() { return 2; }
+    }
+}]=])
+run(${generate})
+file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
+foreach(line IN ITEMS "cc::Child *fork(int *renamed) const noexcept override = 0;"
+                      "virtual cc::Child *fork(int *renamed) = 0;"
+                      "virtual int inspect(const int &value) = 0;"
+                      "virtual int helper() = 0;"
+                      "int count() override { return 2; }")
+    string(FIND "${header}" "    ${line}" index)
+    if(index EQUAL -1)
+        message(FATAL_ERROR "Unexpected C++ override or overload declaration; expected ${line}")
+    endif()
+endforeach()
+if(NOT header MATCHES "Native switch[.]\n \\*/\nconstexpr bool ENABLE_TEST = false;")
+    message(FATAL_ERROR "Expected documented native constexpr bool in the module header")
 endif()
 finish_workspace("${work}")

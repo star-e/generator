@@ -298,5 +298,6 @@ namespace cc::codegen {
         cppHeader: std::string;
         external: bool = false;
         pool: bool = false;
+        cppConstants: std::vector<CppBoolConstant>;
     }
 }

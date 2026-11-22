@@ -1422,7 +1422,14 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     Pool pool;
     RecordArchives archives;
     std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, staticInitializers, nameFunctions;
-    if (deps.emitCpp) writeTemplateAliases(cpp, graph, owner, deps);
+    if (deps.emitCpp) {
+        for (const auto& constant : module.cppConstants) {
+            cpp << '\n';
+            writeDocumentation(cpp, constant.documentation);
+            cpp << "constexpr bool " << constant.name << " = " << (constant.value ? "true" : "false") << ";\n";
+        }
+        writeTemplateAliases(cpp, graph, owner, deps);
+    }
     auto pendingEnums = output.namedEnums;
     std::string enumImports;
     bool previousTag = false;
