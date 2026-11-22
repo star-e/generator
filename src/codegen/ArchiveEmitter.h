@@ -22,9 +22,10 @@ struct ArchiveScript {
     const TypeNode& api;
     ArchiveImports& imports;
     bool save;
+    unsigned arrayLengthCount{};
 
     void value(std::ostream& out, TypeId id, const std::string& expression, const std::string& indent,
-               bool declare = false, unsigned depth = 0) const;
+               bool declare = false, unsigned depth = 0);
 };
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,

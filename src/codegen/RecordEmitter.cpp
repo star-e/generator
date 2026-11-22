@@ -1364,6 +1364,7 @@ struct RecordArchives {
             declarations << signature << ";\n";
             definitions << '\n' << signature << " {\n";
             if (emitTs) script << "\nexport function " << op << name << " (a: " << api.name << ", v: " << name << "): void {\n";
+            ArchiveScript codec{graph, api, imports, save};
             for (const auto& field : fields) {
                 const auto member = "v." + field.name;
                 if (field.transient) {
@@ -1372,7 +1373,7 @@ struct RecordArchives {
                     continue;
                 }
                 definitions << "    " << op << "(ar, " << member << ");\n";
-                if (emitTs) ArchiveScript{graph, api, imports, save}.value(script, field.type, member, "    ");
+                if (emitTs) codec.value(script, field.type, member, "    ");
             }
             definitions << "}\n";
             if (emitTs) script << "}\n";

@@ -46,7 +46,7 @@ void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, Type
 }
 
 void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr, const std::string& indent,
-                          bool declare, unsigned depth) const {
+                          bool declare, unsigned depth) {
     const auto& node = graph.node(id);
     const auto primitive = archivePrimitive(graph, id);
     if (!primitive.empty()) {
@@ -86,19 +86,28 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
         value(out, element, item, inner, false, depth + 1);
     } else {
         const auto readNumber = "a." + archiveMethod(api, "readNumber") + "()";
-        const auto i = (array ? "index" : "left") + std::to_string(depth);
         if (array) {
-            out << indent << expr << ".length = " << readNumber << ";\n"
-                << indent << "for (let " << i << " = 0; " << i << " < " << expr << ".length; ++" << i << ") {\n";
+            const auto length = arrayLengthCount == 0 ? "n" : "n" + std::to_string(arrayLengthCount);
+            ++arrayLengthCount;
+            const auto i = depth == 0 ? "i" : "i" + std::to_string(depth);
+            const auto slot = expr + "[" + i + "]";
+            out << indent << "const " << length << " = " << readNumber << ";\n"
+                << indent << expr << ".length = " << length << ";\n"
+                << indent << "for (let " << i << " = 0; " << i << " < " << length << "; ++" << i << ") {\n";
+            if (archivePrimitive(graph, element).empty()) {
+                value(out, element, item, inner, true, depth + 1);
+                out << inner << slot << " = " << item << ";\n";
+            } else {
+                value(out, element, slot, inner, false, depth + 1);
+            }
         } else {
+            const auto i = "left" + std::to_string(depth);
             out << indent << "for (let " << i << " = " << readNumber << "; " << i << " > 0; --" << i << ") {\n";
+            if (map) value(out, keyType, key, inner, true, depth + 1);
+            value(out, element, item, inner, true, depth + 1);
+            if (map) out << inner << expr << ".set(" << (json ? "JSON.stringify(" + key + ")" : key) << ", " << item << ");\n";
+            else out << inner << expr << ".add(" << item << ");\n";
         }
-        if (map) value(out, keyType, key, inner, true, depth + 1);
-        value(out, element, item, inner, true, depth + 1);
-        out << inner << expr;
-        if (array) out << "[" << i << "] = " << item << ";\n";
-        else if (map) out << ".set(" << (json ? "JSON.stringify(" + key + ")" : key) << ", " << item << ");\n";
-        else out << ".add(" << item << ");\n";
     }
     out << indent << "}\n";
 }
@@ -188,8 +197,8 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     cpp << "}\n";
     if (!ts) return;
 
-    const ArchiveScript writer{graph, output, imports, true};
-    const ArchiveScript reader{graph, input, imports, false};
+    ArchiveScript writer{graph, output, imports, true};
+    ArchiveScript reader{graph, input, imports, false};
     const auto number = "a." + archiveMethod(writer.api, "writeNumber");
     const auto kinds = name + "Value.";
     *ts << "\nexport function save" << name << " (a: " << output.name << ", g: " << name << "): void {\n"
@@ -217,14 +226,14 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     std::string arguments;
     for (const auto& c : model.components) {
         const auto component = "component" + c.publicName;
-        reader.value(*ts, c.valueType, component, "        ", true);
+        reader.value(*ts, c.valueType, component, "        ", true, 1);
         arguments += ", " + component;
     }
     *ts << "        switch (kind) {\n";
     for (const auto& c : model.alternatives) {
         const auto kind = kinds + c.publicName;
         *ts << "        case " << kind << ": {\n";
-        reader.value(*ts, c.valueType, "payload", "            ", true);
+        reader.value(*ts, c.valueType, "payload", "            ", true, 1);
         *ts << "            decoded.addVertex(" << kind << ", payload" << arguments << ", parent);\n            break;\n        }\n";
     }
     *ts << "        }\n    }\n    if (edges || counts.some(n => n !== 0)) throw new RangeError('Invalid graph archive counts');\n";
