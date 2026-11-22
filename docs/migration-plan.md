@@ -40,6 +40,8 @@ ctest --test-dir build/host --output-on-failure
 
 ### 按模块选择输出
 
+引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `cocos/rendering/custom/graph-dfs.ts` 来源于 `runtime/typescript/graph-dfs.ts`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序、采用 LF，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
+
 工作区通过 `ModuleInput` 把每个模块的声明、C++ 定义头、前置声明头和 TS 输出信息交给建图器。建图时，标量别名使用前置声明头，模板实例别名和图标签使用定义头。外部类型的头文件和 TS 导入来源沿用 `extern module` 的声明与配置。[建图输入](../src/model/TypeGraphBuilder.h) · [工作区](../src/workspace/Workspace.cpp)
 
 TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当前使用的五种固定宽度整数（`int32_t`、`uint8_t`、`uint16_t`、`uint32_t`、`uint64_t`）。所有模块都能直接使用这些标量，固定宽度整数的 C++ 头文件是 `<cstdint>`。引擎模块通过 `import EngineTypes;` 使用外部声明，例如 `Material`、`IntrusivePtr<T>` 和 `Array4<T>`。自举模块通过 `import HostTypes;` 使用 `std::filesystem::path`、`std::size_t` 和 `std::string`。迁移旧工作区时，把类型声明和头文件放入 `.spec` 的 `extern module`，由消费模块直接导入，然后删除工作区或模块上的 `types` 配置项。[引擎外部类型](../spec/extern/types.spec) · [自举外部类型](../spec/codegen/host-types.spec)
@@ -216,7 +218,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 开始修改生成器自身的声明前，运行 `cmake --build build/host --target begin-codegen-update`。该目标构建当前生成器，验证其可执行文件副本，通过自举测试后将副本保存为本轮的 A，放在 `build/bootstrap/`。若构建或验证失败，上一次保存的 A 仍可用。
 
-修改 `.spec` 后，运行 `cmake --build build/host --target generate-selfhost`。该目标直接用 A 刷新 `src/generated/`，开发版编译失败时也可反复运行。用 `cmake --build build/host` 编译开发版 B，再运行下文的自举测试。下一轮开始时，再用 `begin-codegen-update` 将 B 保存为新的 A。
+修改 `.spec` 后，运行 `cmake --build build/host --target generate-selfhost`。该目标用 A 刷新 `src/generated/` 和 `src/codegen-generated-manifest.json`，二者应一起提交。CMake 从这份清单读取模型的 C++ 源文件和头文件，所以首次检出可直接编译生成器。再用 `cmake --build build/host` 编译开发版 B，运行下文的自举测试。下一轮开始时，再用 `begin-codegen-update` 将 B 保存为新的 A。
 
 外部模板声明支持末尾的类型参数包。比如 `template<First, Rest...> class variant;` 至少需要一个类型，`template<Ts...> class tuple;` 也接受空参数列表 `tuple<>`。通过 `using` 声明 C++ 模板实例的别名，生成器会收集所需头文件并先生成别名的依赖。`TemplateArgument` 和 `TypeData` 都遵循这条规则。[宿主类型](../spec/codegen/host-types.spec) · [类型别名](../spec/codegen/typegraph.spec)
 

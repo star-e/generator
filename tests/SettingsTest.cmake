@@ -41,6 +41,7 @@ string(REPLACE "iterations: uint32_t = 3" "iterations: uint32_t = 0xA" changed "
 file(WRITE "${spec}" "${changed}")
 run(${generate})
 file(GLOB_RECURSE paths RELATIVE "${output}" "${output}/*")
+list(REMOVE_ITEM paths "codegen-generated-manifest.json")
 if(NOT paths STREQUAL "editor/assets/default_renderpipeline/builtin-pipeline-types.ts")
     message(FATAL_ERROR "Unexpected settings outputs: ${paths}")
 endif()

@@ -13,20 +13,15 @@ endif()
 
 set(COCOS_CODEGEN_SELF_HOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/src" CACHE PATH
     "Root containing the generated self-hosted model files")
+include(cmake/SelfHostManifest.cmake)
+set(self_host_manifest "${COCOS_CODEGEN_SELF_HOST_ROOT}/codegen-generated-manifest.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${self_host_manifest}")
+read_self_host_paths("${self_host_manifest}" self_host_sources)
+list(FILTER self_host_sources INCLUDE REGEX "[.](cpp|h)$")
+list(TRANSFORM self_host_sources PREPEND "${COCOS_CODEGEN_SELF_HOST_ROOT}/")
 
 add_library(CocosCodegenModel STATIC
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.cpp"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocation.h"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SourceLocationFwd.h"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SyntaxFwd.h"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SyntaxTypes.cpp"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/SyntaxTypes.h"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphFwd.h"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphTypes.cpp"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphTypes.h"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/WorkspaceFwd.h"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/WorkspaceTypes.cpp"
-    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/WorkspaceTypes.h"
+    ${self_host_sources}
     src/model/TypeGraph.cpp
     src/model/TypeGraphBuilder.cpp
     src/parser/SpecParser.cpp)

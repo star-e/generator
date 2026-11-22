@@ -23,6 +23,7 @@ namespace cc::codegen {
 namespace {
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
+constexpr char manifestName[] = "codegen-generated-manifest.json";
 
 std::string read(const fs::path& path) {
     std::ifstream input(path, std::ios::binary);
@@ -400,18 +401,36 @@ Files plan(const Json& settings, const fs::path& base) {
     const auto graph = buildTypeGraph(inputs, &dependencyOrder);
     std::set<std::string> outputKeys;
     Files files;
-    const auto addFile = [&](const fs::path& path, const std::string& content) {
-        auto relative = path.lexically_normal();
-        auto key = relative.generic_string();
-        std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (!outputKeys.insert(key).second) throw std::runtime_error("duplicate output " + key);
-        files.emplace(relative, normalizeLines(content, eol == "crlf"));
+    std::optional<fs::path> manifestRoot;
+    Json manifestFiles = Json::object();
+    if (const auto option = settings.find("manifest"); option != settings.end()) {
+        checkKeys(*option, {"sourceRoot"}, "manifest");
+        manifestRoot = (base / option->value("sourceRoot", std::string{"."})).lexically_normal();
+    }
+    const auto sourcePath = [&](const fs::path& source) {
+        const auto relative = (base / source).lexically_normal().lexically_relative(*manifestRoot);
+        if (relative.empty()) throw std::runtime_error("cannot make manifest source relative: " + source.string());
+        return relative.generic_string();
     };
     NestedResets nestedResets;
     for (const auto owner : dependencyOrder) {
         const auto i = owner.value;
         const auto& syntax = inputs[i].syntax;
         const auto& module = graph.modules.at(i);
+        const auto addFile = [&](const fs::path& path, const std::string& content, const fs::path& copiedFrom = {}) {
+            const auto relative = path.lexically_normal();
+            auto key = relative.generic_string();
+            std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (manifestRoot && std::string_view(key).substr(0, key.find('/')) == manifestName)
+                throw std::runtime_error("reserved manifest output: " + key);
+            if (!outputKeys.insert(key).second) throw std::runtime_error("duplicate output " + key);
+            files.emplace(relative, normalizeLines(content, eol == "crlf"));
+            if (manifestRoot) {
+                auto& entry = manifestFiles[relative.generic_string()];
+                entry = {{"module", module.name}, {"source", sourcePath(modules[i].at("spec").get<std::string>())}};
+                if (!copiedFrom.empty()) entry["copiedFrom"] = sourcePath(copiedFrom);
+            }
+        };
         auto& output = outputs[i];
         auto& records = output.types;
         if (!inputs[i].modelOnly()) bindRecordOutput(outputs, syntax, graph, owner);
@@ -440,9 +459,15 @@ Files plan(const Json& settings, const fs::path& base) {
         if (modules[i].contains("runtimeFiles")) {
             const auto& runtime = modules[i].at("runtimeFiles");
             if (!runtime.is_object()) throw std::runtime_error("expected runtimeFiles output-to-source mapping");
-            for (const auto& [destination, source] : runtime.items())
-                addFile(outputPath(destination), read(base / source.get<std::string>()));
+            for (const auto& [destination, source] : runtime.items()) {
+                const fs::path copiedFrom = source.get<std::string>();
+                addFile(outputPath(destination), read(base / copiedFrom), copiedFrom);
+            }
         }
+    }
+    if (manifestRoot) {
+        Json manifest = {{"schemaVersion", 1}, {"files", std::move(manifestFiles)}};
+        files.emplace(manifestName, manifest.dump(2) + '\n');
     }
     return files;
 }
@@ -496,14 +521,14 @@ int generate(const fs::path& workspace, const std::optional<fs::path>& output, b
     auto root = fs::weakly_canonical(fs::absolute(destination));
     const Files files = plan(config, base);
     bool drift = false;
-    for (const auto& [path, bytes] : files) {
+    const auto publish = [&](const fs::path& path, const std::string& bytes) {
         const auto target = root / path;
         if (fs::weakly_canonical(target) != target || fs::is_symlink(target)) {
             throw std::runtime_error("redirected output path: " + target.string());
         }
         const bool exists = fs::exists(target);
         const auto actual = exists ? read(target) : std::string{};
-        if (exists && actual == bytes) continue;
+        if (exists && actual == bytes) return;
         if (check) {
             std::cerr << (exists ? "changed: " : "missing: ") << path.generic_string() << '\n';
             if (diff && exists) printDifference(bytes, actual);
@@ -511,7 +536,12 @@ int generate(const fs::path& workspace, const std::optional<fs::path>& output, b
         } else {
             replaceFile(target, bytes);
         }
+    };
+    const auto manifest = config.contains("manifest") ? files.find(manifestName) : files.end();
+    for (auto it = files.begin(); it != files.end(); ++it) {
+        if (it != manifest) publish(it->first, it->second);
     }
+    if (manifest != files.end()) publish(manifest->first, manifest->second);
     if (check && fs::exists(root)) {
         for (const auto& entry : fs::recursive_directory_iterator(root)) {
             if (!entry.is_regular_file()) continue;

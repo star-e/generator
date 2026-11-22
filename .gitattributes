@@ -1,1 +1,2 @@
 src/generated/** text eol=lf
+src/codegen-generated-manifest.json text eol=lf

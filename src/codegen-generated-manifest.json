@@ -1,0 +1,53 @@
+{
+  "files": {
+    "generated/SourceLocation.cpp": {
+      "module": "SourceLocation",
+      "source": "spec/codegen/source-location.spec"
+    },
+    "generated/SourceLocation.h": {
+      "module": "SourceLocation",
+      "source": "spec/codegen/source-location.spec"
+    },
+    "generated/SourceLocationFwd.h": {
+      "module": "SourceLocation",
+      "source": "spec/codegen/source-location.spec"
+    },
+    "generated/SyntaxFwd.h": {
+      "module": "Syntax",
+      "source": "spec/codegen/syntax.spec"
+    },
+    "generated/SyntaxTypes.cpp": {
+      "module": "Syntax",
+      "source": "spec/codegen/syntax.spec"
+    },
+    "generated/SyntaxTypes.h": {
+      "module": "Syntax",
+      "source": "spec/codegen/syntax.spec"
+    },
+    "generated/TypeGraphFwd.h": {
+      "module": "TypeGraph",
+      "source": "spec/codegen/typegraph.spec"
+    },
+    "generated/TypeGraphTypes.cpp": {
+      "module": "TypeGraph",
+      "source": "spec/codegen/typegraph.spec"
+    },
+    "generated/TypeGraphTypes.h": {
+      "module": "TypeGraph",
+      "source": "spec/codegen/typegraph.spec"
+    },
+    "generated/WorkspaceFwd.h": {
+      "module": "Workspace",
+      "source": "spec/codegen/workspace.spec"
+    },
+    "generated/WorkspaceTypes.cpp": {
+      "module": "Workspace",
+      "source": "spec/codegen/workspace.spec"
+    },
+    "generated/WorkspaceTypes.h": {
+      "module": "Workspace",
+      "source": "spec/codegen/workspace.spec"
+    }
+  },
+  "schemaVersion": 1
+}

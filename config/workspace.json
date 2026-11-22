@@ -1,5 +1,6 @@
 {
   "outputRoot": "../build/staging/cocos4",
+  "manifest": { "sourceRoot": ".." },
   "lineEnding": "crlf",
   "preamble": "preamble.txt",
   "cppDefaults": {
