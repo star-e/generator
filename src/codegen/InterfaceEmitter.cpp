@@ -14,14 +14,6 @@
 
 namespace cc::codegen {
 
-std::string cppMethodDeclarator(std::string type, std::string_view name, bool spaceBeforeReference) {
-    // Only the outer reference belongs next to the function or parameter name.
-    const auto endOfType = spaceBeforeReference ? type.find_last_not_of('&') + 1 : type.size();
-    if (endOfType < type.size() || !name.empty()) type.insert(endOfType, 1, ' ');
-    type += name;
-    return type;
-}
-
 namespace {
 
 constexpr auto lintBegin = "// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
@@ -110,7 +102,7 @@ void cppDeclarator(std::ostream& out, const ClassScope& scope, const MethodInfo&
         if (&decl == forwardType) scope.forwardTypes->insert(&decl);
         else if (!decl.cppHeader.empty()) headers.insert(decl.cppHeader);
         return scope.name(decl, method);
-    });
+    }, scope.spaceBeforeReference);
     out << cppMethodDeclarator(std::move(type), std::string(pointers, '*') + name, scope.spaceBeforeReference);
 }
 
@@ -251,11 +243,14 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     }
     out << " {\npublic:\n";
     if (needsSpecialMembers) {
+        const auto moveParam = cppMethodDeclarator(name + "&&", "rhs", spaceBeforeReference);
+        const auto copyParam = cppMethodDeclarator(name + " const&", "rhs", spaceBeforeReference);
+        const auto assign = cppMethodDeclarator(name + "&", "operator=", spaceBeforeReference);
         out << "    " << name << "() noexcept = default;\n"
-            << "    " << name << '(' << name << "&& rhs) = delete;\n"
-            << "    " << name << '(' << name << " const& rhs) = delete;\n"
-            << "    " << name << "& operator=(" << name << "&& rhs) = delete;\n"
-            << "    " << name << "& operator=(" << name << " const& rhs) = delete;\n"
+            << "    " << name << '(' << moveParam << ") = delete;\n"
+            << "    " << name << '(' << copyParam << ") = delete;\n"
+            << "    " << assign << '(' << moveParam << ") = delete;\n"
+            << "    " << assign << '(' << copyParam << ") = delete;\n"
             << "    virtual ~" << name << "() noexcept = default;\n\n";
     }
     const auto& methods = std::get<InterfaceType>(decl.data).methods;

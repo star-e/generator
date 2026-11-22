@@ -55,9 +55,9 @@ file(READ "${work}/both/native/cocos/renderer/pipeline/custom/PrivateTypes.h" pr
 set(interfaceTypes RenderNode ProgramProxy)
 set(interfaceHeaders renderHeader privateHeader)
 foreach(type header IN ZIP_LISTS interfaceTypes interfaceHeaders)
-    foreach(member IN ITEMS "${type}() noexcept = default;" "${type}(${type}&& rhs) = delete;"
-                            "${type}(${type} const& rhs) = delete;" "operator=(${type}&& rhs) = delete;"
-                            "operator=(${type} const& rhs) = delete;" "virtual ~${type}() noexcept = default;")
+    foreach(member IN ITEMS "${type}() noexcept = default;" "${type}(${type} &&rhs) = delete;"
+                            "${type}(${type} const &rhs) = delete;" "${type} &operator=(${type} &&rhs) = delete;"
+                            "${type} &operator=(${type} const &rhs) = delete;" "virtual ~${type}() noexcept = default;")
         string(FIND "${${header}}" "${member}" index)
         if(index EQUAL -1)
             message(FATAL_ERROR "Missing explicit special member of ${type}: ${member}")
@@ -71,7 +71,9 @@ if(NOT renderHeader MATCHES "constexpr bool ENABLE_SUBPASS = true;" OR pipeline 
     message(FATAL_ERROR "RenderInterface must publish the subpass switch in its native header")
 endif()
 foreach(fragment IN ITEMS "class Setter : public RenderNode"
-                          "const ccstd::vector<gfx::CommandBuffer*> &getCommandBuffers()"
+                          "const ccstd::vector<gfx::CommandBuffer *> &getCommandBuffers()"
+                          "static RenderingModule *init(gfx::Device *deviceIn,"
+                          "SubpassCapabilities &operator&=(SubpassCapabilities &lhs,"
                           "void addUploadPass(ccstd::vector<UploadPair> &uploadPairs)"
                           [=[    void addMaterialTexture(const ccstd::string &resourceName) {
         addMaterialTexture(resourceName, gfx::ShaderStageFlagBit::VERTEX | gfx::ShaderStageFlagBit::FRAGMENT);
@@ -305,7 +307,7 @@ import Shadow;
 namespace cc {
     /** Native switch. */
     constexpr bool ENABLE_TEST = false;
-    struct Item { Item& assign(const Item& other); }
+    struct Item { Item& assign(const Item& other); Item* clone() const; }
     using Count = int;
     interface Parent {
         @cppOnly virtual Parent* fork(Count* value) const = 0;
@@ -328,6 +330,7 @@ namespace cc {
 run(${generate})
 file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
 foreach(line IN ITEMS "Item &assign(const Item &other);"
+                      "Item *clone() const;"
                       "    return select(2, 3);"
                       "    return this->select(select, 3);"
                       "virtual int &revise(int &value, const int &other) = 0;"
@@ -350,7 +353,8 @@ file(WRITE "${workspace}" "${overrideStyle}")
 run(${generate})
 set(providerHeader "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h")
 file(READ "${providerHeader}" overridden)
-foreach(line IN ITEMS "Item& assign(const Item& other);" "virtual int& revise(int& value, const int &other) = 0;")
+foreach(line IN ITEMS "Item& assign(const Item& other);" "Item* clone() const;" "virtual int& revise(int& value, const int &other) = 0;"
+                      "Parent& operator=(Parent&& rhs) = delete;")
     string(FIND "${overridden}" "${line}" index)
     if(index EQUAL -1)
         message(FATAL_ERROR "Expected original reference spacing after module override: ${line}")

@@ -16,7 +16,6 @@ namespace cc::codegen {
 
 using Files = std::map<std::filesystem::path, std::string>;
 
-std::string cppMethodDeclarator(std::string type, std::string_view name, bool spaceBeforeReference);
 std::string emitHeaderSource(const TypeModule& module, const std::filesystem::path& header, const std::string& preamble);
 void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
                           std::string_view body, const std::set<std::string>& headers, const std::string& preamble);

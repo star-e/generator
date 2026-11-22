@@ -3,6 +3,8 @@
 #include "generated/TypeGraphTypes.h"
 #include <set>
 #include <stdexcept>
+#include <string_view>
+#include <utility>
 
 namespace cc::codegen {
 
@@ -95,26 +97,35 @@ inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph
     return "Array<" + name + ">";
 }
 
+inline std::string cppMethodDeclarator(std::string type, std::string_view name, bool spaceBeforeReference) {
+    const auto endOfType = spaceBeforeReference ? type.find_last_not_of("*&") + 1 : type.size();
+    if (endOfType < type.size() || !name.empty()) type.insert(endOfType, 1, ' ');
+    type += name;
+    return type;
+}
+
 template<class NameOf>
-std::string formatTypeName(const TypeGraph& graph, TypeId id, const NameOf& nameOf) {
+std::string formatTypeName(const TypeGraph& graph, TypeId id, const NameOf& nameOf, bool spaceBeforeReference = false) {
     const auto& node = graph.node(id);
     if (const auto* q = std::get_if<QualifiedType>(&node.data)) {
-        auto base = formatTypeName(graph, q->base, nameOf);
+        auto base = formatTypeName(graph, q->base, nameOf, spaceBeforeReference);
         if (std::holds_alternative<PointerType>(graph.node(q->base).data))
             return base + (q->isConst ? " const" : "") + (q->isVolatile ? " volatile" : "");
         return std::string(q->isConst ? "const " : "") + (q->isVolatile ? "volatile " : "") + base;
     }
     if (const auto* pointer = std::get_if<PointerType>(&node.data))
-        return formatTypeName(graph, pointer->pointee, nameOf) + "*";
+        return formatTypeName(graph, pointer->pointee, nameOf, spaceBeforeReference) + "*";
     if (const auto* ref = std::get_if<ReferenceType>(&node.data))
-        return formatTypeName(graph, ref->referred, nameOf) + (ref->rvalue ? "&&" : "&");
+        return formatTypeName(graph, ref->referred, nameOf, spaceBeforeReference) + (ref->rvalue ? "&&" : "&");
     if (const auto* instance = std::get_if<TemplateInstanceType>(&node.data)) {
         std::string name = nameOf(graph.node(instance->declaration)) + "<";
         for (size_t i = 0; i < instance->arguments.size(); ++i) {
             if (i) name += ", ";
             const auto& arg = instance->arguments[i];
-            if (const auto* type = std::get_if<TypeId>(&arg)) name += formatTypeName(graph, *type, nameOf);
-            else name += std::get<std::string>(arg);
+            if (const auto* type = std::get_if<TypeId>(&arg)) {
+                auto argument = formatTypeName(graph, *type, nameOf, spaceBeforeReference);
+                name += cppMethodDeclarator(std::move(argument), {}, spaceBeforeReference);
+            } else name += std::get<std::string>(arg);
         }
         return name + ">";
     }

@@ -17,7 +17,7 @@
     { "spec": "../spec/extern/strings.spec" },
     {
       "spec": "../spec/render/archive.spec",
-      "cpp": { "prefix": "Archive" },
+      "cpp": { "prefix": "Archive", "spaceBeforeReference": false },
       "typescript": "cocos/rendering/custom/archive.ts"
     },
     {
@@ -30,6 +30,7 @@
     {
       "spec": "../spec/render/render-common.spec",
       "cpp": {
+        "spaceBeforeReference": false,
         "names": true,
         "serialization": true,
         "jsb": true

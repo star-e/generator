@@ -68,7 +68,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 外部模块可以用 `header "path/{name}.h" forward { ... }` 声明一组普通类或结构体。分组路径指向定义头，模块的 `cpp.header` 必须已声明组内所有类型。生成接口时，裸指针和引用可以使用模块公共头。按值使用、作为模板实参或通过 `{}` 构造默认实参时，生成器保留定义头。模块含手写 C++ 函数体时也保留原有定义头。[Gfx 分组](../spec/extern/gfx.spec)
 
-`cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的引用格式。cocos4 工作区将它设为 `true`，让 `.spec` 声明的普通 C++ 方法输出 `T &get()` 和 `void set(const T &value)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
+`cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的声明格式。cocos4 工作区将它设为 `true`，让接口和普通成员函数写成 `T *get()`、`void set(const T &value)` 和 `const std::vector<T *> &items`。接口的拷贝、移动声明和 flags 赋值运算符也使用这个设置，例如 `T &operator=(T &&rhs)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
 
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 

@@ -72,11 +72,11 @@ bool numericDefault(const std::string& type, const std::string& literal) {
     return validFloatingDefault(type, literal);
 }
 
-std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
+std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps, bool spaceBeforeReference = false) {
     return formatTypeName(graph, id, [&](const TypeNode& type) {
         if (deps.emitCpp) collectCppHeader(graph, module, type, deps.headers);
         return cppName(graph, type, module);
-    });
+    }, spaceBeforeReference);
 }
 
 std::string pointerType(const TypeGraph& graph, const TypeModule& module, TypeId id, const TypeNode& resource, Dependencies& deps) {
@@ -85,14 +85,14 @@ std::string pointerType(const TypeGraph& graph, const TypeModule& module, TypeId
     return formatTypeName(graph, id, [&](const TypeNode& type) { return cppName(graph, type, module); });
 }
 
-std::string methodType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps) {
+std::string methodType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps, bool spaceBeforeReference) {
     if (const auto* ptr = std::get_if<PointerType>(&graph.node(id).data)) {
         const auto* q = std::get_if<QualifiedType>(&graph.node(ptr->pointee).data);
         const auto& target = graph.node(q ? q->base : ptr->pointee);
         if (std::holds_alternative<ExternalTypeNode>(target.data) && target.module != ModuleId{})
             return pointerType(graph, module, id, target, deps);
     }
-    return nativeType(graph, module, id, deps);
+    return nativeType(graph, module, id, deps, spaceBeforeReference);
 }
 
 struct RecordStorage {
@@ -447,14 +447,15 @@ void removeCppOnlyFields(const RecordType& record, std::vector<BoundField>& memb
     for (auto& i : order) i = indices[i];
 }
 
-void cppFlagOperators(std::ostream& out, const std::string& name, const std::string& base) {
+void cppFlagOperators(std::ostream& out, const std::string& name, const std::string& base, bool spaceBeforeReference) {
     for (const char op : {'|', '&'}) {
         out << "\nconstexpr " << name << " operator" << op << "(const " << name << " lhs, const " << name << " rhs) noexcept {\n"
             << "    return static_cast<" << name << ">(static_cast<" << base << ">(lhs) " << op
             << " static_cast<" << base << ">(rhs));\n}\n";
     }
     for (const char op : {'|', '&'}) {
-        out << "\nconstexpr " << name << "& operator" << op << "=(" << name << "& lhs, const " << name << " rhs) noexcept {\n"
+        out << "\nconstexpr " << cppMethodDeclarator(name + "&", "operator", spaceBeforeReference) << op << "=("
+            << cppMethodDeclarator(name + "&", "lhs", spaceBeforeReference) << ", const " << name << " rhs) noexcept {\n"
             << "    return lhs = lhs " << op << " rhs;\n}\n";
     }
     out << "\nconstexpr bool operator!(" << name << " e) noexcept {\n"
@@ -1010,13 +1011,13 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
         out << "    ";
         if (method.isExplicitConversion) out << "explicit operator ";
         else if (method.isStatic) out << "static ";
-        out << cppMethodDeclarator(methodType(graph, module, method.result.type, deps),
+        out << cppMethodDeclarator(methodType(graph, module, method.result.type, deps, output.spaceBeforeReference),
                                    method.isExplicitConversion ? "" : method.name, output.spaceBeforeReference);
         out << "(";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             if (i) out << ", ";
             const auto& p = method.parameters[i];
-            auto type = methodType(graph, module, p.type.type, deps);
+            auto type = methodType(graph, module, p.type.type, deps, output.spaceBeforeReference);
             if (p.byConstReference) type = "const " + type + "&";
             out << cppMethodDeclarator(std::move(type), p.name, output.spaceBeforeReference);
             if (!p.defaultValue.empty()) out << " = " << p.defaultValue;
@@ -1542,7 +1543,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             cpp << "};\n";
             if (enumeration->isFlags) {
                 deps.headers.insert("type_traits");
-                cppFlagOperators(cpp, node.name, baseName);
+                cppFlagOperators(cpp, node.name, baseName, output.spaceBeforeReference);
             }
             if (pendingEnums.erase(node.name)) {
                 if (!enumImports.empty()) enumImports += ", ";
