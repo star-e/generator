@@ -38,6 +38,33 @@ void checkTypeIdsAndUse() {
     require(use.type.value == 7 && use.location.describe() == "example.spec:2:3", "type use lost its location");
 }
 
+void checkSyntaxDeclarations() {
+    static_assert(std::is_aggregate_v<TypeRef> && std::is_aggregate_v<Parameter> && std::is_aggregate_v<Method>);
+    static_assert(std::is_aggregate_v<Field> && std::is_aggregate_v<Constructor>);
+    const auto module = parseModule("members.spec", R"(
+        module Members;
+        namespace sample {
+            struct Entry {
+                items: List<Tuple<>>;
+                constructor(items) defaults;
+                void replace(const Item& item, uint32_t count = 1);
+            }
+        }
+    )");
+    const auto& record = std::get<Record>(module.declarations.at(0).data);
+    const auto& field = record.fields.at(0);
+    const auto& argument = field.type.arguments.at(0);
+    require(field.name == "items" && field.type.name == "List" && field.type.hasTemplateArguments &&
+            argument.name == "Tuple" && argument.hasTemplateArguments && argument.arguments.empty() &&
+            argument.location.file == "members.spec", "lost nested template syntax");
+    const auto& ctor = record.constructors.at(0);
+    require(ctor.defaults && ctor.fields == std::vector<std::string>{"items"}, "lost constructor syntax");
+    const auto& method = record.methods.at(0);
+    require(method.accessor == AccessorKind::None && method.resultPresence == ResultPresence::Required &&
+            method.parameters.at(0).byConstReference && method.parameters.at(1).defaultValue == "1",
+            "lost method defaults or parameter syntax");
+}
+
 const MethodInfo& scratch(const TypeGraph& graph, TypeId owner) {
     for (const auto& method : std::get<InterfaceType>(graph.node(owner).data).methods) {
         if (method.name == "scratch") return method;
@@ -406,6 +433,7 @@ int main(int argc, char** argv) {
         const std::filesystem::path specs = argv[1];
         checkSourceLocation();
         checkTypeIdsAndUse();
+        checkSyntaxDeclarations();
         checkScalarBindings();
         checkTemplateBindings();
         checkContainerBindings();

@@ -210,7 +210,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 ## 生成器自举
 
-日常构建编译 `src/generated/` 里的自举快照。运行 `cocos-codegen generate --workspace config/self-host.json` 会在 `build/self-host/generated/` 生成 `SourceLocation` 和 `TypeGraph` 两个模块的六个 C++ 文件。解析器、建图器和各后端都使用这份模型。[自举配置](../config/self-host.json) · [声明](../spec/codegen/typegraph.spec) · [生成的图](../src/generated/TypeGraphTypes.h)
+日常构建编译 `src/generated/` 里的自举快照。运行 `cocos-codegen generate --workspace config/self-host.json` 会在 `build/self-host/generated/` 生成 `SourceLocation`、`TypeGraph` 和 `Syntax` 三个模块的九个 C++ 文件。解析器用 `Syntax` 中的 `TypeRef` 保存类型名、源码位置和嵌套模板实参，用 `Parameter`、`Method`、`Field` 和 `Constructor` 保存成员声明。建图器解析这些类型引用后，各后端从 `TypeGraph` 读取语义类型。[自举配置](../config/self-host.json) · [语法声明](../spec/codegen/syntax.spec) · [类型图声明](../spec/codegen/typegraph.spec)
 
 开始修改生成器自身的声明前，运行 `cmake --build build/host --target begin-codegen-update`。该目标构建当前生成器，验证其可执行文件副本，通过自举测试后将副本保存为本轮的 A，放在 `build/bootstrap/`。若构建或验证失败，上一次保存的 A 仍可用。
 
@@ -221,8 +221,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 `TypeGraph` 用 `vertex_storage: indexed(graph::BidirectionalStorage<uint32_t>);` 指定宿主的双向边存储。它适用于声明了顶点遍历、出边和入边的平面组件图。存储模板按顶点编号类型实例化，提供顶点与边的遍历、查询和 `reserve`。生成器为每个组件生成 `std::vector` 和访问方法，为图生成字段和方法声明。`appendNode` 的登记与回滚、按名称查找和类型复用由 `TypeGraph.cpp` 实现。[图存储](../src/model/GraphSupport.h) · [图操作](../src/model/TypeGraph.cpp)
 
 1. 运行 `ctest --test-dir build/host -R cocos.selfhost --output-on-failure`。测试在空目录生成第一轮，逐文件检查路径、LF 换行和快照字节。
-2. 在新的构建目录将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮输出，用该目录中的两个模块编译候选生成器。
-3. 候选生成器在第二个空目录再生成一次，逐字节比较两轮的六个文件，然后运行当前配置启用的其余回归测试。[自举测试](../tests/SelfHost.cmake)
+2. 在新的构建目录将 `COCOS_CODEGEN_SELF_HOST_ROOT` 指向第一轮输出，用该目录中的模型编译候选生成器。
+3. 候选生成器在第二个空目录再生成一次，逐字节比较两轮的自举文件，并核对引擎工作区的生成结果，然后运行当前配置启用的其余回归测试。[自举测试](../tests/SelfHost.cmake)
 
 修改模型或生成规则时，将声明和刷新后的快照一同提交。若模型需要新语法，先用现有快照构建能解析该语法的工具，再用它生成下一轮快照。
 

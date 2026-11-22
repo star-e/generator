@@ -1,5 +1,6 @@
 #pragma once
 
+#include "generated/SyntaxTypes.h"
 #include "generated/TypeGraphFwd.h"
 #include "model/Binding.h"
 #include <map>
@@ -11,63 +12,12 @@
 
 namespace cc::codegen {
 
-struct Parameter {
-    TypeRef type;
-    std::string name;
-    bool byConstReference{};
-    std::string defaultValue;
-};
-
-struct Method {
-    TypeRef result;
-    std::string name;
-    std::vector<Parameter> parameters;
-    bool isConst{};
-    bool isNoexcept{};
-    bool cppOnly{};
-    std::string cppBody;
-    bool isStatic{};
-    bool isPureVirtual{};
-    bool isExplicitConversion{};
-    bool explicitCppOnly{};
-    AccessorKind accessor{};
-    bool optionalMethod{};
-    ResultPresence resultPresence{};
-    bool cppPrivate{};
-    std::string documentation;
-};
-
 enum class ArchiveRole { none, input, output };
 
 struct Interface {
     std::vector<Method> methods;
     std::vector<TypeRef> bases;
     ArchiveRole archiveRole{};
-};
-
-struct Field {
-    TypeRef type;
-    std::string name;
-    std::string initializer;
-    bool isReadonly{};
-    bool isNullable{};
-    bool transient{};
-    bool cppOnly{};
-    bool notElement{};
-    bool isMutable{};
-    bool cppPrivate{};
-    std::string documentation;
-};
-
-struct Constructor {
-    SourceLocation location;
-    std::vector<std::string> fields;
-    bool defaults{};
-    bool cppOnly{};
-    bool custom{};
-    bool isNoexcept{};
-    bool cppPrivate{};
-    std::string documentation;
 };
 
 struct Record {

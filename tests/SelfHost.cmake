@@ -8,6 +8,7 @@ set(build "${work}/build")
 run("${TOOL}" generate --workspace "${workspace}" --output "${first}")
 set(expectedFiles
     generated/SourceLocation.cpp generated/SourceLocation.h generated/SourceLocationFwd.h
+    generated/SyntaxFwd.h generated/SyntaxTypes.cpp generated/SyntaxTypes.h
     generated/TypeGraphFwd.h generated/TypeGraphTypes.cpp generated/TypeGraphTypes.h)
 file(GLOB_RECURSE firstFiles RELATIVE "${first}" "${first}/*")
 if(NOT firstFiles STREQUAL expectedFiles)

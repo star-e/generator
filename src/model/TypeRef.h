@@ -1,19 +1,3 @@
 #pragma once
 
-#include "model/SourceLocation.h"
-#include <string>
-#include <vector>
-
-namespace cc::codegen {
-
-struct TypeRef {
-    SourceLocation location;
-    std::string name;
-    bool pointer{};
-    std::vector<TypeRef> arguments;
-    bool constPointee{};
-    bool reference{};
-    bool hasTemplateArguments{};
-};
-
-} // namespace cc::codegen
+#include <generated/SyntaxTypes.h> // IWYU pragma: export
