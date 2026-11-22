@@ -256,9 +256,13 @@ flat.setCount(index, 43);
 assert(flat.getCount(index) === 43);
 flat.setCount(index, 42);
 assert(flat.getDescriptors(index) === db && flat.getCount(index) === 42 && flat.getName(index) === 'flat', 'Component order');
+let invalidWrite = false;
+try { flat.setCount(index + 1, 99); } catch (e) { invalidWrite = e instanceof RangeError; }
+assert(invalidWrite && flat.nv() === 1, 'Invalid setter must not extend a component column');
 flat.version = 9;
 flat.clear();
 assert(flat.nv() === 0 && flat.version === 1, 'Flat graph scalar default');
+assert(flat.addVertex(db, 'new', 0) === 0 && flat.getName(0) === 'new' && flat.getCount(0) === 0);
 const toggles = new Toggles();
 const toggle = toggles.addVertex(TogglesValue.ComputeTag, false);
 assert(toggles.w(toggle) === TogglesValue.ComputeTag && toggles.value(TogglesValue.ComputeTag, toggle) === false,
@@ -282,7 +286,19 @@ assert(tiny.ne() === 0, 'Outgoing incidence removal');
 
 const indexed = new IndexedNames();
 indexed.addVertex(IndexedNamesValue.Count, 17, 23, '');
-indexed.addVertex(IndexedNamesValue.Count, 19, 29, 'child', 0);
+// Fail the final link after the payload, components and name index have been written.
+const children = indexed['_children'][0];
+const linkFailure = new Error('injected child append failure');
+Object.defineProperty(children, 'push', { configurable: true, value () { throw linkFailure; } });
+let rolledBack = false;
+try { indexed.addVertex(IndexedNamesValue.Count, 31, 37, 'child', 0); }
+catch (e) { rolledBack = e === linkFailure; }
+finally { Reflect.deleteProperty(children, 'push'); }
+assert(rolledBack && !indexed.contains('child') && indexed.numChildren(0) === 0);
+assert([indexed['_children'], indexed['_parents'], indexed['_kinds'], indexed['_indices'],
+    indexed['_components'].Name, indexed['_components'].Count, indexed['_objects'][IndexedNamesValue.Count]]
+    .every(column => column.length === 1), 'Failed insertion must restore every column');
+assert(indexed.addVertex(IndexedNamesValue.Count, 19, 29, 'child', 0) === 1);
 const writer = new BinaryOutputArchive();
 saveIndexedNames(writer, indexed);
 indexed.setName(0, 'replaced');
