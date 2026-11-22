@@ -102,8 +102,11 @@ Module readModule(const std::filesystem::path& spec, const std::filesystem::path
 }
 
 void checkScalarBindings() {
-    const TypeTable types{{"cc::uint32_t", {}}};
-    const auto graph = buildTypeGraph({}, types);
+    const auto shadow = parseModule("shadow.spec", R"(
+        extern module Shadow;
+        namespace cc { struct uint32_t; }
+    )");
+    const auto graph = buildTypeGraph({{shadow}});
     require(graph.node(graph.findType("void")).typescriptName == "void", "wrong default void binding");
     require(graph.node(graph.findType("bool")).typescriptName == "boolean", "wrong default bool binding");
     for (const auto* name : {"int", "char", "double", "float"}) {
@@ -122,32 +125,50 @@ void checkScalarBindings() {
         module Bindings;
         binding typescript { uint32_t => Count from "types/count"; }
     )");
-    const auto bound = buildTypeGraph({{module, {}}}, types);
+    const auto bound = buildTypeGraph({{module}, {shadow}});
     const auto& count = bound.node(bound.findType("uint32_t"));
     require(count.typescriptName == "Count" && count.typescriptModule == "types/count",
             "explicit binding did not override the default scalar binding");
 }
 
 void checkTemplateBindings() {
+    const auto external = parseModule("buffer-types.spec", R"(
+        extern module BufferTypes;
+        cpp { header "vendor/Buffer.h"; }
+        namespace vendor { template<T, U> struct Buffer; struct Element; }
+        namespace vendor::inner::vendor { struct Element; }
+    )");
     const auto module = parseModule("buffers.spec", R"(
         module Buffers;
-        namespace vendor {
+        import BufferTypes;
+        namespace vendor::inner {
             struct Element {}
-            interface Input { virtual Buffer<Element, ::Element> get() = 0; }
+            @tag struct BufferTag {}
+            using Index = uint32_t;
+            using Elements = Buffer<Element, ::vendor::Element>;
+            interface Input { virtual Buffer<Element, ::vendor::Element> get() = 0; }
         }
-        binding typescript { Buffer<Element, ::Element> => Uint8Array; }
+        binding typescript { Buffer<Element, ::vendor::Element> => Uint8Array; }
     )");
-    auto graph = buildTypeGraph({{module, {}}}, {{"vendor::Buffer", {}}, {"Element", {}}});
+    auto graph = buildTypeGraph({{.syntax = module, .nativeHeader = "Buffers.h", .forwardHeader = "BuffersFwd.h",
+                                  .typescriptModule = "sample/buffers"}, {external}});
     const auto buffer = graph.findType("vendor::Buffer");
-    const auto local = graph.findType("vendor::Element");
-    const auto global = graph.findType("Element");
-    const auto bound = graph.makeTemplateInstance(buffer, {local, global});
-    const auto other = graph.makeTemplateInstance(buffer, {global, local});
-    const auto& input = std::get<InterfaceType>(graph.node(graph.findType("vendor::Input")).data);
+    const auto local = graph.findType("vendor::inner::Element");
+    const auto outer = graph.findType("vendor::Element");
+    const auto bound = graph.makeTemplateInstance(buffer, {local, outer});
+    const auto other = graph.makeTemplateInstance(buffer, {outer, local});
+    const auto& input = std::get<InterfaceType>(graph.node(graph.findType("vendor::inner::Input")).data);
     require(input.methods.at(0).result.type == bound && graph.node(bound).typescriptName == "Uint8Array",
             "method and binding resolved to different template instances");
     require(!graph.node(other).typescriptName && !graph.node(buffer).typescriptName,
             "exact binding also bound the template or a different argument list");
+    require(graph.node(graph.findType("vendor::inner::Index")).cppHeader == "BuffersFwd.h" &&
+            graph.node(graph.findType("vendor::inner::Elements")).cppHeader == "Buffers.h",
+            "scalar and template aliases must use their defining headers");
+    const auto& tag = graph.node(graph.findType("vendor::inner::BufferTag"));
+    require(tag.cppHeader == "Buffers.h" && !tag.typescriptName && tag.typescriptModule.empty() &&
+            graph.node(local).typescriptModule == "sample/buffers" && graph.node(outer).cppHeader == "vendor/Buffer.h",
+            "lost tag, TypeScript export or external header mapping");
 }
 
 void checkContainerBindings() {
@@ -171,7 +192,7 @@ void checkContainerBindings() {
             Label => Tag from "labels";
         }
     )");
-    auto graph = buildTypeGraph({{module, {}, true}}, {});
+    auto graph = buildTypeGraph({{module}});
     const auto list = graph.findType("sample::List");
     require(graph.node(list).cppHeader == "sample/List.h" &&
             graph.node(graph.findType("sample::Table")).cppHeader == "sample/Containers.h",
@@ -205,8 +226,8 @@ void checkContainerBindings() {
 
 void checkArchive(const std::filesystem::path& specs) {
     const auto spec = specs / "render/archive.spec";
-    const auto graph = buildTypeGraph({{readModule(spec), {}}, {readModule(specs / "extern/types.spec"), {}, true},
-                                       {readModule(specs / "extern/containers.spec"), {}, true}}, {});
+    const auto graph = buildTypeGraph({{readModule(spec)}, {readModule(specs / "extern/types.spec")},
+                                       {readModule(specs / "extern/containers.spec")}});
     const auto& view = graph.node(graph.findType("std::string_view"));
     require(graph.modules.at(view.module.value).name == "EngineTypes" && view.cppHeader == "string_view" &&
             view.typescriptName == "string" && !std::get<ExternalTypeNode>(view.data).isString,
@@ -239,11 +260,13 @@ void checkArchive(const std::filesystem::path& specs) {
 
 void checkSettings(const std::filesystem::path& spec) {
     const auto externs = spec.parent_path().parent_path() / "extern";
-    const auto graph = buildTypeGraph({{readModule(externs / "gfx.spec", "cocos/gfx"), {}, true},
-                                       {readModule(externs / "containers.spec"), {}, true},
-                                       {readModule(externs / "types.spec"), {}, true}, {readModule(spec), {}}}, {});
+    const auto graph = buildTypeGraph({{readModule(externs / "gfx.spec", "cocos/gfx")},
+                                       {readModule(externs / "containers.spec")}, {readModule(externs / "types.spec")},
+                                       {.syntax = readModule(spec), .typescriptModule = "test/settings", .typescriptSettings = true}});
     const auto bloom = graph.findType("cc::render::Bloom");
     const auto bloomType = graph.findType("cc::render::BloomType");
+    require(graph.node(bloom).typescriptName == "Bloom" && graph.node(bloom).typescriptModule.empty() &&
+            graph.node(bloomType).typescriptModule == "test/settings", "wrong settings record or enum export");
     auto field = [&](TypeId record, const std::string& name) -> const FieldInfo& {
         const auto& fields = std::get<RecordType>(graph.node(record).data).fields;
         const auto it = std::ranges::find(fields, name, &FieldInfo::name);
@@ -268,14 +291,14 @@ void checkSettings(const std::filesystem::path& spec) {
 
 void checkImports(const std::filesystem::path& specs) {
     const auto commonSpec = specs / "render/render-common.spec";
-    std::vector<ModuleInput> inputs{{readModule(commonSpec), {}},
-                                    {readModule(specs / "extern/light.spec", "cocos/render-scene/scene"), {}},
-                                    {readModule(specs / "extern/reflection-probe.spec", "cocos/render-scene/scene/reflection-probe"), {}},
-                                    {readModule(specs / "extern/gfx.spec", "cocos/gfx"), {}, true},
-                                    {readModule(specs / "extern/strings.spec"), {}, true},
-                                    {readModule(specs / "extern/containers.spec"), {}, true},
-                                    {readModule(specs / "render/archive.spec"), {}},
-                                    {readModule(specs / "extern/types.spec"), {}, true}};
+    std::vector<ModuleInput> inputs{{readModule(commonSpec)},
+                                    {readModule(specs / "extern/light.spec", "cocos/render-scene/scene")},
+                                    {readModule(specs / "extern/reflection-probe.spec", "cocos/render-scene/scene/reflection-probe")},
+                                    {readModule(specs / "extern/gfx.spec", "cocos/gfx")},
+                                    {readModule(specs / "extern/strings.spec")},
+                                    {readModule(specs / "extern/containers.spec")},
+                                    {readModule(specs / "render/archive.spec")},
+                                    {readModule(specs / "extern/types.spec")}};
     inputs.push_back({parseModule("consumer.spec", R"(
         module Consumer;
         import RenderCommon;
@@ -307,7 +330,7 @@ void checkImports(const std::filesystem::path& specs) {
             @tag struct Label_ {}
             @tag struct Phase_ {}
         }
-    )"), {}});
+    )")});
     auto check = [&](const TypeGraph& graph) {
         const auto infoId = graph.findType("cc::render::LightInfo");
         const auto& info = graph.node(infoId);
@@ -387,9 +410,9 @@ void checkImports(const std::filesystem::path& specs) {
         require(fields[1].initializer == "nullptr" && fields[2].name == "level" && fields[2].initializer == "0" &&
                 fields[3].name == "culledByLight" && fields[3].initializer == "false", "wrong LightInfo defaults");
     };
-    check(buildTypeGraph(inputs, {}));
+    check(buildTypeGraph(inputs));
     std::ranges::reverse(inputs);
-    check(buildTypeGraph(inputs, {}));
+    check(buildTypeGraph(inputs));
 }
 
 void checkTypes() {
@@ -399,7 +422,7 @@ void checkTypes() {
             interface First { virtual Last* get() = 0; }
             interface Last { virtual First* get() = 0; }
         })");
-    auto graph = buildTypeGraph({{std::move(module), {}}}, {});
+    auto graph = buildTypeGraph({{std::move(module)}});
     const auto first = graph.findType("cc::test::First");
     const auto last = graph.findType("cc::test::Last");
     const auto result = std::get<InterfaceType>(graph.node(first).data).methods.front().result.type;
@@ -424,14 +447,18 @@ void checkTypes() {
 }
 
 void checkEnumIntegers() {
+    // Model the global ::int64_t declaration from <cstdint>.
+    const Module cstdint{.name = "Cstdint", .declarations = {
+        {.name = "int64_t", .data = ExternalDeclaration{}, .cppHeader = "cstdint"}}, .external = true};
     const auto module = parseModule("integers.spec", R"(
         module Integers;
+        import Cstdint;
         namespace cc {
             flags Bits : uint32_t { NONE = 0, HIGH = 0X80000000, ALL = 0xffffffff, COPY = ALL }
             enum class Signed : int64_t { MIN = -9223372036854775808, NEXT, RESTART = MIN, AFTER }
             enum class Unsigned : uint64_t { MAX = 18446744073709551615, TOP = 1<<0x3f, COPY = TOP, NEXT }
         })");
-    const auto graph = buildTypeGraph({{module, {}}}, {{"uint32_t", {}}, {"int64_t", {}}, {"uint64_t", {}}});
+    const auto graph = buildTypeGraph({{module}, {cstdint}});
     const auto& bits = std::get<EnumType>(graph.node(graph.findType("cc::Bits")).data);
     require(bits.isFlags && bits.values.at(1).initializer == "0X80000000" &&
             std::get<uint64_t>(bits.values.at(3).value) == UINT32_MAX, "lost flag literal or alias");

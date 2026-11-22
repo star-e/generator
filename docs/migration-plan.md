@@ -40,6 +40,8 @@ ctest --test-dir build/host --output-on-failure
 
 ### 按模块选择输出
 
+工作区通过 `ModuleInput` 把每个模块的声明、C++ 定义头、前置声明头和 TS 输出信息交给建图器。建图时，标量别名使用前置声明头，模板实例别名和图标签使用定义头。外部类型的头文件和 TS 导入来源沿用 `extern module` 的声明与配置。[建图输入](../src/model/TypeGraphBuilder.h) · [工作区](../src/workspace/Workspace.cpp)
+
 TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当前使用的五种固定宽度整数（`int32_t`、`uint8_t`、`uint16_t`、`uint32_t`、`uint64_t`）。所有模块都能直接使用这些标量，固定宽度整数的 C++ 头文件是 `<cstdint>`。引擎模块通过 `import EngineTypes;` 使用外部声明，例如 `Material`、`IntrusivePtr<T>` 和 `Array4<T>`。自举模块通过 `import HostTypes;` 使用 `std::filesystem::path`、`std::size_t` 和 `std::string`。迁移旧工作区时，把类型声明和头文件放入 `.spec` 的 `extern module`，由消费模块直接导入，然后删除工作区或模块上的 `types` 配置项。[引擎外部类型](../spec/extern/types.spec) · [自举外部类型](../spec/codegen/host-types.spec)
 
 `modules` 中的每一项引用一个 `.spec`。`extern module` 的 `typescript` 字符串指定已有 TS 模块的导入路径，例如 `{ "spec": "../spec/extern/gfx.spec", "typescript": "cocos/gfx" }`。生成器只在消费方写入导入语句。没有统一 TS 来源的外部模块可以只填 `spec`。普通模块可以单独或同时配置 `cpp` 和 `typescript`。例如，`RenderCommon` 的生成配置为

@@ -1,20 +1,22 @@
 #pragma once
 
+#include "generated/SyntaxTypes.h"
 #include "generated/TypeGraphTypes.h"
-#include "model/Interface.h"
 
 namespace cc::codegen {
 
 struct ModuleInput {
     Module syntax;
-    TypeTable externalTypes;
-    bool modelOnly{};
     std::string nativeHeader;
+    std::string forwardHeader;
+    std::string typescriptModule;
+    bool typescriptSettings{};
+
+    bool modelOnly() const noexcept { return nativeHeader.empty() && typescriptModule.empty(); }
 };
 
 // Register declarations before binding direct imports and resolving type uses in dependency order.
-TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes,
-                         std::vector<ModuleId>* dependencyOrder = nullptr);
+TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<ModuleId>* dependencyOrder = nullptr);
 
 std::string componentAccessorSuffix(std::string tagName);
 bool isArithmeticType(const std::string& type);

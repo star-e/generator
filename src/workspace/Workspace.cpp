@@ -379,7 +379,7 @@ Files plan(const Json& settings, const fs::path& base) {
                 if (rule.kind != BindingTarget::type) invalidBinding(rule, "extern module");
         }
         if (module.external || (!config.contains("cpp") && !config.contains("typescript"))) {
-            inputs.push_back({std::move(module), {}, true});
+            inputs.push_back({std::move(module)});
             continue;
         }
         if (config.contains("cpp")) loadCppOutput(typesOutput, config.at("cpp"), defaults, module);
@@ -396,24 +396,12 @@ Files plan(const Json& settings, const fs::path& base) {
             tsModule = path;
             tsModule.replace_extension();
         }
-        TypeTable mappings;
-        for (const auto& decl : module.declarations) {
-            if (std::holds_alternative<AliasDeclaration>(decl.data)) {
-                mappings.emplace(decl.name, ExternalType{.header = typesOutput.forwardHeader.generic_string()});
-            } else if (std::holds_alternative<TagDeclaration>(decl.data)) {
-                mappings.emplace(decl.name, ExternalType{.header = typesOutput.header.generic_string()});
-            } else {
-                // Settings records export interfaces and factories, while ordinary records export constructors.
-                const bool settingsRecord = output.settingsFile && std::holds_alternative<Record>(decl.data);
-                mappings.emplace(decl.name, ExternalType{.header = typesOutput.header.generic_string(),
-                    .typescript = tsModule.empty() ? std::nullopt : std::optional{decl.name},
-                    .typescriptModule = settingsRecord ? std::string{} : tsModule.generic_string()});
-            }
-        }
-        inputs.push_back({std::move(module), std::move(mappings), false, typesOutput.header.generic_string()});
+        inputs.push_back({.syntax = std::move(module), .nativeHeader = typesOutput.header.generic_string(),
+                          .forwardHeader = typesOutput.forwardHeader.generic_string(), .typescriptModule = tsModule.generic_string(),
+                          .typescriptSettings = output.settingsFile.has_value()});
     }
     std::vector<ModuleId> dependencyOrder;
-    const auto graph = buildTypeGraph(inputs, {}, &dependencyOrder);
+    const auto graph = buildTypeGraph(inputs, &dependencyOrder);
     std::set<std::string> outputKeys;
     Files files;
     const auto addFile = [&](const fs::path& path, const std::string& content) {
@@ -430,7 +418,7 @@ Files plan(const Json& settings, const fs::path& base) {
         const auto& module = graph.modules.at(i);
         auto& output = outputs[i];
         auto& records = output.types;
-        if (!inputs[i].modelOnly) bindRecordOutput(outputs, syntax, graph, owner);
+        if (!inputs[i].modelOnly()) bindRecordOutput(outputs, syntax, graph, owner);
         if (output.settingsFile)
             addFile(*output.settingsFile, emitSettings(graph, owner, settingsBinding(syntax), *output.settingsFile, preamble));
         if (records.swigFile) {

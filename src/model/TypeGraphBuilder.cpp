@@ -41,26 +41,17 @@ TypeId ensureNamespace(TypeGraph& graph, const std::string& scope) {
     return graph.appendNode(TypeNode{.name = name, .qualifiedName = scope, .data = NamespaceType{}}, parent);
 }
 
-void registerExternalTypes(TypeGraph& graph, TypeTable types) {
+void registerScalars(TypeGraph& graph) {
     const auto addScalar = [&](const char* name, const char* ts, const std::string& header = {}) {
-        auto& type = types.try_emplace(name, ExternalType{.header = header, .builtin = header.empty()}).first->second;
-        if (!type.typescript) type.typescript = ts;
+        graph.appendNode(TypeNode{.name = name, .qualifiedName = name,
+                                  .data = header.empty() ? TypeData{BuiltinType{}} : TypeData{ExternalTypeNode{}},
+                                  .cppHeader = header, .typescriptName = ts}, {});
     };
-    addScalar("void", "void");
+    // Keep the scalar vertex IDs in name order.
     addScalar("bool", "boolean");
-    for (const auto* name : {"int", "char", "float", "double"}) addScalar(name, "number");
-    for (const auto* name : {"int32_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t"}) addScalar(name, "number", "cstdint");
-
-    for (const auto& [qualified, type] : types) {
-        const auto pos = qualified.rfind("::");
-        const auto parent = pos == std::string::npos ? TypeId{} : ensureNamespace(graph, qualified.substr(0, pos));
-        const auto name = pos == std::string::npos ? qualified : qualified.substr(pos + 2);
-        graph.appendNode(TypeNode{.name = name, .qualifiedName = qualified,
-                                  .data = type.builtin ? TypeData{BuiltinType{}} : TypeData{ExternalTypeNode{}},
-                                  .cppHeader = type.header,
-                                  .typescriptName = type.typescript,
-                                  .typescriptModule = type.typescriptModule}, parent);
-    }
+    for (const auto* name : {"char", "double", "float", "int"}) addScalar(name, "number");
+    for (const auto* name : {"int32_t", "uint16_t", "uint32_t", "uint64_t", "uint8_t"}) addScalar(name, "number", "cstdint");
+    addScalar("void", "void");
 }
 
 TypeId resolveName(const TypeGraph& graph, const std::string& name, const SourceLocation& location,
@@ -646,7 +637,7 @@ TypeScriptRules bindTypes(TypeGraph& graph, const std::vector<ModuleInput>& inpu
                 node.typescriptModule.clear();
             } else if (rule.kind == BindingTarget::type) {
                 if (!std::holds_alternative<BuiltinType>(node.data) && !std::holds_alternative<ExternalTypeNode>(node.data) &&
-                    !(isEnum && input.modelOnly)) reject("expected an external type");
+                    !(isEnum && input.modelOnly())) reject("expected an external type");
                 if (!rule.target.empty()) {
                     node.typescriptName = rule.target;
                     node.typescriptTypeOnly = rule.externalInterface;
@@ -908,9 +899,9 @@ std::optional<uint64_t> indexedVertexLimit(const std::string& type) {
     return it->second.max;
 }
 
-TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable& externalTypes, std::vector<ModuleId>* dependencyOrder) {
+TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<ModuleId>* dependencyOrder) {
     TypeGraph graph;
-    registerExternalTypes(graph, externalTypes);
+    registerScalars(graph);
     std::map<std::string, ModuleId> moduleNames;
     std::vector<std::string> scopes;
     for (const auto& input : inputs) {
@@ -931,16 +922,23 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             const auto* external = std::get_if<ExternalDeclaration>(&decl.data);
             TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl),
                           .cppHeader = decl.cppHeader, .documentation = decl.documentation};
-            if (const auto it = input.externalTypes.find(decl.name); it != input.externalTypes.end()) {
-                if (!it->second.header.empty()) {
+            const bool tag = std::holds_alternative<TagType>(node.data);
+            if (input.modelOnly()) {
+                if (decl.externalScope.empty() && !tag && !external) node.typescriptName = decl.name;
+            } else {
+                const bool alias = std::holds_alternative<AliasType>(node.data);
+                const auto& header = alias ? input.forwardHeader : input.nativeHeader;
+                if (!header.empty()) {
                     if (!node.cppHeader.empty())
                         throw std::runtime_error(decl.location.describe() + ": C++ header already declared in .spec for " + node.qualifiedName);
-                    node.cppHeader = it->second.header;
+                    node.cppHeader = header;
                 }
-                node.typescriptName = it->second.typescript;
-                node.typescriptModule = it->second.typescriptModule;
-            } else if (decl.externalScope.empty() && !std::holds_alternative<TagType>(node.data) && !external) {
-                node.typescriptName = decl.name;
+                if (!tag && !alias && !input.typescriptModule.empty()) {
+                    node.typescriptName = decl.name;
+                    // Settings records export interfaces and factories, while ordinary records export constructors.
+                    if (!input.typescriptSettings || !std::holds_alternative<RecordType>(node.data))
+                        node.typescriptModule = input.typescriptModule;
+                }
             }
             if (external && external->isString && !node.typescriptName) node.typescriptName = "string";
             const bool namedExternal = external && external->templateParameters.empty() && external->container == ContainerKind::None;
@@ -980,16 +978,6 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             const auto missing = entry.inputArchive == TypeId{} ? "input" : "output";
             throw std::runtime_error(module.name + ": missing @archive(" + missing + ") interface");
         }
-        for (const auto& [name, mapping] : input.externalTypes) {
-            const auto it = std::ranges::find(module.declarations, name, &Declaration::name);
-            if (it != module.declarations.end()) {
-                if (std::holds_alternative<ExternalDeclaration>(it->data) || std::holds_alternative<Enum>(it->data) ||
-                    (!input.modelOnly && std::holds_alternative<TagDeclaration>(it->data))) continue;
-                if (!input.modelOnly && (std::holds_alternative<Interface>(it->data) || std::holds_alternative<Record>(it->data) || std::holds_alternative<GraphDeclaration>(it->data) ||
-                                         std::holds_alternative<AliasDeclaration>(it->data))) continue;
-            }
-            throw std::runtime_error(module.name + ": mapping for unknown external type " + name);
-        }
         scopes.push_back(std::move(scope));
     }
     auto order = bindImports(graph.modules, inputs, moduleNames);
@@ -1028,7 +1016,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, const TypeTable
             if (const auto* record = std::get_if<Record>(&decl.data)) {
                 auto payload = resolveRecord(graph, id, *record, scopes[i], owner);
                 const auto& node = graph.node(id);
-                if (!input.modelOnly && !node.typescriptModule.empty() && !node.typescriptNumber && rule.from.empty())
+                if (!input.modelOnly() && !node.typescriptModule.empty() && !node.typescriptNumber && rule.from.empty())
                     payload.typescriptConstructor = selectTypeScriptConstructor(node, payload, rule);
                 graph.getNode(id.value).data = std::move(payload);
             } else if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
