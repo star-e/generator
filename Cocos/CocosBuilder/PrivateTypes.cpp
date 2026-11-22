@@ -40,6 +40,7 @@ void buildPrivateTypes(ModuleBuilder& builder, Features features) {
         .mTypescriptFilePrefix = "web-types",
         .mRequires = { "RenderInterface", "LayoutGraph", "ProgramLib", "PrivateInterface" },
         .mHeader = R"(#include "cocos/base/std/hash/hash.h"
+#include "cocos/renderer/core/ProgramLib.h"
 #include "cocos/renderer/pipeline/GlobalDescriptorSetManager.h"
 #include "cocos/renderer/gfx-base/GFXRenderPass.h"
 )"
