@@ -42,6 +42,21 @@ struct Method;
 struct Field;
 struct Constructor;
 
+enum class ArchiveRole;
+
+struct Interface;
+struct Record;
+struct LeftShift;
+struct EnumMember;
+struct Enum;
+struct ExternalDeclaration;
+struct TagDeclaration;
+struct AliasDeclaration;
+struct GraphComponent;
+struct GraphDeclaration;
+struct Declaration;
+struct ModuleImport;
+
 } // namespace codegen
 
 } // namespace cc

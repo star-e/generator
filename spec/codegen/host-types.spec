@@ -8,6 +8,7 @@ namespace std {
     header "optional" { template<T> class optional; }
     header "variant" { template<First, Rest...> class variant; }
     header "map" { @container("map") template<K, V> class map; }
+    header "set" { @container("set") template<T> class set; }
 }
 
 namespace std::filesystem {

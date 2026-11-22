@@ -30,7 +30,10 @@
 #pragma once
 #include "generated/SourceLocation.h"
 #include "generated/TypeGraphTypes.h"
+#include <optional>
+#include <set>
 #include <string>
+#include <variant>
 #include <vector>
 #include "SyntaxFwd.h"
 
@@ -97,6 +100,123 @@ struct Constructor {
     bool isNoexcept{false};
     bool cppPrivate{false};
     std::string documentation;
+};
+
+enum class ArchiveRole {
+    none,
+    input,
+    output,
+};
+
+struct Interface {
+    std::vector<Method> methods;
+    std::vector<TypeRef> bases;
+    ArchiveRole archiveRole{ArchiveRole::none};
+};
+
+struct Record {
+    bool isClass{false};
+    bool isFinal{false};
+    std::vector<TypeRef> bases;
+    std::optional<TypeRef> implements;
+    std::optional<bool> destructorNoexcept;
+    bool destructorPrivate{false};
+    std::string cppMembers;
+    bool moveOnly{false};
+    bool immovable{false};
+    bool serializable{false};
+    std::set<std::string> comparisons;
+    bool hashable{false};
+    std::vector<Field> fields;
+    std::vector<Field> staticFields;
+    std::vector<Constructor> constructors;
+    std::vector<Method> methods;
+    std::string destructorDocumentation;
+};
+
+struct LeftShift {
+    std::string count;
+    SourceLocation location;
+};
+
+struct EnumMember {
+    std::string name;
+    std::string initializer;
+    SourceLocation initializerLocation;
+    std::optional<LeftShift> leftShift;
+    std::string documentation;
+};
+
+struct Enum {
+    std::vector<EnumMember> values;
+    std::optional<TypeRef> underlying;
+    bool isFlags{false};
+};
+
+struct ExternalDeclaration {
+    bool isStruct{false};
+    bool isString{false};
+    bool isPmr{false};
+    bool constructorConstRef{false};
+    ContainerKind container{ContainerKind::None};
+    std::vector<std::string> templateParameters;
+    bool variadicTemplate{false};
+};
+
+struct TagDeclaration {
+};
+
+struct AliasDeclaration {
+    TypeRef target;
+};
+
+struct GraphComponent {
+    TypeRef tag;
+    TypeRef value;
+    std::string member;
+    std::string kindName;
+};
+
+struct GraphDeclaration {
+    bool immovable{false};
+    bool serializable{false};
+    std::set<std::string> comparisons;
+    bool hashable{false};
+    std::string vertexAlias;
+    std::optional<TypeRef> vertexType;
+    std::optional<TypeRef> indexedStorage;
+    bool indexed{false};
+    bool vertexList{false};
+    bool mutableGraph{false};
+    bool incidence{false};
+    bool bidirectional{false};
+    bool hierarchy{false};
+    bool separateEdges{false};
+    std::optional<TypeRef> nameComponent;
+    std::optional<SourceLocation> nameIndex;
+    std::optional<TypeRef> indexedComponent;
+    bool removeVertex{false};
+    std::optional<SourceLocation> parentGraph;
+    std::optional<SourceLocation> addressableGraph;
+    std::vector<GraphComponent> components;
+    std::vector<GraphComponent> alternatives;
+    std::vector<Field> fields;
+    std::vector<Method> methods;
+};
+
+struct Declaration {
+    std::string name;
+    SourceLocation location;
+    std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration> data;
+    std::string externalScope;
+    std::string cppHeader;
+    bool cppOnly{false};
+    std::string documentation;
+};
+
+struct ModuleImport {
+    SourceLocation location;
+    std::string name;
 };
 
 } // namespace codegen

@@ -41,8 +41,14 @@ void checkTypeIdsAndUse() {
 void checkSyntaxDeclarations() {
     static_assert(std::is_aggregate_v<TypeRef> && std::is_aggregate_v<Parameter> && std::is_aggregate_v<Method>);
     static_assert(std::is_aggregate_v<Field> && std::is_aggregate_v<Constructor>);
+    static_assert(std::is_same_v<decltype(Declaration::data), std::variant<Interface, Record, Enum,
+        ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration>>);
+    const Declaration empty{};
+    const auto* iface = std::get_if<Interface>(&empty.data);
+    require(iface && iface->archiveRole == ArchiveRole::none, "default declaration must be an ordinary interface");
     const auto module = parseModule("members.spec", R"(
         module Members;
+        import Lists;
         namespace sample {
             struct Entry {
                 items: List<Tuple<>>;
@@ -51,6 +57,8 @@ void checkSyntaxDeclarations() {
             }
         }
     )");
+    const auto& imported = module.imports.at(0);
+    require(imported.name == "Lists" && imported.location.file == "members.spec", "lost module import syntax");
     const auto& record = std::get<Record>(module.declarations.at(0).data);
     const auto& field = record.fields.at(0);
     const auto& argument = field.type.arguments.at(0);
