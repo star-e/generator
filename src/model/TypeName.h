@@ -40,11 +40,26 @@ inline void collectCppHeader(const TypeGraph& graph, const TypeModule& consumer,
     }
 }
 
-inline std::string cppForwardDeclaration(const TypeNode& type, std::string keyword) {
-    const auto declaration = keyword + " " + type.name + ";";
-    const auto scope = type.qualifiedName.rfind("::");
-    if (scope == std::string::npos) return declaration;
-    return "namespace " + type.qualifiedName.substr(0, scope) + " {\n" + declaration + "\n}";
+inline const TypeNode* cppForwardType(const TypeGraph& graph, TypeId id, bool byReference = false) {
+    for (;;) {
+        const auto& type = graph.node(id);
+        if (const auto* qualifier = std::get_if<QualifiedType>(&type.data)) {
+            id = qualifier->base;
+        } else if (const auto* pointer = std::get_if<PointerType>(&type.data)) {
+            id = pointer->pointee;
+            byReference = true;
+        } else if (const auto* ref = std::get_if<ReferenceType>(&type.data)) {
+            id = ref->referred;
+            byReference = true;
+        } else {
+            const auto* external = std::get_if<ExternalTypeNode>(&type.data);
+            // Library aliases and standard-library declarations must come from their own headers.
+            if (!byReference || !external || type.module == ModuleId{} || type.cppHeader.empty() ||
+                external->isAlias || external->isString || !type.templateParameters.empty() ||
+                type.qualifiedName.starts_with("std::")) return nullptr;
+            return &type;
+        }
+    }
 }
 
 inline bool isAssociativeContainer(ContainerKind kind) {

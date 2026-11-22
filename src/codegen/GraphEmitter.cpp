@@ -685,7 +685,7 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id) {
 }
 
 void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
-                  std::set<std::string>& headers, std::set<std::string>& forwards,
+                  std::set<std::string>& headers, std::set<const TypeNode*>& forwards,
                   const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
@@ -727,7 +727,7 @@ void emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ost
         if (tag.module != node.module && !tag.cppHeader.empty()) {
             headers.insert(tag.cppHeader);
         } else if (component.tag.value > id.value || tag.module != node.module) {
-            forwards.insert(cppForwardDeclaration(tag, "struct"));
+            forwards.insert(&tag);
         }
         return formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
             collectCppHeader(graph, graph.modules.at(node.module.value), type, headers);

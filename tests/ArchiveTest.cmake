@@ -112,6 +112,15 @@ endif()
 foreach(path IN LISTS baselineFiles)
     string(JSON expected GET "${baseline}" files "${path}")
     file(READ "${output}/${path}" historical)
+    if(path STREQUAL "native/tools/swig-config/render.i")
+        # The binding now includes the definition used by its native type conversions directly.
+        string(REPLACE "#include \"renderer/pipeline/PipelineSceneData.h\"\n" "" historical "${historical}")
+    endif()
+    if(path MATCHES "/ArchiveTypes[.]h$")
+        # The old header included memory_resource even though scratch() only returns a pointer.
+        string(REPLACE "\nnamespace boost::container::pmr {\nclass memory_resource;\n}\n" "" historical "${historical}")
+        string(REPLACE "#include <string_view>" "#include <boost/container/pmr/memory_resource.hpp>\n#include <string_view>" historical "${historical}")
+    endif()
     # The historical RenderCommon headers predate the shared tags and the ArchiveInterface import.
     if(path MATCHES "/RenderCommon(Fwd|Names)[.]h$")
         if(path MATCHES "Fwd[.]h$")

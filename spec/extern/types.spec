@@ -3,11 +3,11 @@ import Containers;
 
 namespace std {
     header "string" {
-        @string class string;
+        @string type string;
     }
 
     header "string_view" {
-        struct string_view;
+        type string_view;
     }
 
     header "memory" {

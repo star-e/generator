@@ -113,30 +113,22 @@ private:
     }
 
     void parseExternalDeclarations(Module& module, const std::string& scope, std::set<std::string>& names) {
-        const auto append = [&](const std::string& header, bool forward) {
+        const auto append = [&](const std::string& header) {
             auto decl = (token == "enum" || token == "flags") ? declaration(names) : externalDeclaration(names);
             decl.externalScope = scope;
             decl.cppHeader = expandHeader(header, decl.name);
-            if (forward) {
-                const auto* external = std::get_if<ExternalDeclaration>(&decl.data);
-                if (!external || !external->templateParameters.empty() || external->isString)
-                    throw std::runtime_error(decl.location.describe() + ": forward requires a non-template class or struct");
-                decl.cppForwardHeader = module.cppHeader;
-            }
             module.declarations.push_back(std::move(decl));
         };
         while (!accept("}")) {
             if (accept("header")) {
                 const auto header = headerPath(true);
-                const bool forward = accept("forward");
-                if (forward && module.cppHeader.empty()) fail("forward requires a module cpp.header");
                 expect("{");
                 while (!accept("}")) {
                     if (token == "header") fail("nested header blocks are not supported");
-                    append(header, forward);
+                    append(header);
                 }
             } else {
-                append(module.cppHeader, false);
+                append(module.cppHeader);
             }
         }
     }
@@ -183,12 +175,14 @@ private:
             fail("@container(\"set\") requires exactly one type parameter");
         if (decl.isString && !decl.templateParameters.empty()) fail("@string requires a non-template declaration");
         decl.isStruct = accept("struct");
+        decl.isAlias = !decl.isStruct && accept("type");
         if (decl.constructorConstRef && (!decl.isStruct || decl.isString || !decl.templateParameters.empty()))
             fail("@constRef requires an external value struct");
-        if (!decl.isStruct) expect("class");
+        if (!decl.isStruct && !decl.isAlias) expect("class");
         const auto start = location;
         auto name = uniqueName(names);
         if (accept("{")) {
+            if (decl.isAlias) fail("an imported type alias cannot declare members");
             if (accept("public") || accept("protected")) expect(":");
             expect("virtual");
             expect("~");

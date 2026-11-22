@@ -23,28 +23,24 @@ struct ClassScope {
     const TypeGraph& graph;
     const TypeModule& module;
     bool spaceBeforeReference;
-    std::set<const TypeNode*>* forwardTypes;
+    std::set<const TypeNode*>& forwardTypes;
     std::set<const TypeNode*> classes;
     std::set<std::string_view> members;
+    bool hasExternalBase{};
 
-    ClassScope(const TypeGraph& graph, const TypeNode& owner, bool spaceBeforeReference, std::set<const TypeNode*>* forwardTypes = nullptr)
+    ClassScope(const TypeGraph& graph, const TypeNode& owner, bool spaceBeforeReference, std::set<const TypeNode*>& forwardTypes)
     : graph(graph), module(graph.modules.at(owner.module.value)), spaceBeforeReference(spaceBeforeReference), forwardTypes(forwardTypes) {
         collect(owner);
     }
 
-    const TypeNode* forwardType(TypeId id, bool byConstReference = false) const {
-        if (!forwardTypes) return nullptr;
-        const auto& data = graph.node(id).data;
-        if (const auto* ptr = std::get_if<PointerType>(&data)) id = ptr->pointee;
-        else if (const auto* ref = std::get_if<ReferenceType>(&data)) id = ref->referred;
-        else if (!byConstReference) return nullptr;
-        if (const auto* q = std::get_if<QualifiedType>(&graph.node(id).data)) id = q->base;
-        const auto& type = graph.node(id);
-        return type.cppForwardHeader.empty() ? nullptr : &type;
+    const TypeNode* forwardResult(TypeId id) const {
+        // An override of an opaque external base may have a covariant return type.
+        return hasExternalBase ? nullptr : cppForwardType(graph, id);
     }
 
     void collect(const TypeNode& node) {
         if (!classes.insert(&node).second) return;
+        if (std::holds_alternative<ExternalTypeNode>(node.data)) hasExternalBase = true;
         const auto addMembers = [&](const auto& declarations) {
             for (const auto& member : declarations) members.insert(member.name);
         };
@@ -99,7 +95,7 @@ void cppDeclarator(std::ostream& out, const ClassScope& scope, const MethodInfo&
         if (decl.module != ModuleId{} && &graph.modules.at(decl.module.value) != &scope.module && decl.cppHeader.empty()) {
             throw std::runtime_error(use.location.describe() + ": missing C++ header for imported type " + decl.qualifiedName);
         }
-        if (&decl == forwardType) scope.forwardTypes->insert(&decl);
+        if (&decl == forwardType) scope.forwardTypes.insert(&decl);
         else if (!decl.cppHeader.empty()) headers.insert(decl.cppHeader);
         return scope.name(decl, method);
     }, scope.spaceBeforeReference);
@@ -114,7 +110,7 @@ void cppParameters(std::ostream& out, const ClassScope& scope, const MethodInfo&
         if (i) out << ", ";
         if (param.byConstReference) out << "const ";
         const auto* forward = param.defaultValue.empty() || param.defaultValue == "nullptr"
-            ? scope.forwardType(param.type.type, param.byConstReference) : nullptr;
+            ? cppForwardType(scope.graph, param.type.type, param.byConstReference) : nullptr;
         cppDeclarator(out, scope, method, param.type, (param.byConstReference ? "&" : "") + (named ? param.name : ""), headers, forward);
         if (!method.isPureVirtual && !param.defaultValue.empty()) out << " = " << scope.defaultValue(param, method);
     }
@@ -166,7 +162,7 @@ void cppMethod(std::ostream& out, const ClassScope& scope, const MethodInfo& met
     if (method.isExplicitConversion) out << "explicit operator ";
     // Checking a covariant override may require the complete return type.
     cppDeclarator(out, scope, method, method.result, method.isExplicitConversion ? "" : method.name, headers,
-                  overrides ? nullptr : scope.forwardType(method.result.type));
+                  overrides ? nullptr : scope.forwardResult(method.result.type));
     cppParameters(out, scope, method, method.parameters.size(), true, headers);
     if (method.isNoexcept) out << " noexcept";
     if (overrides) out << " override";
@@ -192,7 +188,7 @@ void cppForwardingOverloads(std::ostream& out, const ClassScope& scope, const Ty
     const auto& params = method.parameters;
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
     const auto shadowingParameter = std::ranges::find(params, method.name, &ParameterInfo::name);
-    const auto* resultForward = scope.forwardType(method.result.type);
+    const auto* resultForward = scope.forwardResult(method.result.type);
     for (size_t count = requiredParameterCount(method); count < params.size(); ++count) {
         out << "    ";
         cppDeclarator(out, scope, method, method.result, method.name, headers, resultForward);
@@ -227,10 +223,7 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     writeDocumentation(out, decl.documentation);
     out << "class " << name;
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
-    ClassScope scope(graph, decl, spaceBeforeReference, &forwardTypes);
-    // Overrides of an external base cannot be inspected for covariant return types.
-    if (std::ranges::any_of(scope.classes, [](const auto* type) { return std::holds_alternative<ExternalTypeNode>(type->data); }))
-        scope.forwardTypes = nullptr;
+    const ClassScope scope(graph, decl, spaceBeforeReference, forwardTypes);
     VirtualMethods inherited;
     bool needsSpecialMembers = bases.empty();
     bool inheritsVirtualDestructor = false;
@@ -360,10 +353,10 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
 } // namespace
 
 void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers,
-                               bool spaceBeforeReference) {
+                               std::set<const TypeNode*>& forwardTypes, bool spaceBeforeReference) {
     const auto& record = std::get<RecordType>(node.data);
     if (record.bases.empty() && !record.implements) return;
-    const ClassScope scope(graph, node, spaceBeforeReference);
+    const ClassScope scope(graph, node, spaceBeforeReference, forwardTypes);
     VirtualMethods overrides, implementation;
     std::map<std::string, TypeId> providers;
     for (auto base : record.bases) {
@@ -390,7 +383,8 @@ void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const 
         const auto& method = overrideMethod ? *overrides.at(key) : *candidate;
         out << "    ";
         if (method.isExplicitConversion) out << "explicit operator ";
-        cppDeclarator(out, scope, method, method.result, method.isExplicitConversion ? "" : method.name, headers);
+        cppDeclarator(out, scope, method, method.result, method.isExplicitConversion ? "" : method.name, headers,
+                      overrideMethod ? nullptr : scope.forwardResult(method.result.type));
         cppParameters(out, scope, method, method.parameters.size(), true, headers);
         if (method.isNoexcept) out << " noexcept";
         if (overrideMethod) out << " override";
@@ -424,12 +418,13 @@ std::string emitHeaderSource(const TypeModule& module, const std::filesystem::pa
 }
 
 void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
-                          std::string_view body, const std::set<std::string>& headers, const std::string& preamble) {
+                          std::string_view body, const std::set<std::string>& headers, std::string_view forwards, const std::string& preamble) {
     std::ostringstream fwd, header;
     fwd << preamble << "#pragma once\n// clang-format off\n";
     header << preamble << "// clang-format off\n" << lintBegin << "#pragma once\n";
     for (const auto& include : headers) header << "#include <" << include << ">\n";
     header << "#include \"" << output.forwardHeader.generic_string() << "\"\n";
+    header << forwards;
     for (auto* out : {&fwd, &header}) {
         for (const auto& name : module.namespaces) *out << "\nnamespace " << name << " {\n";
     }

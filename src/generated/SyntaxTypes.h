@@ -164,6 +164,7 @@ struct Enum {
 
 struct ExternalDeclaration {
     bool isStruct{false};
+    bool isAlias{false};
     bool isString{false};
     bool isPmr{false};
     bool constructorConstRef{false};
@@ -220,7 +221,6 @@ struct Declaration {
     std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration> data;
     std::string externalScope;
     std::string cppHeader;
-    std::string cppForwardHeader;
     bool cppOnly{false};
     std::string documentation;
 };

@@ -23,7 +23,7 @@ namespace {
 struct Dependencies {
     bool emitCpp{};
     std::set<std::string> headers;
-    std::set<std::string> forwardDeclarations;
+    std::set<const TypeNode*> forwardTypes;
     TypeImports typeImports;
     TypeImports valueImports;
 };
@@ -38,7 +38,7 @@ bool hasHandwrittenCpp(const TypeNode& node) {
     return false;
 }
 
-void resolveInterfaceHeaders(const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
+void resolveDefinitionHeaders(const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
                              const std::set<const TypeNode*>& forwardTypes, std::set<std::string>& headers,
                              OmittedDefinitionHeaders& omittedHeaders) {
     std::set<std::string> definitions;
@@ -46,20 +46,40 @@ void resolveInterfaceHeaders(const TypeGraph& graph, const TypeModule& module, c
         if (const auto it = omittedHeaders.find(include); it != omittedHeaders.end())
             definitions.insert(it->second.begin(), it->second.end());
     }
-    for (const auto* type : forwardTypes) definitions.insert(type->cppHeader);
+    for (const auto* type : forwardTypes) {
+        if (std::holds_alternative<ExternalTypeNode>(type->data)) definitions.insert(type->cppHeader);
+    }
     if (definitions.empty()) return;
     // An opaque body may use a type returned by an imported or inherited method.
     if (std::ranges::any_of(module.declarations, [&](TypeId id) { return hasHandwrittenCpp(graph.node(id)); })) {
         headers.merge(definitions);
         return;
     }
-    std::set<std::string> forwardHeaders;
-    for (const auto* type : forwardTypes) {
-        if (!headers.contains(type->cppHeader)) forwardHeaders.insert(type->cppForwardHeader);
-    }
-    headers.merge(forwardHeaders);
     for (const auto& include : headers) definitions.erase(include);
     if (!definitions.empty()) omittedHeaders.emplace(output.header.generic_string(), std::move(definitions));
+}
+
+std::string cppForwardDeclarations(const Dependencies& deps) {
+    std::map<std::string, std::map<std::string, std::string_view>> groups;
+    for (const auto* type : deps.forwardTypes) {
+        const auto* external = std::get_if<ExternalTypeNode>(&type->data);
+        if (external && deps.headers.contains(type->cppHeader)) continue;
+        const auto scope = type->qualifiedName.rfind("::");
+        const auto ns = scope == std::string::npos ? std::string{} : type->qualifiedName.substr(0, scope);
+        groups[ns].emplace(type->name, external && !external->isStruct ? "class" : "struct");
+    }
+    std::ostringstream out;
+    for (const auto& [ns, declarations] : groups) {
+        out << '\n';
+        if (!ns.empty()) out << "namespace " << ns << " {\n";
+        for (const auto& [name, keyword] : declarations) out << keyword << ' ' << name << ";\n";
+        if (!ns.empty()) {
+            out << '}';
+            if (declarations.size() > 1) out << " // namespace " << ns;
+            out << '\n';
+        }
+    }
+    return out.str();
 }
 
 [[noreturn]] void invalid(const FieldInfo& field, const std::string& reason) {
@@ -79,18 +99,11 @@ std::string nativeType(const TypeGraph& graph, const TypeModule& module, TypeId 
     }, spaceBeforeReference);
 }
 
-std::string pointerType(const TypeGraph& graph, const TypeModule& module, TypeId id, const TypeNode& resource, Dependencies& deps) {
-    const auto keyword = std::get<ExternalTypeNode>(resource.data).isStruct ? "struct" : "class";
-    deps.forwardDeclarations.insert(cppForwardDeclaration(resource, keyword));
-    return formatTypeName(graph, id, [&](const TypeNode& type) { return cppName(graph, type, module); });
-}
-
-std::string methodType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps, bool spaceBeforeReference) {
-    if (const auto* ptr = std::get_if<PointerType>(&graph.node(id).data)) {
-        const auto* q = std::get_if<QualifiedType>(&graph.node(ptr->pointee).data);
-        const auto& target = graph.node(q ? q->base : ptr->pointee);
-        if (std::holds_alternative<ExternalTypeNode>(target.data) && target.module != ModuleId{})
-            return pointerType(graph, module, id, target, deps);
+std::string memberType(const TypeGraph& graph, const TypeModule& module, TypeId id, Dependencies& deps,
+                       bool spaceBeforeReference = false, bool byReference = false) {
+    if (const auto* target = cppForwardType(graph, id, byReference)) {
+        deps.forwardTypes.insert(target);
+        return formatTypeName(graph, id, [&](const TypeNode& type) { return cppName(graph, type, module); }, spaceBeforeReference);
     }
     return nativeType(graph, module, id, deps, spaceBeforeReference);
 }
@@ -176,7 +189,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
     }
     if (std::holds_alternative<ReferenceType>(graph.node(scalarType).data)) {
         if (emitTs) invalid(field, "borrowed reference fields require a native record or @cppOnly");
-        m.cpp = nativeType(graph, module, field.type.type, deps);
+        m.cpp = memberType(graph, module, field.type.type, deps);
         m.referenceMember = true;
         return m;
     }
@@ -275,7 +288,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         return m;
     }
     if (!emitTs && !field.isNullable) {
-        m.cpp = nativeType(graph, module, field.type.type, deps);
+        m.cpp = memberType(graph, module, field.type.type, deps);
         m.move = !isScalar;
         return m;
     }
@@ -315,7 +328,7 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         }
         const auto name = cppName(graph, resource, module);
         if (ptr) {
-            m.cpp = pointerType(graph, module, field.type.type, resource, deps);
+            m.cpp = memberType(graph, module, field.type.type, deps);
             m.cppDefault = "nullptr";
             m.comment = "/*pointer*/ ";
         } else {
@@ -1011,13 +1024,15 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
         out << "    ";
         if (method.isExplicitConversion) out << "explicit operator ";
         else if (method.isStatic) out << "static ";
-        out << formatCppDeclarator(methodType(graph, module, method.result.type, deps, output.spaceBeforeReference),
+        out << formatCppDeclarator(memberType(graph, module, method.result.type, deps, output.spaceBeforeReference),
                                    method.isExplicitConversion ? "" : method.name, output.spaceBeforeReference);
         out << "(";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             if (i) out << ", ";
             const auto& p = method.parameters[i];
-            auto type = methodType(graph, module, p.type.type, deps, output.spaceBeforeReference);
+            auto type = p.defaultValue.empty() || p.defaultValue == "nullptr"
+                ? memberType(graph, module, p.type.type, deps, output.spaceBeforeReference, p.byConstReference)
+                : nativeType(graph, module, p.type.type, deps, output.spaceBeforeReference);
             if (p.byConstReference) type = "const " + type + "&";
             out << formatCppDeclarator(std::move(type), p.name, output.spaceBeforeReference);
             if (!p.defaultValue.empty()) out << " = " << p.defaultValue;
@@ -1142,7 +1157,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     }
     if (!record.bases.empty() || record.implements) {
         memberAccess(out, currentPrivate, false);
-        emitImplementationMethods(out, graph, node, deps.headers, output.spaceBeforeReference);
+        emitImplementationMethods(out, graph, node, deps.headers, deps.forwardTypes, output.spaceBeforeReference);
     }
     if (!record.cppMembers.empty()) memberAccess(out, currentPrivate, false);
     out << record.cppMembers;
@@ -1447,7 +1462,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         return interfaceType && interfaceType->bases.empty();
     });
     Dependencies deps{.emitCpp = !output.header.empty()};
-    std::set<const TypeNode*> forwardTypes;
     ArchiveImports archiveImports{deps.valueImports, output.typescript ? (output.typescript->parent_path() / "serialization").generic_string() : ""};
     Pool pool;
     RecordArchives archives;
@@ -1483,7 +1497,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         const auto methods = output.classMethods.find(node.name);
         const auto classMethods = methods == output.classMethods.end() ? std::string{} : tsClassMethods(methods->second);
         if (std::holds_alternative<InterfaceType>(node.data)) {
-            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, forwardTypes,
+            emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, deps.forwardTypes,
                           emitTs ? &ts : nullptr, deps.typeImports, output);
             continue;
         }
@@ -1496,7 +1510,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                     inputArchive = "::" + graph.node(archive->module.inputArchive).qualifiedName;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
-                emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardDeclarations, fields, methods, inputArchive);
+                emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods, inputArchive);
                 if (model->compareEqual || model->compareLess || model->hashable) {
                     std::vector<std::string_view> elements;
                     for (const auto& component : model->components) elements.push_back(component.name);
@@ -1639,17 +1653,18 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
 
     Files files;
     if (deps.emitCpp) {
-        resolveInterfaceHeaders(graph, module, output, forwardTypes, deps.headers, omittedHeaders);
+        resolveDefinitionHeaders(graph, module, output, deps.forwardTypes, deps.headers, omittedHeaders);
+        const auto forwards = cppForwardDeclarations(deps);
         deps.headers.erase(output.header.generic_string());
         deps.headers.erase(output.forwardHeader.generic_string());
         if (standaloneInterfaces && output.forwardIncludes.empty()) {
-            emitInterfaceHeaders(files, graph, module, output, cpp.view(), deps.headers, preamble);
+            emitInterfaceHeaders(files, graph, module, output, cpp.view(), deps.headers, forwards, preamble);
         } else {
             std::ostringstream header;
             header << preamble << "#pragma once // NOLINT(portability-avoid-pragma-once)\n";
             const auto include = output.forwardHeader.lexically_relative(output.header.parent_path());
             cppIncludes(header, deps.headers, {include.generic_string()});
-            for (const auto& decl : deps.forwardDeclarations) header << "\n" << decl << "\n";
+            header << forwards;
             writeNamespace(header, module, cpp);
             if (!hashDefinitions.view().empty()) {
                 header << "\nnamespace ccstd {\n" << hashDefinitions.str() << "\n} // namespace ccstd\n";

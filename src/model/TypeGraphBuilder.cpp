@@ -299,7 +299,8 @@ TypeData declare(const Declaration& decl) {
     if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) {
         return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString,
                                 .isPmr = external->isPmr, .constructorConstRef = external->constructorConstRef,
-                                .container = external->container, .hasVirtualDestructor = external->hasVirtualDestructor};
+                                .container = external->container, .hasVirtualDestructor = external->hasVirtualDestructor,
+                                .isAlias = external->isAlias};
     }
     return InterfaceType{};
 }
@@ -922,7 +923,7 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<Mod
             }
             const auto* external = std::get_if<ExternalDeclaration>(&decl.data);
             TypeNode node{.name = decl.name, .qualifiedName = std::move(qualified), .module = owner, .data = declare(decl),
-                          .cppHeader = decl.cppHeader, .cppForwardHeader = decl.cppForwardHeader, .documentation = decl.documentation};
+                          .cppHeader = decl.cppHeader, .documentation = decl.documentation};
             const bool tag = std::holds_alternative<TagType>(node.data);
             if (input.modelOnly()) {
                 if (decl.externalScope.empty() && !tag && !external) node.typescriptName = decl.name;

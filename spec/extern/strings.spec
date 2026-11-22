@@ -2,5 +2,5 @@ extern module Strings;
 cpp { header "cocos/base/std/container/string.h"; }
 
 namespace ccstd::pmr {
-    @pmr @string class string;
+    @pmr @string type string;
 }

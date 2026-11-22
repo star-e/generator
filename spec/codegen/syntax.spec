@@ -114,6 +114,7 @@ namespace cc::codegen {
 
     struct ExternalDeclaration {
         isStruct: bool = false;
+        isAlias: bool = false;
         isString: bool = false;
         isPmr: bool = false;
         constructorConstRef: bool = false;
@@ -166,7 +167,6 @@ namespace cc::codegen {
         data: std::variant<Interface, Record, Enum, ExternalDeclaration, TagDeclaration, GraphDeclaration, AliasDeclaration>;
         externalScope: std::string;
         cppHeader: std::string;
-        cppForwardHeader: std::string;
         cppOnly: bool = false;
         documentation: std::string;
     }

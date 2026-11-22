@@ -71,7 +71,10 @@ foreach(type header IN ZIP_LISTS interfaceTypes interfaceHeaders)
         endif()
     endforeach()
 endforeach()
-if(renderHeader MATCHES "([;}]\n|\n\n\n)(/\\*\\*|class |struct |enum class )")
+# Forward declarations precede the module body and intentionally share a namespace block.
+string(FIND "${renderHeader}" "namespace render {" renderBodyStart)
+string(SUBSTRING "${renderHeader}" ${renderBodyStart} -1 renderBody)
+if(renderBody MATCHES "([;}]\n|\n\n\n)(/\\*\\*|class |struct |enum class )")
     message(FATAL_ERROR "Expected one blank line before each top-level RenderInterface declaration or its documentation")
 endif()
 if(NOT renderHeader MATCHES "constexpr bool ENABLE_SUBPASS = true;" OR pipeline MATCHES "ENABLE_SUBPASS")
@@ -382,8 +385,7 @@ endif()
 file(WRITE "${work}/spec/shadow.spec" [=[extern module Shadow;
 cpp { header "vendor/Fwd.h"; }
 namespace vendor {
-    header "vendor/{name}.h" forward { class Device; struct Options; class State; }
-    header "vendor/Other.h" { class Other; }
+    header "vendor/{name}.h" { class Device; struct Options; class State; struct Other; type Handle; }
 }]=])
 string(JSON forwardConfig SET "${config}" modules [[ [{"spec":"../spec/shadow.spec"},{"spec":"../spec/provider.spec","cpp":{}}] ]])
 file(WRITE "${workspace}" "${forwardConfig}")
@@ -394,19 +396,31 @@ namespace cc {
         virtual void bind(const vendor::Device& dev, vendor::State* state, vendor::Other* other) = 0;
         virtual void configure(const vendor::Options& opts = {}) = 0;
         virtual vendor::State snapshot() const = 0;
+        virtual vendor::Handle& handle() const = 0;
     }
 }]=])
 file(WRITE "${provider}" "${forwardSpec}")
 run(${generate})
 file(READ "${providerHeader}" header)
-foreach(path IN ITEMS Fwd Options State Other)
+foreach(path IN ITEMS Options State Handle)
     if(NOT header MATCHES "vendor/${path}[.]h")
         message(FATAL_ERROR "Missing required interface header vendor/${path}.h")
     endif()
 endforeach()
-if(header MATCHES "vendor/Device[.]h")
-    message(FATAL_ERROR "A plain pointer or reference to Device only needs vendor/Fwd.h")
+set(group "namespace vendor {\nclass Device;\nstruct Other;\n}")
+string(FIND "${header}" "${group}" groupIndex)
+if(groupIndex EQUAL -1 OR header MATCHES "vendor/(Device|Other|Fwd)[.]h|class Handle;|class State;|struct Options;")
+    message(FATAL_ERROR "Expected grouped declarations only for Device and Other")
 endif()
+string(REPLACE "    interface API {" "    struct Fields { device: vendor::Device* = nullptr; other: const vendor::Other&; handle: vendor::Handle* = nullptr; constructor(other); }\n    interface API {" withFields "${forwardSpec}")
+file(WRITE "${provider}" "${withFields}")
+run(${generate})
+file(READ "${providerHeader}" mixedHeader)
+string(FIND "${mixedHeader}" "${group}" groupIndex)
+if(groupIndex EQUAL -1 OR mixedHeader MATCHES "vendor/(Device|Other)[.]h|class Handle;")
+    message(FATAL_ERROR "Fields and methods must share forward declarations")
+endif()
+file(WRITE "${provider}" "${forwardSpec}")
 file(WRITE "${work}/spec/use.spec" [=[module Use; import Provider;
 namespace cc { interface Reader : API { int read() const { return get()->status(); } } }]=])
 string(JSON forwardConfig SET "${forwardConfig}" modules 2 [[{"spec":"../spec/use.spec","cpp":{}}]])

@@ -66,7 +66,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `"cpp": {}` 生成 `<模块名>Fwd.h`、`<模块名>Types.h` 和 `<模块名>Types.cpp`。`names`、`serialization`、`jsb` 分别启用 `Names.h`、`Serialization.h`、`Jsb.h`，后两项也生成相应的 `.cpp`。每项都可以直接写文件名。`prefix` 覆盖命名前缀，`header` 覆盖主头文件名。文件写到 `<outputRoot>/<root>/<dir>/`，其中 `dir` 是头文件的 include 路径前缀。工作区的 `cppDefaults` 可统一设置 `root` 和 `dir`，单个模块可覆盖它们。每个 C++ 模块的 `Fwd.h` 自动包含 `.spec` 直接 `import` 的、也生成 C++ 的模块的前置头，路径取自依赖模块的输出配置。外部类型按声明的头文件映射按需包含。旧配置中显式指定的 `forwardIncludes` 仍作为补充，与自动包含的头文件去重。
 
-外部模块可以用 `header "path/{name}.h" forward { ... }` 声明一组普通类或结构体。分组路径指向定义头，模块的 `cpp.header` 必须已声明组内所有类型。生成接口时，裸指针和引用可以使用模块公共头。按值使用、作为模板实参或通过 `{}` 构造默认实参时，生成器保留定义头。模块含手写 C++ 函数体时也保留原有定义头。[Gfx 分组](../spec/extern/gfx.spec)
+外部模块的 `header "path/{name}.h" { ... }` 指定组内类型的定义头。普通外部类和结构体只作为裸指针或引用出现在字段或方法签名中时，C++ 后端按命名空间合并前置声明。需要完整定义的用法（例如基类、按值存储、模板实参或 `{}` 默认实参）优先使用定义头。模块内有手写 C++ 函数体时也保留可能使用的定义。外部别名可写成 `type MacroRecord;`，其声明由所属头文件提供。标准库类型使用标准头。[Gfx 分组](../spec/extern/gfx.spec) · [外部别名](../spec/extern/pipeline-externals.spec)
 
 `cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的声明格式。cocos4 工作区将它设为 `true`，让接口和普通成员函数写成 `T *get()`、`void set(const T &value)` 和 `const std::vector<T *> &items`。记录的指针和引用字段也使用这个设置，例如 `const RenderGraph *renderGraph`。接口的拷贝、移动声明和 flags 赋值运算符也使用这个设置，例如 `T &operator=(T &&rhs)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
 

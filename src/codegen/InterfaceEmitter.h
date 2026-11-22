@@ -18,11 +18,11 @@ using Files = std::map<std::filesystem::path, std::string>;
 
 std::string emitHeaderSource(const TypeModule& module, const std::filesystem::path& header, const std::string& preamble);
 void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,
-                          std::string_view body, const std::set<std::string>& headers, const std::string& preamble);
+                          std::string_view body, const std::set<std::string>& headers, std::string_view forwards, const std::string& preamble);
 void emitInterface(const TypeGraph& graph, const TypeNode& node, std::ostream* cpp, std::set<std::string>& headers,
                    std::set<const TypeNode*>& forwardTypes,
                    std::ostream* script, TypeImports& imports, const RecordOutput& output);
 void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers,
-                               bool spaceBeforeReference);
+                               std::set<const TypeNode*>& forwardTypes, bool spaceBeforeReference);
 
 } // namespace cc::codegen

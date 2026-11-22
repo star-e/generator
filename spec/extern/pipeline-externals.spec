@@ -1,7 +1,7 @@
 extern module PipelineExternals;
 namespace cc {
     header "cocos/renderer/core/PassUtils.h" {
-        class MacroRecord;
+        type MacroRecord;
     }
 
     header "cocos/base/RefCounted.h" {

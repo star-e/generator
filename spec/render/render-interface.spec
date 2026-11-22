@@ -1484,6 +1484,7 @@ binding swig {
     include "bindings/auto/jsb_assets_auto.h";
     include "renderer/pipeline/GeometryRenderer.h";
     include "renderer/pipeline/GlobalDescriptorSetManager.h";
+    include "renderer/pipeline/PipelineSceneData.h";
 
     macro CC_USE_GEOMETRY_RENDERER PipelineRuntime.geometryRenderer;
 
