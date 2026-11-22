@@ -233,11 +233,16 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
         scope.forwardTypes = nullptr;
     VirtualMethods inherited;
     bool needsSpecialMembers = bases.empty();
+    bool inheritsVirtualDestructor = false;
     for (auto base : bases) {
         collectVirtualMethods(graph, base, inherited);
         const auto& type = graph.node(base);
-        // An external base does not guarantee deleted copy/move operations or a virtual destructor.
-        if (!std::holds_alternative<InterfaceType>(type.data)) needsSpecialMembers = true;
+        if (const auto* external = std::get_if<ExternalTypeNode>(&type.data)) {
+            needsSpecialMembers = true;
+            inheritsVirtualDestructor |= external->hasVirtualDestructor;
+        } else {
+            inheritsVirtualDestructor = true;
+        }
         collectCppHeader(graph, graph.modules.at(decl.module.value), type, headers);
         out << (base == bases.front() ? " : public " : ", public ") << cppName(graph, type, scope.module);
     }
@@ -246,12 +251,14 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
         const auto moveParam = cppMethodDeclarator(name + "&&", "rhs", spaceBeforeReference);
         const auto copyParam = cppMethodDeclarator(name + " const&", "rhs", spaceBeforeReference);
         const auto assign = cppMethodDeclarator(name + "&", "operator=", spaceBeforeReference);
-        out << "    " << name << "() noexcept = default;\n"
+        // Let an external base determine the default constructor's exception specification.
+        out << "    " << name << "()" << (bases.empty() ? " noexcept" : "") << " = default;\n"
             << "    " << name << '(' << moveParam << ") = delete;\n"
             << "    " << name << '(' << copyParam << ") = delete;\n"
             << "    " << assign << '(' << moveParam << ") = delete;\n"
             << "    " << assign << '(' << copyParam << ") = delete;\n"
-            << "    virtual ~" << name << "() noexcept = default;\n\n";
+            << "    " << (inheritsVirtualDestructor ? "" : "virtual ") << '~' << name << "() noexcept"
+            << (inheritsVirtualDestructor ? " override" : "") << " = default;\n\n";
     }
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
     for (const auto& method : methods) cppMethod(out, scope, method, headers, inherited);

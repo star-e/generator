@@ -120,6 +120,7 @@ namespace cc::codegen {
         container: ContainerKind = ContainerKind::None;
         templateParameters: std::vector<std::string>;
         variadicTemplate: bool = false;
+        hasVirtualDestructor: bool = false;
     }
 
     struct TagDeclaration {}

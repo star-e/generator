@@ -162,6 +162,7 @@ struct ExternalTypeNode {
     bool isPmr{false};
     bool constructorConstRef{false};
     ContainerKind container{ContainerKind::None};
+    bool hasVirtualDestructor{false};
 };
 
 struct Enumerator {

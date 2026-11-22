@@ -299,7 +299,7 @@ TypeData declare(const Declaration& decl) {
     if (const auto* external = std::get_if<ExternalDeclaration>(&decl.data)) {
         return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString,
                                 .isPmr = external->isPmr, .constructorConstRef = external->constructorConstRef,
-                                .container = external->container};
+                                .container = external->container, .hasVirtualDestructor = external->hasVirtualDestructor};
     }
     return InterfaceType{};
 }

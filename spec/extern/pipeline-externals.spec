@@ -5,7 +5,10 @@ namespace cc {
     }
 
     header "cocos/base/RefCounted.h" {
-        class RefCounted;
+        class RefCounted {
+        public:
+            virtual ~RefCounted();
+        };
     }
 
     header "cocos/core/assets/EffectAsset.h" {

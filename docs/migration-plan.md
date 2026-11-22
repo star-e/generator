@@ -83,7 +83,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 | 旧模块 | 当前可生成的内容 | 后续接管条件 |
 | --- | --- | --- |
 | RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。`render.i` 按 C++ 方法的 `@getter`、`@setter`、`@cppOnly` 生成属性和忽略项。`binding swig` 中的 `macro` 引用属性或方法，`releaseInGC` 指定由 JS GC 释放返回对象的方法。 | 公开 API 的中英文说明随声明输出到 C++ 和 TS，包括方法绑定成的 TS 属性。 |
-| PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h` 和 `private.ts`。原生保留 `getComputePipelineState` 及两个转发重载，Web 保留只读属性、可选的 `key` 和可空结果。 | 引擎接入时可直接对照 `ProgramLibrary`。 |
+| PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h/.cpp` 和 `private.ts` 已接入 cocos4。`getProgramVariant` 和 `getComputePipelineState` 省略 `key` 时均转发 `nullptr`。Web 仅公开前者，返回值可为 `null`。 | 用 `--module PrivateInterface --output ../cocos4 --check --diff` 核对四个产物。原生实现为 `NativeProgramProxy` 和 `NativeProgramLibrary`。 |
 | Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 原生与 Web 消费测试覆盖这些类型。 |
 | FGDispatcher | `FGDispatcherFwd.h` 提供前置声明，`FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
@@ -92,6 +92,8 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 `NativeSetter : NativeRenderNode implements Setter` 为实现类生成 `Setter` 的成员声明。`NativeRenderQueueBuilder final : RenderQueueBuilder, NativeSetter` 从公开接口推导 `override` 签名，并将已有实现转发到 `NativeSetter`。C++ 派生类的 `constructor(...)` 只列自己的字段。生成器按基类声明顺序收集必需的构造参数，放在本类参数之前，并在初始化列表中分别传给直接基类。派生类省略 `constructor` 时也会转发，允许零业务参数构造的基类则省略其字段参数。`constructor() noexcept = custom;` 为引擎手写的 `NativePipeline` 构造函数生成声明。[原生管线声明](../spec/render/native-pipeline.spec) · [消费测试](../tests/consumer/records/MigrationConsumer.cpp)
 
 `struct` 和 `class` 可直接声明 `~T();` 或 `~T() noexcept;`。生成器将声明写入 C++ 头文件，定义由手写源文件提供。例如 `ResourceGroup` 在析构时调用各实例化缓冲区的 `clear()`。[模块声明](../spec/render/native-pipeline.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp)
+
+在 `extern module` 中写 `class RefCounted { public: virtual ~RefCounted(); };`，可告诉生成器该外部基类已有虚析构函数。直接派生的 `ProgramProxy` 因此生成 `~ProgramProxy() noexcept override = default;`。[外部基类声明](../spec/extern/pipeline-externals.spec)
 
 `.spec` 的 `struct` 和 `class` 成员默认公开。`private:` 或 `public:` 作用于后续声明，直到下一个访问标签或类型结束，包含静态成员、构造和析构函数。字段保留声明顺序，生成的比较、哈希和归档函数可以访问其使用的私有字段。JSB 转换只读写公开字段，TypeScript 成员仍按原有绑定规则生成。[原生管线声明](../spec/render/native-pipeline.spec)
 

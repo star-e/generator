@@ -65,6 +65,7 @@ namespace cc::codegen {
         isPmr: bool = false;
         constructorConstRef: bool = false;
         container: ContainerKind = ContainerKind::None;
+        hasVirtualDestructor: bool = false;
     }
 
     struct Enumerator {

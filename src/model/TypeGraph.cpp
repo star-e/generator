@@ -58,10 +58,10 @@ static_assert(hasFixedLayout<bool, 1, 1> && hasFixedLayout<uint32_t, 4, 4>);
 static_assert(hasFixedLayout<TypeId, 4, 4> && hasFixedLayout<ModuleId, 4, 4>);
 static_assert(hasFixedLayout<ContainerKind, 4, 4> && hasFixedLayout<MapKeyKind, 4, 4>);
 static_assert(hasFixedLayout<NamespaceType, 1, 1> && hasFixedLayout<TagType, 1, 1> && hasFixedLayout<BuiltinType, 1, 1>);
-static_assert(hasFixedLayout<ExternalTypeNode, 8, 4>);
+static_assert(hasFixedLayout<ExternalTypeNode, 12, 4>);
 static_assert(offsetof(ExternalTypeNode, isStruct) == 0 && offsetof(ExternalTypeNode, isString) == 1);
 static_assert(offsetof(ExternalTypeNode, isPmr) == 2 && offsetof(ExternalTypeNode, constructorConstRef) == 3);
-static_assert(offsetof(ExternalTypeNode, container) == 4);
+static_assert(offsetof(ExternalTypeNode, container) == 4 && offsetof(ExternalTypeNode, hasVirtualDestructor) == 8);
 static_assert(hasFixedLayout<AliasType, 4, 4> && offsetof(AliasType, target) == 0);
 static_assert(hasFixedLayout<PointerType, 4, 4> && offsetof(PointerType, pointee) == 0);
 static_assert(hasFixedLayout<ReferenceType, 8, 4> && offsetof(ReferenceType, referred) == 0 &&

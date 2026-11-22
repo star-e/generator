@@ -170,6 +170,7 @@ struct ExternalDeclaration {
     ContainerKind container{ContainerKind::None};
     std::vector<std::string> templateParameters;
     bool variadicTemplate{false};
+    bool hasVirtualDestructor{false};
 };
 
 struct TagDeclaration {

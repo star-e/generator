@@ -52,12 +52,19 @@ foreach(type IN ITEMS Setter SceneBuilder)
     endif()
 endforeach()
 file(READ "${work}/both/native/cocos/renderer/pipeline/custom/PrivateTypes.h" privateHeader)
+if(NOT renderHeader MATCHES "RenderNode\\(\\) noexcept = default;" OR NOT privateHeader MATCHES "ProgramProxy\\(\\) = default;")
+    message(FATAL_ERROR "The generated root must be noexcept and ProgramProxy must infer its constructor exception specification from RefCounted")
+endif()
+if(NOT renderHeader MATCHES "\n    virtual ~RenderNode\\(\\) noexcept = default;" OR
+   NOT privateHeader MATCHES "\n    ~ProgramProxy\\(\\) noexcept override = default;")
+    message(FATAL_ERROR "RenderNode must declare a virtual destructor and ProgramProxy must override the RefCounted destructor")
+endif()
 set(interfaceTypes RenderNode ProgramProxy)
 set(interfaceHeaders renderHeader privateHeader)
 foreach(type header IN ZIP_LISTS interfaceTypes interfaceHeaders)
-    foreach(member IN ITEMS "${type}() noexcept = default;" "${type}(${type} &&rhs) = delete;"
+    foreach(member IN ITEMS "${type}(${type} &&rhs) = delete;"
                             "${type}(${type} const &rhs) = delete;" "${type} &operator=(${type} &&rhs) = delete;"
-                            "${type} &operator=(${type} const &rhs) = delete;" "virtual ~${type}() noexcept = default;")
+                            "${type} &operator=(${type} const &rhs) = delete;")
         string(FIND "${${header}}" "${member}" index)
         if(index EQUAL -1)
             message(FATAL_ERROR "Missing explicit special member of ${type}: ${member}")
@@ -309,6 +316,7 @@ namespace cc {
     constexpr bool ENABLE_TEST = false;
     struct Item { Item& assign(const Item& other); Item* clone() const; }
     using Count = int;
+    @cppOnly interface Adapter : ::vendor::Device {}
     interface Parent {
         @cppOnly virtual Parent* fork(Count* value) const = 0;
         @cppOnly virtual int inspect(const int& value, int mode = 1) = 0;
@@ -330,6 +338,7 @@ namespace cc {
 run(${generate})
 file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
 foreach(line IN ITEMS "Item &assign(const Item &other);"
+                      "virtual ~Adapter() noexcept = default;"
                       "Item *clone() const;"
                       "    return select(2, 3);"
                       "    return this->select(select, 3);"

@@ -188,6 +188,18 @@ private:
         if (!decl.isStruct) expect("class");
         const auto start = location;
         auto name = uniqueName(names);
+        if (accept("{")) {
+            if (accept("public") || accept("protected")) expect(":");
+            expect("virtual");
+            expect("~");
+            expect(name);
+            expect("(");
+            expect(")");
+            accept("noexcept");
+            expect(";");
+            expect("}");
+            decl.hasVirtualDestructor = true;
+        }
         expect(";");
         return {.name = std::move(name), .location = start, .data = std::move(decl), .documentation = std::move(doc)};
     }
