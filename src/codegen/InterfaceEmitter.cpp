@@ -236,7 +236,7 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
         const size_t firstExplicit = method.parameters.size() - binding.optional.size();
         const size_t firstOptional = std::min(firstExplicit, requiredParameterCount(method));
         writeDocumentation(out, method.documentation, "    ");
-        out << "    " << *method.typescriptName << (method.optionalMethod ? "? (" : " (");
+        out << "    " << *method.typescriptName << (method.optionalMethod ? "?(" : " (");
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             const auto& param = method.parameters[i];
             if (i >= firstExplicit && binding.optional[i - firstExplicit] != param.name)
@@ -248,7 +248,7 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
     }
     for (const auto& callback : iface.typescriptCallbacks) {
         writeDocumentation(out, callback.documentation, "    ");
-        out << "    " << callback.name << (callback.optional ? "? (" : " (");
+        out << "    " << callback.name << (callback.optional ? "?(" : " (");
         for (size_t i = 0; i < callback.parameters.size(); ++i) {
             const auto& param = callback.parameters[i];
             out << tsParameterPrefix(i, callback.parameters.size()) << param.name << (param.optional ? "?: " : ": ")

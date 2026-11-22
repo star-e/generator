@@ -36,7 +36,7 @@ foreach(signature IN ITEMS
         hint?: QueueHint,
         phaseName?: string,
         passName?: string): RenderQueueBuilder;]=]
-        [=[    configCamera? (
+        [=[    configCamera?(
         camera: Readonly<Camera>,
         pplConfigs: Readonly<Record<string, any>>,
         cameraConfigs: Record<string, any>): void;]=])

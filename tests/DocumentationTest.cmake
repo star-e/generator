@@ -83,7 +83,7 @@ has(cpp "     * Integer overload.\n     */\n    virtual void internals(int index
 has(ts "     * Read the value.\n     */\n    value: number;")
 has(ts "     * Enabled state.\n     */\n    readonly enabled: boolean;")
 has(ts "     * Upper bound.\n     */\n    limit: number;")
-has(ts "     * Web callback.\n     */\n    notify? (")
+has(ts "     * Web callback.\n     */\n    notify?(")
 has(ts "     * Web method.\n     */\n    read (")
 if(ts MATCHES "Write the value|Native only" OR cpp MATCHES "Web callback|Web method")
     message(FATAL_ERROR "Documentation attached to an unrelated declaration")
