@@ -68,7 +68,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 外部模块可以用 `header "path/{name}.h" forward { ... }` 声明一组普通类或结构体。分组路径指向定义头，模块的 `cpp.header` 必须已声明组内所有类型。生成接口时，裸指针和引用可以使用模块公共头。按值使用、作为模板实参或通过 `{}` 构造默认实参时，生成器保留定义头。模块含手写 C++ 函数体时也保留原有定义头。[Gfx 分组](../spec/extern/gfx.spec)
 
-`cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的声明格式。cocos4 工作区将它设为 `true`，让接口和普通成员函数写成 `T *get()`、`void set(const T &value)` 和 `const std::vector<T *> &items`。接口的拷贝、移动声明和 flags 赋值运算符也使用这个设置，例如 `T &operator=(T &&rhs)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
+`cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的声明格式。cocos4 工作区将它设为 `true`，让接口和普通成员函数写成 `T *get()`、`void set(const T &value)` 和 `const std::vector<T *> &items`。记录的指针和引用字段也使用这个设置，例如 `const RenderGraph *renderGraph`。接口的拷贝、移动声明和 flags 赋值运算符也使用这个设置，例如 `T &operator=(T &&rhs)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
 
 启用 `cpp` 的每个模块都生成与主头文件同目录、同名的 `.cpp`。头文件之外的定义写入这个源文件。模块只有声明时，源文件包含主头文件，例如 `ArchiveTypes.cpp` 包含 `ArchiveTypes.h`。
 
@@ -84,7 +84,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 | --- | --- | --- |
 | RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。`render.i` 按 C++ 方法的 `@getter`、`@setter`、`@cppOnly` 生成属性和忽略项。`binding swig` 中的 `macro` 引用属性或方法，`releaseInGC` 指定由 JS GC 释放返回对象的方法。 | 公开 API 的中英文说明随声明输出到 C++ 和 TS，包括方法绑定成的 TS 属性。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h/.cpp` 和 `private.ts` 已接入 cocos4。`getProgramVariant` 和 `getComputePipelineState` 省略 `key` 时均转发 `nullptr`。Web 仅公开前者，返回值可为 `null`。 | 用 `--module PrivateInterface --output ../cocos4 --check --diff` 核对四个产物。原生实现为 `NativeProgramProxy` 和 `NativeProgramLibrary`。 |
-| Customization | `CustomFwd.h`、`CustomTypes.h` 覆盖上下文、管线自定义接口和六组回调。 | 回调的具体实现由使用者提供。 |
+| Customization | `CustomFwd.h`、`CustomTypes.h/.cpp` 已接入 cocos4。六组回调使用 `RenderGraphVertex`。该别名在 .spec 中引用新版 `RenderGraph::Vertex`，生成的前置声明头将其展开为 `uint32_t`，与旧图的 `vertex_descriptor` 一致。 | 用 `--module Customization --output ../cocos4 --check --diff` 核对三个产物。原生消费者包括 `NativePipeline.cpp` 的两个自定义渲染命令和 `NativeExecutor.cpp` 的回调调用点。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 覆盖 `ProgramInfo`、`ProgramGroup`。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 原生与 Web 消费测试覆盖这些类型。 |
 | FGDispatcher | `FGDispatcherFwd.h` 提供前置声明，`FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
 | NativePipeline | `NativePipelineFwd.h` 和 `NativePipelineTypes.h/.cpp` 覆盖旧版全部 50 个顶层类型，包括 9 个具体构建器、原生管线、程序库、资源上下文和绘制队列。 | 引擎切换时，手写执行器和管线代码中引用旧图自由函数与嵌套标签的调用仍需适配。 |

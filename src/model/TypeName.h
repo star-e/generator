@@ -97,7 +97,7 @@ inline std::optional<std::string> typeScriptContainerName(const TypeGraph& graph
     return "Array<" + name + ">";
 }
 
-inline std::string cppMethodDeclarator(std::string type, std::string_view name, bool spaceBeforeReference) {
+inline std::string formatCppDeclarator(std::string type, std::string_view name, bool spaceBeforeReference) {
     const auto endOfType = spaceBeforeReference ? type.find_last_not_of("*&") + 1 : type.size();
     if (endOfType < type.size() || !name.empty()) type.insert(endOfType, 1, ' ');
     type += name;
@@ -124,7 +124,7 @@ std::string formatTypeName(const TypeGraph& graph, TypeId id, const NameOf& name
             const auto& arg = instance->arguments[i];
             if (const auto* type = std::get_if<TypeId>(&arg)) {
                 auto argument = formatTypeName(graph, *type, nameOf, spaceBeforeReference);
-                name += cppMethodDeclarator(std::move(argument), {}, spaceBeforeReference);
+                name += formatCppDeclarator(std::move(argument), {}, spaceBeforeReference);
             } else name += std::get<std::string>(arg);
         }
         return name + ">";

@@ -314,7 +314,7 @@ import Shadow;
 namespace cc {
     /** Native switch. */
     constexpr bool ENABLE_TEST = false;
-    struct Item { Item& assign(const Item& other); Item* clone() const; }
+    struct Item { @cppOnly link: const Item* = nullptr; @cppOnly static current: Item* = nullptr; Item& assign(const Item& other); Item* clone() const; }
     using Count = int;
     @cppOnly interface Adapter : ::vendor::Device {}
     interface Parent {
@@ -338,6 +338,7 @@ namespace cc {
 run(${generate})
 file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
 foreach(line IN ITEMS "Item &assign(const Item &other);"
+                      "const Item *link{nullptr};" "inline static Item *current{nullptr};"
                       "virtual ~Adapter() noexcept = default;"
                       "Item *clone() const;"
                       "    return select(2, 3);"
@@ -363,6 +364,7 @@ run(${generate})
 set(providerHeader "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h")
 file(READ "${providerHeader}" overridden)
 foreach(line IN ITEMS "Item& assign(const Item& other);" "Item* clone() const;" "virtual int& revise(int& value, const int &other) = 0;"
+                      "const Item* link{nullptr};" "inline static Item* current{nullptr};"
                       "Parent& operator=(Parent&& rhs) = delete;")
     string(FIND "${overridden}" "${line}" index)
     if(index EQUAL -1)

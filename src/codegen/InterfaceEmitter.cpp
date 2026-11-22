@@ -103,7 +103,7 @@ void cppDeclarator(std::ostream& out, const ClassScope& scope, const MethodInfo&
         else if (!decl.cppHeader.empty()) headers.insert(decl.cppHeader);
         return scope.name(decl, method);
     }, scope.spaceBeforeReference);
-    out << cppMethodDeclarator(std::move(type), std::string(pointers, '*') + name, scope.spaceBeforeReference);
+    out << formatCppDeclarator(std::move(type), std::string(pointers, '*') + name, scope.spaceBeforeReference);
 }
 
 void cppParameters(std::ostream& out, const ClassScope& scope, const MethodInfo& method, size_t count, bool named,
@@ -248,9 +248,9 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     }
     out << " {\npublic:\n";
     if (needsSpecialMembers) {
-        const auto moveParam = cppMethodDeclarator(name + "&&", "rhs", spaceBeforeReference);
-        const auto copyParam = cppMethodDeclarator(name + " const&", "rhs", spaceBeforeReference);
-        const auto assign = cppMethodDeclarator(name + "&", "operator=", spaceBeforeReference);
+        const auto moveParam = formatCppDeclarator(name + "&&", "rhs", spaceBeforeReference);
+        const auto copyParam = formatCppDeclarator(name + " const&", "rhs", spaceBeforeReference);
+        const auto assign = formatCppDeclarator(name + "&", "operator=", spaceBeforeReference);
         // Let an external base determine the default constructor's exception specification.
         out << "    " << name << "()" << (bases.empty() ? " noexcept" : "") << " = default;\n"
             << "    " << name << '(' << moveParam << ") = delete;\n"

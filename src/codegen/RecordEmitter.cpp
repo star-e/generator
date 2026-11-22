@@ -454,8 +454,8 @@ void cppFlagOperators(std::ostream& out, const std::string& name, const std::str
             << " static_cast<" << base << ">(rhs));\n}\n";
     }
     for (const char op : {'|', '&'}) {
-        out << "\nconstexpr " << cppMethodDeclarator(name + "&", "operator", spaceBeforeReference) << op << "=("
-            << cppMethodDeclarator(name + "&", "lhs", spaceBeforeReference) << ", const " << name << " rhs) noexcept {\n"
+        out << "\nconstexpr " << formatCppDeclarator(name + "&", "operator", spaceBeforeReference) << op << "=("
+            << formatCppDeclarator(name + "&", "lhs", spaceBeforeReference) << ", const " << name << " rhs) noexcept {\n"
             << "    return lhs = lhs " << op << " rhs;\n}\n";
     }
     out << "\nconstexpr bool operator!(" << name << " e) noexcept {\n"
@@ -1011,7 +1011,7 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
         out << "    ";
         if (method.isExplicitConversion) out << "explicit operator ";
         else if (method.isStatic) out << "static ";
-        out << cppMethodDeclarator(methodType(graph, module, method.result.type, deps, output.spaceBeforeReference),
+        out << formatCppDeclarator(methodType(graph, module, method.result.type, deps, output.spaceBeforeReference),
                                    method.isExplicitConversion ? "" : method.name, output.spaceBeforeReference);
         out << "(";
         for (size_t i = 0; i < method.parameters.size(); ++i) {
@@ -1019,7 +1019,7 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
             const auto& p = method.parameters[i];
             auto type = methodType(graph, module, p.type.type, deps, output.spaceBeforeReference);
             if (p.byConstReference) type = "const " + type + "&";
-            out << cppMethodDeclarator(std::move(type), p.name, output.spaceBeforeReference);
+            out << formatCppDeclarator(std::move(type), p.name, output.spaceBeforeReference);
             if (!p.defaultValue.empty()) out << " = " << p.defaultValue;
         }
         out << ")";
@@ -1082,12 +1082,14 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
             invalid(field, "no C++ default for static field of type " + type.qualifiedName);
         const auto* alias = std::get_if<AliasType>(&type.data);
         const bool scalarAlias = alias && !std::holds_alternative<TemplateInstanceType>(graph.node(alias->target).data);
+        const auto declaration = formatCppDeclarator(member.cpp, member.name, output.spaceBeforeReference);
         if (std::holds_alternative<BuiltinType>(type.data) || scalarAlias ||
             (std::holds_alternative<EnumType>(type.data) && !forwardEnum) || std::holds_alternative<PointerType>(type.data)) {
-            out << "    inline static " << member.cpp << " " << member.name << "{" << member.cppDefault << "};\n";
+            out << "    inline static " << declaration << "{" << member.cppDefault << "};\n";
         } else {
-            out << "    static " << member.cpp << " " << member.name << ";\n";
-            source << "\n" << member.cpp << " " << node.name << "::" << member.name << "{" << member.cppDefault << "};\n";
+            out << "    static " << declaration << ";\n";
+            source << "\n" << formatCppDeclarator(member.cpp, node.name + "::" + member.name, output.spaceBeforeReference)
+                   << "{" << member.cppDefault << "};\n";
         }
     }
     const auto allocator = std::ranges::find(members, true, &BoundField::usesAllocator);
@@ -1150,7 +1152,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         writeDocumentation(out, m.documentation, "    ");
         out << "    ";
         if (record.fields[i].isMutable) out << "mutable ";
-        out << m.cpp << " " << m.name;
+        out << formatCppDeclarator(m.cpp, m.name, output.spaceBeforeReference);
         if (!m.cppDefault.empty()) out << "{" << m.cppDefault << "}";
         out << ";\n";
     }

@@ -5,6 +5,23 @@ set(spec "${work}/spec/render/render-common.spec")
 file(READ "${spec}" original)
 set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --output "${work}/stage")
 
+# The legacy RenderGraph uses its nested Vertex for storage. Callback IDs must track the
+# descriptor declared in the spec while compiling against either graph header.
+set(graphSpec "${work}/spec/render/render-graph.spec")
+file(READ "${graphSpec}" renderGraph)
+string(REPLACE "graph RenderGraph {\n        vertex_descriptor Vertex = uint32_t;"
+               "graph RenderGraph {\n        vertex_descriptor Vertex = uint64_t;" wideGraph "${renderGraph}")
+file(WRITE "${graphSpec}" "${wideGraph}")
+run(${generate})
+set(customDir "${work}/stage/native/cocos/renderer/pipeline/custom")
+file(READ "${customDir}/CustomFwd.h" customForward)
+file(READ "${customDir}/CustomTypes.h" customTypes)
+if(NOT customForward MATCHES "using RenderGraphVertex = uint64_t;" OR
+   customTypes MATCHES "RenderGraph::Vertex" OR NOT customTypes MATCHES "RenderGraphVertex passID")
+    message(FATAL_ERROR "Customization callbacks must use the scalar RenderGraph vertex descriptor")
+endif()
+file(WRITE "${graphSpec}" "${renderGraph}")
+
 set(privateSpec "${work}/spec/render/private-interface.spec")
 file(READ "${privateSpec}" privateApi)
 file(APPEND "${privateSpec}" "binding typescript { ProgramLibrary => interface { method getProgramVariant optional(name); }; }")
