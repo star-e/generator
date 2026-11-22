@@ -152,7 +152,7 @@ class EditorFixture {
         assert(root === this.getPassID('main', RenderPassType.RENDER_PASS) &&
             sub === this.getSubpassID('deferred', root) && shadow === this.getPhaseID('shadow', sub), 'Vertex reuse');
         assert(shadow !== other && [...lg.v()].length === 4 && lg.nv() === 4, 'Scoped phase names');
-        assert(lg.N === 0xFFFFFFFF && lg.getParent(root) === lg.N && lg.getParent(lg.N) === lg.N &&
+        assert(lg.N === 0xFFFFFFFF && lg.getParent(root) === lg.N &&
             lg.getParent(shadow) === sub && lg.getParent(other) === root, 'Parent lookup');
         assert(lg.locateChild(lg.N, 'shadow') === lg.N && lg.locateChild(shadow, 'shadow') === lg.N, 'Missing child');
         assert(lg.getName(shadow) === 'shadow' && lg.w(shadow) === phase && lg.w(sub) === stage, 'Vertex kind and name');

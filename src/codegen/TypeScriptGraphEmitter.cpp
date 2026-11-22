@@ -271,19 +271,15 @@ void referenceQueries(std::ostream& out, const GraphStorageNames& names, bool se
     out << R"(    numChildren (v: number): number {
         return this.)" << names.children << R"([v].length;
     }
+    getParent (v: number): number {
 )";
     if (separateEdges)
-        out << R"(    getParent (v: number): number {
-        if (v === this.N) return this.N;
-        const parents = this.)" << names.parents << R"([v];
+        out << R"(        const parents = this.)" << names.parents << R"([v];
         return parents.length ? parents[0].target as number : this.N;
-    }
 )";
     else
-        out << R"(    getParent (v: number): number {
-        return this.)" << names.parents << R"([v] ?? this.N;
-    }
-)";
+        out << "        return this." << names.parents << "[v];\n";
+    out << "    }\n";
 }
 
 void adjacencyMutation(std::ostream& out, const GraphStorageNames& names, bool references, bool bidirectional) {

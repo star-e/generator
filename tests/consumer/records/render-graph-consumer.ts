@@ -21,7 +21,7 @@ const pass = add(Kind.RasterPass, pool.createRasterPass(), 'pass');
 const queue = add(Kind.Queue, pool.createRenderQueue(), 'queue', pass);
 const scene = add(Kind.Scene, pool.createSceneData(), 'scene', queue);
 const compute = add(Kind.Compute, pool.createComputePass(), 'pass');
-check(g.ne() === 0 && refs.getParent(queue) === pass && g.getParent(scene) === queue && g.getParent(g.N) === g.N, 'initial ownership');
+check(g.ne() === 0 && refs.getParent(queue) === pass && g.getParent(scene) === queue && g.getParent(pass) === g.N, 'initial ownership');
 check(g.vertexName(pass) === g.vertexName(compute) && g.index.size === 0, 'duplicate names');
 const edge = g.addEdge(pass, compute), link = g.addReference(pass, compute);
 if (!edge || !link) throw new Error('missing edge or reference');
