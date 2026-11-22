@@ -125,12 +125,19 @@ inline std::string qualifiedTypeName(const TypeGraph& graph, TypeId id) {
     return formatTypeName(graph, id, [](const TypeNode& type) { return type.qualifiedName; });
 }
 
-inline std::string qualifyIfShadowed(const TypeGraph& graph, const TypeNode& type, const TypeModule& module, std::string name) {
+inline std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
     std::string scope;
+    size_t common = 0;
     for (const auto& ns : module.namespaces) {
         scope += ns + "::";
-        const auto other = graph.findType(scope + name);
-        if (other != TypeId{} && graph.node(other).qualifiedName != type.qualifiedName) return "::" + type.qualifiedName;
+        if (type.qualifiedName.starts_with(scope)) common = scope.size();
+    }
+    const auto name = type.qualifiedName.substr(common);
+    const auto first = name.substr(0, name.find("::"));
+    // C++ looks up the first qualifier before resolving the rest of the name.
+    for (auto it = module.namespaces.rbegin(); scope.size() > common; ++it) {
+        if (graph.findType(scope + first) != TypeId{}) return "::" + type.qualifiedName;
+        scope.resize(scope.size() - it->size() - 2);
     }
     return name;
 }

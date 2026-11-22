@@ -17,8 +17,61 @@ namespace {
 constexpr auto lintBegin = "// NOLINTBEGIN(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
 constexpr auto lintEnd = "// NOLINTEND(misc-include-cleaner, bugprone-easily-swappable-parameters)\n";
 
-void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use, const std::string& name,
-                   ModuleId owner, std::set<std::string>& headers) {
+struct ClassScope {
+    const TypeGraph& graph;
+    const TypeModule& module;
+    std::set<const TypeNode*> classes;
+    std::set<std::string_view> members;
+
+    ClassScope(const TypeGraph& graph, const TypeNode& owner) : graph(graph), module(graph.modules.at(owner.module.value)) {
+        collect(owner);
+    }
+
+    void collect(const TypeNode& node) {
+        if (!classes.insert(&node).second) return;
+        const auto addMembers = [&](const auto& declarations) {
+            for (const auto& member : declarations) members.insert(member.name);
+        };
+        if (const auto* iface = std::get_if<InterfaceType>(&node.data)) {
+            addMembers(iface->methods);
+            for (auto base : iface->bases) collect(graph.node(base));
+        } else if (const auto* record = std::get_if<RecordType>(&node.data)) {
+            addMembers(record->methods);
+            addMembers(record->fields);
+            addMembers(record->staticFields);
+            for (auto base : record->bases) collect(graph.node(base));
+            if (record->implements) collect(graph.node(*record->implements));
+        }
+    }
+
+    std::string name(const TypeNode& type, const MethodInfo& method) const {
+        auto result = cppName(graph, type, module);
+        const auto separator = result.find("::");
+        const auto first = std::string_view(result).substr(0, separator);
+        const bool hiddenByClass = std::ranges::any_of(classes, [&](const TypeNode* base) { return base != &type && base->name == first; });
+        const bool hiddenByValue = separator == std::string::npos &&
+            (members.contains(first) || std::ranges::find(method.parameters, first, &ParameterInfo::name) != method.parameters.end());
+        if (hiddenByClass || hiddenByValue) return "::" + type.qualifiedName;
+        return result;
+    }
+
+    std::string defaultValue(const ParameterInfo& param, const MethodInfo& method) const {
+        auto value = param.defaultValue;
+        if (!value.starts_with("::")) return value;
+        // The model stores each enumerator of a flags expression with its canonical type prefix.
+        const auto& type = graph.node(param.type.type);
+        const auto prefix = "::" + type.qualifiedName + "::";
+        const auto relative = name(type, method) + "::";
+        for (size_t pos = 0; (pos = value.find(prefix, pos)) != std::string::npos; pos += relative.size()) {
+            value.replace(pos, prefix.size(), relative);
+        }
+        return value;
+    }
+};
+
+void cppDeclarator(std::ostream& out, const ClassScope& scope, const MethodInfo& method, const TypeUse& use,
+                   const std::string& name, std::set<std::string>& headers) {
+    const auto& graph = scope.graph;
     auto id = use.type;
     size_t pointers = 0;
     while (const auto* pointer = std::get_if<PointerType>(&graph.node(id).data)) {
@@ -27,25 +80,25 @@ void cppDeclarator(std::ostream& out, const TypeGraph& graph, const TypeUse& use
     }
     const auto type = formatTypeName(graph, id, [&](const TypeNode& decl) {
         if (decl.qualifiedName.empty()) throw std::runtime_error(use.location.describe() + ": unsupported C++ interface type");
-        if (decl.module != ModuleId{} && decl.module != owner && decl.cppHeader.empty()) {
+        if (decl.module != ModuleId{} && &graph.modules.at(decl.module.value) != &scope.module && decl.cppHeader.empty()) {
             throw std::runtime_error(use.location.describe() + ": missing C++ header for imported type " + decl.qualifiedName);
         }
         if (!decl.cppHeader.empty()) headers.insert(decl.cppHeader);
-        return qualifyIfShadowed(graph, decl, graph.modules.at(owner.value), decl.qualifiedName);
+        return scope.name(decl, method);
     });
     out << type;
     if (pointers || !name.empty()) out << ' ' << std::string(pointers, '*') << name;
 }
 
-void cppParameters(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, size_t count, bool named,
-                   ModuleId owner, std::set<std::string>& headers) {
+void cppParameters(std::ostream& out, const ClassScope& scope, const MethodInfo& method, size_t count, bool named,
+                   std::set<std::string>& headers) {
     out << '(';
     for (size_t i = 0; i < count; ++i) {
         const auto& param = method.parameters[i];
         if (i) out << ", ";
         if (param.byConstReference) out << "const ";
-        cppDeclarator(out, graph, param.type, (param.byConstReference ? "&" : "") + (named ? param.name : ""), owner, headers);
-        if (!method.isPureVirtual && !param.defaultValue.empty()) out << " = " << param.defaultValue;
+        cppDeclarator(out, scope, method, param.type, (param.byConstReference ? "&" : "") + (named ? param.name : ""), headers);
+        if (!method.isPureVirtual && !param.defaultValue.empty()) out << " = " << scope.defaultValue(param, method);
     }
     out << ')';
     if (method.isConst) out << " const";
@@ -87,14 +140,14 @@ void collectVirtualMethods(const TypeGraph& graph, TypeId id, VirtualMethods& me
     }
 }
 
-void cppMethod(std::ostream& out, const TypeGraph& graph, const MethodInfo& method, ModuleId owner, std::set<std::string>& headers,
+void cppMethod(std::ostream& out, const ClassScope& scope, const MethodInfo& method, std::set<std::string>& headers,
                const VirtualMethods& inherited) {
-    const bool overrides = !method.isStatic && !inherited.empty() && inherited.contains(methodSignature(graph, method));
+    const bool overrides = !method.isStatic && !inherited.empty() && inherited.contains(methodSignature(scope.graph, method));
     writeDocumentation(out, method.documentation, "    ");
     out << "    " << (method.isPureVirtual && !overrides ? "virtual " : method.isStatic ? "static " : "");
     if (method.isExplicitConversion) out << "explicit operator ";
-    cppDeclarator(out, graph, method.result, method.isExplicitConversion ? "" : method.name, owner, headers);
-    cppParameters(out, graph, method, method.parameters.size(), true, owner, headers);
+    cppDeclarator(out, scope, method, method.result, method.isExplicitConversion ? "" : method.name, headers);
+    cppParameters(out, scope, method, method.parameters.size(), true, headers);
     if (method.isNoexcept) out << " noexcept";
     if (overrides) out << " override";
     if (method.isPureVirtual) out << " = 0";
@@ -113,21 +166,22 @@ void forwardArgument(std::ostream& out, const TypeGraph& graph, const ParameterI
     }
 }
 
-void cppForwardingOverloads(std::ostream& out, const TypeGraph& graph, const TypeNode& decl, const MethodInfo& method,
+void cppForwardingOverloads(std::ostream& out, const ClassScope& scope, const TypeNode& decl, const MethodInfo& method,
                            std::set<std::string>& headers) {
+    const auto& graph = scope.graph;
     const auto& params = method.parameters;
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
     for (size_t count = requiredParameterCount(method); count < params.size(); ++count) {
         out << "    ";
-        cppDeclarator(out, graph, method.result, method.name, decl.module, headers);
-        cppParameters(out, graph, method, count, true, decl.module, headers);
+        cppDeclarator(out, scope, method, method.result, method.name, headers);
+        cppParameters(out, scope, method, count, true, headers);
         out << " { ";
         if (graph.node(method.result.type).qualifiedName != "void") out << "return ";
         if (std::ranges::count(methods, method.name, &MethodInfo::name) > 1) {
             // A literal such as nullptr or {} need not select this overload on its own.
             out << "(this->*static_cast<";
-            cppDeclarator(out, graph, method.result, "(" + decl.name + "::*)", decl.module, headers);
-            cppParameters(out, graph, method, params.size(), false, decl.module, headers);
+            cppDeclarator(out, scope, method, method.result, "(" + decl.name + "::*)", headers);
+            cppParameters(out, scope, method, params.size(), false, headers);
             out << ">(&" << decl.name << "::" << method.name << "))";
         } else {
             out << "this->" << method.name;
@@ -136,7 +190,7 @@ void cppForwardingOverloads(std::ostream& out, const TypeGraph& graph, const Typ
         for (size_t i = 0; i < params.size(); ++i) {
             if (i) out << ", ";
             const auto& p = params[i];
-            if (i >= count) out << p.defaultValue;
+            if (i >= count) out << scope.defaultValue(p, method);
             else forwardArgument(out, graph, p, headers);
         }
         out << "); }\n";
@@ -148,12 +202,13 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     writeDocumentation(out, decl.documentation);
     out << "class " << name;
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
+    const ClassScope scope(graph, decl);
     VirtualMethods inherited;
     for (auto base : bases) {
         collectVirtualMethods(graph, base, inherited);
         const auto& type = graph.node(base);
         collectCppHeader(graph, graph.modules.at(decl.module.value), type, headers);
-        out << (base == bases.front() ? " : public " : ", public ") << qualifyIfShadowed(graph, type, graph.modules.at(decl.module.value), type.qualifiedName);
+        out << (base == bases.front() ? " : public " : ", public ") << cppName(graph, type, scope.module);
     }
     out << " {\npublic:\n"
         << "    " << name << "() noexcept = default;\n"
@@ -163,9 +218,9 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
         << "    " << name << "& operator=(" << name << " const& rhs) = delete;\n"
         << "    virtual ~" << name << "() noexcept = default;\n\n";
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
-    for (const auto& method : methods) cppMethod(out, graph, method, decl.module, headers, inherited);
+    for (const auto& method : methods) cppMethod(out, scope, method, headers, inherited);
     for (const auto& method : methods) {
-        if (method.isPureVirtual) cppForwardingOverloads(out, graph, decl, method, headers);
+        if (method.isPureVirtual) cppForwardingOverloads(out, scope, decl, method, headers);
     }
     out << "};\n\n";
 }
@@ -264,6 +319,7 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
 void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers) {
     const auto& record = std::get<RecordType>(node.data);
     if (record.bases.empty() && !record.implements) return;
+    const ClassScope scope(graph, node);
     VirtualMethods overrides, implementation;
     std::map<std::string, TypeId> providers;
     for (auto base : record.bases) {
@@ -290,14 +346,14 @@ void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const 
         const auto& method = overrideMethod ? *overrides.at(key) : *candidate;
         out << "    ";
         if (method.isExplicitConversion) out << "explicit operator ";
-        cppDeclarator(out, graph, method.result, method.isExplicitConversion ? "" : method.name, node.module, headers);
-        cppParameters(out, graph, method, method.parameters.size(), true, node.module, headers);
+        cppDeclarator(out, scope, method, method.result, method.isExplicitConversion ? "" : method.name, headers);
+        cppParameters(out, scope, method, method.parameters.size(), true, headers);
         if (method.isNoexcept) out << " noexcept";
         if (overrideMethod) out << " override";
         if (provider == providers.end()) { out << ";\n"; continue; }
         out << " { ";
         if (graph.node(method.result.type).qualifiedName != "void") out << "return ";
-        out << graph.node(provider->second).qualifiedName << "::" << method.name << '(';
+        out << scope.name(graph.node(provider->second), method) << "::" << method.name << '(';
         for (size_t i = 0; i < method.parameters.size(); ++i) {
             if (i) out << ", ";
             forwardArgument(out, graph, method.parameters[i], headers);

@@ -29,16 +29,6 @@ struct Dependencies {
 };
 
 
-std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
-    std::string scope;
-    std::string name = type.qualifiedName;
-    for (const auto& ns : module.namespaces) {
-        scope += ns + "::";
-        if (type.qualifiedName.starts_with(scope)) name = type.qualifiedName.substr(scope.size());
-    }
-    return qualifyIfShadowed(graph, type, module, std::move(name));
-}
-
 [[noreturn]] void invalid(const FieldInfo& field, const std::string& reason) {
     throw std::runtime_error(field.type.location.describe() + ": " + field.name + ": " + reason);
 }

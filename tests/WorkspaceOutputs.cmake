@@ -49,6 +49,14 @@ file(READ "${work}/both/native/cocos/renderer/pipeline/custom/RenderInterfaceTyp
 if(NOT renderHeader MATCHES "constexpr bool ENABLE_SUBPASS = true;" OR pipeline MATCHES "ENABLE_SUBPASS")
     message(FATAL_ERROR "RenderInterface must publish the subpass switch in its native header")
 endif()
+foreach(fragment IN ITEMS "class Setter : public RenderNode"
+                          "const ccstd::vector<gfx::CommandBuffer*>& getCommandBuffers()"
+                          "this->addMaterialTexture(resourceName, gfx::ShaderStageFlagBit::VERTEX | gfx::ShaderStageFlagBit::FRAGMENT)")
+    string(FIND "${renderHeader}" "${fragment}" index)
+    if(index EQUAL -1)
+        message(FATAL_ERROR "Expected namespace-relative C++ output: ${fragment}")
+    endif()
+endforeach()
 string(REGEX MATCHALL "export (enum|interface|class) [A-Za-z0-9_]+" pipelineExports "${pipeline}")
 list(LENGTH pipelineExports count)
 if(NOT count EQUAL 22 OR pipeline MATCHES "(Factory|isOcclusionQueryEnabled|resetRenderQueue|setValue \\()")
@@ -258,7 +266,15 @@ if(script MATCHES "readonly value|getURLValue|getValue|setValue")
     message(FATAL_ERROR "TypeScript exposed annotated methods or made a writable property readonly")
 endif()
 
+file(WRITE "${work}/spec/shadow.spec" [=[extern module Shadow;
+cpp { header "Vendor.h"; }
+namespace vendor { struct Device; }
+namespace cc::vendor { struct Other; }
+]=])
+string(JSON config SET "${config}" modules 3 [[{"spec":"../spec/shadow.spec"}]])
+file(WRITE "${workspace}" "${config}")
 file(WRITE "${provider}" [=[module Provider;
+import Shadow;
 namespace cc {
     /** Native switch. */
     constexpr bool ENABLE_TEST = false;
@@ -268,9 +284,11 @@ namespace cc {
         @cppOnly virtual Parent* fork(Count* value) const = 0;
         @cppOnly virtual int inspect(const int& value, int mode = 1) = 0;
         static int helper() { return 1; }
+        static int Item() { return 0; }
     }
     interface Middle : Parent { @cppOnly virtual int count() = 0; }
     interface Child : Middle {
+        @cppOnly virtual void borrow(int Count, ::cc::Count* value, ::cc::Item* item, ::vendor::Device* device) = 0;
         @cppOnly virtual Child* fork(int* renamed) const noexcept = 0;
         @cppOnly virtual Child* fork(int* renamed) = 0;
         @cppOnly virtual int inspect(const int& value) = 0;
@@ -280,8 +298,9 @@ namespace cc {
 }]=])
 run(${generate})
 file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
-foreach(line IN ITEMS "cc::Child *fork(int *renamed) const noexcept override = 0;"
-                      "virtual cc::Child *fork(int *renamed) = 0;"
+foreach(line IN ITEMS "Child *fork(int *renamed) const noexcept override = 0;"
+                      "virtual Child *fork(int *renamed) = 0;"
+                      "virtual void borrow(int Count, ::cc::Count *value, ::cc::Item *item, ::vendor::Device *device) = 0;"
                       "virtual int inspect(const int &value) = 0;"
                       "virtual int helper() = 0;"
                       "int count() override { return 2; }")
