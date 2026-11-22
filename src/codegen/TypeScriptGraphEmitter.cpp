@@ -427,10 +427,10 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     }
     if (model.mutableGraph) {
         out << "\n    // MutableGraph\n    clear (): void {\n";
+        if (model.parentGraph) out << "        this." << names.roots << ".length = 0;\n";
         if (vertexList.empty()) out << "        this." << names.vertexCount << " = 0;\n";
         for (const auto& column : columns) out << "        this." << column.name << ".length = 0;\n";
         if (model.nameIndex) out << "        this." << names.nameIndex << ".clear();\n";
-        if (model.parentGraph) out << "        this." << names.roots << ".length = 0;\n";
         for (const auto& f : fields) {
             if (!f.tsReset.empty()) out << "        " << f.tsReset << ";\n";
             else if (!f.readonly) out << "        this." << f.name << " = " << f.tsDefault << ";\n";
@@ -541,11 +541,11 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
 )";
 
     out << '\n';
+    if (model.parentGraph) out << "    " << storage << names.roots << ": OutE[] = [];\n";
     if (vertexList.empty()) out << "    private " << names.vertexCount << " = 0;\n";
     for (const auto& column : columns)
         out << "    " << storage << column.name << ": " << column.arrayType << " = [];\n";
     if (model.nameIndex) out << "    " << storage << names.nameIndex << " = new Map<string, number>();\n";
-    if (model.parentGraph) out << "    " << storage << names.roots << ": OutE[] = [];\n";
     std::string initializers;
     for (const auto& f : fields) {
         writeDocumentation(out, f.documentation, "    ");
@@ -557,10 +557,10 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (!initializers.empty()) out << "\n    constructor () {\n" << initializers << "    }\n";
     if (model.serializable) {
         out << "\n    [adopt" << node.name << "] (decoded: " << node.name << "): void {\n";
+        if (model.parentGraph) out << "        this." << names.roots << " = decoded." << names.roots << ";\n";
         if (vertexList.empty()) out << "        this." << names.vertexCount << " = decoded." << names.vertexCount << ";\n";
         for (const auto& column : columns) out << "        this." << column.name << " = decoded." << column.name << ";\n";
         if (model.nameIndex) out << "        this." << names.nameIndex << " = decoded." << names.nameIndex << ";\n";
-        if (model.parentGraph) out << "        this." << names.roots << " = decoded." << names.roots << ";\n";
         for (const auto& f : model.fields) {
             if (f.transient) continue;
             const auto target = "this." + f.name;

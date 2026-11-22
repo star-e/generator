@@ -2,6 +2,7 @@
 #include <algorithm>
 
 namespace cc::codegen {
+namespace {
 
 const std::string& archiveMethod(const TypeNode& api, const std::string& method) {
     const auto& methods = std::get<InterfaceType>(api.data).methods;
@@ -10,6 +11,8 @@ const std::string& archiveMethod(const TypeNode& api, const std::string& method)
     }
     throw std::runtime_error("missing TypeScript binding for " + api.qualifiedName + "." + method);
 }
+
+} // namespace
 
 std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
     const auto& node = graph.node(id);
@@ -25,19 +28,18 @@ std::string archivePrimitive(const TypeGraph& graph, TypeId id) {
     return std::ranges::find(numbers, type) != std::end(numbers) ? "Number" : "";
 }
 
-void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context, bool emitTs) {
+void ArchiveRequirements::checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context) {
     const auto& node = graph.node(id);
     if (!node.typescriptNumber && !archivePrimitive(graph, id).empty()) return;
     if (std::holds_alternative<ExternalTypeNode>(node.data) && !node.typescriptModule.empty()) return;
     if (const auto* record = std::get_if<RecordType>(&node.data); record && record->serializable && node.module == owner) return;
     if (node.typescriptContainer != ContainerKind::None) {
-        needsReadSize |= emitTs;
         const auto& args = std::get<TemplateInstanceType>(node.data).arguments;
         if (node.typescriptContainer == ContainerKind::Map && graph.node(std::get<TypeId>(args.front())).typescriptMapKey == MapKeyKind::String)
             throw std::runtime_error(context + ": mapKey string has no archive encoding for the native key");
         if (node.typescriptContainer == ContainerKind::Array && archivePrimitive(graph, std::get<TypeId>(args.front())) == "Bool")
             needsBoolVectorLoad = true;
-        for (const auto& arg : args) checkType(graph, owner, std::get<TypeId>(arg), context, emitTs);
+        for (const auto& arg : args) checkType(graph, owner, std::get<TypeId>(arg), context);
         return;
     }
     throw std::runtime_error(context + ": unsupported archive field type " + node.qualifiedName);
@@ -83,12 +85,13 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
         if (map) value(out, keyType, json ? "JSON.parse(" + key + ")" : key, inner, false, depth + 1);
         value(out, element, item, inner, false, depth + 1);
     } else {
+        const auto readNumber = "a." + archiveMethod(api, "readNumber") + "()";
         const auto i = (array ? "index" : "left") + std::to_string(depth);
         if (array) {
-            out << indent << expr << ".length = readSize(a);\n"
+            out << indent << expr << ".length = " << readNumber << ";\n"
                 << indent << "for (let " << i << " = 0; " << i << " < " << expr << ".length; ++" << i << ") {\n";
         } else {
-            out << indent << "for (let " << i << " = readSize(a); " << i << " > 0; --" << i << ") {\n";
+            out << indent << "for (let " << i << " = " << readNumber << "; " << i << " > 0; --" << i << ") {\n";
         }
         if (map) value(out, keyType, key, inner, true, depth + 1);
         value(out, element, item, inner, true, depth + 1);
@@ -108,14 +111,13 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.separateEdges || model.alternatives.empty() ||
         graph.node(model.vertexType).qualifiedName != "uint32_t")
         throw std::runtime_error(node.qualifiedName + ": graph archive requires a mutable uint32_t vertex list with shared edges and polymorphic payloads");
-    requirements.needsReadSize |= ts != nullptr;
     for (const auto& columns : {&model.components, &model.alternatives})
-        for (const auto& column : *columns) requirements.checkType(graph, node.module, column.valueType, node.qualifiedName + "." + column.name, ts != nullptr);
+        for (const auto& column : *columns) requirements.checkType(graph, node.module, column.valueType, node.qualifiedName + "." + column.name);
     for (const auto& field : model.fields) {
         if (field.transient) continue;
         if (field.isReadonly && !archivePrimitive(graph, field.type.type).empty())
             throw std::runtime_error(node.qualifiedName + "." + field.name + ": archive load requires a writable field");
-        requirements.checkType(graph, node.module, field.type.type, node.qualifiedName + "." + field.name, ts != nullptr);
+        requirements.checkType(graph, node.module, field.type.type, node.qualifiedName + "." + field.name);
     }
     const auto tag = [&](const ComponentInfo& column) { return "::" + graph.node(column.tag).qualifiedName + "{}"; };
     const auto count = model.alternatives.size();
@@ -205,10 +207,11 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     }
     *ts << "        }\n    }\n";
     for (const auto& f : model.fields) if (!f.transient) writer.value(*ts, f.type.type, "g." + f.name, "    ");
+    const auto readNumber = "a." + archiveMethod(input, "readNumber") + "()";
     *ts << "}\n\nexport function load" << name << " (a: " << input.name << ", g: " << name << "): void {\n"
-        << "    const decoded = new " << name << "();\n    const size = readSize(a);\n    let edges = readSize(a);\n"
-        << "    const counts = Array.from({ length: " << count << " }, () => readSize(a));\n"
-        << "    for (let i = 0; i < size; ++i) {\n        const kind = readSize(a);\n        const parent = readSize(a);\n"
+        << "    const decoded = new " << name << "();\n    const size = " << readNumber << ";\n    let edges = " << readNumber << ";\n"
+        << "    const counts = Array.from({ length: " << count << " }, () => " << readNumber << ");\n"
+        << "    for (let i = 0; i < size; ++i) {\n        const kind = " << readNumber << ";\n        const parent = " << readNumber << ";\n"
         << "        if (kind >= counts.length || !counts[kind]) throw new RangeError('Invalid graph archive kind');\n        --counts[kind];\n"
         << "        if (parent !== decoded.N) {\n            if (parent >= i || !edges) throw new RangeError('Invalid graph archive parent');\n            --edges;\n        }\n";
     std::string arguments;

@@ -167,6 +167,7 @@ file(READ "${common}" original)
 string(REPLACE "ArchiveInterface" "Streams" renamedArchive "${originalArchive}")
 string(REPLACE "InputArchive" "Reader" renamedArchive "${renamedArchive}")
 string(REPLACE "OutputArchive" "Writer" renamedArchive "${renamedArchive}")
+string(REPLACE "method readNumber => n;" "method readNumber => readScalar;" renamedArchive "${renamedArchive}")
 file(WRITE "${archive}" "${renamedArchive}")
 string(REPLACE "import ArchiveInterface;" "import Streams;" renamedCommon "${original}")
 file(WRITE "${common}" "${renamedCommon}")
@@ -179,6 +180,9 @@ file(WRITE "${layout}" "${probe}")
 file(APPEND "${gfx}" [[binding typescript { UniformBlock archive from "cocos/codecs/uniform"; }]])
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/codecs")
 file(READ "${work}/codecs/cocos/client/layout.ts" script)
+if(script MATCHES "readSize")
+    message(FATAL_ERROR "TypeScript archive loads must call the bound reader directly")
+endif()
 foreach(fragment IN ITEMS
         [[import { loadColor, loadDescriptorSetLayoutInfo, saveColor, saveDescriptorSetLayoutInfo } from './serialization';]]
         [[import { loadUniformBlock, saveUniformBlock } from '../codecs/uniform';]]
@@ -187,7 +191,10 @@ foreach(fragment IN ITEMS
         [[function loadDescriptor (a: Reader, v: Descriptor)]]
         [[function saveLayoutGraph (a: Writer, g: LayoutGraph)]]
         [[function loadLayoutGraph (a: Reader, g: LayoutGraph)]]
-        [[function readSize (a: Reader)]]
+        [[const size = a.readScalar();]]
+        [[const parent = a.readScalar();]]
+        [[v.descriptorNames.length = a.readScalar();]]
+        [[for (let left0 = a.readScalar(); left0 > 0; --left0)]]
         [[const adoptLayoutGraph = Symbol(); // eslint-disable-line symbol-description]]
         [[const adoptLayoutGraphData = Symbol(); // eslint-disable-line symbol-description]]
         [[g[adoptLayoutGraph](decoded);]]

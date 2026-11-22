@@ -6,12 +6,10 @@ namespace cc::codegen {
 
 std::string archivePrimitive(const TypeGraph& graph, TypeId id);
 struct ArchiveRequirements {
-    bool needsReadSize{};
     bool needsBoolVectorLoad{};
 
-    void checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context, bool emitTs);
+    void checkType(const TypeGraph& graph, ModuleId owner, TypeId id, const std::string& context);
 };
-const std::string& archiveMethod(const TypeNode& api, const std::string& method);
 
 struct ArchiveImports {
     TypeImports& values;

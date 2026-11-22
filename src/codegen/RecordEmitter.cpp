@@ -1327,7 +1327,7 @@ struct ArchiveField {
 };
 
 std::vector<ArchiveField> archiveFields(const TypeGraph& graph, ModuleId owner, const RecordType& record,
-                                        const std::vector<BoundField>& members, ArchiveRequirements& requirements, bool emitTs) {
+                                        const std::vector<BoundField>& members, ArchiveRequirements& requirements) {
     std::vector<ArchiveField> fields;
     for (size_t i = 0; i < record.fields.size(); ++i) {
         const auto& field = record.fields[i];
@@ -1342,7 +1342,7 @@ std::vector<ArchiveField> archiveFields(const TypeGraph& graph, ModuleId owner, 
             if (field.typescriptInitializer == "null") invalid(field, "native value archive cannot encode TypeScript null");
             if (field.isReadonly && !archivePrimitive(graph, field.type.type).empty())
                 invalid(field, "archive load requires a writable field");
-            requirements.checkType(graph, owner, field.type.type, field.type.location.describe() + ": " + field.name, emitTs);
+            requirements.checkType(graph, owner, field.type.type, field.type.location.describe() + ": " + field.name);
         }
         fields.push_back(std::move(entry));
     }
@@ -1598,7 +1598,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                                     output.serializationHeader ? &archive->module : nullptr, output, deps);
         if (record->serializable && (output.serializationHeader || emitTs)) {
             const bool emitTsArchive = emitTs && !node.typescriptNumber;
-            const auto fields = archiveFields(graph, owner, *record, members, archives.requirements, emitTsArchive);
+            const auto fields = archiveFields(graph, owner, *record, members, archives.requirements);
             archives.add(graph, archive->module, node, fields, emitTsArchive, archiveImports);
         }
         if (deps.emitCpp && (record->hashable || record->compareEqual || record->compareLess)) {
@@ -1763,13 +1763,6 @@ function defineUint64 (target: object, key: string, initial: number): void {
     Object.defineProperty(target, key, { enumerable: true, configurable: true, get: () => value, set });
 }
 )";
-    }
-    if (archives.requirements.needsReadSize) {
-        const auto& input = graph.node(archive->module.inputArchive);
-        script << "\nfunction readSize (a: " << input.name << "): number {\n"
-               << "    const n = a." << archiveMethod(input, "readNumber") << "();\n"
-               << "    if (!Number.isInteger(n) || n < 0 || n > 0xFFFFFFFF) throw new RangeError('Invalid archive size');\n"
-               << "    return n;\n}\n";
     }
     script << archives.script.str();
     files.emplace(*output.typescript, script.str());

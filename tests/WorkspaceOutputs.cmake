@@ -35,7 +35,7 @@ string(JSON readableConfig REMOVE "${config}" typescriptDefaults)
 file(WRITE "${workspace}" "${readableConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/readable")
 file(READ "${work}/readable/${layoutTs}" readableLayout)
-if(NOT compactLayout MATCHES "private c: OutE" OR NOT readableLayout MATCHES "private _children: OutE"
+if(NOT compactLayout MATCHES "private r: OutE[^}]*private c: OutE" OR NOT readableLayout MATCHES "private roots: OutE[^}]*private _children: OutE"
    OR NOT compactLayout MATCHES "private _names: string" OR NOT readableLayout MATCHES "private _names: string")
     message(FATAL_ERROR "Unexpected graph storage or component names in compact or default mode")
 endif()
