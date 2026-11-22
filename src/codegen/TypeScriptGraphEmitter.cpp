@@ -206,7 +206,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             if (graph.findType(scope + symbol) != TypeId{})
                 throw std::runtime_error(node.qualifiedName + ": TypeScript graph export collides with " + symbol);
         }
-        out << "\nexport const enum " << kinds << " {\n";
+        out << "export const enum " << kinds << " {\n";
         for (const auto& alt : alternatives) out << "    " << alt.tagName << ",\n";
         out << "}\n\nexport function get" << kinds << "Name (kind: " << kinds << "): string {\n    switch (kind) {\n";
         for (const auto& alt : alternatives)
@@ -217,14 +217,13 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "}\n\nexport interface " << node.name << "Visitor {\n";
         for (const auto& alt : alternatives)
             out << "    " << alt.visitorMethod() << "(value: " << alt.type << "): unknown;\n";
-        out << "}\n\nexport type " << node.name << "Object = " << kinds << "Type[" << kinds << "];\n";
+        out << "}\n\nexport type " << node.name << "Object = " << kinds << "Type[" << kinds << "];\n\n";
     }
 
     // Array indices stop at 2^32 - 2. Reserve the null descriptor for narrower index types too.
     const auto limit = std::min<uint64_t>(indexedVertexLimit(graph.node(model.vertexType).qualifiedName).value(), UINT32_MAX);
-    if (model.serializable) out << "\nconst cc$adopt" << node.name << " = Symbol();\n";
+    if (model.serializable) out << "const cc$adopt" << node.name << " = Symbol();\n\n";
     const auto storage = model.serializable ? "private " : "private readonly ";
-    out << '\n';
     writeDocumentation(out, node.documentation);
     out << "export class " << node.name << " {\n    readonly N = " << limit << ";\n"
         << "    " << storage << "vertices: {\n";

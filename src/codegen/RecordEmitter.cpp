@@ -1448,11 +1448,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             continue;
         }
         previousTag = false;
+        if (emitTs && !node.typescriptNumber && !ts.view().empty()) ts << '\n';
         const auto entry = output.pools.find(node.name);
         const auto methods = output.classMethods.find(node.name);
         const auto classMethods = methods == output.classMethods.end() ? std::string{} : tsClassMethods(methods->second);
         if (std::holds_alternative<InterfaceType>(node.data)) {
-            if (emitTs && standaloneInterfaces && !ts.view().empty()) ts << '\n';
             emitInterface(graph, node, deps.emitCpp ? &cpp : nullptr, deps.headers, emitTs ? &ts : nullptr, deps.typeImports, output.interfaceBindings);
             continue;
         }
@@ -1495,7 +1495,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             continue;
         }
         cpp << '\n';
-        if (emitTs) ts << '\n';
         if (const auto* enumeration = std::get_if<EnumType>(&node.data)) {
             writeDocumentation(cpp, node.documentation);
             cpp << "enum class " << node.name;
@@ -1677,10 +1676,11 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         auto path = *archive->output.typescript;
         runtimeImport(path.replace_extension(), {writer.name, reader.name}, true);
     }
+    const auto importsBegin = script.tellp();
     writeRecordImports(script, packageValues, packageTypes, {});
     writeRecordImports(script, deps.valueImports, deps.typeImports, *output.typescript);
-    if (standaloneInterfaces && !deps.typeImports.empty()) script << '\n';
     script << runtimeImports.str();
+    if (script.tellp() != importsBegin && !ts.view().empty()) script << '\n';
     if (pool.count) {
         ts << "\nfunction createPool<T> (Constructor: new () => T): RecyclePool<T> {\n"
            << "    return new RecyclePool<T>(() => new Constructor(), 16);\n}\n"

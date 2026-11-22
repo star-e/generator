@@ -54,6 +54,14 @@ list(LENGTH pipelineExports count)
 if(NOT count EQUAL 22 OR pipeline MATCHES "(Factory|isOcclusionQueryEnabled|resetRenderQueue|setValue \\()")
     message(FATAL_ERROR "Unexpected RenderInterface TypeScript exports: ${pipelineExports}")
 endif()
+# Each declaration starts after one blank line, including its optional JSDoc.
+string(REGEX REPLACE "[^\n]\n\n(/\\*\\*\n( [*][^\n]*\n)* [*]/\n)?export (enum|interface|class) " "" unspaced "${pipeline}")
+if(unspaced MATCHES "export (enum|interface|class) [A-Za-z0-9_]+")
+    message(FATAL_ERROR "Expected one blank line before the declaration and its JSDoc: ${CMAKE_MATCH_0}")
+endif()
+if(pipeline MATCHES "[*]/\n\n+export (enum|interface|class) [A-Za-z0-9_]+")
+    message(FATAL_ERROR "JSDoc must be adjacent to its TypeScript declaration: ${CMAKE_MATCH_0}")
+endif()
 foreach(path IN ITEMS native/cocos/renderer/pipeline/custom/RenderSettingsTypes.h
                       native/cocos/renderer/pipeline/custom/RenderSettingsTypes.cpp
                       native/cocos/renderer/pipeline/custom/RenderSettingsFwd.h
