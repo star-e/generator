@@ -111,9 +111,27 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     out << "            throw error;\n        }\n        return v;\n    }\n";
 }
 
-void directedEdges(std::ostream& out, const GraphType& model) {
-    out << R"(
-    edge (u: number, v: number): boolean {
+void edgeTraversal(std::ostream& out, bool sharedEdges, bool bidirectional) {
+    out << "\n    // IncidenceGraph\n";
+    if (sharedEdges)
+        out << R"(    edge (u: number, v: number): boolean {
+        return this.reference(u, v);
+    }
+    source (e: ED): number {
+        return this.parent(e);
+    }
+    target (e: ED): number {
+        return this.child(e);
+    }
+    oe (v: number): OutEI {
+        return this.children(v);
+    }
+    od (v: number): number {
+        return this.numChildren(v);
+    }
+)";
+    else
+        out << R"(    edge (u: number, v: number): boolean {
         return Number.isInteger(u) && u >= 0 && u < this._outEdges.length && this._outEdges[u].some(e => e.target === v);
     }
     source (e: ED): number {
@@ -128,15 +146,24 @@ void directedEdges(std::ostream& out, const GraphType& model) {
     od (v: number): number {
         return this._outEdges[v].length;
     }
-    adj (v: number): AdjI {
-        return new AdjI(this, this.oe(v));
+)";
+
+    if (bidirectional || sharedEdges) {
+        out << "\n    // BidirectionalGraph\n";
+        if (sharedEdges)
+            out << R"(    ie (v: number): InEI {
+        const parent = this.getParent(v);
+        return new InEI((parent === this.N ? [] : [new OutE(parent)]).values(), v);
     }
-    ne (): number {
-        return this._outEdges.reduce((sum, edges) => sum + edges.length, 0);
+    id (v: number): number {
+        return this.getParent(v) === this.N ? 0 : 1;
+    }
+    d (v: number): number {
+        return this.id(v) + this.od(v);
     }
 )";
-    if (model.bidirectional)
-        out << R"(    ie (v: number): InEI {
+        else
+            out << R"(    ie (v: number): InEI {
         return new InEI(this._inEdges[v].values(), v);
     }
     id (v: number): number {
@@ -144,6 +171,62 @@ void directedEdges(std::ostream& out, const GraphType& model) {
     }
     d (v: number): number {
         return this.od(v) + this.id(v);
+    }
+)";
+    }
+    out << "\n    // AdjacencyGraph\n"
+        << R"(    adj (v: number): AdjI {
+        return new AdjI(this, this.oe(v));
+    }
+)";
+}
+
+void referenceQueries(std::ostream& out, bool separateEdges) {
+    out << "\n    // ReferenceGraph\n";
+    if (separateEdges)
+        out << R"(    reference (u: number, v: number): boolean {
+        return Number.isInteger(u) && !!this._children[u] && this._children[u].some(e => e.target === v);
+    }
+)";
+    else
+        out << R"(    reference (u: number, v: number): boolean {
+        return u !== this.N && !!this._children[v] && this._parents[v] === u;
+    }
+)";
+    out << R"(    parent (e: ED): number {
+        return e.source as number;
+    }
+    child (e: ED): number {
+        return e.target as number;
+    }
+)";
+    if (separateEdges)
+        out << R"(    parents (v: number): InEI {
+        return new InEI(this._parents[v].values(), v);
+    }
+)";
+    out << R"(    children (v: number): OutEI {
+        return new OutEI(this._children[v].values(), v);
+    }
+)";
+    if (separateEdges)
+        out << R"(    numParents (v: number): number {
+        return this._parents[v].length;
+    }
+)";
+    out << R"(    numChildren (v: number): number {
+        return this._children[v].length;
+    }
+)";
+    if (separateEdges)
+        out << R"(    getParent (v: number): number {
+        const parents = this._parents[v];
+        return parents && parents.length ? parents[0].target as number : this.N;
+    }
+)";
+    else
+        out << R"(    getParent (v: number): number {
+        return v === this.N ? this.N : this._parents[v];
     }
 )";
 }
@@ -279,7 +362,143 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (model.serializable) out << "const adopt" << node.name << " = Symbol(); // eslint-disable-line symbol-description\n\n";
     const auto storage = model.serializable ? "private " : "private readonly ";
     writeDocumentation(out, node.documentation);
-    out << "export class " << node.name << " {\n    readonly N = " << limit << ";\n";
+    out << "export class " << node.name << " {\n    // Graph\n    readonly N = " << limit << ";\n";
+    if (model.incidence || sharedEdges) edgeTraversal(out, sharedEdges, model.bidirectional);
+    if (model.vertexList) {
+        out << "\n    // VertexListGraph\n";
+        if (vertexList.empty())
+            out << "    *v (): IterableIterator<number> {\n        for (let v = 0; v < this._vertexCount; ++v) yield v;\n    }\n";
+        else out << "    v (): IterableIterator<number> {\n        return " << vertexList << ".keys();\n    }\n";
+        out << "    nv (): number {\n        return " << vertexCount << ";\n    }\n";
+    }
+    if (model.incidence || sharedEdges) {
+        out << "\n    // EdgeListGraph\n    ne (): number {\n";
+        if (model.incidence) out << "        return this._outEdges.reduce((sum, edges) => sum + edges.length, 0);\n";
+        else if (model.parentGraph) out << "        return this._children.length - this.roots.length;\n";
+        else out << "        return this._children.reduce((n, edges) => n + edges.length, 0);\n";
+        out << "    }\n";
+    }
+    if (model.mutableGraph) {
+        out << "\n    // MutableGraph\n    clear (): void {\n";
+        if (vertexList.empty()) out << "        this._vertexCount = 0;\n";
+        for (const auto& column : columns) out << "        this." << column.name << ".length = 0;\n";
+        for (const auto& alt : alternatives) out << "        this._objects[" << kinds << "." << alt.tagName << "].length = 0;\n";
+        if (model.nameIndex) out << "        this.nameIndex.clear();\n";
+        if (model.parentGraph) out << "        this.roots.length = 0;\n";
+        for (const auto& f : fields) {
+            if (!f.tsReset.empty()) out << "        " << f.tsReset << ";\n";
+            else if (!f.readonly) out << "        this." << f.name << " = " << f.tsDefault << ";\n";
+            else if (f.tsDefault.starts_with("new "))
+                out << "        Object.assign(this." << f.name << ", " << f.tsDefault << ");\n";
+        }
+        out << "    }\n";
+        addVertex(out, model, kinds, components, columns, vertexCount);
+        if (sharedEdges) {
+            out << "\n    addEdge (u: number, v: number): ED | null {\n"
+                << "        if (!Number.isInteger(u) || !Number.isInteger(v) || !this._children[u] || this._parents[v] !== this.N"
+                << (model.serializable ? " || u >= v" : "") << ") return null;\n";
+            if (!model.serializable)
+                out << "        for (let p = u; p !== this.N; p = this._parents[p]) if (p === v) return null;\n";
+            out << "        const children = this._children[u];\n"
+                << "        const index = children.findIndex(e => (e.target as number) > v);\n"
+                << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
+            if (model.parentGraph) out << "        this.roots.splice(this.roots.findIndex(e => e.target === v), 1);\n";
+            out << "        this._parents[v] = u;\n        return new ED(u, v);\n    }\n";
+        } else if (model.incidence) {
+            adjacencyMutation(out, false, model.bidirectional);
+        }
+    }
+    if (model.nameComponentIndex)
+        out << "\n    // NamedGraph\n    vertexName (v: number): string {\n        return this.get" << components.at(*model.nameComponentIndex).tagName << "(v);\n    }\n";
+    if (!components.empty()) out << "\n    // ComponentGraph\n";
+    for (size_t i = 0; i < components.size(); ++i) {
+        const auto& component = components[i];
+        out << "    get" << component.tagName << " (v: number): " << component.type << " {\n"
+            << "        return this." << component.storageName << "[v];\n    }\n";
+        if (hasSetter(i)) {
+            out << "    set" << component.tagName << " (v: number, value: " << component.type << "): void {\n";
+            if (model.nameIndex && i == model.nameComponentIndex) {
+                out << "        const previous = this." << component.storageName << "[v];\n"
+                    << "        if (previous === value) return;\n"
+                    << "        if (this.nameIndex.has(value)) throw new Error('Duplicate vertex name');\n"
+                    << "        this.nameIndex.set(value, v);\n        this.nameIndex.delete(previous);\n"
+                    << "        this." << component.storageName << "[v] = value;\n";
+            } else {
+                out << "        this." << component.storageName << "[v] = value;\n";
+            }
+            out << "    }\n";
+        }
+    }
+    if (!alternatives.empty()) {
+        out << "\n    // PolymorphicGraph\n    h (id: " << kinds << ", v: number): boolean {\n        return this.w(v) === id;\n    }\n"
+            << "    w (v: number): " << kinds << " {\n        return this._kinds[v];\n    }\n"
+            << "    object (v: number): " << node.name << "Object {\n        return this._objects[this.w(v)][this._indices[v]];\n    }\n"
+            << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
+            << "        if (this.w(v) !== id) throw new Error('Vertex kind does not match');\n"
+            << "        return this._objects[id][this._indices[v]];\n    }\n"
+            << "    visitVertex (visitor: " << node.name << "Visitor, v: number): unknown {\n"
+            << "        const index = this._indices[v];\n        switch (this.w(v)) {\n";
+        for (const auto& alt : alternatives)
+            out << "        case " << kinds << "." << alt.tagName << ": return visitor." << alt.visitorMethod()
+                << "(this._objects[" << kinds << "." << alt.tagName << "][index]);\n";
+        out << "        default: throw new Error('Unknown vertex kind');\n        }\n    }\n"
+            << "    j<T extends " << node.name << "Object> (v: number): T {\n        return this.object(v) as T;\n    }\n";
+    }
+    if (model.hierarchy) {
+        referenceQueries(out, model.separateEdges);
+        if (model.mutableGraph) {
+            out << "\n    // MutableReferenceGraph\n";
+            if (model.separateEdges) adjacencyMutation(out, true, true);
+            else out << R"(    addReference (u: number, v: number): ED | null {
+        return this.addEdge(u, v);
+    }
+)";
+        }
+    }
+    if (model.parentGraph) {
+        out << "\n    // ParentGraph\n    locateChild (parent: number, name: string): number {\n"
+            << "        if (parent !== this.N && !this._children[parent]) return this.N;\n"
+            << "        const children = parent === this.N ? this.roots : this._children[parent];\n"
+            << "        for (const edge of children) {\n"
+            << "            const v = edge.target as number;\n"
+            << "            if (this.vertexName(v) === name) return v;\n"
+            << "        }\n        return this.N;\n    }\n";
+    }
+    if (model.addressableGraph)
+        out << R"(
+    // AddressableGraph
+    locate (absPath: string): number {
+        return this.locateRelative(absPath);
+    }
+
+    locateRelative (path: string, start: number = this.N): number {
+        if (path.length === 0) return this.N;
+        if (path[0] !== '/' && start !== this.N && !this._children[start]) return this.N;
+        return findRelative(this, start, path) as number;
+    }
+
+    path (v: number): string {
+        if (v !== this.N && !this._children[v]) throw new RangeError('Invalid vertex');
+        return getPath(this, v);
+    }
+)";
+    if (model.nameIndex)
+        out << "\n    // UuidGraph\n"
+            << R"(    contains (key: string): boolean {
+        return this.nameIndex.has(key);
+    }
+    vertex (key: string): number {
+        const v = this.find(key);
+        if (v === this.N) throw new RangeError('Unknown vertex name');
+        return v;
+    }
+    find (key: string): number {
+        const v = this.nameIndex.get(key);
+        return v === undefined ? this.N : v;
+    }
+)";
+
+    out << '\n';
     if (vertexList.empty()) out << "    private _vertexCount = 0;\n";
     for (const auto& column : columns)
         out << "    " << storage << column.name << ": " << column.arrayType << " = [];\n";
@@ -322,187 +541,6 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         }
         out << "    }\n";
     }
-    if (model.vertexList) {
-        if (vertexList.empty())
-            out << "\n    *v (): IterableIterator<number> {\n        for (let v = 0; v < this._vertexCount; ++v) yield v;\n    }\n";
-        else out << "\n    v (): IterableIterator<number> {\n        return " << vertexList << ".keys();\n    }\n";
-        out << "    nv (): number {\n        return " << vertexCount << ";\n    }\n";
-    }
-    if (model.mutableGraph) {
-        out << "\n    clear (): void {\n";
-        if (vertexList.empty()) out << "        this._vertexCount = 0;\n";
-        for (const auto& column : columns) out << "        this." << column.name << ".length = 0;\n";
-        for (const auto& alt : alternatives) out << "        this._objects[" << kinds << "." << alt.tagName << "].length = 0;\n";
-        if (model.nameIndex) out << "        this.nameIndex.clear();\n";
-        if (model.parentGraph) out << "        this.roots.length = 0;\n";
-        for (const auto& f : fields) {
-            if (!f.tsReset.empty()) out << "        " << f.tsReset << ";\n";
-            else if (!f.readonly) out << "        this." << f.name << " = " << f.tsDefault << ";\n";
-            else if (f.tsDefault.starts_with("new "))
-                out << "        Object.assign(this." << f.name << ", " << f.tsDefault << ");\n";
-        }
-        out << "    }\n";
-        addVertex(out, model, kinds, components, columns, vertexCount);
-        if (sharedEdges) {
-            out << "\n    addEdge (u: number, v: number): ED | null {\n"
-                << "        if (!Number.isInteger(u) || !Number.isInteger(v) || !this._children[u] || this._parents[v] !== this.N"
-                << (model.serializable ? " || u >= v" : "") << ") return null;\n";
-            if (!model.serializable)
-                out << "        for (let p = u; p !== this.N; p = this._parents[p]) if (p === v) return null;\n";
-            out << "        const children = this._children[u];\n"
-                << "        const index = children.findIndex(e => (e.target as number) > v);\n"
-                << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
-            if (model.parentGraph) out << "        this.roots.splice(this.roots.findIndex(e => e.target === v), 1);\n";
-            out << "        this._parents[v] = u;\n        return new ED(u, v);\n    }\n"
-                << "    addReference (u: number, v: number): ED | null {\n        return this.addEdge(u, v);\n    }\n";
-        }
-    }
-    for (size_t i = 0; i < components.size(); ++i) {
-        const auto& component = components[i];
-        out << "\n    get" << component.tagName << " (v: number): " << component.type << " {\n"
-            << "        return this." << component.storageName << "[v];\n    }\n";
-        if (hasSetter(i)) {
-            out << "    set" << component.tagName << " (v: number, value: " << component.type << "): void {\n";
-            if (model.nameIndex && i == model.nameComponentIndex) {
-                out << "        const previous = this." << component.storageName << "[v];\n"
-                    << "        if (previous === value) return;\n"
-                    << "        if (this.nameIndex.has(value)) throw new Error('Duplicate vertex name');\n"
-                    << "        this.nameIndex.set(value, v);\n        this.nameIndex.delete(previous);\n"
-                    << "        this." << component.storageName << "[v] = value;\n";
-            } else {
-                out << "        this." << component.storageName << "[v] = value;\n";
-            }
-            out << "    }\n";
-        }
-    }
-    if (model.incidence) {
-        directedEdges(out, model);
-        if (model.mutableGraph) adjacencyMutation(out, false, model.bidirectional);
-    }
-    if (model.nameIndex)
-        out << "\n    contains (key: string): boolean {\n        return this.nameIndex.has(key);\n    }\n"
-            << "    find (key: string): number {\n        const v = this.nameIndex.get(key);\n"
-            << "        return v === undefined ? this.N : v;\n    }\n"
-            << "    vertex (key: string): number {\n        const v = this.find(key);\n"
-            << "        if (v === this.N) throw new RangeError('Unknown vertex name');\n        return v;\n    }\n";
-    if (model.nameComponentIndex)
-        out << "\n    vertexName (v: number): string {\n        return this.get" << components.at(*model.nameComponentIndex).tagName << "(v);\n    }\n";
-    if (!alternatives.empty()) {
-        out << "\n    h (id: " << kinds << ", v: number): boolean {\n        return this.w(v) === id;\n    }\n"
-            << "    w (v: number): " << kinds << " {\n        return this._kinds[v];\n    }\n"
-            << "    object (v: number): " << node.name << "Object {\n        return this._objects[this.w(v)][this._indices[v]];\n    }\n"
-            << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
-            << "        if (this.w(v) !== id) throw new Error('Vertex kind does not match');\n"
-            << "        return this._objects[id][this._indices[v]];\n    }\n"
-            << "    visitVertex (visitor: " << node.name << "Visitor, v: number): unknown {\n"
-            << "        const index = this._indices[v];\n        switch (this.w(v)) {\n";
-        for (const auto& alt : alternatives)
-            out << "        case " << kinds << "." << alt.tagName << ": return visitor." << alt.visitorMethod()
-                << "(this._objects[" << kinds << "." << alt.tagName << "][index]);\n";
-        out << "        default: throw new Error('Unknown vertex kind');\n        }\n    }\n"
-            << "    j<T extends " << node.name << "Object> (v: number): T {\n        return this.object(v) as T;\n    }\n";
-    }
-    if (model.hierarchy) {
-        out << R"(
-    parent (e: ED): number {
-        return e.source as number;
-    }
-    children (v: number): OutEI {
-        return new OutEI(this._children[v].values(), v);
-    }
-    child (e: ED): number {
-        return e.target as number;
-    }
-    numChildren (v: number): number {
-        return this._children[v].length;
-    }
-)";
-    }
-    if (model.separateEdges) {
-        out << R"(    parents (v: number): InEI {
-        return new InEI(this._parents[v].values(), v);
-    }
-    numParents (v: number): number {
-        return this._parents[v].length;
-    }
-    getParent (v: number): number {
-        const parents = this._parents[v];
-        return parents && parents.length ? parents[0].target as number : this.N;
-    }
-    reference (u: number, v: number): boolean {
-        return Number.isInteger(u) && !!this._children[u] && this._children[u].some(e => e.target === v);
-    }
-)";
-        if (model.mutableGraph) adjacencyMutation(out, true, true);
-    } else if (model.hierarchy) {
-        out << R"(
-    getParent (v: number): number {
-        return v === this.N ? this.N : this._parents[v];
-    }
-    reference (u: number, v: number): boolean {
-        return u !== this.N && !!this._children[v] && this._parents[v] === u;
-    }
-
-    edge (u: number, v: number): boolean {
-        return this.reference(u, v);
-    }
-    source (e: ED): number {
-        return this.parent(e);
-    }
-    target (e: ED): number {
-        return this.child(e);
-    }
-    oe (v: number): OutEI {
-        return this.children(v);
-    }
-    od (v: number): number {
-        return this.numChildren(v);
-    }
-    ie (v: number): InEI {
-        const parent = this.getParent(v);
-        return new InEI((parent === this.N ? [] : [new OutE(parent)]).values(), v);
-    }
-    id (v: number): number {
-        return this.getParent(v) === this.N ? 0 : 1;
-    }
-    d (v: number): number {
-        return this.id(v) + this.od(v);
-    }
-    adj (v: number): AdjI {
-        return new AdjI(this, this.oe(v));
-    }
-    ne (): number {
-)";
-        if (model.parentGraph) out << "        return this._children.length - this.roots.length;\n";
-        else out << "        return this._children.reduce((n, edges) => n + edges.length, 0);\n";
-        out << "    }\n";
-    }
-    if (model.parentGraph) {
-        out << "\n    locateChild (parent: number, name: string): number {\n"
-            << "        if (parent !== this.N && !this._children[parent]) return this.N;\n"
-            << "        const children = parent === this.N ? this.roots : this._children[parent];\n"
-            << "        for (const edge of children) {\n"
-            << "            const v = edge.target as number;\n"
-            << "            if (this.vertexName(v) === name) return v;\n"
-            << "        }\n        return this.N;\n    }\n";
-    }
-    if (model.addressableGraph)
-        out << R"(
-    locate (absPath: string): number {
-        return this.locateRelative(absPath);
-    }
-
-    locateRelative (path: string, start: number = this.N): number {
-        if (path.length === 0) return this.N;
-        if (path[0] !== '/' && start !== this.N && !this._children[start]) return this.N;
-        return findRelative(this, start, path) as number;
-    }
-
-    path (v: number): string {
-        if (v !== this.N && !this._children[v]) throw new RangeError('Invalid vertex');
-        return getPath(this, v);
-    }
-)";
     out << classMethods << "}\n";
 }
 

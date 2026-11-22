@@ -51,6 +51,30 @@ const ts = 'cocos/rendering/custom/types.ts';
 const layoutCpp = 'native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h';
 const layoutTs = 'cocos/rendering/custom/layout-graph.ts';
 const layout = require(path.join(jsDir, 'layout-graph.js'));
+
+function graphConcepts(root, file, name) {
+    const lines = fs.readFileSync(path.join(root, file), 'utf8').split(/\r?\n/);
+    const start = lines.findIndex(line => line.startsWith(`export class ${name} `));
+    const end = lines.indexOf('}', start + 1);
+    assert.ok(start >= 0 && end > start, name);
+    const sections = [];
+    for (const line of lines.slice(start + 1, end)) {
+        const heading = /^    \/\/ (Graph|\w+Graph)$/.exec(line);
+        if (heading) sections.push([heading[1]]);
+        else if (sections.length && sections[sections.length - 1].length === 1) {
+            const member = /^    (?:readonly )?(\w+)\s*[(<=:]/.exec(line);
+            if (member) sections[sections.length - 1].push(member[1]);
+        }
+    }
+    return sections;
+}
+
+for (const [file, names] of [[layoutTs, ['LayoutGraph', 'LayoutGraphData']],
+    ['cocos/rendering/custom/render-graph.ts', ['SubpassGraph', 'ResourceGraph', 'RenderGraph']]]) {
+    for (const name of names)
+        assert.deepEqual(graphConcepts(stage, file, name), graphConcepts(legacy, file, name), name);
+}
+
 compareDeclaration(layoutTs, 'export class LayoutGraphObjectPool {', '}');
 for (const [name, values] of Object.entries(layoutEnums)) {
     compareDeclaration(layoutCpp, `enum class ${name} : uint8_t {`, '};');
