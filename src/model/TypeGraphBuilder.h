@@ -1,19 +1,9 @@
 #pragma once
 
-#include "generated/SyntaxTypes.h"
 #include "generated/TypeGraphTypes.h"
+#include "generated/WorkspaceTypes.h"
 
 namespace cc::codegen {
-
-struct ModuleInput {
-    Module syntax;
-    std::string nativeHeader;
-    std::string forwardHeader;
-    std::string typescriptModule;
-    bool typescriptSettings{};
-
-    bool modelOnly() const noexcept { return nativeHeader.empty() && typescriptModule.empty(); }
-};
 
 // Register declarations before binding direct imports and resolving type uses in dependency order.
 TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<ModuleId>* dependencyOrder = nullptr);

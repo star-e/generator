@@ -1,6 +1,7 @@
 #pragma once
 
 #include "generated/TypeGraphFwd.h"
+#include "generated/WorkspaceFwd.h"
 #include "codegen/TypeScriptImports.h"
 #include "model/Binding.h"
 
@@ -14,8 +15,6 @@
 namespace cc::codegen {
 
 using Files = std::map<std::filesystem::path, std::string>;
-
-struct RecordOutput;
 
 std::string emitHeaderSource(const TypeModule& module, const std::filesystem::path& header, const std::string& preamble);
 void emitInterfaceHeaders(Files& files, const TypeGraph& graph, const TypeModule& module, const RecordOutput& output,

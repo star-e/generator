@@ -24,6 +24,9 @@ add_library(CocosCodegenModel STATIC
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphFwd.h"
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphTypes.cpp"
     "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/TypeGraphTypes.h"
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/WorkspaceFwd.h"
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/WorkspaceTypes.cpp"
+    "${COCOS_CODEGEN_SELF_HOST_ROOT}/generated/WorkspaceTypes.h"
     src/model/TypeGraph.cpp
     src/model/TypeGraphBuilder.cpp
     src/parser/SpecParser.cpp)

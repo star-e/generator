@@ -74,8 +74,13 @@ foreach(language IN ITEMS cpp typescript)
     endforeach()
 endforeach()
 
-# A consumer must be able to include or import the provider in its selected language.
 file(WRITE "${work}/spec/provider.spec" "module Provider; namespace cc { struct Item {} }")
+# With no selected language the provider contributes declarations and plans no files.
+string(JSON modelOnly SET "${config}" modules [=[[{"spec":"../spec/provider.spec"}]]=])
+file(WRITE "${workspace}" "${modelOnly}")
+run("${TOOL}" generate --workspace "${workspace}" --output "${work}/model-only" --check --diff)
+
+# A consumer must be able to include or import the provider in its selected language.
 file(WRITE "${work}/spec/web.spec" "module Web; namespace cc { struct WebItem {} }")
 file(WRITE "${work}/spec/use.spec" "module Use; import Provider; import Web; namespace cc { struct UseItem { item: Item; } }")
 string(JSON config SET "${config}" modules [=[

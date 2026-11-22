@@ -15,6 +15,10 @@
     {
       "spec": "../spec/codegen/syntax.spec",
       "cpp": { "dir": "generated" }
+    },
+    {
+      "spec": "../spec/codegen/workspace.spec",
+      "cpp": { "dir": "generated" }
     }
   ]
 }

@@ -3,6 +3,7 @@
 #include "codegen/RecordEmitter.h"
 #include "codegen/SettingsEmitter.h"
 #include "codegen/SwigEmitter.h"
+#include "generated/WorkspaceTypes.h"
 #include "parser/SpecParser.h"
 #include "model/TypeGraphBuilder.h"
 
@@ -60,11 +61,6 @@ void rejectJsonTypes(const Json& config, std::string_view scope) {
     if (config.contains("types"))
         throw std::runtime_error(std::string(scope) + ".types was removed. Declare external types in a .spec extern module.");
 }
-
-struct ModuleOutput {
-    RecordOutput types;
-    std::optional<fs::path> settingsFile;
-};
 
 std::optional<ArchiveOutput> resolveArchive(const TypeGraph& graph, ModuleId owner, const std::vector<ModuleOutput>& outputs) {
     const auto& module = graph.modules.at(owner.value);

@@ -9,7 +9,8 @@ run("${TOOL}" generate --workspace "${workspace}" --output "${first}")
 set(expectedFiles
     generated/SourceLocation.cpp generated/SourceLocation.h generated/SourceLocationFwd.h
     generated/SyntaxFwd.h generated/SyntaxTypes.cpp generated/SyntaxTypes.h
-    generated/TypeGraphFwd.h generated/TypeGraphTypes.cpp generated/TypeGraphTypes.h)
+    generated/TypeGraphFwd.h generated/TypeGraphTypes.cpp generated/TypeGraphTypes.h
+    generated/WorkspaceFwd.h generated/WorkspaceTypes.cpp generated/WorkspaceTypes.h)
 file(GLOB_RECURSE firstFiles RELATIVE "${first}" "${first}/*")
 if(NOT firstFiles STREQUAL expectedFiles)
     message(FATAL_ERROR "Unexpected self-host outputs: ${firstFiles}")

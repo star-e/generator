@@ -5,6 +5,7 @@
 #include "codegen/GraphEmitter.h"
 #include "codegen/TypeScriptImports.h"
 #include "generated/TypeGraphTypes.h"
+#include "model/Binding.h"
 #include "model/NumericLiteral.h"
 #include "model/TypeName.h"
 

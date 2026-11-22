@@ -2,38 +2,13 @@
 
 #include "codegen/InterfaceEmitter.h"
 #include "generated/TypeGraphTypes.h"
-#include "model/Binding.h"
+#include "generated/WorkspaceTypes.h"
+#include <map>
 #include <optional>
-#include <set>
-#include <utility>
+#include <string>
 #include <vector>
 
 namespace cc::codegen {
-
-struct RecordOutput {
-    std::filesystem::path nativeRoot;
-    std::filesystem::path header;
-    std::filesystem::path forwardHeader;
-    std::set<std::string> forwardIncludes;
-    std::optional<std::filesystem::path> namesHeader;
-    std::vector<std::filesystem::path> importedNamesHeaders;
-    std::optional<std::filesystem::path> serializationHeader;
-    std::optional<std::filesystem::path> jsbHeader;
-    std::optional<std::filesystem::path> swigFile;
-    std::set<std::string> jsbRecords;
-    std::set<std::filesystem::path> jsbIncludes;
-    std::optional<std::filesystem::path> typescript;
-    std::set<std::string> namedEnums;
-    std::set<std::string> runtimeEnums;
-    InterfaceBindings interfaceBindings;
-    std::map<std::string, TypeScriptImport> bases;
-    std::map<std::string, TypeScriptClassMethods> classMethods;
-    std::vector<TypeScriptNamedImport> typescriptImports;
-    std::map<std::string, std::filesystem::path> externalClasses;
-    std::filesystem::path poolModule;
-    std::vector<std::pair<std::string, TypeScriptImport>> poolDependencies;
-    std::map<std::string, PoolBinding> pools;
-};
 
 struct ArchiveOutput {
     const RecordOutput& output;
