@@ -7,6 +7,37 @@
 namespace cc::codegen {
 namespace {
 
+void writeGraphInterfaces(std::ostream& out, const GraphType& model, bool sharedEdges, std::set<std::string>& imports) {
+    bool first = true;
+    const auto implement = [&](const char* name, std::string_view typeArguments = {}) {
+        out << (first ? " implements " : "\n, ") << name << typeArguments;
+        imports.insert(name);
+        first = false;
+    };
+    const bool hasEdges = model.incidence || sharedEdges;
+    if (hasEdges) {
+        implement(model.bidirectional || sharedEdges ? "BidirectionalGraph" : "IncidenceGraph");
+        implement("AdjacencyGraph");
+    }
+    if (model.vertexList) implement("VertexListGraph");
+    if (hasEdges) {
+        implement("EdgeListGraph");
+        if (model.mutableGraph) implement("MutableGraph");
+    }
+    if (!model.components.empty()) implement("PropertyGraph");
+    if (model.nameComponentIndex) implement("NamedGraph");
+    if (!model.components.empty()) implement("ComponentGraph");
+    if (!model.alternatives.empty()) implement("PolymorphicGraph");
+    if (model.hierarchy) {
+        implement("ReferenceGraph");
+        if (model.mutableGraph) implement("MutableReferenceGraph");
+    }
+    if (model.addressableGraph) implement("AddressableGraph");
+    else if (model.parentGraph) implement("ParentGraph");
+    if (model.nameIndex) implement("UuidGraph", "<string>");
+    if (first) implement("Graph");
+}
+
 struct Column {
     std::string tagName;
     std::string type;
@@ -312,8 +343,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (model.vertexList) api.insert({"v", "nv"});
     if (model.mutableGraph) api.insert({"addVertex", "clear"});
     const bool sharedEdges = model.hierarchy && !model.separateEdges;
+    constexpr auto runtime = "cocos/rendering/custom/graph";
     if (model.hierarchy || model.incidence) {
-        constexpr auto runtime = "cocos/rendering/custom/graph";
         auto& values = valueImports[runtime];
         values.insert("OutEI");
         (model.mutableGraph ? values : typeImports[runtime]).insert("ED");
@@ -380,7 +411,9 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     if (model.serializable) out << "const adopt" << node.name << " = Symbol(); // eslint-disable-line symbol-description\n\n";
     const auto storage = model.serializable ? "private " : "private readonly ";
     writeDocumentation(out, node.documentation);
-    out << "export class " << node.name << " {\n    // Graph\n    readonly N = " << limit << ";\n";
+    out << "export class " << node.name;
+    writeGraphInterfaces(out, model, sharedEdges, typeImports[runtime]);
+    out << " {\n    // Graph\n    readonly N = " << limit << ";\n";
     if (model.incidence || sharedEdges) edgeTraversal(out, names, sharedEdges, model.bidirectional);
     if (model.vertexList) {
         out << "\n    // VertexListGraph\n";
