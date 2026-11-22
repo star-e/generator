@@ -480,7 +480,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         }
     }
     if (!alternatives.empty()) {
-        out << "\n    // PolymorphicGraph\n    h (id: " << kinds << ", v: number): boolean {\n        return this.w(v) === id;\n    }\n"
+        out << "\n    // PolymorphicGraph\n    h (id: " << kinds << ", v: number): boolean {\n"
+            << "        return this." << names.kinds << "[v] === id;\n    }\n"
             << "    w (v: number): " << kinds << " {\n        return this." << names.kinds << "[v];\n    }\n"
             << "    object (v: number): " << node.name << "Object {\n        return this." << names.objects << "[v];\n    }\n"
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
