@@ -1,2 +1,4 @@
 CompileFlags:
   CompilationDatabase: build/host
+  # Allow clangd 21 to parse the MSVC STL that requires Clang 22.
+  Add: [-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH]
