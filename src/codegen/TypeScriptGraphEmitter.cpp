@@ -487,12 +487,14 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "    value<T extends " << kinds << "> (id: T, v: number): " << kinds << "Type[T] {\n"
             << "        return this." << names.objects << "[v] as " << kinds << "Type[typeof id];\n    }\n"
             << "    visitVertex (visitor: " << node.name << "Visitor, v: number): unknown {\n"
-            << "        const object = this." << names.objects << "[v];\n        switch (this.w(v)) {\n";
+            << "        const object = this." << names.objects << "[v];\n"
+            << "        switch (this." << names.kinds << "[v]) {\n";
         for (const auto& alt : alternatives)
-            out << "        case " << kinds << "." << alt.tagName << ": return visitor." << alt.visitorMethod()
+            out << "        case " << kinds << "." << alt.tagName << ":\n            return visitor." << alt.visitorMethod()
                 << "(object as " << alt.type << ");\n";
-        out << "        default: throw new Error('Unknown vertex kind');\n        }\n    }\n"
-            << "    j<T extends " << node.name << "Object> (v: number): T {\n        return this.object(v) as T;\n    }\n";
+        out << "        default:\n            throw new Error('Unknown vertex kind');\n        }\n    }\n"
+            << "    j<T extends " << node.name << "Object> (v: number): T {\n"
+            << "        return this." << names.objects << "[v] as T;\n    }\n";
     }
     if (model.hierarchy) {
         referenceQueries(out, names, model.separateEdges);
