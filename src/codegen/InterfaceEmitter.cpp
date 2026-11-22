@@ -216,19 +216,24 @@ void cppInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& dec
     const auto& bases = std::get<InterfaceType>(decl.data).bases;
     const ClassScope scope(graph, decl, spaceBeforeReference);
     VirtualMethods inherited;
+    bool needsSpecialMembers = bases.empty();
     for (auto base : bases) {
         collectVirtualMethods(graph, base, inherited);
         const auto& type = graph.node(base);
+        // An external base does not guarantee deleted copy/move operations or a virtual destructor.
+        if (!std::holds_alternative<InterfaceType>(type.data)) needsSpecialMembers = true;
         collectCppHeader(graph, graph.modules.at(decl.module.value), type, headers);
         out << (base == bases.front() ? " : public " : ", public ") << cppName(graph, type, scope.module);
     }
-    out << " {\npublic:\n"
-        << "    " << name << "() noexcept = default;\n"
-        << "    " << name << '(' << name << "&& rhs) = delete;\n"
-        << "    " << name << '(' << name << " const& rhs) = delete;\n"
-        << "    " << name << "& operator=(" << name << "&& rhs) = delete;\n"
-        << "    " << name << "& operator=(" << name << " const& rhs) = delete;\n"
-        << "    virtual ~" << name << "() noexcept = default;\n\n";
+    out << " {\npublic:\n";
+    if (needsSpecialMembers) {
+        out << "    " << name << "() noexcept = default;\n"
+            << "    " << name << '(' << name << "&& rhs) = delete;\n"
+            << "    " << name << '(' << name << " const& rhs) = delete;\n"
+            << "    " << name << "& operator=(" << name << "&& rhs) = delete;\n"
+            << "    " << name << "& operator=(" << name << " const& rhs) = delete;\n"
+            << "    virtual ~" << name << "() noexcept = default;\n\n";
+    }
     const auto& methods = std::get<InterfaceType>(decl.data).methods;
     for (const auto& method : methods) cppMethod(out, scope, method, headers, inherited);
     for (const auto& method : methods) {
