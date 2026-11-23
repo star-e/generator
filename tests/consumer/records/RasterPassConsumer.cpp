@@ -40,7 +40,7 @@ bool checkRasterPassCache() {
     static_assert(std::is_nothrow_move_constructible_v<RasterPass>);
     static_assert(std::is_nothrow_move_constructible_v<SubpassGraph>);
     static_assert(!noexcept(SubpassGraph(std::declval<SubpassGraph&&>(), std::declval<const SubpassGraph::allocator_type&>())));
-    static_assert(!std::is_nothrow_move_assignable_v<RasterPass>);
+    static_assert(std::is_nothrow_move_assignable_v<RasterPass> && std::is_nothrow_move_assignable_v<SubpassGraph>);
     boost::container::pmr::monotonic_buffer_resource arena, scratch;
     ResourceGraph resources{&arena};
     auto& cache = resources.renderPasses;

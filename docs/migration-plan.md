@@ -148,7 +148,7 @@ C++ 方法可为尾部参数声明默认值，例如 `uint32_t lightByteOffset =
 | `constructor(a, b);` | 两个字段参数必填。 | 两个字段参数必填，即使字段本身有初值。 |
 | `constructor(a, b) defaults;` | 每个参数都取字段初值或类型默认值，允许传入零到两个字段参数。无法确定某个默认值时，生成器报告字段名。 | 每个参数都取字段绑定、字段初值或类型默认值。数组、Map 和可无参构造的记录在每次调用时分别创建。无法提供默认值时，生成器报告字段名。 |
 
-PMR 记录由字段推导，分配器由 C++ 后端加入签名。可移动的 PMR 记录和图生成 `T(T&&) noexcept`。异常逃出该移动构造时会调用 `std::terminate`。显式接受分配器的构造函数允许异常传播给调用方，包括 `T(T&&, alloc)`。省略构造声明或只声明 `constructor();` 时，生成 `T(alloc)`，按字段初值或值初始化构造成员，并把资源传给需要分配器的成员。`constructor(a, b);` 要求传入 `a, b, alloc`。`constructor() defaults;` 生成 `T(alloc = boost::container::pmr::get_default_resource())`。[RasterSubpass 声明](../spec/render/render-graph.spec) · [消费测试](../tests/consumer/records/PassConsumer.cpp)
+PMR 记录由字段推导，分配器由 C++ 后端加入签名。可移动的 PMR 记录和图生成 `T(T&&) noexcept`。支持移动赋值的类型也生成 `T& operator=(T&&) noexcept`。异常逃出这两个操作时会调用 `std::terminate`，包括跨资源移动赋值时的分配失败。显式接受分配器的构造函数允许异常传播给调用方，包括 `T(T&&, alloc)`。省略构造声明或只声明 `constructor();` 时，生成 `T(alloc)`，按字段初值或值初始化构造成员，并把资源传给需要分配器的成员。`constructor(a, b);` 要求传入 `a, b, alloc`。`constructor() defaults;` 生成 `T(alloc = boost::container::pmr::get_default_resource())`。[RasterSubpass 声明](../spec/render/render-graph.spec) · [消费测试](../tests/consumer/records/PassConsumer.cpp)
 
 PMR 的 `constructor(a, b) defaults;` 生成两组构造。`T(alloc)` 按字段初值构造，调用方传入分配器。只有在 `.spec` 中另行声明 `constructor() defaults;` 时，分配器才有默认值。`T(std::allocator_arg, alloc, ...)` 要求显式传入分配器，随后可传零个、一个或两个字段参数。若省略的字段是必须传入分配器的嵌套记录，生成的重载会用本次调用的 `alloc` 就地构造该成员。例如，`CopyPair{std::allocator_arg, alloc, "src"}` 使用指定资源构造两个字符串，`target` 取空字符串。引擎的 `ccstd::pmr::vector<CopyPair>` 在 `emplace_back("src")` 时自动传入容器的分配器。[渲染公共类型](../spec/render/render-common.spec) · [C++ 消费测试](../tests/consumer/records/RecordConsumer.cpp)
 
@@ -427,7 +427,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 ## 当前图接口覆盖
 
-TS 图按引擎 `graph.ts` 的 concept 顺序输出成员，只为当前图具备的能力生成分组。共享父子边的图把 `source`、`target` 放在 `IncidenceGraph`，把 `ne` 放在 `EdgeListGraph`。普通边和父子引用的修改接口分别归入 `MutableGraph` 和 `MutableReferenceGraph`。
+生成的 C++ 和 TS 图按引擎 `graph.ts` 的 concept 顺序组织公开操作，只输出有成员的分组。`source`、`target` 属于 `IncidenceGraph`，`num_edges`（TS 的 `ne`）属于 `EdgeListGraph`。普通边和独立父子引用的修改接口分别归入 `MutableGraph` 和 `MutableReferenceGraph`。类外定义沿用头文件的分组顺序。C++ 多态图按类型分列保存载荷，通过顶点的 `Kind` 和列内下标定位对象。
 
 TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数组，名称取自 `.spec` 的 `member`，例如 `member: names;` 生成 `_names`。组件读写、边的查询与修改、路径操作都由调用者保证顶点编号有效。父子关系和入出边按图声明分别存储。多态图用两个与顶点数等长的数组保存标签和载荷。同一个顶点编号 `v` 直接索引两列。`object(v)` 返回该顶点的载荷，`value(id, v)` 用调用者提供的标签确定返回类型，`visitVertex` 按存储的标签分派。归档读取器在添加顶点前校验标签和父编号。
 

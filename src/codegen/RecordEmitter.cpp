@@ -641,7 +641,6 @@ struct BaseInitializer {
     std::string name;
     std::string arguments;
     bool usesAllocator{};
-    bool containsGraph{};
     bool allocatorTagged{};
 };
 
@@ -660,7 +659,7 @@ ConstructorPrefix bindBaseArguments(const TypeGraph& graph, const TypeNode& node
         const auto& base = graph.node(call.type);
         std::set<uint32_t> visited;
         const auto storage = recordStorage(graph, call.type, visited);
-        BaseInitializer init{cppName(graph, base, graph.modules.at(node.module.value)), {}, storage.usesAllocator, storage.containsGraph, call.allocatorTagged};
+        BaseInitializer init{cppName(graph, base, graph.modules.at(node.module.value)), {}, storage.usesAllocator, call.allocatorTagged};
         if (call.allocatorTagged) deps.headers.insert("memory");
         for (const auto* field : call.fields) {
             auto member = bindMember(graph, node.module, *field, deps, false, false);
@@ -1141,13 +1140,10 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
             << "    " << name << "& operator=(const " << name << "&) = delete;\n\n";
     } else if (usesAllocator || moveOnly) {
         const auto& name = node.name;
-        // Move assignment of an embedded graph can allocate storage for its columns.
-        const bool containsGraph = std::ranges::any_of(members, &BoundField::containsGraph) || std::ranges::any_of(bases, &BaseInitializer::containsGraph);
-        const auto assignmentSpec = usesAllocator && !containsGraph ? " noexcept" : "";
         const bool assignable = !std::ranges::any_of(members, &BoundField::referenceMember);
         out << "    " << name << "(" << name << "&& rhs)" << (usesAllocator ? " noexcept" : "") << " = default;\n"
             << "    " << name << "(" << name << " const& rhs) = delete;\n"
-            << "    " << name << "& operator=(" << name << "&& rhs)" << assignmentSpec << " = " << (assignable ? "default" : "delete") << ";\n"
+            << "    " << name << "& operator=(" << name << "&& rhs)" << (usesAllocator ? " noexcept" : "") << " = " << (assignable ? "default" : "delete") << ";\n"
             << "    " << name << "& operator=(" << name << " const& rhs) = " << (moveOnly || !assignable ? "delete" : "default") << ";\n\n";
     }
     if (record.destructorNoexcept.has_value()) {

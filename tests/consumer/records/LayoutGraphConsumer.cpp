@@ -223,11 +223,20 @@ bool checkLayoutValues(const LayoutGraphData& graph, unsigned count) {
     return true;
 }
 
-enum class InsertionResult { complete = 0, mismatch = 1, retried = 42, debugProxyTermination = 43 };
+enum class InsertionResult { complete = 0, mismatch = 1, retried = 42, debugProxyTermination = 43, moveTermination = 44 };
+
+[[noreturn]] void exitOnAllocationFailure(InsertionResult result) noexcept {
+    if (auto exception = std::current_exception()) {
+        try { std::rethrow_exception(exception); }
+        catch (const InjectedFailure&) { std::_Exit(static_cast<int>(result)); }
+        catch (...) {}
+    }
+    std::_Exit(static_cast<int>(InsertionResult::mismatch));
+}
 
 InsertionResult insertWithFailure(unsigned count, int failAfter) {
     static_assert(!std::is_constructible_v<LayoutGraphData, const LayoutGraphData&, LayoutGraphData::allocator_type>);
-    static_assert(!std::is_copy_assignable_v<LayoutGraphData> && std::is_move_assignable_v<LayoutGraphData>);
+    static_assert(!std::is_copy_assignable_v<LayoutGraphData> && std::is_nothrow_move_assignable_v<LayoutGraphData>);
     FailingResource resource;
     LayoutGraphData graph{&resource};
     for (unsigned i = 0; i != count; ++i) fillLayout(graph, addLayout(graph, i));
@@ -373,6 +382,7 @@ bool checkGraphPaths(const char* sampleFile) {
 }
 
 InsertionResult assignWithFailure(bool move, int failAfter) {
+    static_assert(std::is_nothrow_move_assignable_v<LayoutGraph>);
     boost::container::pmr::monotonic_buffer_resource arena;
     FailingResource resource;
     LayoutGraph source{&arena};
@@ -383,22 +393,23 @@ InsertionResult assignWithFailure(bool move, int failAfter) {
     LayoutGraph target{&resource};
     target.add_vertex("previous");
     target.getDescriptors(0).groupBlocks[{}].capacity = 8;
-    const auto assign = [&] {
-        if (move) target = std::move(source);
-        else target = source;
-    };
     auto result = InsertionResult::complete;
     resource.allocationsBeforeFailure = failAfter;
     try {
-        assign();
+        if (move) {
+            std::set_terminate([] { exitOnAllocationFailure(InsertionResult::moveTermination); });
+            target = std::move(source);
+        } else {
+            target = source;
+        }
     } catch (const InjectedFailure&) {
-        if (target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
+        if (move || target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
             source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf}) ||
             !target.holds<RenderStage_>(0) || source.value(RenderPhase_{}, leaf).shaders.size() != 1 ||
             target.getDescriptors(0).groupBlocks.at({}).capacity != 8 || source.getDescriptors(leaf).blocks.at({}).count != 42)
             return InsertionResult::mismatch;
         resource.allocationsBeforeFailure = -1;
-        assign();
+        target = source;
         result = InsertionResult::retried;
     }
     if (!hasChildren(target, root, {leaf}) || target.getName(leaf) != "leaf" ||
@@ -476,14 +487,7 @@ bool checkFlatComponents() {
 int checkLayoutAllocation(const std::string& sample, int failAfter) {
 #if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL != 0
     // Some noexcept STL constructors allocate an iterator proxy.
-    std::set_terminate([] {
-        if (auto exception = std::current_exception()) {
-            try { std::rethrow_exception(exception); }
-            catch (const InjectedFailure&) { std::_Exit(static_cast<int>(InsertionResult::debugProxyTermination)); }
-            catch (...) {}
-        }
-        std::_Exit(static_cast<int>(InsertionResult::mismatch));
-    });
+    std::set_terminate([] { exitOnAllocationFailure(InsertionResult::debugProxyTermination); });
 #endif
     if (sample == "copy" || sample == "move")
         return static_cast<int>(assignWithFailure(sample == "move", failAfter));
