@@ -500,7 +500,7 @@ int checkLayoutAllocation(const std::string& sample, int failAfter) {
 static bool checkForestIterators() {
     using Vertex = std::uint8_t;
     struct Link { Vertex source, target; };
-    using Rows = std::array<cc::graph::VertexLinks<Vertex>, 3>;
+    using Rows = std::array<cc::graph::TreeEdge<Vertex>, 3>;
     using Child = cc::graph::ChildIterator<Link, false>;
     using Edge = cc::graph::EdgeIterator<Link, Rows>;
     constexpr auto none = (std::numeric_limits<Vertex>::max)();

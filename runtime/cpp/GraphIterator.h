@@ -53,7 +53,7 @@ struct VertexRange {
 };
 
 template<class Vertex>
-struct VertexLinks {
+struct TreeEdge {
     Vertex parent{(std::numeric_limits<Vertex>::max)()};
     Vertex firstChild{(std::numeric_limits<Vertex>::max)()};
     Vertex lastChild{(std::numeric_limits<Vertex>::max)()};
@@ -75,7 +75,7 @@ public:
     using reference = value_type;
 
     ChildIterator() = default;
-    ChildIterator(const VertexLinks<Vertex>* rows, Vertex v) noexcept : rows_(rows), current_(v) {}
+    ChildIterator(const TreeEdge<Vertex>* rows, Vertex v) noexcept : rows_(rows), current_(v) {}
 
     value_type operator*() const noexcept {
         if constexpr (Adjacent) {
@@ -99,7 +99,7 @@ public:
     bool operator!=(const ChildIterator& rhs) const noexcept { return !(*this == rhs); }
 
 private:
-    const VertexLinks<Vertex>* rows_{};
+    const TreeEdge<Vertex>* rows_{};
     Vertex current_{(std::numeric_limits<Vertex>::max)()};
 };
 

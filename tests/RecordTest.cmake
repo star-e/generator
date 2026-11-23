@@ -376,7 +376,7 @@ string(REPLACE "@serialize graph" "graph" flat "${flat}")
 file(WRITE "${layoutSpec}" "${flat}")
 run(${generate})
 file(READ "${layoutHeader}" flatHeader)
-if(flatHeader MATCHES "child_links[(]|get_parent[(]|num_children[(]|VertexLinks|out_edges[(]|out_degree[(]|(struct|using) edge_descriptor "
+if(flatHeader MATCHES "child_links[(]|get_parent[(]|num_children[(]|TreeEdge|out_edges[(]|out_degree[(]|(struct|using) edge_descriptor "
    OR NOT flatHeader MATCHES "add_vertex[(]" OR NOT flatHeader MATCHES "emplace_vertex[(]")
     message(FATAL_ERROR "Flat graph did not preserve its original vertex interface")
 endif()

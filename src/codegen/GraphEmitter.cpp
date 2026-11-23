@@ -80,7 +80,7 @@ void componentAccessors(std::ostream& out, const GraphScope& scope, const GraphT
 
 void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const std::string& vertex, const std::string& rows, bool edgeList) {
     sections.incidence.header << "    struct edge_descriptor { " << vertex << " source, target; };\n"
-        << "    using VertexLinks = " << scope.name("cc::graph::VertexLinks") << "<" << vertex << ">;\n"
+        << "    using TreeEdge = " << scope.name("cc::graph::TreeEdge") << "<" << vertex << ">;\n"
         << "    using out_edge_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, false>;\n"
         << "    " << vertex << " source(edge_descriptor e) const noexcept { return e.source; }\n"
         << "    " << vertex << " target(edge_descriptor e) const noexcept { return e.target; }\n"
@@ -102,7 +102,7 @@ void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const 
     if (edgeList) {
         sections.edgeList.header << "    " << vertex << " num_edges() const noexcept {\n        " << vertex << " count{};\n"
             << "        for (const auto& row : this->" << rows << ") count += row.childCount;\n        return count;\n    }\n"
-            << "    using edge_iterator = " << scope.name("cc::graph::EdgeIterator") << "<edge_descriptor, ccstd::pmr::vector<VertexLinks>>;\n"
+            << "    using edge_iterator = " << scope.name("cc::graph::EdgeIterator") << "<edge_descriptor, ccstd::pmr::vector<TreeEdge>>;\n"
             << "    " << scope.name("cc::graph::IteratorRange") << "<edge_iterator> edges() const noexcept {\n"
             << "        return {{" << rows << ", 0}, {" << rows << ", static_cast<" << vertex << ">(" << rows << ".size())}};\n    }\n";
     }
@@ -612,7 +612,7 @@ void emplaceVertex(std::ostream& out, std::ostream& impl, const std::string& nam
         if (field != rows && field != handles)
             impl << "            this->" << field << ".emplace_back();\n";
     }
-    if (!rows.empty()) impl << "            edges.push_back(VertexLinks{parent});\n";
+    if (!rows.empty()) impl << "            edges.push_back(TreeEdge{parent});\n";
     if (!children.empty()) impl << "            if (parent != null_vertex()) linked = add_reference(parent, vertex).second;\n";
     if (tagged) {
         impl << "            this->" << handles << ".push_back({payloadKind, payloadIndex});\n";
@@ -773,7 +773,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         for (const auto& symbol : symbols)
             if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": reference API collides with " + symbol);
         api.insert(symbols.begin(), symbols.end());
-    } else if (model.hierarchy) api.insert({"null_vertex", "VertexLinks", "ownership_descriptor", "out_edge_iterator", "in_edge_iterator", "adjacency_iterator",
+    } else if (model.hierarchy) api.insert({"null_vertex", "TreeEdge", "ownership_descriptor", "out_edge_iterator", "in_edge_iterator", "adjacency_iterator",
         "children_iterator", "parent_iterator", "get_parent", "num_children", "child_links", "child", "parent", "parent_links",
         "num_parents", "edge_descriptor", "source", "target", "out_edges", "out_degree", "in_edges", "in_degree", "degree",
         "adjacent_vertices", "edge", "has_link"});
@@ -914,7 +914,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
                               << vertex << ">::max)(); }\n";
     }
     if (!rows.empty()) {
-        for (const auto* symbol : {"edge_descriptor", "source", "target", "out_edges", "out_degree", "edge", "out_edge_iterator", "in_edge_iterator", "adjacency_iterator",
+        for (const auto* symbol : {"TreeEdge", "edge_descriptor", "source", "target", "out_edges", "out_degree", "edge", "out_edge_iterator", "in_edge_iterator", "adjacency_iterator",
                                    "ownership_descriptor", "children_iterator", "parent_iterator", "parent", "parent_links", "num_parents", "in_edges", "in_degree", "degree",
                                    "adjacent_vertices", "has_link"}) {
             if (members.contains(symbol))
@@ -998,7 +998,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         if (!column.empty()) out << "    ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">> " << column << ";\n";
     }
     if (!rows.empty()) {
-        out << "    ccstd::pmr::vector<VertexLinks> " << rows << ";\n";
+        out << "    ccstd::pmr::vector<TreeEdge> " << rows << ";\n";
     }
     if (!alternatives.empty()) {
         out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n"
