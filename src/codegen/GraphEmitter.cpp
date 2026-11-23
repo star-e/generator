@@ -363,15 +363,42 @@ struct Alternative {
     }
 };
 
+std::string templateParam(std::string param, const std::string& graphName, const std::string& vertex,
+                          const std::vector<Alternative>& alternatives) {
+    while (param == vertex || param == graphName || std::ranges::any_of(alternatives, [&](const auto& alt) {
+        return alt.tag == param || alt.tag.starts_with(param + "::");
+    })) param += "T";
+    return param;
+}
+
+template<class Body>
+void tagBranches(std::ostream& out, const std::vector<Alternative>& alternatives, const std::string& tag,
+                 const std::string& indent, bool constrained, Body writeBranch) {
+    const auto bodyIndent = alternatives.size() > 1 ? indent + "    " : indent;
+    for (size_t i = 0; i + 1 < alternatives.size(); ++i) {
+        out << (i ? "" : indent) << "if constexpr (std::is_same_v<" << tag << ", " << alternatives[i].tag << ">) {\n";
+        writeBranch(alternatives[i], bodyIndent);
+        out << indent << "} else ";
+    }
+    const bool hasElse = alternatives.size() > 1;
+    if (hasElse) out << "{\n";
+    if (!constrained)
+        out << bodyIndent << "static_assert(std::is_same_v<" << tag << ", " << alternatives.back().tag << ">, \"unknown graph tag\");\n";
+    writeBranch(alternatives.back(), bodyIndent);
+    if (hasElse) out << indent << "}\n";
+}
+
 void payloadAccess(std::ostream& out, const GraphScope& scope, const std::vector<Alternative>& alternatives,
-                   const std::string& vertex, const std::string& handles) {
-    const auto tagParam = vertex == "Tag" ? "VertexTag" : "Tag";
+                   const std::string& vertex, const std::string& handles, const std::string& tagParam) {
     out << "\n    enum class Kind { ";
     for (size_t i = 0; i < alternatives.size(); ++i) out << (i ? ", " : "") << alternatives[i].kind;
     out << " };\n    Kind kind(" << vertex << " v) const { return this->" << handles << ".at(v).kind; }\n"
         << "    template<class " << tagParam << ">\n    bool holds(" << vertex << " v) const noexcept {\n"
-        << "        return static_cast<std::uintmax_t>(v) < this->" << handles << ".size() && this->" << handles
-        << "[v].kind == kindOf(static_cast<" << tagParam << "*>(nullptr));\n    }\n";
+        << "        if (static_cast<std::uintmax_t>(v) >= this->" << handles << ".size()) return false;\n";
+    tagBranches(out, alternatives, tagParam, "        ", false, [&](const auto& alt, const auto& indent) {
+        out << indent << "return this->" << handles << "[v].kind == Kind::" << alt.kind << ";\n";
+    });
+    out << "    }\n";
     for (const auto& alt : alternatives) {
         for (const std::string qualifier : {"", " const"}) {
             out << "    " << alt.type << qualifier << "& value(const " << alt.tag << "&, " << vertex << " v)" << qualifier << " {\n"
@@ -471,41 +498,33 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     for (const auto& alt : alternatives) overload(alt.tag);
 }
 
-void piecewiseAddVertex(std::ostream& out, std::ostream& impl, const std::string& name, const std::string& vertex,
+void piecewiseAddVertex(std::ostream& out, const std::string& name, const std::string& vertex,
                    const std::vector<ComponentInfo>& components, const std::vector<std::string>& storage,
                    const std::string& rows, const std::vector<Alternative>& alternatives,
-                   const std::string& handles, const GraphType& model, const std::string& children) {
+                   const std::string& handles, const GraphType& model, const std::string& children, const std::string& tagType) {
     const bool indexedNames = model.nameIndex;
-    const bool deferredIndex = indexedNames || (model.keyComponentIndex && model.serializable);
     const bool tagged = !alternatives.empty();
     const bool hierarchy = !rows.empty() || !children.empty();
-    std::string templateParams, tupleParams, forwarded, tupleTypes;
+    std::string templateParams, tupleParams, tupleTypes;
     const auto append = [](std::string& list, const std::string& item) {
         if (!list.empty()) list += ", ";
         list += item;
     };
-    const auto typeParam = [&](std::string type) {
-        while (type == vertex || type == name || std::ranges::any_of(alternatives, [&](const Alternative& alt) {
-            return alt.tag == type || alt.tag.starts_with(type + "::");
-        })) type += "T";
-        return type;
-    };
-    const auto tagType = typeParam("Tag");
-    if (tagged) append(templateParams, "class " + tagType);
+    const auto typeParam = [&](std::string type) { return templateParam(std::move(type), name, vertex, alternatives); };
     std::vector<std::string> componentArgs;
     const auto tupleParam = [&](const std::string& type, const std::string& arg) {
         append(templateParams, "class " + type);
         append(tupleParams, type + "&& " + arg);
         if (!tupleTypes.empty()) tupleTypes += ",\n                                 ";
         tupleTypes += "typename std::tuple_size<std::decay_t<" + type + ">>::type";
-        auto forward = "std::forward<" + type + ">(" + arg + ")";
-        append(forwarded, forward);
-        return forward;
+        return "std::forward<" + type + ">(" + arg + ")";
     };
     const auto payloadArgs = tagged ? tupleParam(typeParam("PayloadArgs"), "payloadArgs") : "";
     for (size_t i = 0; i < components.size(); ++i)
         componentArgs.push_back(tupleParam(typeParam("Args" + std::to_string(i)), "args" + components[i].publicName));
-    out << "\n    template<" << templateParams;
+    out << "\n    template<";
+    if (tagged) out << "class " << tagType << ", ";
+    out << templateParams;
     if (tagged) {
         out << ",\n             std::enable_if_t<";
         for (size_t i = 0; i < alternatives.size(); ++i)
@@ -513,35 +532,23 @@ void piecewiseAddVertex(std::ostream& out, std::ostream& impl, const std::string
         out << ", int> = 0";
     }
     out << ",\n             class = std::void_t<" << tupleTypes << ">>\n    " << vertex << " add_vertex(";
-    if (tagged) out << "const " << tagType << "& tag, ";
-    out << "std::piecewise_construct_t, " << tupleParams << (hierarchy ? ", " + vertex + " parent = null_vertex()" : "") << ") {\n"
-        << "        return appendVertex(" << (tagged ? "&tag, " : "") << forwarded
-        << (deferredIndex ? ", true" : "") << (hierarchy ? ", parent" : "") << ");\n    }\n";
-
-    for (const auto& alt : alternatives)
-        impl << "    auto& payloadColumn(const " << alt.tag << "*) noexcept { return this->" << alt.member << "; }\n";
-    impl << "\n    template<" << templateParams << ">\n    " << vertex << " appendVertex(";
-    if (tagged) impl << "const " << tagType << "* tag, ";
-    impl << tupleParams << (deferredIndex ? ", bool indexName" : "") << (hierarchy ? ", " + vertex + " parent" : "") << ") {\n";
+    if (tagged) out << "const " << tagType << "&, ";
+    out << "std::piecewise_construct_t, " << tupleParams << (hierarchy ? ", " + vertex + " parent = null_vertex()" : "") << ") {\n";
     const auto count = "this->" + storage.front() + ".size()";
     const auto descriptor = name + "::" + vertex;
     if (hierarchy)
-        impl << "        if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= " << count << ")\n"
+        out << "        if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= " << count << ")\n"
              << "            throw std::out_of_range(\"invalid " << name << " parent\");\n";
-    impl << "        if (" << count << " >= (std::numeric_limits<" << descriptor << ">::max)())\n"
+    out << "        if (" << count << " >= (std::numeric_limits<" << descriptor << ">::max)())\n"
          << "            throw std::length_error(\"" << name << " vertex limit exceeded\");\n"
          << "        const auto vertex = static_cast<" << descriptor << ">(" << count << ");\n";
-    if (tagged) {
-        impl << "        auto& payloads = payloadColumn(tag);\n"
-             << "        const auto payloadIndex = static_cast<" << descriptor << ">(payloads.size());\n"
-             << "        constexpr auto payloadKind = kindOf(static_cast<" << tagType << "*>(nullptr));\n";
-    }
-    if (indexedNames) impl << "        auto entry = this->nameIndex_.end();\n";
-    if (!rows.empty()) impl << "        auto& edges = this->" << rows << ";\n";
-    if (!children.empty()) impl << "        bool linked = false;\n";
-    impl << "        try {\n";
+    if (tagged && model.keyComponentIndex) out << "        bool indexedKey = false;\n";
+    if (indexedNames) out << "        auto entry = this->nameIndex_.end();\n";
+    if (!rows.empty()) out << "        auto& edges = this->" << rows << ";\n";
+    if (!children.empty()) out << "        bool linked = false;\n";
+    out << "        try {\n";
     const auto emplaceTuple = [&](const std::string& column, const std::string& tuple, std::string_view indent) {
-        impl << indent << "std::apply([&](auto&&... args) {\n"
+        out << indent << "std::apply([&](auto&&... args) {\n"
              << indent << "    " << column << ".emplace_back(std::forward<decltype(args)>(args)...);\n"
              << indent << "}, " << tuple << ");\n";
     };
@@ -551,52 +558,45 @@ void piecewiseAddVertex(std::ostream& out, std::ostream& impl, const std::string
     if (indexedNames) {
         const auto i = *model.nameComponentIndex;
         emplaceComponent(i);
-        impl << "            if (indexName) {\n"
-             << "                const auto inserted = this->nameIndex_.emplace(this->" << storage[i] << ".back(), vertex);\n"
-             << "                if (!inserted.second) throw std::invalid_argument(\"duplicate vertex name\");\n"
-             << "                entry = inserted.first;\n            }\n";
+        out << "            const auto inserted = this->nameIndex_.emplace(this->" << storage[i] << ".back(), vertex);\n"
+            << "            if (!inserted.second) throw std::invalid_argument(\"duplicate vertex name\");\n"
+            << "            entry = inserted.first;\n";
     }
     for (size_t i = 0; i < components.size(); ++i)
         if (!indexedNames || i != *model.nameComponentIndex) emplaceComponent(i);
     for (size_t i = components.size(); i < storage.size(); ++i) {
         const auto& field = storage[i];
         if (field != rows && field != handles)
-            impl << "            this->" << field << ".emplace_back();\n";
+            out << "            this->" << field << ".emplace_back();\n";
     }
-    if (!rows.empty()) impl << "            edges.push_back(TreeEdge{parent});\n";
-    if (tagged) {
-        impl << "            this->" << handles << ".push_back({payloadKind, payloadIndex});\n";
-        std::string boolKinds;
-        for (const auto& alt : alternatives) {
-            if (!alt.isBoolean) continue;
-            if (!boolKinds.empty()) boolKinds += " || ";
-            boolKinds += "payloadKind == Kind::" + alt.kind;
-        }
-        if (boolKinds.empty()) {
-            emplaceTuple("payloads", payloadArgs, "            ");
-        } else {
-            impl << "            if constexpr (" << boolKinds << ") {\n"
-                 << "                payloads.push_back({std::make_from_tuple<bool>(" << payloadArgs << ")});\n"
-                 << "            } else {\n";
-            emplaceTuple("payloads", payloadArgs, "                ");
-            impl << "            }\n";
-        }
-    }
-    if (!children.empty()) impl << "            if (parent != null_vertex()) linked = add_reference(parent, vertex).second;\n";
+    if (!rows.empty()) out << "            edges.push_back(TreeEdge{parent});\n";
+    if (!children.empty()) out << "            if (parent != null_vertex()) linked = add_reference(parent, vertex).second;\n";
     if (model.keyComponentIndex) {
-        impl << "            if (" << (deferredIndex ? "indexName && " : "")
-             << "!this->componentIndex_.emplace(this->" << storage[*model.keyComponentIndex] << ".back(), vertex).second)\n"
+        out << "            if (!this->componentIndex_.emplace(this->" << storage[*model.keyComponentIndex] << ".back(), vertex).second)\n"
              << "                throw std::invalid_argument(\"duplicate vertex key\");\n";
+        if (tagged) out << "            indexedKey = true;\n";
     }
-    impl << "        } catch (...) {\n";
-    if (indexedNames) impl << "            if (entry != this->nameIndex_.end()) this->nameIndex_.erase(entry);\n";
-    if (!children.empty()) impl << "            if (linked) this->" << children << "[parent].pop_back();\n";
-    if (tagged) impl << "            if (payloads.size() > payloadIndex) payloads.pop_back();\n";
+    // Append the payload last so rollback only needs the common per-vertex storage and indices.
+    if (tagged) {
+        tagBranches(out, alternatives, tagType, "            ", true, [&](const auto& alt, const auto& indent) {
+            const auto column = "this->" + alt.member;
+            out << indent << "this->" << handles << ".push_back({Kind::" << alt.kind << ", static_cast<" << descriptor
+                << ">(" << column << ".size())});\n";
+            if (alt.isBoolean)
+                out << indent << column << ".push_back({std::make_from_tuple<bool>(" << payloadArgs << ")});\n";
+            else emplaceTuple(column, payloadArgs, indent);
+        });
+    }
+    out << "        } catch (...) {\n";
+    if (indexedNames) out << "            if (entry != this->nameIndex_.end()) this->nameIndex_.erase(entry);\n";
+    if (!children.empty()) out << "            if (linked) this->" << children << "[parent].pop_back();\n";
+    if (tagged && model.keyComponentIndex)
+        out << "            if (indexedKey) this->componentIndex_.erase(this->" << storage[*model.keyComponentIndex] << ".back());\n";
     for (const auto& field : storage)
-        impl << "            if (this->" << field << ".size() > vertex) this->" << field << ".pop_back();\n";
-    impl << "            throw;\n        }\n";
+        out << "            if (this->" << field << ".size() > vertex) this->" << field << ".pop_back();\n";
+    out << "            throw;\n        }\n";
     if (!rows.empty()) {
-        impl << R"(        if (parent != null_vertex()) {
+        out << R"(        if (parent != null_vertex()) {
             auto& parentLinks = edges[parent];
             if (parentLinks.lastChild == null_vertex()) {
                 parentLinks.firstChild = vertex;
@@ -608,7 +608,7 @@ void piecewiseAddVertex(std::ostream& out, std::ostream& impl, const std::string
         }
 )";
     }
-    impl << "        return vertex;\n    }\n";
+    out << "        return vertex;\n    }\n";
 }
 
 } // namespace
@@ -657,7 +657,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     for (const auto& alt : model.alternatives) members.insert(alt.name);
     std::set<std::string> api{"allocator_type", "get_allocator"};
     if (!model.alternatives.empty()) {
-        for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_object", "kindOf", "VertexHandle"}) {
+        for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_object", "VertexHandle"}) {
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": polymorphic graph member name collision: " + symbol);
             api.insert(symbol);
@@ -706,9 +706,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         api.insert(symbols.begin(), symbols.end());
     }
     if (model.mutableGraph) {
-        std::set<std::string> symbols{"add_vertex", "appendVertex"};
+        std::set<std::string> symbols{"add_vertex"};
         if (model.removeVertex) symbols.insert("remove_vertex");
-        if (!model.alternatives.empty()) symbols.insert("payloadColumn");
         for (const auto& symbol : symbols)
             if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": vertex API collides with " + symbol);
         api.insert(symbols.begin(), symbols.end());
@@ -843,16 +842,17 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     writeDocumentation(out, node.documentation);
     out << "struct " << name << " {\n"
         << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n"
-        << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
+        << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n";
+    out << '\n';
     graphConstructors(out, source, name, allStorage, fields, copyable, model.immovable);
     GraphSections sections;
+    const auto tagParam = templateParam("Tag", name, vertex, alternatives);
     if (model.vertexList) {
         headers.insert("cocos/base/GraphIterator.h");
         vertexRange(sections.vertexList.header, scope, vertex);
         sections.vertexList.header << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
     }
     std::string input;
-    std::ostringstream privateMethods;
     if (model.mutableGraph) {
         headers.insert("limits");
         headers.insert("stdexcept");
@@ -861,8 +861,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         if (!input.empty()) headers.insert("string_view");
         headers.insert({"tuple", "type_traits", "utility"});
         addVertex(sections.mutation.header, sections.mutation.source, name, vertex, model.components, input, alternatives, model.hierarchy, keyColumn, keyType);
-        piecewiseAddVertex(sections.mutation.header, privateMethods, name, vertex, model.components, storage, rows,
-                           alternatives, handles, model, childRows);
+        piecewiseAddVertex(sections.mutation.header, name, vertex, model.components, storage, rows,
+                           alternatives, handles, model, childRows, tagParam);
     }
     if (model.hierarchy || model.incidence || model.nameIndex || model.keyComponentIndex) {
         sections.graph.header << "    static constexpr " << vertex << " null_vertex() noexcept { return (std::numeric_limits<"
@@ -938,8 +938,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         }
     }
     if (!alternatives.empty()) {
-        headers.insert({"cstdint", "variant", "cocos/base/TemplateUtils.h"});
-        payloadAccess(sections.polymorphic.header, scope, alternatives, vertex, handles);
+        headers.insert({"cstdint", "type_traits", "variant", "cocos/base/TemplateUtils.h"});
+        payloadAccess(sections.polymorphic.header, scope, alternatives, vertex, handles, tagParam);
     }
     sections.write(out, source);
     writeDeclaredMethods();
@@ -959,7 +959,6 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n"
             << "    ccstd::pmr::vector<VertexHandle> " << handles << ";\n";
         for (const auto& alt : alternatives) {
-            privateMethods << "    static constexpr Kind kindOf(" << alt.tag << "*) noexcept { return Kind::" << alt.kind << "; }\n";
             // Keep value() addressable even when the C++ container specializes vector<bool>.
             if (alt.isBoolean) headers.insert("array");
             out << "    ccstd::pmr::" << (dequeColumns.contains(alt.member) ? "deque" : "vector") << "<" << (alt.isBoolean ? "std::array<bool, 1>" : alt.type)
@@ -971,18 +970,12 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     if (model.keyComponentIndex)
         out << "    ccstd::pmr::unordered_map<" << keyType << ", " << vertex << "> componentIndex_;\n";
     writeFields();
-    if (!privateMethods.view().empty()) {
-        out << '\n';
-        memberAccess(out, currentPrivate, true);
-        out << privateMethods.view();
-    }
     if (archive) {
         const bool hasPrivateArchiveFields = std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; });
-        if (hasPrivateArchiveFields)
+        if (hasPrivateArchiveFields) {
             out << "    friend void save(" << scope.name(graph.node(archive->outputArchive).qualifiedName) << "&, const " << name << "&);\n";
-        // Indexed loads use the private appendVertex to defer indexing until the key has been read.
-        if (hasPrivateArchiveFields || model.nameIndex || model.keyComponentIndex)
             out << "    friend void load(" << scope.name(graph.node(archive->inputArchive).qualifiedName) << "&, " << name << "&);\n";
+        }
     }
     out << "};\n";
     if (!archive) return {};

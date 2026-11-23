@@ -191,8 +191,8 @@ namespace cc {
         mutable_graph;
         polymorphic_graph {
             Count_: bool { member: handles; }
-            render::ComputeTag: ToggleFlag { member: flags; }
-            Layout_: render::LayoutGraph { member: layouts; }
+            render::ComputeTag: ToggleFlag { member: payloadColumn; }
+            Layout_: render::LayoutGraph { member: kindOf; }
         }
     }
     @tag struct Count_ {}
@@ -250,6 +250,9 @@ import Strings;
 import ArchiveInterface;
 namespace cc {
     @tag struct SignedKey_ {}
+    @tag struct Note_ {}
+    @tag struct Weight_ {}
+    @serialize struct VertexNote { text: ccstd::pmr::string; }
     @serialize graph IndexedKeys {
         vertex_descriptor = uint32_t;
         vertex_storage: indexed;
@@ -257,7 +260,9 @@ namespace cc {
         mutable_graph;
         hierarchy_graph { storage: shared_edges; }
         component render::Name_: ccstd::pmr::string { member: labels; }
+        component Note_: VertexNote { member: notes; }
         component SignedKey_: int32_t { member: keys; }
+        component Weight_: uint32_t { member: weights; }
         named_graph { component: render::Name_; }
         name_index;
         component_index { component: SignedKey_; }

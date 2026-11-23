@@ -378,8 +378,12 @@ run(${generate})
 file(READ "${layoutHeader}" flatHeader)
 if(flatHeader MATCHES "child_links[(]|get_parent[(]|num_children[(]|TreeEdge|out_edges[(]|out_degree[(]|(struct|using) edge_descriptor "
    OR flatHeader MATCHES "emplace_vertex[(]|add_vertex[(]std::string_view"
-   OR NOT flatHeader MATCHES "add_vertex[(]const Tag& tag, std::piecewise_construct_t")
+   OR NOT flatHeader MATCHES "add_vertex[(]const Tag&( [a-zA-Z_][a-zA-Z_0-9]*)?, std::piecewise_construct_t")
     message(FATAL_ERROR "Flat graph did not preserve its original vertex interface")
+endif()
+if(flatHeader MATCHES "TagList|PayloadTags|appendVertex" OR NOT flatHeader MATCHES "if constexpr [(]std::is_same_v<Tag, RenderStage_>[)]"
+   OR NOT flatHeader MATCHES "this->phases.emplace_back[(]")
+    message(FATAL_ERROR "Polymorphic vertex insertion must select its payload column directly by tag")
 endif()
 file(READ "${work}/stage/cocos/rendering/custom/layout-graph.ts" script)
 if(script MATCHES "import [{][^\n]*from './graph'|numChildren [(]" OR NOT script MATCHES "j<T extends LayoutGraphObject>"
@@ -411,7 +415,7 @@ foreach(capability IN ITEMS mutable_graph vertex_list_graph)
         if(emitted MATCHES "(add|emplace)_vertex[(]" OR NOT emitted MATCHES "num_vertices[(]")
             message(FATAL_ERROR "Removing mutable_graph changed the wrong graph operations")
         endif()
-    elseif(emitted MATCHES " (vertices|num_vertices)[(]" OR NOT emitted MATCHES "add_vertex[(]const Tag& tag, std::piecewise_construct_t")
+    elseif(emitted MATCHES " (vertices|num_vertices)[(]" OR NOT emitted MATCHES "add_vertex[(]const Tag&( [a-zA-Z_][a-zA-Z_0-9]*)?, std::piecewise_construct_t")
         message(FATAL_ERROR "Removing vertex_list_graph changed the wrong graph operations")
     endif()
     file(READ "${work}/stage/cocos/rendering/custom/layout-graph.ts" script)

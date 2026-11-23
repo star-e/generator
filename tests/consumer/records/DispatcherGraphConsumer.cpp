@@ -63,6 +63,8 @@ bool checkIndexedArchive() {
     cc::IndexedKeys graph{&arena};
     const auto root = graph.add_vertex(cc::SignedKey_{}, -5, "root");
     const auto child = graph.add_vertex(cc::SignedKey_{}, 0, "child", root);
+    graph.getNote(child).text = "archived before the indexed key";
+    graph.getWeight(child) = 83;
     graph.setRevision(17);
     if (graph.labels.size() != 2 || graph.values.size() != 2 || graph.links[child].parent != root ||
         graph.handles.size() != 2 || graph.componentIndex_.size() != 2 || graph.nameIndex_.size() != 2) return false;
@@ -72,6 +74,17 @@ bool checkIndexedArchive() {
     } catch (const std::invalid_argument&) {}
     if (graph.num_vertices() != 2 || graph.contains("duplicate") || graph.num_children(root) != 1) return false;
 
+    struct InvalidPayload {
+        operator uint32_t() const { throw std::domain_error("invalid payload"); }
+    };
+    try {
+        graph.add_vertex(cc::SignedKey_{}, std::piecewise_construct, std::make_tuple(InvalidPayload{}),
+                         std::forward_as_tuple("unused"), std::tuple<>{}, std::make_tuple(42), std::tuple<>{}, root);
+        return false;
+    } catch (const std::domain_error&) {}
+    if (graph.contains(42) || graph.contains("unused") || graph.num_children(root) != 1 ||
+        graph.num_vertices() != 2 || graph.handles.size() != 2 || graph.values.size() != 2) return false;
+
     std::stringstream bytes;
     BinaryOutputArchive writer(bytes, &arena);
     cc::save(writer, graph);
@@ -80,6 +93,8 @@ bool checkIndexedArchive() {
     decoded.add_vertex(cc::SignedKey_{}, 41, "old");
     BinaryInputArchive reader(bytes, &other);
     cc::load(reader, decoded);
+    if (decoded.getNote(child).text != graph.getNote(child).text || decoded.getNote(child).text.get_allocator().resource() != &other ||
+        decoded.getWeight(child) != 83) return false;
     if (decoded.revision() != 17 || decoded.stamp != 42) return false;
     if (decoded.contains(41) || decoded.contains("old") || decoded.vertex(-5) != root || decoded.vertex("root") != root ||
         decoded.vertex(0) != child || decoded.vertex("child") != child || decoded.get_parent(child) != root) return false;

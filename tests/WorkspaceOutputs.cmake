@@ -54,7 +54,7 @@ foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
         "// ParentGraph\n" " locate_child(" "// AddressableGraph\n" " locate(")
 endforeach()
 check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
-    "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(")
+    "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(vertex_descriptor u, vertex_descriptor v)")
 foreach(header IN ITEMS LayoutGraphTypes.h RenderGraphTypes.h FGDispatcherTypes.h)
     file(READ "${work}/both/native/cocos/renderer/pipeline/custom/${header}" graphTypes)
     if(NOT graphTypes MATCHES "using vertex_iterator = graph::VertexIterator<" OR

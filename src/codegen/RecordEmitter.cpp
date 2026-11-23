@@ -1444,6 +1444,11 @@ void writeRecordImports(std::ostream& script, const TypeImports& values, TypeImp
 
 } // namespace
 
+bool usesCppAllocator(const TypeGraph& graph, TypeId type) {
+    std::set<uint32_t> visited;
+    return recordStorage(graph, type, visited).usesAllocator;
+}
+
 Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& output, std::optional<ArchiveOutput> archive,
                   const std::string& preamble, NestedResets& nestedResets, OmittedDefinitionHeaders& omittedHeaders) {
     const auto& module = graph.modules.at(owner.value);

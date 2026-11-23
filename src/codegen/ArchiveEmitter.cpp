@@ -1,4 +1,5 @@
 #include "codegen/ArchiveEmitter.h"
+#include "codegen/RecordEmitter.h"
 #include "model/TypeName.h"
 #include <algorithm>
 
@@ -172,26 +173,29 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "    for (uint32_t i = 0; i < size; ++i) {\n        const auto kind = readSize();\n        const auto parent = readSize();\n"
         << "        if (kind >= " << count << " || counts[kind] == 0) throw std::runtime_error(\"Invalid graph archive kind\");\n"
         << "        --counts[kind];\n        if (parent != g.null_vertex()) {\n"
-        << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n"
-        << "        const auto readVertex = [&](auto tag) {\n";
-    if (model.nameIndex || model.keyComponentIndex) {
-        cpp << "            const auto v = g.appendVertex(&tag, std::tuple<>{}";
-        for (size_t i = 0; i < model.components.size(); ++i) cpp << ", std::tuple<>{}";
-        cpp << ", false, parent);\n";
-    } else
-        cpp << "            const auto v = g.add_vertex(tag, " << (takesName ? "{}, " : "") << "parent);\n";
-    for (size_t i = 0; i < model.components.size(); ++i) {
+        << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n";
+    // Decode through the last indexed key before insertion, preserving the archive's component order.
+    size_t prefix = model.nameIndex ? *model.nameComponentIndex + 1 : 0;
+    if (model.keyComponentIndex) prefix = std::max(prefix, static_cast<size_t>(*model.keyComponentIndex) + 1);
+    for (size_t i = 0; i < prefix; ++i) {
         const auto& c = model.components[i];
-        if (model.nameIndex && i == model.nameComponentIndex) {
-            cpp << "            auto& key = g." << c.name << "[v];\n            load(ar, key);\n"
-                << "            if (!g.nameIndex_.emplace(key, v).second) throw std::invalid_argument(\"duplicate vertex name\");\n";
-        } else if (i == model.keyComponentIndex) {
-            cpp << "            auto& componentKey = g." << c.name << "[v];\n            load(ar, componentKey);\n"
-                << "            if (!g.componentIndex_.emplace(componentKey, v).second) throw std::invalid_argument(\"duplicate vertex key\");\n";
-        } else {
-            cpp << "            load(ar, g.get" << c.publicName << "(v));\n";
-        }
+        cpp << "        decltype(g." << c.name << ")::value_type component" << i
+            << (usesCppAllocator(graph, c.valueType) ? "(g.get_allocator())" : "{}") << ";\n"
+            << "        load(ar, component" << i << ");\n";
     }
+    cpp << "        const auto readVertex = [&](auto tag) {\n";
+    if (prefix) {
+        cpp << "            const auto v = g.add_vertex(tag, std::piecewise_construct, std::tuple<>{}";
+        for (size_t i = 0; i < model.components.size(); ++i) {
+            if (i < prefix) cpp << ", std::forward_as_tuple(std::move_if_noexcept(component" << i << "))";
+            else cpp << ", std::tuple<>{}";
+        }
+        cpp << ", parent);\n";
+    } else {
+        cpp << "            const auto v = g.add_vertex(tag, " << (takesName ? "{}, " : "") << "parent);\n";
+    }
+    for (size_t i = prefix; i < model.components.size(); ++i)
+        cpp << "            load(ar, g.get" << model.components[i].publicName << "(v));\n";
     cpp << "            load(ar, g.value(tag, v));\n        };\n        switch (kind) {\n";
     for (size_t i = 0; i != count; ++i) cpp << "        case " << i << ": readVertex(" << tag(model.alternatives[i]) << "); break;\n";
     cpp << "        }\n    }\n    if (edges) throw std::runtime_error(\"Invalid graph archive edge count\");\n"

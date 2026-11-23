@@ -25,6 +25,8 @@ using NestedResets = std::map<uint32_t, std::vector<ResetArgument>>;
 // Maps a generated header to the definition headers replaced by forward declarations in its include chain.
 using OmittedDefinitionHeaders = std::map<std::string, std::set<std::string>>;
 
+bool usesCppAllocator(const TypeGraph& graph, TypeId type);
+
 void emitRecordJsb(Files& files, const TypeGraph& graph, const TypeModule& module,
                    const RecordOutput& output, const std::string& preamble);
 
