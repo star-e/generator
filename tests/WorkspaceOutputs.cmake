@@ -55,6 +55,13 @@ foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
 endforeach()
 check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
     "// ReferenceGraph\n" " child(Link" "// MutableReferenceGraph\n" " add_reference(")
+foreach(header IN ITEMS LayoutGraphTypes.h RenderGraphTypes.h FGDispatcherTypes.h)
+    file(READ "${work}/both/native/cocos/renderer/pipeline/custom/${header}" graphTypes)
+    if(NOT graphTypes MATCHES "using VertexIterator = ::cc::graph::VertexIterator<" OR
+       graphTypes MATCHES "(class|struct) (VertexIterator|ChildIterator|ParentLinkIterator|EdgeIterator|VertexRange|IteratorRange) [{]")
+        message(FATAL_ERROR "${header} must use the shared graph iterators and ranges")
+    endif()
+endforeach()
 file(GLOB_RECURSE all RELATIVE "${work}/both" "${work}/both/*")
 set(layoutTs "cocos/rendering/custom/layout-graph.ts")
 file(READ "${work}/both/${layoutTs}" compactLayout)

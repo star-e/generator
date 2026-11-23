@@ -39,33 +39,9 @@ struct GraphSections {
 };
 
 void vertexRange(std::ostream& out, const std::string& vertex) {
-    out << "\n    class VertexIterator {\n    public:\n"
-        << "        using value_type = " << vertex << ";\n"
-        << R"(        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
-        using pointer = void;
-        using reference = value_type;
-
-        VertexIterator() = default;
-        explicit VertexIterator(value_type value) noexcept : current(value) {}
-        value_type operator*() const noexcept { return current; }
-        VertexIterator& operator++() noexcept { ++current; return *this; }
-        VertexIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
-        bool operator==(VertexIterator rhs) const noexcept { return current == rhs.current; }
-        bool operator!=(VertexIterator rhs) const noexcept { return !(*this == rhs); }
-
-    private:
-        value_type current{};
-    };
-
-    struct VertexRange {
-        VertexIterator begin() const noexcept { return VertexIterator{}; }
-        VertexIterator end() const noexcept { return last; }
-        VertexIterator last;
-    };
-
-    VertexRange vertices() const noexcept { return {VertexIterator(num_vertices())}; }
-)";
+    out << "    using VertexIterator = ::cc::graph::VertexIterator<" << vertex << ">;\n"
+        << "    using VertexRange = ::cc::graph::VertexRange<" << vertex << ">;\n"
+        << "    VertexRange vertices() const noexcept { return {VertexIterator(num_vertices())}; }\n";
 }
 
 void componentAccessors(std::ostream& out, const TypeGraph& graph, const GraphType& model, const std::string& vertex,
@@ -89,38 +65,15 @@ void componentAccessors(std::ostream& out, const TypeGraph& graph, const GraphTy
 }
 
 void hierarchyInterface(GraphSections& sections, const std::string& name, const std::string& vertex,
-                        const std::string& rows) {
+                        const std::string& rows, const std::string& access) {
     sections.incidence.header << "    struct Link { " << vertex << " source, target; };\n"
-        << "\n    template<bool Adjacent>\n    class ChildIterator {\n    public:\n"
-        << "        using value_type = std::conditional_t<Adjacent, " << vertex << ", Link>;\n"
-        << R"(        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
-        using pointer = void;
-        using reference = value_type;
-
-        ChildIterator() = default;
-)"
-        << "        ChildIterator(const " << name << "* graph, " << vertex << " v) noexcept : owner(graph), current(v) {}\n"
-        << "        value_type operator*() const noexcept {\n            if constexpr (Adjacent) return current;\n"
-        << "            else return {owner->get_parent(current), current};\n        }\n"
-        << "        ChildIterator& operator++() noexcept { current = owner->" << rows << "[current].nextSibling; return *this; }\n"
-        << R"(        ChildIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
-        bool operator==(ChildIterator rhs) const noexcept { return owner == rhs.owner && current == rhs.current; }
-        bool operator!=(ChildIterator rhs) const noexcept { return !(*this == rhs); }
-    private:
-)"
-        << "        const " << name << "* owner{};\n        " << vertex << " current{null_vertex()};\n    };\n"
-        << R"(
-    using ChildLinkIterator = ChildIterator<false>;
-    template<class Iterator>
-    struct IteratorRange {
-        Iterator first, last;
-        Iterator begin() const noexcept { return first; }
-        Iterator end() const noexcept { return last; }
-    };
-    using ChildLinkRange = IteratorRange<ChildLinkIterator>;
-)"
-        << "\n    using Edge = Link;\n"
+        << "    template<bool Adjacent>\n"
+        << "    using ChildIterator = ::cc::graph::ChildIterator<" << name << ", " << access << ", Adjacent>;\n"
+        << "    template<class Iterator>\n"
+        << "    using IteratorRange = ::cc::graph::IteratorRange<Iterator>;\n"
+        << "    using ChildLinkIterator = ChildIterator<false>;\n"
+        << "    using ChildLinkRange = IteratorRange<ChildLinkIterator>;\n"
+        << "    using Edge = Link;\n"
         << "    " << vertex << " source(Edge e) const noexcept { return e.source; }\n"
         << "    " << vertex << " target(Edge e) const noexcept { return e.target; }\n"
         << "    ChildLinkRange out_edges(" << vertex << " v) const noexcept { return child_links(v); }\n"
@@ -130,21 +83,8 @@ void hierarchyInterface(GraphSections& sections, const std::string& name, const 
         << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
         << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
 
-    sections.bidirectional.header << R"(    struct ParentLinkIterator {
-        using value_type = Link;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
-        using pointer = void;
-        using reference = Link;
-        Link link{null_vertex(), null_vertex()};
-        Link operator*() const noexcept { return link; }
-        ParentLinkIterator& operator++() noexcept { link.source = null_vertex(); return *this; }
-        ParentLinkIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
-        bool operator==(ParentLinkIterator rhs) const noexcept { return link.source == rhs.link.source && link.target == rhs.link.target; }
-        bool operator!=(ParentLinkIterator rhs) const noexcept { return !(*this == rhs); }
-    };
-    using ParentLinkRange = IteratorRange<ParentLinkIterator>;
-)"
+    sections.bidirectional.header << "    using ParentLinkIterator = ::cc::graph::ParentLinkIterator<" << name << ">;\n"
+        << "    using ParentLinkRange = IteratorRange<ParentLinkIterator>;\n"
         << "    ParentLinkRange in_edges(" << vertex << " v) const noexcept { return parent_links(v); }\n"
         << "    " << vertex << " in_degree(" << vertex << " v) const noexcept { return num_parents(v); }\n"
         << "    " << vertex << " degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
@@ -152,27 +92,7 @@ void hierarchyInterface(GraphSections& sections, const std::string& name, const 
         << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n";
     sections.edgeList.header << "    " << vertex << " num_edges() const noexcept {\n        " << vertex << " count{};\n"
         << "        for (const auto& row : this->" << rows << ") count += row.childCount;\n        return count;\n    }\n"
-        << "\n    class EdgeIterator {\n    public:\n"
-        << R"(        using value_type = Edge;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
-        using pointer = void;
-        using reference = Edge;
-        EdgeIterator() = default;
-)"
-        << "        EdgeIterator(const " << name << "* graph, " << vertex << " first) noexcept : owner(graph), u(first) { seek(); }\n"
-        << "        Edge operator*() const noexcept { return {u, v}; }\n"
-        << "        EdgeIterator& operator++() noexcept {\n            v = owner->" << rows << "[v].nextSibling;\n"
-        << "            if (v == null_vertex()) { ++u; seek(); }\n            return *this;\n        }\n"
-        << R"(        EdgeIterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
-        bool operator==(EdgeIterator rhs) const noexcept { return owner == rhs.owner && u == rhs.u && v == rhs.v; }
-        bool operator!=(EdgeIterator rhs) const noexcept { return !(*this == rhs); }
-    private:
-        void seek() noexcept {
-)"
-        << "            while (u < owner->" << rows << ".size()) {\n                v = owner->" << rows << "[u].firstChild;\n"
-        << "                if (v != null_vertex()) break;\n                ++u;\n            }\n        }\n"
-        << "        const " << name << "* owner{};\n        " << vertex << " u{}, v{null_vertex()};\n    };\n"
+        << "    using EdgeIterator = ::cc::graph::EdgeIterator<" << name << ", " << access << ">;\n"
         << "    IteratorRange<EdgeIterator> edges() const noexcept {\n"
         << "        return {{this, 0}, {this, static_cast<" << vertex << ">(this->" << rows << ".size())}};\n    }\n";
 
@@ -934,8 +854,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     graphConstructors(out, source, name, allStorage, moveOnlyColumns, fields, model, transactionalArchive);
     GraphSections sections;
     if (model.vertexList) {
-        headers.insert("cstddef");
-        headers.insert("iterator");
+        headers.insert("cocos/base/GraphIterator.h");
         vertexRange(sections.vertexList.header, vertex);
         sections.vertexList.header << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
     }
@@ -962,8 +881,13 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": shared-edge graph member name collision: " + symbol);
         }
-        headers.insert({"cstddef", "cstdint", "iterator", "limits", "type_traits", "utility"});
-        hierarchyInterface(sections, name, vertex, rows);
+        headers.insert({"cocos/base/GraphIterator.h", "cstdint", "limits", "utility"});
+        std::string access = "IteratorAccess";
+        while (members.contains(access)) access += "0";
+        out << "\nprivate:\n    struct " << access << " {\n"
+            << "        static const auto& rows(const " << name << "& graph) noexcept { return graph." << rows << "; }\n"
+            << "    };\n\npublic:\n";
+        hierarchyInterface(sections, name, vertex, rows, access);
         if (model.mutableGraph) {
             if (members.contains("add_edge") || members.contains("remove_edge"))
                 throw std::runtime_error(node.qualifiedName + ": mutable graph member name collision");

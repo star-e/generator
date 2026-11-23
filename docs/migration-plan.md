@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 58 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 59 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphIterator.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release

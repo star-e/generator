@@ -55,6 +55,11 @@
       "module": "RenderGraph",
       "source": "spec/render/render-graph.spec"
     },
+    "native/cocos/base/GraphIterator.h": {
+      "copiedFrom": "runtime/cpp/GraphIterator.h",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
     "native/cocos/base/GraphView.h": {
       "copiedFrom": "runtime/cpp/GraphView.h",
       "module": "LayoutGraph",
