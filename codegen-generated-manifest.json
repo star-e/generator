@@ -50,6 +50,11 @@
       "module": "LayoutGraph",
       "source": "spec/render/layout-graph.spec"
     },
+    "native/cocos/base/GraphDescriptor.h": {
+      "copiedFrom": "runtime/cpp/GraphDescriptor.h",
+      "module": "LayoutGraph",
+      "source": "spec/render/layout-graph.spec"
+    },
     "native/cocos/base/GraphEdges.h": {
       "copiedFrom": "runtime/cpp/GraphEdges.h",
       "module": "RenderGraph",

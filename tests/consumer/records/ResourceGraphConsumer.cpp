@@ -106,8 +106,11 @@ bool checkResourceEmplacement() {
     };
     struct FailedConstruction {};
     struct ThrowingView { operator FormatView() const { throw FailedConstruction{}; } };
+    struct ThrowingDesc { operator ResourceDesc() const { throw FailedConstruction{}; } };
     try {
-        insert(std::forward_as_tuple("root"), ThrowingView{}, root);
+        graph.add_vertex(FormatView_{}, std::piecewise_construct, std::make_tuple(ThrowingView{}),
+            std::forward_as_tuple("root"), std::make_tuple(ThrowingDesc{}),
+            std::tuple<>{}, std::tuple<>{}, std::tuple<>{}, root);
         return false;
     } catch (const std::invalid_argument&) {}
     try {

@@ -26,7 +26,7 @@ add_library(CocosCodegenModel STATIC
     src/model/TypeGraphBuilder.cpp
     src/parser/SpecParser.cpp)
 target_compile_features(CocosCodegenModel PUBLIC cxx_std_20)
-target_include_directories(CocosCodegenModel PUBLIC "${COCOS_CODEGEN_SELF_HOST_ROOT}" src)
+target_include_directories(CocosCodegenModel PUBLIC "${COCOS_CODEGEN_SELF_HOST_ROOT}" src runtime/cpp)
 set_target_properties(CocosCodegenModel PROPERTIES CXX_EXTENSIONS OFF)
 
 add_executable(CocosCodegen

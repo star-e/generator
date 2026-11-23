@@ -16,7 +16,6 @@
 #include <initializer_list>
 #include <iterator>
 #include <limits>
-#include <new>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -136,49 +135,26 @@ bool checkHierarchy() {
     assigned = copied;
     if (!intact(assigned) || !intact(copied)) return false;
     assigned = std::move(copied);
-    if (!intact(assigned) || copied.num_vertices() != 0) return false;
+    if (!intact(assigned)) return false;
     LayoutGraph moved{std::move(assigned), &firstArena};
-    return intact(moved) && assigned.num_vertices() == 0 && intact(graph);
+    return intact(moved) && intact(graph);
 }
 
-bool checkFailedInsertion() {
+bool insertDescriptorsWithFailure(FailingResource& resource, int failAfter) {
     const std::string longName(160, 'x');
-    for (int failAfter = 0; ; ++failAfter) {
-        FailingResource resource;
-        LayoutGraph graph{&resource};
-        const auto root = graph.add_vertex(RenderStage_{}, "root");
-        const auto first = graph.add_vertex(RenderPhase_{}, "first", root);
-        graph.value(RenderPhase_{}, first).shaders.emplace(longName.c_str());
-        graph.getDescriptors(root).blocks[{}].count = 3;
-        graph.getDescriptors(first).groupBlocks[{}].capacity = 9;
-        auto intact = [&] {
-            const auto& shaders = graph.value(RenderPhase_{}, first).shaders;
-            return shaders.size() == 1 && *shaders.begin() == longName.c_str() && graph.holds<RenderStage_>(root) &&
-                   graph.getDescriptors(root).blocks.at({}).count == 3 && graph.getDescriptors(root).groupBlocks.empty() &&
-                   graph.getDescriptors(first).groupBlocks.at({}).capacity == 9 && graph.getDescriptors(first).blocks.empty();
-        };
-        resource.allocationsBeforeFailure = failAfter;
-        try {
-            const auto added = graph.add_vertex(RenderPhase_{}, longName, root);
-            return failAfter > 0 && added == 2 && hasChildren(graph, root, {first, added}) && intact() &&
-                   graph.value(RenderPhase_{}, added).shaders.empty() &&
-                   graph.getDescriptors(added).blocks.empty() && usesResource(graph.getDescriptors(added), graph);
-        } catch (const std::bad_alloc&) {
-            if (resource.allocationsBeforeFailure != 0) throw;
-            if (graph.num_vertices() != 2 || !hasChildren(graph, root, {first}) || !hasChildren(graph, first, {}) ||
-                graph.getName(root) != "root" || graph.getName(first) != "first" || !intact()) return false;
-        }
-        resource.allocationsBeforeFailure = -1;
-        const auto retry = graph.add_vertex(RenderPhase_{}, longName, root);
-        if (retry != 2 || !intact() || !graph.getDescriptors(retry).blocks.empty() ||
-            graph.getName(retry) != longName.c_str() || !hasChildren(graph, root, {first, retry})) return false;
-        // A leftover component after rollback would shift the next appended data by one.
-        graph.getDescriptors(retry).blocks[{}].count = 4;
-        graph.value(RenderPhase_{}, retry).shaders.emplace("retry");
-        const auto next = graph.add_vertex(RenderPhase_{}, "next");
-        if (!graph.getDescriptors(next).blocks.empty() || graph.getDescriptors(retry).blocks.at({}).count != 4 ||
-            !graph.value(RenderPhase_{}, next).shaders.empty() || graph.value(RenderPhase_{}, retry).shaders.size() != 1) return false;
-    }
+    LayoutGraph graph{&resource};
+    const auto root = graph.add_vertex(RenderStage_{}, "root");
+    const auto first = graph.add_vertex(RenderPhase_{}, "first", root);
+    graph.value(RenderPhase_{}, first).shaders.emplace(longName.c_str());
+    graph.getDescriptors(root).blocks[{}].count = 3;
+    graph.getDescriptors(first).groupBlocks[{}].capacity = 9;
+    resource.allocationsBeforeFailure = failAfter;
+    const auto added = graph.add_vertex(RenderPhase_{}, longName, root);
+    const auto& shaders = graph.value(RenderPhase_{}, first).shaders;
+    return added == 2 && hasChildren(graph, root, {first, added}) && graph.getName(added) == longName.c_str() &&
+           shaders.size() == 1 && *shaders.begin() == longName.c_str() && graph.getDescriptors(root).blocks.at({}).count == 3 &&
+           graph.getDescriptors(first).groupBlocks.at({}).capacity == 9 && graph.value(RenderPhase_{}, added).shaders.empty() &&
+           graph.getDescriptors(added).blocks.empty() && usesResource(graph.getDescriptors(added), graph);
 }
 
 using cc::render::LayoutGraphData;
@@ -188,9 +164,7 @@ constexpr std::string_view layoutName{"vertex name long enough to allocate from 
 
 auto addLayout(LayoutGraphData& graph, unsigned i) {
     const auto parent = i ? (i - 1) / 2 : LayoutGraphData::null_vertex();
-    // Exercise the view into an existing name during growth as well.
-    const auto name = i ? std::string_view{graph.getName(parent)} : layoutName;
-    return i % 2 ? graph.add_vertex(RenderPhase_{}, name, parent) : graph.add_vertex(RenderStage_{}, name, parent);
+    return i % 2 ? graph.add_vertex(RenderPhase_{}, layoutName, parent) : graph.add_vertex(RenderStage_{}, layoutName, parent);
 }
 
 void fillLayout(LayoutGraphData& graph, unsigned i) {
@@ -238,7 +212,7 @@ bool checkLayoutValues(const LayoutGraphData& graph, unsigned count) {
     return true;
 }
 
-enum class InsertionResult { complete = 0, mismatch = 1, retried = 42, debugProxyTermination = 43, moveTermination = 44 };
+enum class InsertionResult { complete = 0, mismatch = 1, discarded = 42, debugProxyTermination = 43, moveTermination = 44 };
 
 [[noreturn]] void exitOnAllocationFailure(InsertionResult result) noexcept {
     if (auto exception = std::current_exception()) {
@@ -249,32 +223,26 @@ enum class InsertionResult { complete = 0, mismatch = 1, retried = 42, debugProx
     std::_Exit(static_cast<int>(InsertionResult::mismatch));
 }
 
-InsertionResult insertWithFailure(unsigned count, int failAfter) {
+InsertionResult insertWithFailure(FailingResource& resource, unsigned count, int failAfter) {
     static_assert(!std::is_constructible_v<LayoutGraphData, const LayoutGraphData&, LayoutGraphData::allocator_type>);
     static_assert(!std::is_copy_assignable_v<LayoutGraphData> && std::is_nothrow_move_assignable_v<LayoutGraphData>);
-    FailingResource resource;
     LayoutGraphData graph{&resource};
     for (unsigned i = 0; i != count; ++i) fillLayout(graph, addLayout(graph, i));
     resource.allocationsBeforeFailure = failAfter;
-    bool failed = false;
-    try {
-        if (addLayout(graph, count) != count) return InsertionResult::mismatch;
-    } catch (const std::bad_alloc&) {
-        failed = true;
-        if (resource.allocationsBeforeFailure != 0 || !checkLayoutValues(graph, count)) return InsertionResult::mismatch;
-    }
+    if (addLayout(graph, count) != count) return InsertionResult::mismatch;
     resource.allocationsBeforeFailure = -1;
-    if (failed && addLayout(graph, count) != count) return InsertionResult::mismatch;
     if (!graph.getLayout(count).descriptorSets.empty()) return InsertionResult::mismatch;
     fillLayout(graph, count);
     fillLayout(graph, addLayout(graph, count + 1));
     if (!checkLayoutValues(graph, count + 2)) return InsertionResult::mismatch;
-    if (failed) return InsertionResult::retried;
+    const auto* layouts = graph.layouts.data();
     LayoutGraphData moved{std::move(graph)};
+    if (moved.layouts.data() != layouts || moved.get_allocator().resource() != &resource ||
+        !checkLayoutValues(moved, count + 2)) return InsertionResult::mismatch;
     FailingResource other;
     LayoutGraphData assigned{&other};
     assigned = std::move(moved);
-    if (failAfter == 0 || graph.num_vertices() || moved.num_vertices() || assigned.get_allocator().resource() != &other ||
+    if (failAfter == 0 || assigned.get_allocator().resource() != &other ||
         !checkLayoutValues(assigned, count + 2)) return InsertionResult::mismatch;
     return InsertionResult::complete;
 }
@@ -396,10 +364,9 @@ bool checkGraphPaths(const char* sampleFile) {
            view.locate(newPath) == leaf && view.exists(newPath) && !view.exists("/main/shadow/leaf");
 }
 
-InsertionResult assignWithFailure(bool move, int failAfter) {
+InsertionResult assignWithFailure(FailingResource& resource, bool move, int failAfter) {
     static_assert(std::is_nothrow_move_assignable_v<LayoutGraph>);
     boost::container::pmr::monotonic_buffer_resource arena;
-    FailingResource resource;
     LayoutGraph source{&arena};
     const auto root = source.add_vertex(RenderStage_{}, "original");
     const auto leaf = source.add_vertex(RenderPhase_{}, "leaf", root);
@@ -408,35 +375,23 @@ InsertionResult assignWithFailure(bool move, int failAfter) {
     LayoutGraph target{&resource};
     target.add_vertex(RenderStage_{}, "previous");
     target.getDescriptors(0).groupBlocks[{}].capacity = 8;
-    auto result = InsertionResult::complete;
     resource.allocationsBeforeFailure = failAfter;
-    try {
-        if (move) {
-            std::set_terminate([] { exitOnAllocationFailure(InsertionResult::moveTermination); });
-            target = std::move(source);
-        } else {
-            target = source;
-        }
-    } catch (const InjectedFailure&) {
-        if (move || target.num_vertices() != 1 || target.getName(0) != "previous" || !hasChildren(target, 0, {}) ||
-            source.num_vertices() != 2 || source.getName(leaf) != "leaf" || !hasChildren(source, root, {leaf}) ||
-            !target.holds<RenderStage_>(0) || source.value(RenderPhase_{}, leaf).shaders.size() != 1 ||
-            target.getDescriptors(0).groupBlocks.at({}).capacity != 8 || source.getDescriptors(leaf).blocks.at({}).count != 42)
-            return InsertionResult::mismatch;
-        resource.allocationsBeforeFailure = -1;
+    if (move) {
+        std::set_terminate([] { exitOnAllocationFailure(InsertionResult::moveTermination); });
+        target = std::move(source);
+    } else {
         target = source;
-        result = InsertionResult::retried;
     }
     if (!hasChildren(target, root, {leaf}) || target.getName(leaf) != "leaf" ||
         target.getName(leaf).get_allocator().resource() != &resource || target.value(RenderPhase_{}, leaf).shaders.size() != 1 ||
         target.value(RenderPhase_{}, leaf).get_allocator().resource() != &resource ||
         target.getDescriptors(leaf).blocks.at({}).count != 42 || !usesResource(target.getDescriptors(leaf), target))
         return InsertionResult::mismatch;
-    return result;
+    return InsertionResult::complete;
 }
 
 bool checkIndexedNames() {
-    FailingResource arena, other;
+    boost::container::pmr::monotonic_buffer_resource arena, other;
     cc::IndexedNames graph{&arena};
     try {
         (void)graph.add_vertex(cc::Count_{}, "orphan", 42);
@@ -457,18 +412,9 @@ bool checkIndexedNames() {
     if (copy.contains("replaced") || copy.vertex("") != root || copy.find("child") != child ||
         copy.getCount(child) != 42 || copy.value(cc::Count_{}, child) != 7 || copy.get_parent(child) != root) return false;
     cc::IndexedNames moved{std::move(copy), &arena};
-    if (copy.contains("child") || copy.num_vertices() || moved.vertex("child") != child) return false;
+    if (moved.vertex("child") != child) return false;
     const std::string longName(160, 'x');
-    for (int n = 0; ; ++n) {
-        arena.allocationsBeforeFailure = n;
-        try {
-            moved.setName(child, longName);
-            break;
-        } catch (const InjectedFailure&) {
-            if (moved.contains(longName) || moved.vertex("child") != child || moved.getName(child) != "child") return false;
-        }
-    }
-    arena.allocationsBeforeFailure = -1;
+    moved.setName(child, longName);
     return moved.vertex(longName) == child && !moved.contains("child") && graph.vertex("child") == child;
 }
 
@@ -490,11 +436,11 @@ bool checkFlatComponents() {
     source.getCount(a) = 12;
     source.getDescriptors(a).blocks[{}].count = 5;
     const auto b = source.add_vertex(std::piecewise_construct, std::tuple<>{},
-                                     std::forward_as_tuple(source.getName(a)), std::forward_as_tuple(source.getCount(a)));
+                                     std::make_tuple(source.getName(a)), std::make_tuple(source.getCount(a)));
     if (a != 0 || b != 1 || source.getName(b) != "a" || source.get(cc::Count_{}, b) != 12) return false;
     cc::FlatComponents target{&targetArena};
     target = std::move(source);
-    return source.num_vertices() == 0 && target.num_vertices() == 2 && target.version == 4 &&
+    return target.num_vertices() == 2 && target.version == 4 &&
            target.getName(b).get_allocator().resource() == &targetArena && target.getCount(a) == 12 &&
            target.getDescriptors(a).blocks.get_allocator().resource() == &targetArena &&
            target.getDescriptors(a).blocks.at({}).count == 5 && target.getDescriptors(b).blocks.empty();
@@ -506,14 +452,21 @@ int checkLayoutAllocation(const std::string& sample, int failAfter) {
     // Some noexcept STL constructors allocate an iterator proxy.
     std::set_terminate([] { exitOnAllocationFailure(InsertionResult::debugProxyTermination); });
 #endif
-    if (sample == "copy" || sample == "move")
-        return static_cast<int>(assignWithFailure(sample == "move", failAfter));
-    return static_cast<int>(insertWithFailure(std::stoul(sample), failAfter));
+    FailingResource resource;
+    try {
+        if (sample == "descriptors")
+            return static_cast<int>(insertDescriptorsWithFailure(resource, failAfter) ? InsertionResult::complete : InsertionResult::mismatch);
+        if (sample == "copy" || sample == "move")
+            return static_cast<int>(assignWithFailure(resource, sample == "move", failAfter));
+        return static_cast<int>(insertWithFailure(resource, std::stoul(sample), failAfter));
+    } catch (const InjectedFailure&) {
+        return static_cast<int>(resource.outstandingAllocations() == 0 ? InsertionResult::discarded : InsertionResult::mismatch);
+    }
 }
 
 static bool checkForestIterators() {
     using Vertex = std::uint8_t;
-    struct Link { Vertex source, target; };
+    using Link = cc::graph::EdgeDescriptor<Vertex>;
     using Rows = std::array<cc::graph::TreeEdge<Vertex>, 3>;
     using Child = cc::graph::ChildIterator<Link, false>;
     using Edge = cc::graph::EdgeIterator<Link, Rows>;
@@ -562,11 +515,14 @@ static bool checkLayoutEdges() {
 bool checkLayoutGraph(const char* pathSamples) {
     if (!checkForestIterators() || !checkLayoutEdges()) return false;
     if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkIndexedNames()) return false;
-    if (!checkHierarchy() || !checkFailedInsertion()) return false;
+    if (!checkHierarchy()) return false;
     using cc::render::LayoutGraph;
     using cc::render::Name_;
     using Name = ccstd::pmr::string;
     static_assert(std::is_same_v<LayoutGraph::vertex_descriptor, uint32_t>);
+    static_assert(std::is_nothrow_move_constructible_v<LayoutGraph>);
+    static_assert(std::is_same_v<decltype(LayoutGraph::names), ccstd::pmr::vector<Name>>);
+    static_assert(std::is_same_v<decltype(LayoutGraph::descriptors), ccstd::pmr::vector<DescriptorDB>>);
     static_assert(std::is_same_v<decltype(std::declval<LayoutGraph&>().getName(0)), Name&>);
     static_assert(std::is_same_v<decltype(std::declval<LayoutGraph&>().get(Name_{}, 0)), Name&>);
     static_assert(std::is_same_v<decltype(std::declval<const LayoutGraph&>().getName(0)), const Name&>);

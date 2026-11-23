@@ -32,6 +32,7 @@ constexpr bool checkIteratorTypes() {
     static_assert(std::is_same_v<typename Graph::children_iterator, decltype(std::declval<G>().child_links(0).begin())>);
     static_assert(std::is_same_v<typename Graph::parent_iterator, decltype(std::declval<G>().parent_links(0).begin())>);
     static_assert(std::is_same_v<typename Graph::edge_descriptor, typename Graph::out_edge_iterator::value_type>);
+    static_assert(std::is_same_v<typename Graph::edge_descriptor, cc::graph::EdgeDescriptor<typename Graph::vertex_descriptor>>);
     static_assert(std::is_same_v<typename Graph::ownership_descriptor, typename Graph::children_iterator::value_type>);
     return true;
 }
@@ -42,7 +43,7 @@ static_assert(std::is_same_v<cc::render::ResourceGraph::ownership_iterator, decl
 
 // The hierarchy cannot represent cycles. This graph also enumerates vertex zero last.
 struct Digraph {
-    struct edge_descriptor { Vertex source, target; };
+    using edge_descriptor = cc::graph::EdgeDescriptor<Vertex>;
     std::vector<std::vector<edge_descriptor>> rows;
     std::vector<Vertex> order;
     const auto& vertices() const { return order; }

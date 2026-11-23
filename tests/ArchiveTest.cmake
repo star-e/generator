@@ -54,6 +54,7 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     native/cocos/renderer/pipeline/custom/RenderGraphTypes.h native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp
     cocos/rendering/custom/graph-dfs.ts
     native/cocos/base/GraphDFS.h
+    native/cocos/base/GraphDescriptor.h
     native/cocos/base/GraphIterator.h
     native/cocos/base/GraphView.h
     native/cocos/base/GraphEdges.h

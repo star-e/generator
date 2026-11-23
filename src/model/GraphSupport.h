@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GraphDescriptor.h"
+
 #include <iterator>
 #include <limits>
 #include <ranges>
@@ -14,12 +16,7 @@ using IntegerIterator = std::ranges::iterator_t<std::ranges::iota_view<Vertex, V
 template<class Iterator>
 using IteratorPair = std::ranges::subrange<Iterator>;
 
-template<class Vertex>
-struct EdgeDescriptor {
-    Vertex source;
-    Vertex target;
-    bool operator==(const EdgeDescriptor&) const = default;
-};
+using ::cc::graph::EdgeDescriptor;
 
 // Each adjacency row stores just the vertex at the other end of the edge.
 template<class Edge, class Iterator, bool Incoming>

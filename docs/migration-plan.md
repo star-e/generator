@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 59 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDFS.h`、`GraphIterator.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 60 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDescriptor.h`、`GraphDFS.h`、`GraphIterator.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp`、`LayoutGraphDescriptorSet.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -258,6 +258,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 **C++ 图操作生成在图类型上，取消每个模块的 `*Graphs.h`。** 图按声明的能力提供成员函数。遍历和计数使用 `g.vertices()`、`g.out_edges(v)`、`g.num_vertices()`，增删使用 `g.add_vertex(…)`、`g.remove_vertex(v)`、`g.add_edge(u, v)`、`g.remove_edge(e)`，层级查询使用 `g.get_parent(v)`、`g.num_children(v)`。
 
+生成的 C++ 图用 `Graph::edge_descriptor` 表示有向边，其共用实现为 `cc::graph::EdgeDescriptor<vertex_descriptor>`。`source` 和 `target` 分别保存起点和终点。顶点编号类型相同的图使用同一描述符类型，调用方应将边交回所属图。[边描述符](../runtime/cpp/GraphDescriptor.h)
+
 C++ 图存储扩容后，已有的遍历区间和迭代器（包括 `end()`）失效。森林图的 `child_links(v)`、`out_edges(v)` 和 `adjacent_vertices(v)` 直接借用父子关系数组。若添加顶点导致扩容，调用方应重新取得区间再继续遍历。[迭代器实现](../runtime/cpp/GraphIterator.h)
 
 C++ 图的组件列、多态载荷列、边和索引存储都是公开成员。图内普通字段和方法默认公开，可用 `private:`、`public:` 切换访问级别。组件标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。组件访问提供两种成员调用，例如自举模型中的 `g.get(Node_{}, v)` 和 `g.getNode(v)`。具名访问器采用 `get` 加组件名的形式。[自举模型声明](../spec/codegen/typegraph.spec) · [生成的成员接口](../src/generated/TypeGraphTypes.h)
@@ -337,9 +339,11 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。同一模块的绑定块声明 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。工作区 JSON 选择 C++ 和 TS 产物及其输出路径。
 
-C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 PMR deque，追加元素时已有对象保留原位。标量、层级索引和载荷索引使用 PMR vector。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。跨资源移动将嵌套数据放入目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(RenderStage_{}, name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。带 allocator 的复制、移动和赋值使用目标资源。插入失败时回滚本次已追加的组件，成功后才更新父子关系。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+C++ 索引图的每个 `component` 独占一个 vector，按顶点编号访问。组件列扩容会使该列已有的引用、指针和迭代器失效，调用方可以保留顶点编号并重新取组件。多态载荷按类型分列，记录类型的载荷使用 PMR deque。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。普通移动构造使用 `noexcept = default`，移动后源图只用于析构。带 allocator 的复制、移动和赋值使用目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(RenderStage_{}, name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。修改图时若抛出 `std::bad_alloc`，调用方直接销毁该图。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
-`LayoutGraph` 声明 `hierarchy_graph { storage: shared_edges; }`，父子关系存储在图的邻接表中。`add_vertex(RenderStage_{}, name)` 创建根节点，`add_vertex(RenderStage_{}, name, parent)` 创建子节点。`get_parent(v)` 和 `num_children(v)` 的时间复杂度为 O(1)，根节点的父节点为 `null_vertex()`。`child_links(v)` 按插入顺序遍历直接子边，`child(link)` 取得子节点。无效父节点会触发 `std::out_of_range`。消费测试还逐次注入分配失败，检查已有顶点、名称和边，并在同一张图上重试。[层级声明](../spec/render/layout-graph.spec) · [C++17 消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+`add_vertex` 将每组构造参数直接转发给对应组件列的 `emplace_back`。调用方应保证参数在整个调用期间有效。从同一张图取值且插入可能触发扩容时，先复制所需的值，再传入构造参数。
+
+`LayoutGraph` 声明 `hierarchy_graph { storage: shared_edges; }`，父子关系存储在图的邻接表中。`add_vertex(RenderStage_{}, name)` 创建根节点，`add_vertex(RenderStage_{}, name, parent)` 创建子节点。`get_parent(v)` 和 `num_children(v)` 的时间复杂度为 O(1)，根节点的父节点为 `null_vertex()`。`child_links(v)` 按插入顺序遍历直接子边，`child(link)` 取得子节点。无效父节点会触发 `std::out_of_range`。[层级声明](../spec/render/layout-graph.spec) · [C++17 消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `named_graph { component: Name_; }` 将本图的字符串组件选作名称，`parent_graph;` 启用 C++ 成员函数 `locate_child(parent, name)`。传入普通父节点时查询其直接子节点，传入 `null_vertex()` 时按顶点插入顺序查找根。重名时返回第一个匹配项，未命中返回 `null_vertex()`。查询逐项比较组件中的当前值，通过 `getName(v)` 或 `get(Name_{}, v)` 改名后立即生效。[模块声明](../spec/render/layout-graph.spec) · [查找测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
@@ -381,7 +385,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 `LayoutGraphObjectPool` 的 24 个工厂由模块的 `@pool` 生成。`import RenderCommon;` 会推导出构造参数和只读属性 `renderCommon: RenderCommonObjectPool`。`reset()` 只重置本地子池的取用位置。下次取出时，普通记录调用自己的 `reset(...)`，两个描述符索引用 `assign;` 按构造参数逐字段赋值，可修改的图调用 `clear()`，外部实现的空记录 `Layout` 直接复用。消费测试用同一套用例对照旧引擎和新生成的池。[布局绑定](../spec/render/layout-graph.spec) · [对象池测试](../tests/consumer/records/layout-pool.cjs)
 
-PMR 字符串和 vector 直接用分配器构造。图插入用 `std::apply` 将参数元组转发给组件列和载荷列的 `emplace_back`；元组为空时直接无参插入。MSVC Debug 的字符串、vector 和 unordered_map 在某些 `noexcept` 构造中会分配迭代器代理，该次分配失败会终止进程。布局图消费测试在独立进程中逐笔注入分配失败，分别记录这种终止和可恢复异常，并核对回滚后的图和重试结果。[插入与回滚测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+PMR 字符串和 vector 直接用分配器构造。图插入用 `std::apply` 将参数元组转发给组件列和载荷列的 `emplace_back`，元组为空时直接无参插入。MSVC Debug 的字符串、vector 和 unordered_map 在某些 `noexcept` 构造中会分配迭代器代理，该次分配失败会终止进程。布局图消费测试在独立进程中逐笔注入分配失败。异常传播时，测试让图随栈展开而析构，再检查 PMR 资源上的分配是否全部释放。[分配失败测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `RenderCommon` 的十二个标签在 C++ 命名空间中定义。记录后端按声明顺序输出 `RenderCommonFwd.h`，并按记录声明上的 `@hash` 生成 `ccstd::hash<ResolvePair>`。哈希计算与相等比较都遍历记录的字段序列。测试核对两个共享标签的前置声明和名称查询、对 `ArchiveFwd.h` 的导入，以及这两个头文件其余内容与历史基线的一致性，C++17 消费测试使用不同分配器构造等值的键并查询同一容器条目。[声明](../spec/render/render-common.spec)
 

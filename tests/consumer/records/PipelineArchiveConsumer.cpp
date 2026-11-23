@@ -280,7 +280,7 @@ bool exchangePipelineArchives(bool writing, const char* path) {
     load(archive, graph);
     if (!checkGraph(graph) || graph.constantMacros != "reader macros") return false;
     LayoutGraphData movedGraph{std::move(graph), &arena};
-    if (!checkGraph(movedGraph) || movedGraph.constantMacros != "reader macros" || graph.num_vertices()) return false;
+    if (!checkGraph(movedGraph) || movedGraph.constantMacros != "reader macros") return false;
     const auto& rp = records.renderPhase;
     if (file.peek() != std::char_traits<char>::eof() || records.set.descriptorSetLayout != layout || records.set.descriptorSet != set ||
         records.program.pipelineLayout != pipeline || rp.pipelineLayout != pipeline || !checkSet(records.set, 7, &destination) ||

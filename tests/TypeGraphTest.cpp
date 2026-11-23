@@ -15,6 +15,7 @@ namespace {
 using namespace cc::codegen;
 
 static_assert(std::is_same_v<TypeGraph::vertex_descriptor, uint32_t>);
+static_assert(std::is_same_v<TypeGraph::edge_descriptor, cc::graph::EdgeDescriptor<TypeGraph::vertex_descriptor>>);
 static_assert(std::is_same_v<TypeGraph::vertex_iterator, decltype(std::declval<const TypeGraph&>().vertices().begin())>);
 static_assert(std::is_same_v<TypeGraph::out_edge_iterator, decltype(std::declval<const TypeGraph&>().out_edges(0).begin())>);
 static_assert(std::is_same_v<TypeGraph::in_edge_iterator, decltype(std::declval<const TypeGraph&>().in_edges(0).begin())>);

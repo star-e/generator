@@ -1,14 +1,11 @@
 #pragma once
 
+#include "GraphDescriptor.h"
+
 #include <cstddef>
 #include <iterator>
 
 namespace cc::detail {
-
-template<class Vertex>
-struct DirectedEdge {
-    Vertex source, target;
-};
 
 // A single row yields incident edges. All outgoing rows yield the graph's edges in vertex order.
 template<bool Incoming, class Rows>
@@ -18,7 +15,7 @@ class DirectedEdgeRange {
 public:
     class Iterator {
     public:
-        using value_type = DirectedEdge<Vertex>;
+        using value_type = graph::EdgeDescriptor<Vertex>;
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
         using pointer = void;
