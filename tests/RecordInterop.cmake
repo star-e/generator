@@ -158,6 +158,8 @@ namespace cc {
         component cc::render::Descriptors_: render::DescriptorDB { member: data; }
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
         component Count_: uint32_t { member: counts; }
+        Count_: uint32_t = 0;
+        graph: uint32_t = 0;
         version: uint64_t = 1;
         named_graph { component: cc::render::Name_; }
     }
@@ -271,6 +273,11 @@ string(JSON config SET "${config}" modules ${count} [[{
 string(JSON transactionalConfig SET "${config}" transactionalGraphLoad true)
 file(WRITE "${workspace}" "${transactionalConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
+file(READ "${stage}/native/ShiftProbe.h" shiftHeader)
+if(NOT shiftHeader MATCHES "get[(]const ::cc::Count_&" OR
+   NOT shiftHeader MATCHES "using vertex_iterator = ::cc::graph::VertexIterator<")
+    message(FATAL_ERROR "Graph members hiding a tag or runtime namespace require qualified C++ names")
+endif()
 file(WRITE "${stage}/native/SampleText.h" [[#pragma once
 #include <string>
 namespace sample {

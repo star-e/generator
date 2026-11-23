@@ -503,7 +503,7 @@ static bool checkForestIterators() {
     using Rows = std::array<cc::graph::VertexLinks<Vertex>, 3>;
     using Child = cc::graph::ChildIterator<Link, false>;
     using Edge = cc::graph::EdgeIterator<Link, Rows>;
-    constexpr auto none = cc::graph::nullVertex<Vertex>;
+    constexpr auto none = (std::numeric_limits<Vertex>::max)();
     Rows rows{};
     rows[1] = {none, 2, 2, none, 1};
     rows[2].parent = 1;

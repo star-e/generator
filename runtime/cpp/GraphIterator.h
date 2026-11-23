@@ -53,14 +53,11 @@ struct VertexRange {
 };
 
 template<class Vertex>
-inline constexpr Vertex nullVertex = (std::numeric_limits<Vertex>::max)();
-
-template<class Vertex>
 struct VertexLinks {
-    Vertex parent{nullVertex<Vertex>};
-    Vertex firstChild{nullVertex<Vertex>};
-    Vertex lastChild{nullVertex<Vertex>};
-    Vertex nextSibling{nullVertex<Vertex>};
+    Vertex parent{(std::numeric_limits<Vertex>::max)()};
+    Vertex firstChild{(std::numeric_limits<Vertex>::max)()};
+    Vertex lastChild{(std::numeric_limits<Vertex>::max)()};
+    Vertex nextSibling{(std::numeric_limits<Vertex>::max)()};
     Vertex childCount{};
 };
 
@@ -103,7 +100,7 @@ public:
 
 private:
     const VertexLinks<Vertex>* rows_{};
-    Vertex current_{nullVertex<Vertex>};
+    Vertex current_{(std::numeric_limits<Vertex>::max)()};
 };
 
 template<class LinkType>
@@ -116,11 +113,11 @@ struct ParentLinkIterator {
     using pointer = void;
     using reference = value_type;
 
-    Link link{nullVertex<Vertex>, nullVertex<Vertex>};
+    Link link{(std::numeric_limits<Vertex>::max)(), (std::numeric_limits<Vertex>::max)()};
 
     Link operator*() const noexcept { return link; }
     ParentLinkIterator& operator++() noexcept {
-        link.source = nullVertex<Vertex>;
+        link.source = (std::numeric_limits<Vertex>::max)();
         return *this;
     }
     ParentLinkIterator operator++(int) noexcept {
@@ -152,7 +149,7 @@ public:
     Link operator*() const noexcept { return {source_, target_}; }
     EdgeIterator& operator++() noexcept {
         target_ = (*rows_)[target_].nextSibling;
-        if (target_ == nullVertex<Vertex>) {
+        if (target_ == (std::numeric_limits<Vertex>::max)()) {
             ++source_;
             seek();
         }
@@ -173,13 +170,13 @@ private:
         const auto& rows = *rows_;
         while (source_ < rows.size()) {
             target_ = rows[source_].firstChild;
-            if (target_ != nullVertex<Vertex>) break;
+            if (target_ != (std::numeric_limits<Vertex>::max)()) break;
             ++source_;
         }
     }
 
     const Rows* rows_{};
-    Vertex source_{}, target_{nullVertex<Vertex>};
+    Vertex source_{}, target_{(std::numeric_limits<Vertex>::max)()};
 };
 
 } // namespace cc::graph

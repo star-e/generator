@@ -393,18 +393,18 @@ struct TypeModule {
 
 struct Node_ {};
 
-struct TypeGraph : public cc::codegen::graph::BidirectionalStorage<uint32_t> {
+struct TypeGraph : public graph::BidirectionalStorage<uint32_t> {
     using vertex_descriptor = uint32_t;
     void reserve(vertex_descriptor capacity) {
-        cc::codegen::graph::BidirectionalStorage<uint32_t>::reserve(capacity);
+        graph::BidirectionalStorage<uint32_t>::reserve(capacity);
         this->nodes.reserve(capacity);
     }
 
-    cc::codegen::TypeNode& getNode(vertex_descriptor v) noexcept { return this->nodes[v]; }
-    cc::codegen::TypeNode& get(const ::cc::codegen::Node_&, vertex_descriptor v) noexcept { return getNode(v); }
+    TypeNode& getNode(vertex_descriptor v) noexcept { return this->nodes[v]; }
+    TypeNode& get(const Node_&, vertex_descriptor v) noexcept { return getNode(v); }
 
-    cc::codegen::TypeNode const& getNode(vertex_descriptor v) const noexcept { return this->nodes[v]; }
-    cc::codegen::TypeNode const& get(const ::cc::codegen::Node_&, vertex_descriptor v) const noexcept { return getNode(v); }
+    TypeNode const& getNode(vertex_descriptor v) const noexcept { return this->nodes[v]; }
+    TypeNode const& get(const Node_&, vertex_descriptor v) const noexcept { return getNode(v); }
 
     TypeId appendNode(TypeNode node, TypeId parent);
     const TypeNode& node(TypeId id) const;
@@ -414,7 +414,7 @@ struct TypeGraph : public cc::codegen::graph::BidirectionalStorage<uint32_t> {
     TypeId makeQualified(TypeId base, bool isConst, bool isVolatile);
     TypeId makeFunction(TypeId result, std::vector<TypeId> parameters, bool isNoexcept);
     TypeId makeTemplateInstance(TypeId declaration, std::vector<TemplateArgument> arguments);
-    std::vector<cc::codegen::TypeNode> nodes;
+    std::vector<TypeNode> nodes;
     std::vector<TypeModule> modules;
     std::map<std::string, TypeId> nameIndex;
 };

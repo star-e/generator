@@ -213,7 +213,7 @@ file(READ "${native}/LayoutGraphSerialization.cpp" source)
 file(READ "${native}/LayoutGraphTypes.h" graphHeader)
 if(NOT header MATCHES "save[(]Writer& ar, const Descriptor& v[)]" OR NOT header MATCHES "load[(]Reader& ar, LayoutGraph& g[)]"
    OR NOT source MATCHES "load[(]Reader& ar, std::vector<bool, Allocator>& bits[)]"
-   OR NOT graphHeader MATCHES "friend void load[(]::cc::render::Reader&, LayoutGraphData&[)]")
+   OR NOT graphHeader MATCHES "friend void load[(]Reader&, LayoutGraphData&[)]")
     message(FATAL_ERROR "Native record, graph or packed bool archive did not follow the declared roles")
 endif()
 file(WRITE "${archive}" "${originalArchive}")

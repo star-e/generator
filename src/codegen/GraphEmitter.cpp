@@ -38,14 +38,29 @@ struct GraphSections {
     }
 };
 
-void vertexRange(std::ostream& out, const std::string& vertex) {
-    out << "    using vertex_iterator = ::cc::graph::VertexIterator<" << vertex << ">;\n"
-        << "    ::cc::graph::VertexRange<" << vertex << "> vertices() const noexcept { return {vertex_iterator(num_vertices())}; }\n";
+struct GraphScope {
+    const TypeGraph& graph;
+    const TypeModule& module;
+    const std::set<std::string>& members;
+    const std::set<std::string>& api;
+
+    std::string name(const std::string& qualified) const {
+        const auto relative = cppName(graph, qualified, module);
+        const auto first = relative.substr(0, relative.find("::"));
+        if (members.contains(first) || api.contains(first)) return "::" + qualified;
+        return relative;
+    }
+};
+
+void vertexRange(std::ostream& out, const GraphScope& scope, const std::string& vertex) {
+    out << "    using vertex_iterator = " << scope.name("cc::graph::VertexIterator") << "<" << vertex << ">;\n"
+        << "    " << scope.name("cc::graph::VertexRange") << "<" << vertex << "> vertices() const noexcept { return {vertex_iterator(num_vertices())}; }\n";
 }
 
-void componentAccessors(std::ostream& out, const TypeGraph& graph, const GraphType& model, const std::string& vertex,
+void componentAccessors(std::ostream& out, const GraphScope& scope, const GraphType& model, const std::string& vertex,
                         const std::vector<std::string>& storage, const std::vector<std::string>& types,
                         std::string_view vectorType) {
+    const auto& graph = scope.graph;
     for (size_t i = 0; i < model.components.size(); ++i) {
         const auto& tag = graph.node(model.components[i].tag);
         const auto accessor = "get" + model.components[i].publicName;
@@ -57,38 +72,38 @@ void componentAccessors(std::ostream& out, const TypeGraph& graph, const GraphTy
                 : types[i] + qualifier + "&";
             out << "\n    " << result << " " << accessor << "(" << vertex << " v)" << qualifier
                 << " noexcept { return this->" << storage[i] << "[v]; }\n"
-                << "    " << result << " get(const ::" << tag.qualifiedName << "&, " << vertex << " v)"
+                << "    " << result << " get(const " << scope.name(tag.qualifiedName) << "&, " << vertex << " v)"
                 << qualifier << " noexcept { return " << accessor << "(v); }\n";
         }
     }
 }
 
-void hierarchyInterface(GraphSections& sections, const std::string& vertex, const std::string& rows, bool edgeList) {
+void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const std::string& vertex, const std::string& rows, bool edgeList) {
     sections.incidence.header << "    struct edge_descriptor { " << vertex << " source, target; };\n"
-        << "    using VertexLinks = ::cc::graph::VertexLinks<" << vertex << ">;\n"
-        << "    using out_edge_iterator = ::cc::graph::ChildIterator<edge_descriptor, false>;\n"
+        << "    using VertexLinks = " << scope.name("cc::graph::VertexLinks") << "<" << vertex << ">;\n"
+        << "    using out_edge_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, false>;\n"
         << "    " << vertex << " source(edge_descriptor e) const noexcept { return e.source; }\n"
         << "    " << vertex << " target(edge_descriptor e) const noexcept { return e.target; }\n"
-        << "    ::cc::graph::IteratorRange<out_edge_iterator> out_edges(" << vertex << " v) const noexcept { return child_links(v); }\n"
+        << "    " << scope.name("cc::graph::IteratorRange") << "<out_edge_iterator> out_edges(" << vertex << " v) const noexcept { return child_links(v); }\n"
         << "    " << vertex << " out_degree(" << vertex << " v) const noexcept { return num_children(v); }\n"
         << "    std::pair<edge_descriptor, bool> edge(" << vertex << " u, " << vertex << " v) const noexcept {\n"
         << "        if (u != null_vertex() && static_cast<std::uintmax_t>(v) < this->" << rows
         << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
         << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
 
-    sections.bidirectional.header << "    using in_edge_iterator = ::cc::graph::ParentLinkIterator<edge_descriptor>;\n"
-        << "    ::cc::graph::IteratorRange<in_edge_iterator> in_edges(" << vertex << " v) const noexcept { return parent_links(v); }\n"
+    sections.bidirectional.header << "    using in_edge_iterator = " << scope.name("cc::graph::ParentLinkIterator") << "<edge_descriptor>;\n"
+        << "    " << scope.name("cc::graph::IteratorRange") << "<in_edge_iterator> in_edges(" << vertex << " v) const noexcept { return parent_links(v); }\n"
         << "    " << vertex << " in_degree(" << vertex << " v) const noexcept { return num_parents(v); }\n"
         << "    " << vertex << " degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
-    sections.adjacency.header << "    using adjacency_iterator = ::cc::graph::ChildIterator<edge_descriptor, true>;\n"
-        << "    ::cc::graph::IteratorRange<adjacency_iterator> adjacent_vertices(" << vertex << " v) const noexcept {\n"
+    sections.adjacency.header << "    using adjacency_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, true>;\n"
+        << "    " << scope.name("cc::graph::IteratorRange") << "<adjacency_iterator> adjacent_vertices(" << vertex << " v) const noexcept {\n"
         << "        const auto* rows = " << rows << ".data();\n"
         << "        return {{rows, rows[v].firstChild}, {rows, null_vertex()}};\n    }\n";
     if (edgeList) {
         sections.edgeList.header << "    " << vertex << " num_edges() const noexcept {\n        " << vertex << " count{};\n"
             << "        for (const auto& row : this->" << rows << ") count += row.childCount;\n        return count;\n    }\n"
-            << "    using edge_iterator = ::cc::graph::EdgeIterator<edge_descriptor, ccstd::pmr::vector<VertexLinks>>;\n"
-            << "    ::cc::graph::IteratorRange<edge_iterator> edges() const noexcept {\n"
+            << "    using edge_iterator = " << scope.name("cc::graph::EdgeIterator") << "<edge_descriptor, ccstd::pmr::vector<VertexLinks>>;\n"
+            << "    " << scope.name("cc::graph::IteratorRange") << "<edge_iterator> edges() const noexcept {\n"
             << "        return {{" << rows << ", 0}, {" << rows << ", static_cast<" << vertex << ">(" << rows << ".size())}};\n    }\n";
     }
 
@@ -100,30 +115,30 @@ void hierarchyInterface(GraphSections& sections, const std::string& vertex, cons
         << "    " << vertex << " get_parent(" << vertex << " v) const noexcept { return v == null_vertex() ? v : this->"
         << rows << "[v].parent; }\n"
         << "    " << vertex << " num_children(" << vertex << " v) const noexcept { return this->" << rows << "[v].childCount; }\n"
-        << "    ::cc::graph::IteratorRange<children_iterator> child_links(" << vertex << " v) const noexcept {\n"
+        << "    " << scope.name("cc::graph::IteratorRange") << "<children_iterator> child_links(" << vertex << " v) const noexcept {\n"
         << "        const auto* rows = " << rows << ".data();\n"
         << "        return {{rows, rows[v].firstChild}, {rows, null_vertex()}};\n    }\n"
         << "    " << vertex << " parent(ownership_descriptor e) const noexcept { return e.source; }\n"
         << "    " << vertex << " num_parents(" << vertex << " v) const noexcept { return get_parent(v) != null_vertex(); }\n"
-        << "    ::cc::graph::IteratorRange<parent_iterator> parent_links(" << vertex << " v) const noexcept { return {{{get_parent(v), v}}, {{null_vertex(), v}}}; }\n"
+        << "    " << scope.name("cc::graph::IteratorRange") << "<parent_iterator> parent_links(" << vertex << " v) const noexcept { return {{{get_parent(v), v}}, {{null_vertex(), v}}}; }\n"
         << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return edge(u, v).second; }\n";
 }
 
-void directedEdges(GraphSections& sections, const std::string& name, const std::string& vertex,
+void directedEdges(GraphSections& sections, const GraphScope& scope, const std::string& name, const std::string& vertex,
                    const std::string& outgoing, const std::string& incoming, const GraphType& model, bool references) {
     const std::string descriptor = references ? "ownership_descriptor" : "edge_descriptor";
     const std::string operation = references ? "reference" : "edge";
     auto& traversal = references ? sections.reference.header : sections.incidence.header;
-    traversal << "    using " << descriptor << " = ::cc::detail::DirectedEdge<" << vertex << ">;\n"
+    traversal << "    using " << descriptor << " = " << scope.name("cc::detail::DirectedEdge") << "<" << vertex << ">;\n"
         << "    " << vertex << (references ? " parent(" : " source(") << descriptor << " e) const noexcept { return e.source; }\n"
         << "    " << vertex << (references ? " child(" : " target(") << descriptor << " e) const noexcept { return e.target; }\n";
     const auto incident = [&](std::ostream& out, const char* range, const char* count, const std::string& rows, bool reversed) {
         const auto* iterator = references ? (reversed ? "parent_iterator" : "children_iterator")
                                           : (reversed ? "in_edge_iterator" : "out_edge_iterator");
-        out << "    using " << iterator << " = ::cc::detail::DirectedEdgeRange<" << (reversed ? "true" : "false")
+        out << "    using " << iterator << " = " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false")
             << ", ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">>>::Iterator;\n"
             << "    auto " << range << "(" << vertex << " v) const noexcept {\n"
-            << "        return ::cc::detail::DirectedEdgeRange<" << (reversed ? "true" : "false") << ", decltype(" << rows
+            << "        return " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false") << ", decltype(" << rows
             << ")>{" << rows << ", v, static_cast<std::size_t>(v) + 1};\n    }\n"
             << "    std::size_t " << count << "(" << vertex << " v) const noexcept { return " << rows << "[v].size(); }\n";
     };
@@ -142,7 +157,7 @@ void directedEdges(GraphSections& sections, const std::string& name, const std::
     if (model.edgeList && references) traversal << "    using ownership_iterator = children_iterator;\n";
     if (model.edgeList && !references) {
         sections.edgeList.header << "    using edge_iterator = out_edge_iterator;\n"
-            << "    auto edges() const noexcept { return ::cc::detail::DirectedEdgeRange<false, decltype(" << outgoing
+            << "    auto edges() const noexcept { return " << scope.name("cc::detail::DirectedEdgeRange") << "<false, decltype(" << outgoing
             << ")>{" << outgoing << ", 0, " << outgoing << ".size()}; }\n"
             << "    std::size_t num_edges() const noexcept {\n        std::size_t count{};\n"
             << "        for (const auto& row : " << outgoing << ") count += row.size();\n        return count;\n    }\n";
@@ -401,7 +416,7 @@ struct Alternative {
     }
 };
 
-void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternatives,
+void payloadAccess(std::ostream& out, const GraphScope& scope, const std::vector<Alternative>& alternatives,
                    const std::string& vertex, const std::string& handles) {
     const auto tagParam = vertex == "Tag" ? "VertexTag" : "Tag";
     out << "\n    enum class Kind { ";
@@ -423,7 +438,7 @@ void payloadAccess(std::ostream& out, const std::vector<Alternative>& alternativ
         out << "\n    template<class " << visitorType << ", class... " << othersType << ">\n"
             << "    decltype(auto) visit_object(" << vertex << " v, " << visitorType << "&& visitor, " << othersType << "&&... others)" << qualifier << " {\n"
             << "        if constexpr (sizeof...(others) > 0) {\n"
-            << "            auto handlers = ::cc::overloaded{std::forward<" << visitorType << ">(visitor), std::forward<" << othersType << ">(others)...};\n"
+            << "            auto handlers = " << scope.name("cc::overloaded") << "{std::forward<" << visitorType << ">(visitor), std::forward<" << othersType << ">(others)...};\n"
             << "            return this->visit_object(v, handlers);\n"
             << "        } else {\n            const auto& handle = this->" << handles << ".at(v);\n"
             << "            switch (handle.kind) {\n";
@@ -685,50 +700,15 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         while (const auto* aliasType = std::get_if<AliasType>(&graph.node(type).data)) type = aliasType->target;
         return graph.node(type);
     };
-    const auto columnType = [&](const ComponentInfo& component) {
-        if (hasMoveOnlyValue(graph, component.valueType)) moveOnlyColumns.insert(component.name);
-        const auto& valueNode = columnValue(component.valueType);
-        const auto& value = valueNode.data;
-        if (!model.indexedStorage && !std::holds_alternative<BuiltinType>(value) && !std::holds_alternative<EnumType>(value) &&
-            !std::holds_alternative<PointerType>(value)) {
-            // Segmented columns append without relocating allocator-aware or move-only elements.
-            dequeColumns.insert(component.name);
-            headers.insert("cocos/base/std/container/deque.h");
-        }
-        const auto& tag = graph.node(component.tag);
-        if (tag.module != node.module && !tag.cppHeader.empty()) {
-            headers.insert(tag.cppHeader);
-        } else if (component.tag.value > id.value || tag.module != node.module) {
-            forwards.insert(&tag);
-        }
-        return formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
-            collectCppHeader(graph, graph.modules.at(node.module.value), type, headers);
-            return type.qualifiedName;
-        });
-    };
     std::vector<std::string> storage;
-    std::vector<std::string> types;
     std::set<std::string> members{vertex, name};
     for (const auto& component : model.components) {
         storage.push_back(component.name);
         members.insert(component.name);
-        types.push_back(columnType(component));
     }
-    const auto keyColumn = model.keyComponentIndex ? storage.at(*model.keyComponentIndex) : "";
-    const auto keyType = model.keyComponentIndex ? types.at(*model.keyComponentIndex) : "";
-    dequeColumns.erase(keyColumn);
-    std::vector<Alternative> alternatives;
-    for (const auto& alt : model.alternatives) {
-        const auto& tag = graph.node(alt.tag);
-        const auto& payload = columnValue(alt.valueType);
-        if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data))
-            throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires an object type");
-        const bool isBoolean = payload.qualifiedName == "bool";
-        alternatives.push_back({"::" + tag.qualifiedName, alt.publicName, columnType(alt), alt.name, isBoolean});
-        members.insert(alt.name);
-    }
+    for (const auto& alt : model.alternatives) members.insert(alt.name);
     std::set<std::string> api{"allocator_type", "get_allocator", "swapStorage"};
-    if (!alternatives.empty()) {
+    if (!model.alternatives.empty()) {
         for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_object", "kindOf", "VertexHandle"}) {
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": polymorphic graph member name collision: " + symbol);
@@ -780,7 +760,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     if (model.mutableGraph) {
         std::set<std::string> symbols{"add_vertex", "emplace_vertex", "appendVertex"};
         if (model.removeVertex) symbols.insert("remove_vertex");
-        if (!alternatives.empty()) symbols.insert("payloadColumn");
+        if (!model.alternatives.empty()) symbols.insert("payloadColumn");
         for (const auto& symbol : symbols)
             if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": vertex API collides with " + symbol);
         api.insert(symbols.begin(), symbols.end());
@@ -813,20 +793,56 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
             throw std::runtime_error(method.result.location.describe() + ": graph method collides with C++ member " + method.name);
         members.insert(method.name);
     }
+    const GraphScope scope{graph, graph.modules.at(node.module.value), members, api};
+    const auto columnType = [&](const ComponentInfo& component) {
+        if (hasMoveOnlyValue(graph, component.valueType)) moveOnlyColumns.insert(component.name);
+        const auto& valueNode = columnValue(component.valueType);
+        const auto& value = valueNode.data;
+        if (!model.indexedStorage && !std::holds_alternative<BuiltinType>(value) && !std::holds_alternative<EnumType>(value) &&
+            !std::holds_alternative<PointerType>(value)) {
+            // Segmented columns append without relocating allocator-aware or move-only elements.
+            dequeColumns.insert(component.name);
+            headers.insert("cocos/base/std/container/deque.h");
+        }
+        const auto& tag = graph.node(component.tag);
+        if (tag.module != node.module && !tag.cppHeader.empty()) {
+            headers.insert(tag.cppHeader);
+        } else if (component.tag.value > id.value || tag.module != node.module) {
+            forwards.insert(&tag);
+        }
+        return formatTypeName(graph, component.valueType, [&](const TypeNode& type) {
+            collectCppHeader(graph, scope.module, type, headers);
+            return scope.name(type.qualifiedName);
+        });
+    };
+    std::vector<std::string> types;
+    for (const auto& component : model.components) types.push_back(columnType(component));
+    const auto keyColumn = model.keyComponentIndex ? storage.at(*model.keyComponentIndex) : "";
+    const auto keyType = model.keyComponentIndex ? types.at(*model.keyComponentIndex) : "";
+    dequeColumns.erase(keyColumn);
+    std::vector<Alternative> alternatives;
+    for (const auto& alt : model.alternatives) {
+        const auto& tag = graph.node(alt.tag);
+        const auto& payload = columnValue(alt.valueType);
+        if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data))
+            throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires an object type");
+        const bool isBoolean = payload.qualifiedName == "bool";
+        alternatives.push_back({scope.name(tag.qualifiedName), alt.publicName, columnType(alt), alt.name, isBoolean});
+    }
     if (model.indexedStorage) {
         const auto base = formatTypeName(graph, *model.indexedStorage, [&](const TypeNode& part) {
-            collectCppHeader(graph, graph.modules.at(node.module.value), part, headers);
-            return part.qualifiedName;
+            collectCppHeader(graph, scope.module, part, headers);
+            return scope.name(part.qualifiedName);
         });
         out << '\n';
         writeDocumentation(out, node.documentation);
         out << "struct " << name << " : public " << base << " {\n"
-            << "    using " << vertex << " = " << integer.qualifiedName << ";\n";
+            << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n";
         if (model.edgeList) out << "    using " << base << "::edges;\n    using " << base << "::num_edges;\n";
         out << "    void reserve(" << vertex << " capacity) {\n        " << base << "::reserve(capacity);\n";
         for (const auto& column : storage) out << "        this->" << column << ".reserve(capacity);\n";
         out << "    }\n";
-        componentAccessors(out, graph, model, vertex, storage, types, "std::vector");
+        componentAccessors(out, scope, model, vertex, storage, types, "std::vector");
         if (!methods.empty()) out << '\n' << methods;
         for (size_t i = 0; i < storage.size(); ++i)
             out << "    std::vector<" << types[i] << "> " << storage[i] << ";\n";
@@ -870,14 +886,14 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     out << '\n';
     writeDocumentation(out, node.documentation);
     out << "struct " << name << " {\n"
-        << "    using " << vertex << " = " << integer.qualifiedName << ";\n"
+        << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
     const bool transactionalArchive = transactionalLoad && !inputArchive.empty();
     graphConstructors(out, source, name, allStorage, moveOnlyColumns, fields, model, transactionalArchive);
     GraphSections sections;
     if (model.vertexList) {
         headers.insert("cocos/base/GraphIterator.h");
-        vertexRange(sections.vertexList.header, vertex);
+        vertexRange(sections.vertexList.header, scope, vertex);
         sections.vertexList.header << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
     }
     std::string input;
@@ -886,7 +902,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         headers.insert("limits");
         headers.insert("stdexcept");
         if (model.nameComponentIndex) input = storage.at(*model.nameComponentIndex);
-        else if (!types.empty() && types.front() == "ccstd::pmr::string") input = storage.front();
+        else if (!model.components.empty() && graph.node(model.components.front().valueType).qualifiedName == "ccstd::pmr::string") input = storage.front();
         if (!input.empty()) headers.insert("string_view");
         headers.insert({"tuple", "utility"});
         addVertex(sections.mutation.header, sections.mutation.source, name, vertex, model.components, input, alternatives, model.hierarchy, keyColumn, keyType);
@@ -905,7 +921,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
                 throw std::runtime_error(node.qualifiedName + ": shared-edge graph member name collision: " + symbol);
         }
         headers.insert({"cocos/base/GraphIterator.h", "cstdint", "limits", "utility"});
-        hierarchyInterface(sections, vertex, rows, model.edgeList);
+        hierarchyInterface(sections, scope, vertex, rows, model.edgeList);
         if (model.mutableGraph) {
             if (members.contains("add_edge") || members.contains("remove_edge"))
                 throw std::runtime_error(node.qualifiedName + ": mutable graph member name collision");
@@ -914,8 +930,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     }
     if (model.incidence || model.separateEdges) {
         headers.insert({"algorithm", "limits", "cocos/base/GraphEdges.h", "cocos/base/std/container/deque.h"});
-        if (model.incidence) directedEdges(sections, name, vertex, outgoing, incoming, model, false);
-        if (model.separateEdges) directedEdges(sections, name, vertex, childRows, parentRows, model, true);
+        if (model.incidence) directedEdges(sections, scope, name, vertex, outgoing, incoming, model, false);
+        if (model.separateEdges) directedEdges(sections, scope, name, vertex, childRows, parentRows, model, true);
     }
     if (model.parentGraph) {
         headers.insert("string_view");
@@ -945,7 +961,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         headers.insert({"algorithm", "cstddef", "type_traits"});
         removeVertex(sections.mutation.header, sections.mutation.source, name, vertex, model, storage, outgoing, incoming);
     }
-    componentAccessors(sections.components.header, graph, model, vertex, storage, types, "ccstd::pmr::vector");
+    componentAccessors(sections.components.header, scope, model, vertex, storage, types, "ccstd::pmr::vector");
     if (model.nameIndex) {
         sections.uuid.header << "    bool contains(std::string_view key) const noexcept { return find(key) != null_vertex(); }\n"
             << "    " << vertex << " find(std::string_view key) const noexcept {\n"
@@ -968,14 +984,14 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     }
     if (!alternatives.empty()) {
         headers.insert({"cstdint", "variant", "cocos/base/TemplateUtils.h"});
-        payloadAccess(sections.polymorphic.header, alternatives, vertex, handles);
+        payloadAccess(sections.polymorphic.header, scope, alternatives, vertex, handles);
     }
     sections.write(out, source);
     if (!methods.empty()) out << '\n' << methods;
     out << "\nprivate:\n";
     if (model.compareEqual) out << "    friend bool operator==(const " << name << "&, const " << name << "&) noexcept;\n";
     if (model.compareLess) out << "    friend bool operator<(const " << name << "&, const " << name << "&) noexcept;\n";
-    if (model.hashable) out << "    friend struct ::ccstd::hash<" << name << ">;\n";
+    if (model.hashable) out << "    friend struct " << scope.name("ccstd::hash") << "<" << name << ">;\n";
     for (size_t i = 0; i < types.size(); ++i)
         out << "    ccstd::pmr::" << (dequeColumns.contains(storage[i]) ? "deque" : "vector") << "<" << types[i] << "> " << storage[i] << ";\n";
     for (const auto& column : {outgoing, incoming, childRows, parentRows}) {
@@ -1006,7 +1022,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
             << (skipTransients ? ", bool includeTransient = true" : "")
             << ")" << (fields.empty() ? " noexcept" : "") << ";\n";
     }
-    if (!inputArchive.empty()) out << "    friend void load(" << inputArchive << "&, " << name << "&);\n";
+    if (!inputArchive.empty()) out << "    friend void load(" << scope.name(inputArchive) << "&, " << name << "&);\n";
     if (!fields.empty()) out << "\npublic:\n";
     for (const auto& f : fields) {
         writeDocumentation(out, f.documentation, "    ");

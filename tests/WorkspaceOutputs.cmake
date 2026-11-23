@@ -57,7 +57,7 @@ check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// EdgeListGraph\
     "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(")
 foreach(header IN ITEMS LayoutGraphTypes.h RenderGraphTypes.h FGDispatcherTypes.h)
     file(READ "${work}/both/native/cocos/renderer/pipeline/custom/${header}" graphTypes)
-    if(NOT graphTypes MATCHES "using vertex_iterator = ::cc::graph::VertexIterator<" OR
+    if(NOT graphTypes MATCHES "using vertex_iterator = graph::VertexIterator<" OR
        graphTypes MATCHES "(class|struct|using) (Vertex|Edge|Link|VertexIterator|ChildIterator|ChildLinkIterator|ParentLinkIterator|EdgeIterator|VertexRange|IteratorRange) [={]")
         message(FATAL_ERROR "${header} must use the shared graph iterators and ranges")
     endif()

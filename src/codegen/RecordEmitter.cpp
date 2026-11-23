@@ -1506,7 +1506,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 std::string inputArchive;
                 if (output.serializationHeader && model->serializable && archive) {
                     deps.headers.insert(archive->output.forwardHeader.generic_string());
-                    inputArchive = "::" + graph.node(archive->module.inputArchive).qualifiedName;
+                    inputArchive = graph.node(archive->module.inputArchive).qualifiedName;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
                 nativeLoadReset = emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods,

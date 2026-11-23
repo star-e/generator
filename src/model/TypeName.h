@@ -155,21 +155,25 @@ inline std::string qualifiedTypeName(const TypeGraph& graph, TypeId id) {
     return formatTypeName(graph, id, [](const TypeNode& type) { return type.qualifiedName; });
 }
 
-inline std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
+inline std::string cppName(const TypeGraph& graph, const std::string& qualifiedName, const TypeModule& module) {
     std::string scope;
     size_t common = 0;
     for (const auto& ns : module.namespaces) {
         scope += ns + "::";
-        if (type.qualifiedName.starts_with(scope)) common = scope.size();
+        if (qualifiedName.starts_with(scope)) common = scope.size();
     }
-    const auto name = type.qualifiedName.substr(common);
+    const auto name = qualifiedName.substr(common);
     const auto first = name.substr(0, name.find("::"));
     // C++ looks up the first qualifier before resolving the rest of the name.
     for (auto it = module.namespaces.rbegin(); scope.size() > common; ++it) {
-        if (graph.findType(scope + first) != TypeId{}) return "::" + type.qualifiedName;
+        if (graph.findType(scope + first) != TypeId{}) return "::" + qualifiedName;
         scope.resize(scope.size() - it->size() - 2);
     }
     return name;
+}
+
+inline std::string cppName(const TypeGraph& graph, const TypeNode& type, const TypeModule& module) {
+    return cppName(graph, type.qualifiedName, module);
 }
 
 } // namespace cc::codegen

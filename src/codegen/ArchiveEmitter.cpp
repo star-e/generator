@@ -1,4 +1,5 @@
 #include "codegen/ArchiveEmitter.h"
+#include "model/TypeName.h"
 #include <algorithm>
 
 namespace cc::codegen {
@@ -131,16 +132,14 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
             throw std::runtime_error(node.qualifiedName + "." + field.name + ": archive load requires a writable field");
         requirements.checkType(graph, node.module, field.type.type, node.qualifiedName + "." + field.name);
     }
-    const auto tag = [&](const ComponentInfo& column) { return "::" + graph.node(column.tag).qualifiedName + "{}"; };
+    const auto& module = graph.modules.at(node.module.value);
+    const auto tag = [&](const ComponentInfo& column) { return cppName(graph, graph.node(column.tag), module) + "{}"; };
     const auto count = model.alternatives.size();
     const auto& output = graph.node(archive.outputArchive);
     const auto& input = graph.node(archive.inputArchive);
-    const auto archiveName = [&](const TypeNode& api) {
-        return graph.modules.at(node.module.value).namespaces == archive.namespaces ? api.name : "::" + api.qualifiedName;
-    };
-    const std::string save = "void save(" + archiveName(output) + "& ar, const " + name + "& g)";
+    const std::string save = "void save(" + cppName(graph, output, module) + "& ar, const " + name + "& g)";
     const std::string destination = transactionalLoad ? "target" : "g";
-    const std::string load = "void load(" + archiveName(input) + "& ar, " + name + "& " + destination + ")";
+    const std::string load = "void load(" + cppName(graph, input, module) + "& ar, " + name + "& " + destination + ")";
     const bool hasTransients = std::ranges::any_of(model.fields, &FieldInfo::transient);
     const bool takesName = model.nameComponentIndex || (!model.components.empty() &&
         graph.node(model.components.front().valueType).qualifiedName == "ccstd::pmr::string");
