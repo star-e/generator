@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -37,7 +38,7 @@ void checkReferenceRollback() {
     for (int failAfter : {0, 1}) {
         FailingResource arena;
         RenderGraph graph{&arena};
-        const auto pass = graph.add_vertex("pass");
+        const auto pass = graph.add_vertex(RasterPassTag{}, "pass");
         const auto queue = graph.add_vertex(Queue_{}, "queue");
         graph.add_edge(pass, queue);
         arena.allocationsBeforeFailure = failAfter;
@@ -53,10 +54,10 @@ void checkReferenceRollback() {
     struct BadPhase { operator uint32_t() const { throw FailedConstruction{}; } };
     Arena arena;
     RenderGraph graph{&arena};
-    const auto root = graph.add_vertex("root");
+    const auto root = graph.add_vertex(RasterPassTag{}, "root");
     const auto insert = [&](auto phase) {
-        return graph.emplace_vertex(Queue_{}, std::forward_as_tuple("queue"), std::tuple<>{}, std::tuple<>{},
-            std::make_tuple(true), std::forward_as_tuple(phase, 13U), root);
+        return graph.add_vertex(Queue_{}, std::piecewise_construct, std::forward_as_tuple(phase, 13U),
+            std::forward_as_tuple("queue"), std::tuple<>{}, std::tuple<>{}, std::make_tuple(true), root);
     };
     try {
         insert(BadPhase{});
@@ -78,8 +79,8 @@ bool checkRenderGraph() {
         Arena scratch;
         RenderGraph g{&scratch};
         const auto pass = g.add_vertex(RasterPassTag{}, "pass");
-        const auto queue = g.emplace_vertex(Queue_{}, std::forward_as_tuple("queue"), std::forward_as_tuple("queue-layout"),
-            std::tuple<>{}, std::make_tuple(true), std::make_tuple(QueueHint::BLEND, 11U, 17U), pass);
+        const auto queue = g.add_vertex(Queue_{}, std::piecewise_construct, std::make_tuple(QueueHint::BLEND, 11U, 17U),
+            std::forward_as_tuple("queue"), std::forward_as_tuple("queue-layout"), std::tuple<>{}, std::make_tuple(true), pass);
         const auto& queuePayload = g.value(Queue_{}, queue);
         require(queuePayload.hint == QueueHint::BLEND && queuePayload.phaseID == 11 && queuePayload.passLayoutID == 17 &&
                 g.getName(queue) == "queue" && g.getLayout(queue) == "queue-layout" && g.getValid(queue), "emplaced queue");
@@ -129,9 +130,9 @@ bool checkRenderGraph() {
             RenderData data{&temporary};
             data.constants[23] = {'c', 'p'};
             data.custom = "copy-pass-custom-render-data";
-            return g.emplace_vertex(CopyTag{}, std::forward_as_tuple("copy"), std::forward_as_tuple(g.getLayout(queue)),
-                std::forward_as_tuple(std::move(data)), std::forward_as_tuple(g.getValid(queue)),
-                std::forward_as_tuple(std::move(payload)), queue);
+            return g.add_vertex(CopyTag{}, std::piecewise_construct, std::forward_as_tuple(std::move(payload)),
+                std::forward_as_tuple("copy"), std::forward_as_tuple(g.getLayout(queue)),
+                std::forward_as_tuple(std::move(data)), std::forward_as_tuple(g.getValid(queue)), queue);
         }();
         checkPayload(g, copy, CopyTag{}, 5);
         const auto& data = g.getData(copy);
@@ -168,7 +169,7 @@ bool checkRenderGraph() {
         RenderGraph same{std::move(g)};
         require(!g.num_vertices() && same.num_vertices() == 14, "same-resource move");
         graph = std::move(same);
-        require(!same.num_vertices() && same.add_vertex("again") == 0, "reuse moved graph");
+        require(!same.num_vertices() && same.add_vertex(RasterPassTag{}, "again") == 0, "reuse moved graph");
     }
     const auto& order = graph.sortedVertices;
     const auto copy = order.at(4), clear = order.at(5), viewport = order.at(6);

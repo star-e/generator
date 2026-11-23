@@ -5,7 +5,9 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <fstream>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace {
 using namespace cc::render;
@@ -40,12 +42,12 @@ bool checkDescriptorData() {
 }
 
 void populate(LayoutGraph& g) {
-    const auto pass = g.add_vertex("main");
-    g.value(RenderStage_{}, pass) = RenderPassType::RENDER_PASS;
-    g.add_vertex("other");
+    const auto pass = g.add_vertex(RenderStage_{}, std::piecewise_construct, std::make_tuple(RenderPassType::RENDER_PASS),
+                                   std::forward_as_tuple("main"), std::tuple<>{});
+    g.add_vertex(RenderStage_{}, "other");
     const auto phase = g.add_vertex(RenderPhase_{}, "shadow");
     g.add_vertex(RenderPhase_{}, "shadow", 1);
-    g.add_vertex("sub", pass);
+    g.add_vertex(RenderStage_{}, "sub", pass);
     if (!g.add_edge(pass, phase).second) throw std::runtime_error("Cannot attach layout phase");
     auto& shaders = g.value(RenderPhase_{}, phase).shaders;
     shaders.emplace("alpha");
@@ -223,7 +225,7 @@ bool exchangeLayoutArchive(std::string_view mode, const char* path) {
     std::ifstream file(path, std::ios::binary);
     file.exceptions(std::ios::badbit | std::ios::failbit);
     BinaryInputArchive archive(file, &arena);
-    g.add_vertex("previous");
+    g.add_vertex(RenderStage_{}, "previous");
     if (mode == "layout-invalid" || mode == "layout-invalid-in-place") {
         try { load(archive, g); }
         catch (const std::runtime_error&) {

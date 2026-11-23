@@ -205,12 +205,12 @@ bool writeDfsCases(const char* path) {
     if (colors.at(leaf) != GraphColor::BLACK) return false;
 
     LayoutGraph forest{&scratch};
-    const auto root = forest.add_vertex("first");
-    const auto other = forest.add_vertex("second");
-    const auto child = forest.add_vertex("child", root);
-    forest.add_vertex("sibling", root);
-    forest.add_vertex("grandchild", child);
-    forest.add_vertex("child", other);
+    const auto root = forest.add_vertex(cc::render::RenderStage_{}, "first");
+    const auto other = forest.add_vertex(cc::render::RenderStage_{}, "second");
+    const auto child = forest.add_vertex(cc::render::RenderStage_{}, "child", root);
+    forest.add_vertex(cc::render::RenderStage_{}, "sibling", root);
+    forest.add_vertex(cc::render::RenderStage_{}, "grandchild", child);
+    forest.add_vertex(cc::render::RenderStage_{}, "child", other);
     samples.writeNumber(forest.num_vertices());
     for (const auto v : forest.vertices()) samples.writeNumber(forest.get_parent(v));
     colors.assign(forest.num_vertices(), GraphColor::BLACK);
@@ -222,7 +222,7 @@ bool writeDfsCases(const char* path) {
     samples.writeNumber(length);
     LayoutGraph chain{&scratch};
     auto parent = LayoutGraph::null_vertex();
-    for (Vertex v = 0; v != length; ++v) parent = chain.add_vertex("v", parent);
+    for (Vertex v = 0; v != length; ++v) parent = chain.add_vertex(cc::render::RenderStage_{}, "v", parent);
     colors.assign(length, GraphColor::WHITE);
     depthFirstVisit(chain, 0, trace, colors, layoutStack);
     trace.write(samples);

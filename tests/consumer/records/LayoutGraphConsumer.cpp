@@ -35,6 +35,18 @@ using cc::render::RenderPhase_;
 using cc::render::RenderStage_;
 using Vertex = LayoutGraph::vertex_descriptor;
 
+struct AddLayoutVertex {
+    template<class... Args>
+    auto operator()(Args&&... args) const -> decltype(std::declval<LayoutGraph&>().add_vertex(std::forward<Args>(args)...));
+};
+
+using Empty = std::tuple<>;
+static_assert(std::is_invocable_v<AddLayoutVertex, RenderStage_, std::piecewise_construct_t, Empty, Empty, Empty>);
+static_assert(!std::is_invocable_v<AddLayoutVertex, std::string_view>);
+static_assert(!std::is_invocable_v<AddLayoutVertex, RenderStage_, Empty, Empty, Empty>);
+static_assert(!std::is_invocable_v<AddLayoutVertex, Descriptors_, std::piecewise_construct_t, Empty, Empty, Empty>);
+static_assert(!std::is_invocable_v<AddLayoutVertex, RenderStage_, std::piecewise_construct_t, int, Empty, Empty>);
+
 bool usesResource(const DescriptorDB& db, const LayoutGraph& g) {
     const auto* resource = g.get_allocator().resource();
     return db.get_allocator().resource() == resource && db.blocks.get_allocator().resource() == resource &&
@@ -61,9 +73,9 @@ bool hasChildren(const LayoutGraph& g, Vertex parent, std::initializer_list<Vert
 bool checkHierarchy() {
     boost::container::pmr::monotonic_buffer_resource firstArena, secondArena;
     LayoutGraph graph{&firstArena};
-    const auto root = graph.add_vertex("main");
+    const auto root = graph.add_vertex(RenderStage_{}, "main");
     graph.getDescriptors(root).blocks[{}].count = 7;
-    const auto ui = graph.add_vertex("ui", LayoutGraph::null_vertex());
+    const auto ui = graph.add_vertex(RenderStage_{}, "ui", LayoutGraph::null_vertex());
     graph.get(Descriptors_{}, ui).groupBlocks[{}].capacity = 11;
     const auto shadow = graph.add_vertex(RenderPhase_{}, "shadow", root);
     constexpr std::string_view shader{"a shader name long enough to allocate its own storage"};
@@ -108,7 +120,7 @@ bool checkHierarchy() {
         return false;
     } catch (const std::bad_variant_access&) {}
     try {
-        graph.add_vertex("invalid", graph.num_vertices());
+        graph.add_vertex(RenderStage_{}, "invalid", graph.num_vertices());
         return false;
     } catch (const std::out_of_range&) {
         if (!intact(graph)) return false;
@@ -134,7 +146,7 @@ bool checkFailedInsertion() {
     for (int failAfter = 0; ; ++failAfter) {
         FailingResource resource;
         LayoutGraph graph{&resource};
-        const auto root = graph.add_vertex("root");
+        const auto root = graph.add_vertex(RenderStage_{}, "root");
         const auto first = graph.add_vertex(RenderPhase_{}, "first", root);
         graph.value(RenderPhase_{}, first).shaders.emplace(longName.c_str());
         graph.getDescriptors(root).blocks[{}].count = 3;
@@ -276,16 +288,16 @@ bool checkChildLookup() {
     static_assert(noexcept(view.locate_child(none, "main")));
     if (view.locate_child(none, "main") != none) return false;
 
-    const auto main = graph.add_vertex("main");
-    const auto shadow = graph.add_vertex("shadow", main);
-    const auto grandchild = graph.add_vertex("lighting", shadow);
-    const auto other = graph.add_vertex("lighting");
-    const auto otherShadow = graph.add_vertex("shadow", other);
-    const auto laterRoot = graph.add_vertex("main");
-    const auto laterShadow = graph.add_vertex("shadow", main);
-    const auto leaf = graph.add_vertex();
+    const auto main = graph.add_vertex(RenderStage_{}, "main");
+    const auto shadow = graph.add_vertex(RenderStage_{}, "shadow", main);
+    const auto grandchild = graph.add_vertex(RenderStage_{}, "lighting", shadow);
+    const auto other = graph.add_vertex(RenderStage_{}, "lighting");
+    const auto otherShadow = graph.add_vertex(RenderStage_{}, "shadow", other);
+    const auto laterRoot = graph.add_vertex(RenderStage_{}, "main");
+    const auto laterShadow = graph.add_vertex(RenderStage_{}, "shadow", main);
+    const auto leaf = graph.add_vertex(RenderStage_{});
     const std::string_view binaryName{"x\0y", 3};
-    const auto binary = graph.add_vertex(binaryName, main);
+    const auto binary = graph.add_vertex(RenderStage_{}, binaryName, main);
 
     if (view.locate_child(none, "main") != main || view.locate_child(none, "lighting") != other ||
         view.locate_child(none, "") != leaf || view.locate_child(none, "shadow") != none ||
@@ -312,14 +324,14 @@ bool checkGraphPaths(const char* sampleFile) {
     static_assert(std::is_same_v<decltype(view.path(none)), ccstd::pmr::string>);
     if (view.exists("/main") || !view.path(none).empty() || view.path(none).get_allocator().resource() != &resource) return false;
 
-    const auto main = graph.add_vertex("main");
-    const auto shadow = graph.add_vertex("shadow", main);
+    const auto main = graph.add_vertex(RenderStage_{}, "main");
+    const auto shadow = graph.add_vertex(RenderStage_{}, "shadow", main);
     graph.value(RenderStage_{}, main) = RenderPassType::RENDER_PASS;
     graph.value(RenderStage_{}, shadow) = RenderPassType::RENDER_SUBPASS;
     const auto light = graph.add_vertex(RenderPhase_{}, "lighting", main);
     const auto leaf = graph.add_vertex(RenderPhase_{}, "leaf", shadow);
-    const auto ui = graph.add_vertex("ui");
-    graph.add_vertex("shadow", main);
+    const auto ui = graph.add_vertex(RenderStage_{}, "ui");
+    graph.add_vertex(RenderStage_{}, "shadow", main);
     constexpr std::string_view binaryName{"x\0y", 3};
     constexpr std::string_view binaryPath{"/ui/x\0y", 7};
     const auto binary = graph.add_vertex(RenderPhase_{}, binaryName, ui);
@@ -389,12 +401,12 @@ InsertionResult assignWithFailure(bool move, int failAfter) {
     boost::container::pmr::monotonic_buffer_resource arena;
     FailingResource resource;
     LayoutGraph source{&arena};
-    const auto root = source.add_vertex("original");
+    const auto root = source.add_vertex(RenderStage_{}, "original");
     const auto leaf = source.add_vertex(RenderPhase_{}, "leaf", root);
     source.value(RenderPhase_{}, leaf).shaders.emplace("original");
     source.getDescriptors(leaf).blocks[{}].count = 42;
     LayoutGraph target{&resource};
-    target.add_vertex("previous");
+    target.add_vertex(RenderStage_{}, "previous");
     target.getDescriptors(0).groupBlocks[{}].capacity = 8;
     auto result = InsertionResult::complete;
     resource.allocationsBeforeFailure = failAfter;
@@ -427,12 +439,13 @@ bool checkIndexedNames() {
     FailingResource arena, other;
     cc::IndexedNames graph{&arena};
     try {
-        (void)graph.add_vertex("orphan", 42);
+        (void)graph.add_vertex(cc::Count_{}, "orphan", 42);
         return false;
     } catch (const std::out_of_range&) {}
     if (graph.contains("orphan") || graph.num_vertices()) return false;
-    const auto root = graph.add_vertex("");
-    const auto child = graph.emplace_vertex(cc::Count_{}, std::make_tuple(42U), std::forward_as_tuple("child"), std::make_tuple(7U), root);
+    const auto root = graph.add_vertex(cc::Count_{}, "");
+    const auto child = graph.add_vertex(cc::Count_{}, std::piecewise_construct, std::make_tuple(7U),
+                                       std::make_tuple(42U), std::forward_as_tuple("child"), root);
     std::stringstream bytes;
     cc::render::BinaryOutputArchive writer(bytes, &arena);
     cc::save(writer, graph);
@@ -462,7 +475,7 @@ bool checkIndexedNames() {
 bool checkFlatComponents() {
     boost::container::pmr::monotonic_buffer_resource sourceArena, targetArena;
     cc::Toggles toggles{&sourceArena};
-    const auto enabled = toggles.emplace_vertex(cc::Count_{}, std::make_tuple(true));
+    const auto enabled = toggles.add_vertex(cc::Count_{}, std::piecewise_construct, std::make_tuple(true));
     const auto disabled = toggles.add_vertex(cc::render::ComputeTag{});
     const auto selectFlag = [](bool& flag) -> bool& { return flag; };
     const auto unexpectedLayout = [](LayoutGraph&) -> bool& { throw std::runtime_error("expected bool"); };
@@ -476,7 +489,8 @@ bool checkFlatComponents() {
     const auto a = source.add_vertex("a");
     source.getCount(a) = 12;
     source.getDescriptors(a).blocks[{}].count = 5;
-    const auto b = source.emplace_vertex(std::tuple<>{}, std::forward_as_tuple(source.getName(a)), std::forward_as_tuple(source.getCount(a)));
+    const auto b = source.add_vertex(std::piecewise_construct, std::tuple<>{},
+                                     std::forward_as_tuple(source.getName(a)), std::forward_as_tuple(source.getCount(a)));
     if (a != 0 || b != 1 || source.getName(b) != "a" || source.get(cc::Count_{}, b) != 12) return false;
     cc::FlatComponents target{&targetArena};
     target = std::move(source);
@@ -522,10 +536,10 @@ static bool checkForestIterators() {
 static bool checkLayoutEdges() {
     boost::container::pmr::monotonic_buffer_resource arena;
     LayoutGraph g{&arena};
-    const auto root = g.add_vertex("root");
-    const auto first = g.add_vertex("same");
-    const auto last = g.add_vertex("same", root);
-    const auto nested = g.add_vertex("nested", first);
+    const auto root = g.add_vertex(RenderStage_{}, "root");
+    const auto first = g.add_vertex(RenderStage_{}, "same");
+    const auto last = g.add_vertex(RenderStage_{}, "same", root);
+    const auto nested = g.add_vertex(RenderStage_{}, "nested", first);
     const auto [link, added] = g.add_edge(root, first);
     if (!added || g.parent(link) != root || g.child(link) != first || !hasChildren(g, root, {first, last})) return false;
     if (g.add_edge(root, first).second || g.add_edge(last, first).second || g.add_edge(nested, root).second ||
@@ -567,8 +581,8 @@ bool checkLayoutGraph(const char* pathSamples) {
     const auto& view = std::as_const(graph);
     if (view.num_vertices() != 0 || view.vertices().begin() != view.vertices().end()) return false;
     const std::string longName(160, 'a');
-    const auto first = graph.add_vertex(longName);
-    const auto second = graph.add_vertex("lighting");
+    const auto first = graph.add_vertex(RenderStage_{}, longName);
+    const auto second = graph.add_vertex(RenderStage_{}, "lighting");
     if (first != 0 || second != 1 || view.num_vertices() != 2) return false;
     if (view.getName(first) != longName.c_str() || view.get(Name_{}, second) != "lighting") return false;
     const auto vertices = view.vertices();

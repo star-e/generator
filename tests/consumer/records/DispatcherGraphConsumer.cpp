@@ -8,7 +8,9 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace {
 using namespace cc::render;
@@ -48,7 +50,7 @@ bool checkDispatcher() {
     auto& access = dispatcher.resourceAccessGraph;
     access.add_vertex(passes.null_vertex());
     const auto v = access.add_vertex(pass);
-    const auto resource = resources.add_vertex("color");
+    const auto resource = resources.add_vertex(Managed_{}, "color");
     access.resourceIndex.emplace("color", resource);
     return &dispatcher.getBarrier(pass) == &access.getBarrier(v) &&
            &dispatcher.getAccessNode(pass) == &access.getPassNode(v) &&
@@ -59,10 +61,10 @@ bool checkDispatcher() {
 bool checkIndexedArchive() {
     boost::container::pmr::monotonic_buffer_resource arena, other;
     cc::IndexedKeys graph{&arena};
-    const auto root = graph.add_vertex(-5, "root");
+    const auto root = graph.add_vertex(cc::SignedKey_{}, -5, "root");
     const auto child = graph.add_vertex(cc::SignedKey_{}, 0, "child", root);
     try {
-        graph.add_vertex(-5, "duplicate", root);
+        graph.add_vertex(cc::SignedKey_{}, -5, "duplicate", root);
         return false;
     } catch (const std::invalid_argument&) {}
     if (graph.num_vertices() != 2 || graph.contains("duplicate") || graph.num_children(root) != 1) return false;
@@ -71,7 +73,7 @@ bool checkIndexedArchive() {
     BinaryOutputArchive writer(bytes, &arena);
     cc::save(writer, graph);
     cc::IndexedKeys decoded{&other};
-    decoded.add_vertex(41, "old");
+    decoded.add_vertex(cc::SignedKey_{}, 41, "old");
     BinaryInputArchive reader(bytes, &other);
     cc::load(reader, decoded);
     if (decoded.contains(41) || decoded.contains("old") || decoded.vertex(-5) != root || decoded.vertex("root") != root ||
@@ -119,7 +121,7 @@ bool checkDispatcherGraphs() {
     access.getRenderPassInfo(pass).resolveCount = 3;
     access.leafPasses.emplace(pass, LeafStatus{});
     try {
-        access.emplace_vertex(std::make_tuple(33U), std::tuple<>{}, std::tuple<>{}, std::tuple<>{});
+        access.add_vertex(std::piecewise_construct, std::make_tuple(33U), std::tuple<>{}, std::tuple<>{}, std::tuple<>{});
         return false;
     } catch (const std::invalid_argument&) {}
     if (access.getCurrentID() != 5 || access.get(PassID_{}, pass) != 33 ||

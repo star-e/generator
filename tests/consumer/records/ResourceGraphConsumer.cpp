@@ -96,12 +96,13 @@ bool checkResourceEmplacement() {
     using namespace cc::render;
     boost::container::pmr::monotonic_buffer_resource arena;
     ResourceGraph graph{&arena};
-    const auto root = graph.add_vertex("root");
+    const auto root = graph.add_vertex(Managed_{}, "root");
     ResourceDesc desc;
     desc.width = 512;
     const auto insert = [&](auto&& nameArgs, auto payload, ResourceGraph::vertex_descriptor parent) {
-        return graph.emplace_vertex(FormatView_{}, std::forward<decltype(nameArgs)>(nameArgs), std::tie(desc),
-            std::make_tuple(ResourceResidency::EXTERNAL), std::tuple<>{}, std::tuple<>{}, std::tie(payload), parent);
+        return graph.add_vertex(FormatView_{}, std::piecewise_construct, std::tie(payload),
+            std::forward<decltype(nameArgs)>(nameArgs), std::tie(desc),
+            std::make_tuple(ResourceResidency::EXTERNAL), std::tuple<>{}, std::tuple<>{}, parent);
     };
     struct FailedConstruction {};
     struct ThrowingView { operator FormatView() const { throw FailedConstruction{}; } };

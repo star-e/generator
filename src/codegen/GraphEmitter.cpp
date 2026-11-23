@@ -484,53 +484,47 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
                const std::vector<ComponentInfo>& components, const std::string& input,
                const std::vector<Alternative>& alternatives, bool hierarchy,
                const std::string& keyColumn, const std::string& keyType) {
-    std::string value, arguments;
+    std::string value;
     if (!keyColumn.empty()) {
         value = keyType + " key";
-        arguments = "key";
     }
     if (!input.empty()) {
         value += value.empty() ? "std::string_view value" : ", std::string_view value";
-        arguments += arguments.empty() ? "value" : ", value";
     }
-    const std::string parameters = value + (hierarchy ? (value.empty() ? "" : ", ") + vertex + " parent" : "");
     const std::string definition = "\n" + name + "::" + vertex + " " + name + "::add_vertex(";
-    out << "\n    " << vertex << " add_vertex(" << value;
-    if (!input.empty()) out << " = {}";
-    if (hierarchy) {
-        out << ") { return add_vertex(" << (arguments.empty() ? "" : arguments + ", ") << "null_vertex()); }\n"
-            << "    " << vertex << " add_vertex(" << parameters;
-    }
-    out << ");\n";
-    source << definition << parameters << ") {\n";
-    if (!alternatives.empty()) {
-        source << "    return add_vertex(" << alternatives.front().tag << "{}" << (arguments.empty() ? "" : ", " + arguments)
-               << (hierarchy ? ", parent" : "") << ");\n}\n";
-    }
-    const auto forwardDefaults = [&](bool tagged) {
-        std::vector<std::string> args;
-        if (tagged) args.emplace_back("tag");
+    const auto overload = [&](const std::string& tag) {
+        std::string parameters = tag.empty() ? "" : "const " + tag + "& tag";
+        if (!value.empty()) parameters += (parameters.empty() ? "" : ", ") + value;
+        out << "    " << vertex << " add_vertex(" << parameters;
+        if (!input.empty()) out << " = {}";
+        if (hierarchy) {
+            const auto parent = (parameters.empty() ? "" : ", ") + vertex + " parent";
+            if (tag.empty()) {
+                out << ") { return add_vertex(";
+                if (!keyColumn.empty()) out << "key, ";
+                if (!input.empty()) out << "value, ";
+                out << "null_vertex()); }\n    " << vertex << " add_vertex(" << parameters << parent;
+            } else {
+                out << parent << " = null_vertex()";
+            }
+            parameters += parent;
+        }
+        out << ");\n";
+        source << definition << parameters << ") {\n    return add_vertex(";
+        if (!tag.empty()) source << "tag, ";
+        source << "std::piecewise_construct";
+        if (!tag.empty()) source << ", std::tuple<>{}";
         for (const auto& component : components)
-            args.emplace_back(component.name == input ? "std::forward_as_tuple(value)" :
-                              component.name == keyColumn ? "std::forward_as_tuple(key)" : "std::tuple<>{}");
-        if (tagged) args.emplace_back("std::tuple<>{}");
-        if (hierarchy) args.emplace_back("parent");
-        source << "    return emplace_vertex(";
-        for (size_t i = 0; i < args.size(); ++i) source << (i ? ", " : "") << args[i];
+            source << ", " << (component.name == input ? "std::forward_as_tuple(value)" :
+                               component.name == keyColumn ? "std::forward_as_tuple(key)" : "std::tuple<>{}");
+        if (hierarchy) source << ", parent";
         source << ");\n}\n";
     };
-    if (alternatives.empty()) forwardDefaults(false);
-    for (const auto& alt : alternatives) {
-        out << "    " << vertex << " add_vertex(const " << alt.tag << "&";
-        if (!value.empty()) out << ", " << value;
-        if (hierarchy) out << ", " << vertex << " parent = null_vertex()";
-        out << ");\n";
-        source << definition << "const " << alt.tag << "& tag" << (parameters.empty() ? "" : ", ") << parameters << ") {\n";
-        forwardDefaults(true);
-    }
+    if (alternatives.empty()) overload({});
+    for (const auto& alt : alternatives) overload(alt.tag);
 }
 
-void emplaceVertex(std::ostream& out, std::ostream& impl, const std::string& name, const std::string& vertex,
+void piecewiseAddVertex(std::ostream& out, std::ostream& impl, const std::string& name, const std::string& vertex,
                    const std::vector<ComponentInfo>& components, const std::vector<std::string>& storage,
                    const std::vector<std::string>& types, const std::set<std::string>& dequeColumns,
                    const std::string& input, const std::string& rows, const std::vector<Alternative>& alternatives,
@@ -539,28 +533,42 @@ void emplaceVertex(std::ostream& out, std::ostream& impl, const std::string& nam
     const bool deferredIndex = indexedNames || (model.keyComponentIndex && model.serializable);
     const bool tagged = !alternatives.empty();
     const bool hierarchy = !rows.empty() || !children.empty();
-    std::string templateParams, componentParams, forwarded;
+    std::string templateParams, tupleParams, forwarded, tupleTypes;
     const auto append = [](std::string& list, const std::string& item) {
         if (!list.empty()) list += ", ";
         list += item;
     };
-    const auto typeParam = [&](std::string type) { return type == vertex ? type + "T" : type; };
+    const auto typeParam = [&](std::string type) {
+        while (type == vertex || type == name || std::ranges::any_of(alternatives, [&](const Alternative& alt) {
+            return alt.tag == type || alt.tag.starts_with(type + "::");
+        })) type += "T";
+        return type;
+    };
     const auto tagType = typeParam("Tag");
     if (tagged) append(templateParams, "class " + tagType);
     std::vector<std::string> componentArgs;
     const auto tupleParam = [&](const std::string& type, const std::string& arg) {
         append(templateParams, "class " + type);
-        append(componentParams, type + "&& " + arg);
+        append(tupleParams, type + "&& " + arg);
+        if (!tupleTypes.empty()) tupleTypes += ",\n                                 ";
+        tupleTypes += "typename std::tuple_size<std::decay_t<" + type + ">>::type";
         auto forward = "std::forward<" + type + ">(" + arg + ")";
         append(forwarded, forward);
         return forward;
     };
+    const auto payloadArgs = tagged ? tupleParam(typeParam("PayloadArgs"), "payloadArgs") : "";
     for (size_t i = 0; i < components.size(); ++i)
         componentArgs.push_back(tupleParam(typeParam("Args" + std::to_string(i)), "args" + components[i].publicName));
-    const auto payloadArgs = tagged ? tupleParam(typeParam("PayloadArgs"), "payloadArgs") : "";
-    out << "\n    template<" << templateParams << ">\n    " << vertex << " emplace_vertex(";
+    out << "\n    template<" << templateParams;
+    if (tagged) {
+        out << ",\n             std::enable_if_t<";
+        for (size_t i = 0; i < alternatives.size(); ++i)
+            out << (i ? " ||\n                              " : "") << "std::is_same_v<" << tagType << ", " << alternatives[i].tag << ">";
+        out << ", int> = 0";
+    }
+    out << ",\n             class = std::void_t<" << tupleTypes << ">>\n    " << vertex << " add_vertex(";
     if (tagged) out << "const " << tagType << "& tag, ";
-    out << componentParams << (hierarchy ? ", " + vertex + " parent = null_vertex()" : "") << ") {\n"
+    out << "std::piecewise_construct_t, " << tupleParams << (hierarchy ? ", " + vertex + " parent = null_vertex()" : "") << ") {\n"
         << "        return appendVertex(" << (tagged ? "&tag, " : "") << forwarded
         << (deferredIndex ? ", true" : "") << (hierarchy ? ", parent" : "") << ");\n    }\n";
 
@@ -568,7 +576,7 @@ void emplaceVertex(std::ostream& out, std::ostream& impl, const std::string& nam
         impl << "    auto& payloadColumn(const " << alt.tag << "*) noexcept { return this->" << alt.member << "; }\n";
     impl << "\n    template<" << templateParams << ">\n    " << vertex << " appendVertex(";
     if (tagged) impl << "const " << tagType << "* tag, ";
-    impl << componentParams << (deferredIndex ? ", bool indexName" : "") << (hierarchy ? ", " + vertex + " parent" : "") << ") {\n";
+    impl << tupleParams << (deferredIndex ? ", bool indexName" : "") << (hierarchy ? ", " + vertex + " parent" : "") << ") {\n";
     const auto count = "this->" + storage.front() + ".size()";
     const auto descriptor = name + "::" + vertex;
     if (hierarchy)
@@ -758,7 +766,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         api.insert(symbols.begin(), symbols.end());
     }
     if (model.mutableGraph) {
-        std::set<std::string> symbols{"add_vertex", "emplace_vertex", "appendVertex"};
+        std::set<std::string> symbols{"add_vertex", "appendVertex"};
         if (model.removeVertex) symbols.insert("remove_vertex");
         if (!model.alternatives.empty()) symbols.insert("payloadColumn");
         for (const auto& symbol : symbols)
@@ -904,10 +912,10 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         if (model.nameComponentIndex) input = storage.at(*model.nameComponentIndex);
         else if (!model.components.empty() && graph.node(model.components.front().valueType).qualifiedName == "ccstd::pmr::string") input = storage.front();
         if (!input.empty()) headers.insert("string_view");
-        headers.insert({"tuple", "utility"});
+        headers.insert({"tuple", "type_traits", "utility"});
         addVertex(sections.mutation.header, sections.mutation.source, name, vertex, model.components, input, alternatives, model.hierarchy, keyColumn, keyType);
-        emplaceVertex(sections.mutation.header, insertion, name, vertex, model.components, storage, types, dequeColumns, input, rows,
-                      alternatives, handles, model, childRows);
+        piecewiseAddVertex(sections.mutation.header, insertion, name, vertex, model.components, storage, types, dequeColumns, input, rows,
+                           alternatives, handles, model, childRows);
     }
     if (model.hierarchy || model.incidence || model.nameIndex || model.keyComponentIndex) {
         sections.graph.header << "    static constexpr " << vertex << " null_vertex() noexcept { return (std::numeric_limits<"

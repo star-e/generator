@@ -127,7 +127,7 @@ bool checkTruncatedGraph(const LayoutGraphData& graph) {
     input.exceptions(std::ios::badbit | std::ios::failbit);
     BinaryInputArchive reader(input, graph.get_allocator().resource());
     LayoutGraphData target{graph.get_allocator()};
-    target.add_vertex("retained");
+    target.add_vertex(RenderStage_{}, "retained");
     target.valueNames.emplace_back("previous");
     target.constantMacros = "session";
     try { load(reader, target); }
@@ -272,7 +272,7 @@ bool exchangePipelineArchives(bool writing, const char* path) {
     load(archive, records.effect);
     load(archive, records.stage);
     load(archive, records.renderPhase);
-    graph.add_vertex("old");
+    graph.add_vertex(RenderStage_{}, "old");
     graph.valueNames.emplace_back("stale");
     graph.attributeIndex.emplace("stale", NameLocalID{7});
     load(archive, graph);

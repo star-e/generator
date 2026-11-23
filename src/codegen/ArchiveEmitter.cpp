@@ -175,9 +175,9 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n"
         << "        const auto readVertex = [&](auto tag) {\n";
     if (model.nameIndex || model.keyComponentIndex) {
-        cpp << "            const auto v = g.appendVertex(&tag, ";
-        for (size_t i = 0; i < model.components.size(); ++i) cpp << "std::tuple<>{}, ";
-        cpp << "std::tuple<>{}, false, parent);\n";
+        cpp << "            const auto v = g.appendVertex(&tag, std::tuple<>{}";
+        for (size_t i = 0; i < model.components.size(); ++i) cpp << ", std::tuple<>{}";
+        cpp << ", false, parent);\n";
     } else
         cpp << "            const auto v = g.add_vertex(tag, " << (takesName ? "{}, " : "") << "parent);\n";
     for (size_t i = 0; i < model.components.size(); ++i) {

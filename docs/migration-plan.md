@@ -101,7 +101,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `.spec` 的 `struct` 和 `class` 成员默认公开。`private:` 或 `public:` 作用于后续声明，直到下一个访问标签或类型结束，包含静态成员、构造和析构函数。字段保留声明顺序，生成的比较、哈希和归档函数可以访问其使用的私有字段。JSB 转换只读写公开字段，TypeScript 成员仍按原有绑定规则生成。[原生管线声明](../spec/render/native-pipeline.spec)
 
-C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `emplace_vertex(...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
+C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `add_vertex(std::piecewise_construct, ...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
 `FGDispatcher` 和 `NativePipeline` 在暂存目录沿用引擎文件名。消费测试优先包含暂存头文件。切换引擎中的同名文件前，还需完成表中列出的引擎实现适配。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
 
@@ -262,15 +262,15 @@ C++ 图存储扩容后，已有的遍历区间和迭代器（包括 `end()`）�
 
 组件标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。组件访问提供两种成员调用，例如自举模型中的 `g.get(Node_{}, v)` 和 `g.getNode(v)`。具名访问器采用 `get` 加组件名的形式。[自举模型声明](../spec/codegen/typegraph.spec) · [生成的成员接口](../src/generated/TypeGraphTypes.h)
 
-多态顶点在 `polymorphic_graph` 块内按 `RenderStage_: RenderPassType { member: stages; }` 声明。C++ 顶点保存类别和在该类别数组中的索引。用 `g.add_vertex(RenderPhase_{}, "shadow", parent)` 创建相位，用 `g.kind(v)` 或 `g.holds<RenderPhase_>(v)` 查询类别，用 `g.value(RenderPhase_{}, v)` 读写载荷。类别不符或顶点越界时，`holds` 返回 false，`value` 抛出 `std::bad_variant_access`。已有的 `add_vertex(name, parent)` 默认创建声明顺序中的第一类，载荷按值初始化。`LayoutGraph` 的第一类是阶段，初值为 `SINGLE_RENDER_PASS`。[布局图声明](../spec/render/layout-graph.spec)
+多态顶点在 `polymorphic_graph` 块内按 `RenderStage_: RenderPassType { member: stages; }` 声明。C++ 顶点保存类别和在该类别数组中的索引。用 `g.add_vertex(RenderPhase_{}, "shadow", parent)` 创建相位，用 `g.kind(v)` 或 `g.holds<RenderPhase_>(v)` 查询类别，用 `g.value(RenderPhase_{}, v)` 读写载荷。类别不符或顶点越界时，`holds` 返回 false，`value` 抛出 `std::bad_variant_access`。创建多态顶点时必须显式传入标签。`g.add_vertex(RenderStage_{}, name, parent)` 创建阶段，载荷初值为 `SINGLE_RENDER_PASS`。[布局图声明](../spec/render/layout-graph.spec)
 
-可变图的 C++ 成员 `emplace_vertex` 按 `.spec` 声明顺序接收每个组件的构造参数元组。多态图在开头接收载荷标签，在组件之后接收载荷构造参数元组。层级图可在末尾传入父顶点，省略时创建根顶点。`std::tuple<>{}` 表示默认构造，`std::forward_as_tuple(std::move(value))` 可传入仅移动对象。PMR 组件和载荷在图的内存资源上构造。例如下面的调用创建一个透明队列，同时写入名称、布局和有效标记。[RenderGraph 消费测试](../tests/consumer/records/RenderGraphConsumer.cpp)
+可变图用 `add_vertex` 的 `std::piecewise_construct` 重载原地构造。多态图先传标签和 `std::piecewise_construct`，再传载荷的构造参数元组，最后按 `.spec` 声明顺序传各组件的构造参数元组。非多态图从 `std::piecewise_construct` 起直接传各组件元组。层级图可在末尾传入父顶点，省略时创建根顶点。`std::tuple<>{}` 表示默认构造，`std::forward_as_tuple(std::move(value))` 可传入仅移动对象。PMR 组件和载荷在图的内存资源上构造。例如下面的调用创建一个透明队列，同时写入名称、布局和有效标记。[RenderGraph 消费测试](../tests/consumer/records/RenderGraphConsumer.cpp)
 
 ```cpp
-auto queue = graph.emplace_vertex(Queue_{},
+auto queue = graph.add_vertex(Queue_{}, std::piecewise_construct,
+    std::make_tuple(QueueHint::BLEND, phaseID, passLayoutID),
     std::forward_as_tuple("transparent"), std::forward_as_tuple("main"),
-    std::tuple<>{}, std::make_tuple(true),
-    std::make_tuple(QueueHint::BLEND, phaseID, passLayoutID), pass);
+    std::tuple<>{}, std::make_tuple(true), pass);
 ```
 
 TS 后端从同一声明生成 `LayoutGraphValue`、类别到载荷的类型映射和 `LayoutGraph`。编辑器通过 `addVertex(id, object, name, descriptors, parent)` 创建顶点，省略父节点时创建根。传入的相位与描述符对象保留原引用。`locateChild(parent, name)` 按插入顺序返回该父节点下第一个同名顶点，未找到时返回 `g.N`。消费测试直接编译并运行引擎编辑器的 `getPassID`、`getSubpassID` 和 `getPhaseID`。[TS 图后端](../src/codegen/TypeScriptGraphEmitter.cpp) · [编辑器建图用例](../tests/consumer/records/layout-graph-consumer.ts.in)
@@ -337,9 +337,9 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。同一模块的绑定块声明 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。工作区 JSON 选择 C++ 和 TS 产物及其输出路径。
 
-C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 PMR deque，追加元素时已有对象保留原位。标量、层级索引和载荷索引使用 PMR vector。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。跨资源移动将嵌套数据放入目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。带 allocator 的复制、移动和赋值使用目标资源。插入失败时回滚本次已追加的组件，成功后才更新父子关系。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+C++ 索引图按顶点编号访问组件。名称、记录和其他对象使用 PMR deque，追加元素时已有对象保留原位。标量、层级索引和载荷索引使用 PMR vector。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。跨资源移动将嵌套数据放入目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(RenderStage_{}, name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。带 allocator 的复制、移动和赋值使用目标资源。插入失败时回滚本次已追加的组件，成功后才更新父子关系。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
-`LayoutGraph` 声明 `hierarchy_graph { storage: shared_edges; }`，父子关系存储在图的邻接表中。`add_vertex(name)` 创建根节点，`add_vertex(name, parent)` 创建子节点。`get_parent(v)` 和 `num_children(v)` 的时间复杂度为 O(1)，根节点的父节点为 `null_vertex()`。`child_links(v)` 按插入顺序遍历直接子边，`child(link)` 取得子节点。无效父节点会触发 `std::out_of_range`。消费测试还逐次注入分配失败，检查已有顶点、名称和边，并在同一张图上重试。[层级声明](../spec/render/layout-graph.spec) · [C++17 消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+`LayoutGraph` 声明 `hierarchy_graph { storage: shared_edges; }`，父子关系存储在图的邻接表中。`add_vertex(RenderStage_{}, name)` 创建根节点，`add_vertex(RenderStage_{}, name, parent)` 创建子节点。`get_parent(v)` 和 `num_children(v)` 的时间复杂度为 O(1)，根节点的父节点为 `null_vertex()`。`child_links(v)` 按插入顺序遍历直接子边，`child(link)` 取得子节点。无效父节点会触发 `std::out_of_range`。消费测试还逐次注入分配失败，检查已有顶点、名称和边，并在同一张图上重试。[层级声明](../spec/render/layout-graph.spec) · [C++17 消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `named_graph { component: Name_; }` 将本图的字符串组件选作名称，`parent_graph;` 启用 C++ 成员函数 `locate_child(parent, name)`。传入普通父节点时查询其直接子节点，传入 `null_vertex()` 时按顶点插入顺序查找根。重名时返回第一个匹配项，未命中返回 `null_vertex()`。查询逐项比较组件中的当前值，通过 `getName(v)` 或 `get(Name_{}, v)` 改名后立即生效。[模块声明](../spec/render/layout-graph.spec) · [查找测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 

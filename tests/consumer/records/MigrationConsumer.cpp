@@ -98,7 +98,7 @@ bool checkNativeContext(boost::container::pmr::memory_resource* memory) {
     const ccstd::pmr::vector<bool> passes({false, true}, memory);
     const RenderGraphFilter filter{&passes};
     RenderGraph graph{memory};
-    const auto pass = graph.add_vertex("before");
+    const auto pass = graph.add_vertex(RasterPassTag{}, "before");
     LayoutGraphData layouts{memory};
     NativeSetter setter{nullptr, &graph, pass, &layouts, 19};
     if (setter.renderGraph != &graph || setter.nodeID != pass || setter.layoutGraph != &layouts || setter.layoutID != 19) return false;
