@@ -11,7 +11,7 @@
 namespace cc::codegen {
 
 bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id);
-// Returns the storage reset statements for an in-place native archive load.
+// Returns the statements that clear graph storage or commit a transactional native load.
 std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& header, std::ostream& source,
                          std::set<std::string>& headers, std::set<const TypeNode*>& forwardTypes,
                          const std::vector<BoundField>& fields, const std::string& methods, const TypeModule* archive,

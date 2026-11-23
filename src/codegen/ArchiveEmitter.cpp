@@ -118,7 +118,7 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
 
 void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeModule& archive,
                       std::ostream& declarations, std::ostream& cpp, std::ostream* ts, ArchiveImports& imports,
-                      ArchiveRequirements& requirements, bool transactionalLoad, const std::string& nativeLoadReset) {
+                      ArchiveRequirements& requirements, bool transactionalLoad, const std::string& nativeLoadStorage) {
     const auto& model = std::get<GraphType>(node.data);
     const auto& name = node.name;
     if (!model.vertexList || !model.mutableGraph || !model.hierarchy || model.separateEdges || model.alternatives.empty() ||
@@ -158,7 +158,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     for (const auto& f : model.fields) if (!f.transient) cpp << "    save(ar, g." << f.name << ");\n";
     cpp << "}\n\n" << load << " {\n";
     if (transactionalLoad) cpp << "    " << name << " g{target.get_allocator()};\n";
-    else cpp << nativeLoadReset;
+    else cpp << nativeLoadStorage;
     cpp << R"(    const auto readSize = [&ar]() -> uint32_t {
         const auto n = ar.readNumber();
         if (!(n >= 0 && n <= UINT32_MAX) || n != static_cast<uint32_t>(n))
@@ -197,7 +197,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     cpp << "        }\n    }\n    if (edges) throw std::runtime_error(\"Invalid graph archive edge count\");\n"
         << "    for (auto n : counts) if (n) throw std::runtime_error(\"Invalid graph archive kind count\");\n";
     for (const auto& f : model.fields) if (!f.transient) cpp << "    load(ar, g." << f.name << ");\n";
-    if (transactionalLoad) cpp << "    target.swapStorage(g" << (hasTransients ? ", false" : "") << ");\n";
+    if (transactionalLoad) cpp << nativeLoadStorage;
     cpp << "}\n";
     if (!ts) return;
 

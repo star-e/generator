@@ -1494,7 +1494,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         if (const auto* model = std::get_if<GraphType>(&node.data)) {
             const auto fields = bindFields(graph, node, model->fields, deps, emitTs, nestedResets);
             const bool transactionalLoad = model->serializable && archive && archive->transactionalGraphLoad;
-            std::string nativeLoadReset;
+            std::string nativeLoadStorage;
             if (deps.emitCpp) {
                 const TypeModule* nativeArchive = nullptr;
                 if (output.serializationHeader && model->serializable && archive) {
@@ -1502,7 +1502,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                     nativeArchive = &archive->module;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
-                nativeLoadReset = emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods,
+                nativeLoadStorage = emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods,
                                               nativeArchive, transactionalLoad);
                 if (model->compareEqual || model->compareLess || model->hashable) {
                     std::vector<std::string_view> elements;
@@ -1534,7 +1534,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             }
             if (model->serializable && (output.serializationHeader || emitTs)) {
                 emitGraphArchive(graph, node, archive->module, archives.declarations, archives.definitions,
-                                 emitTs ? &archives.script : nullptr, archiveImports, archives.requirements, transactionalLoad, nativeLoadReset);
+                                 emitTs ? &archives.script : nullptr, archiveImports, archives.requirements, transactionalLoad, nativeLoadStorage);
             }
             continue;
         }

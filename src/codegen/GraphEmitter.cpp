@@ -297,87 +297,37 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
 }
 
 void graphConstructors(std::ostream& out, std::ostream& source, const std::string& name,
-                       const std::vector<std::string>& storage, const std::set<std::string>& moveOnlyColumns,
-                       const std::vector<BoundField>& fields, const GraphType& model, bool transactionalArchive) {
-    const auto writeSwap = [&] {
-        const bool skipTransients = transactionalArchive && std::ranges::any_of(fields, &BoundField::transient);
-        source << "\nvoid " << name << "::swapStorage(" << name << "& other"
-               << (skipTransients ? ", bool includeTransient" : "") << ")" << (fields.empty() ? " noexcept" : "") << " {\n";
-        for (const auto& field : storage) source << "    this->" << field << ".swap(other." << field << ");\n";
-        if (!fields.empty()) source << "    using std::swap;\n";
-        for (const auto& f : fields)
-            source << "    " << (skipTransients && f.transient ? "if (includeTransient) " : "")
-                   << "swap(this->" << f.name << ", other." << f.name << ");\n";
-        source << "}\n";
-    };
-    const auto& member = storage.front();
-    const bool copyable = moveOnlyColumns.empty();
+                       const std::vector<std::string>& storage, const std::vector<BoundField>& fields,
+                       bool copyable, bool immovable) {
+    const auto& first = storage.front();
     out << "    explicit " << name << "(const allocator_type& alloc)";
-    for (const auto& field : storage)
-        out << (field == member ? " : " : ", ") << field << "(alloc)";
-    for (const auto& f : fields)
-        if (f.usesAllocator) out << ", " << f.name << "(alloc)";
+    for (const auto& member : storage)
+        out << (member == first ? " : " : ", ") << member << "(alloc)";
+    for (const auto& field : fields)
+        if (field.usesAllocator) out << ", " << field.name << "(alloc)";
     out << " {}\n";
-    if (model.immovable) {
-        out << "    " << name << "(const " << name << "&) = delete;\n"
-            << "    " << name << "(" << name << "&&) = delete;\n"
-            << "    " << name << "& operator=(const " << name << "&) = delete;\n"
-            << "    " << name << "& operator=(" << name << "&&) = delete;\n"
-            << "    allocator_type get_allocator() const noexcept { return {this->" << member << ".get_allocator().resource()}; }\n";
-        if (transactionalArchive) writeSwap();
-        return;
-    }
-    out << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc)" << (copyable ? ";\n" : " = delete;\n")
-        << "    " << name << "(" << name << "&& rhs, const allocator_type& alloc);\n"
-        << "    " << name << "(" << name << "&&) noexcept = default;\n"
-        << "    " << name << "(const " << name << "&) = delete;\n";
-    const bool simple = storage.size() == 1 && copyable && fields.empty();
-    const auto assignment = simple ? " = default;\n" : ";\n";
-    out << "    " << name << "& operator=(" << name << "&&) noexcept" << assignment
-        << "    " << name << "& operator=(const " << name << "&)" << (copyable ? assignment : " = delete;\n")
-        << "    allocator_type get_allocator() const noexcept { return {this->" << member << ".get_allocator().resource()}; }\n";
-    if (copyable) {
-        source << "\n" << name << "::" << name << "(const " << name << "& rhs, const allocator_type& alloc)\n";
-        for (const auto& field : storage)
-            source << (field == member ? ": " : ", ") << field << "(rhs." << field << ", alloc)";
-        for (const auto& f : fields) source << ", " << f.name << "(rhs." << f.name << (f.usesAllocator ? ", alloc)" : ")");
-        source << " {}\n";
-    }
-    source << "\n" << name << "::" << name << "(" << name << "&& rhs, const allocator_type& alloc)\n";
-    if (simple) {
-        source << ": " << member << "(std::move(rhs." << member << "), alloc) {}\n";
-        return;
-    }
-    // Keep parallel component and adjacency storage together if the destination resource fails.
-    source << ": " << name << "(alloc) {\n"
-           << "    if (alloc == rhs.get_allocator()) {\n        swapStorage(rhs);\n    } else {\n";
-    if (copyable) {
-        source << "        " << name << " copy(rhs, alloc);\n        swapStorage(copy);\n";
-    } else {
-        // Build the copyable columns before transferring move-only values.
-        for (const auto& field : storage) {
-            if (!moveOnlyColumns.contains(field))
-                source << "        decltype(" << field << ")(rhs." << field << ", alloc).swap(this->" << field << ");\n";
-        }
-        for (const auto& field : storage)
-            if (moveOnlyColumns.contains(field))
-                source << "        for (auto& item : rhs." << field << ") this->" << field << ".emplace_back(std::move(item));\n";
-        for (const auto& f : fields) {
-            source << "        this->" << f.name << " = ";
-            if (f.usesAllocator) source << f.cpp << "(std::move(rhs." << f.name << "), alloc)";
-            else source << "std::move(rhs." << f.name << ")";
-            source << ";\n";
+    if (!immovable) {
+        out << "    " << name << "(const " << name << "& rhs, const allocator_type& alloc)" << (copyable ? ";\n" : " = delete;\n")
+            << "    " << name << "(" << name << "&& rhs, const allocator_type& alloc);\n";
+        for (bool move : {false, true}) {
+            if (!move && !copyable) continue;
+            source << "\n" << name << "::" << name << "(" << (move ? "" : "const ") << name
+                   << (move ? "&&" : "&") << " rhs, const allocator_type& alloc)\n";
+            const auto initialize = [&](const std::string& member, bool usesAllocator) {
+                source << (member == first ? ": " : ", ") << member << "("
+                       << (move ? "std::move(rhs." : "rhs.") << member << (move ? ")" : "")
+                       << (usesAllocator ? ", alloc)" : ")");
+            };
+            for (const auto& member : storage) initialize(member, true);
+            for (const auto& field : fields) initialize(field.name, field.usesAllocator);
+            source << " {}\n";
         }
     }
-    source << "    }\n}\n";
-    writeSwap();
-    for (bool move : {false, true}) {
-        if (!move && !copyable) continue;
-        source << "\n" << name << "& " << name << "::operator=(" << (move ? "" : "const ") << name << (move ? "&&" : "&")
-               << " rhs)" << (move ? " noexcept" : "") << " {\n"
-               << "    if (this != &rhs) {\n        " << name << " replacement(" << (move ? "std::move(rhs)" : "rhs")
-               << ", get_allocator());\n        swapStorage(replacement);\n    }\n    return *this;\n}\n";
-    }
+    out << "    " << name << "(" << name << "&&)" << (immovable ? " = delete;\n" : " noexcept = default;\n")
+        << "    " << name << "(const " << name << "&) = delete;\n"
+        << "    " << name << "& operator=(" << name << "&&)" << (immovable ? " = delete;\n" : " noexcept = default;\n")
+        << "    " << name << "& operator=(const " << name << "&)" << (copyable && !immovable ? " = default;\n" : " = delete;\n")
+        << "    allocator_type get_allocator() const noexcept { return {this->" << first << ".get_allocator().resource()}; }\n";
 }
 
 bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
@@ -692,7 +642,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     else headers.insert("cocos/base/std/container/vector.h");
     headers.insert("utility");
     if (!integer.cppHeader.empty()) headers.insert(integer.cppHeader);
-    std::set<std::string> moveOnlyColumns;
+    bool copyable = true;
     std::set<std::string> dequeColumns;
     const auto columnValue = [&](TypeId type) -> const TypeNode& {
         while (const auto* aliasType = std::get_if<AliasType>(&graph.node(type).data)) type = aliasType->target;
@@ -705,7 +655,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         members.insert(component.name);
     }
     for (const auto& alt : model.alternatives) members.insert(alt.name);
-    std::set<std::string> api{"allocator_type", "get_allocator", "swapStorage"};
+    std::set<std::string> api{"allocator_type", "get_allocator"};
     if (!model.alternatives.empty()) {
         for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_object", "kindOf", "VertexHandle"}) {
             if (members.contains(symbol))
@@ -782,7 +732,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         api.insert("get" + c.publicName);
     }
     for (const auto& f : model.fields) {
-        if (hasMoveOnlyValue(graph, f.type.type)) moveOnlyColumns.insert(f.name);
+        if (hasMoveOnlyValue(graph, f.type.type)) copyable = false;
         if (api.contains(f.name) || !members.insert(f.name).second)
             throw std::runtime_error(node.qualifiedName + ": graph field collides with C++ member " + f.name);
     }
@@ -793,7 +743,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     }
     const GraphScope scope{graph, graph.modules.at(node.module.value), members, api};
     const auto columnType = [&](const ComponentInfo& component) {
-        if (hasMoveOnlyValue(graph, component.valueType)) moveOnlyColumns.insert(component.name);
+        if (hasMoveOnlyValue(graph, component.valueType)) copyable = false;
         const auto& tag = graph.node(component.tag);
         if (tag.module != node.module && !tag.cppHeader.empty()) {
             headers.insert(tag.cppHeader);
@@ -894,8 +844,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     out << "struct " << name << " {\n"
         << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    const bool transactionalArchive = transactionalLoad && archive;
-    graphConstructors(out, source, name, allStorage, moveOnlyColumns, fields, model, transactionalArchive);
+    graphConstructors(out, source, name, allStorage, fields, copyable, model.immovable);
     GraphSections sections;
     if (model.vertexList) {
         headers.insert("cocos/base/GraphIterator.h");
@@ -1022,12 +971,6 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     if (model.keyComponentIndex)
         out << "    ccstd::pmr::unordered_map<" << keyType << ", " << vertex << "> componentIndex_;\n";
     writeFields();
-    if (transactionalArchive || (!model.immovable && (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty()))) {
-        const bool skipTransients = transactionalArchive && std::ranges::any_of(fields, &BoundField::transient);
-        privateMethods << "    void swapStorage(" << name << "& other"
-                       << (skipTransients ? ", bool includeTransient = true" : "")
-                       << ")" << (fields.empty() ? " noexcept" : "") << ";\n";
-    }
     if (!privateMethods.view().empty()) {
         out << '\n';
         memberAccess(out, currentPrivate, true);
@@ -1039,7 +982,15 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << "    friend void load(" << scope.name(graph.node(archive->inputArchive).qualifiedName) << "&, " << name << "&);\n";
     }
     out << "};\n";
-    if (!archive || transactionalLoad) return {};
+    if (!archive) return {};
+    if (transactionalLoad) {
+        std::ostringstream commit;
+        for (const auto& member : allStorage) commit << "    target." << member << ".swap(g." << member << ");\n";
+        if (std::ranges::any_of(fields, [](const auto& f) { return !f.transient; })) commit << "    using std::swap;\n";
+        for (const auto& field : fields)
+            if (!field.transient) commit << "    swap(target." << field.name << ", g." << field.name << ");\n";
+        return commit.str();
+    }
     std::ostringstream reset;
     for (const auto& member : allStorage) reset << "    g." << member << ".clear();\n";
     for (size_t i = 0; i < fields.size(); ++i) {
