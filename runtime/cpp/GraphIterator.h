@@ -65,7 +65,8 @@ struct VertexLinks {
 };
 
 // Children are linked in sibling order. Adjacency traversal yields just the child descriptor.
-template<class Link, class Rows, bool Adjacent>
+// Reallocating the link rows invalidates these iterators, including the end iterator.
+template<class Link, bool Adjacent>
 class ChildIterator {
     using Vertex = decltype(Link::target);
 
@@ -77,17 +78,17 @@ public:
     using reference = value_type;
 
     ChildIterator() = default;
-    ChildIterator(const Rows& rows, Vertex v) noexcept : rows_(&rows), current_(v) {}
+    ChildIterator(const VertexLinks<Vertex>* rows, Vertex v) noexcept : rows_(rows), current_(v) {}
 
     value_type operator*() const noexcept {
         if constexpr (Adjacent) {
             return current_;
         } else {
-            return {(*rows_)[current_].parent, current_};
+            return {rows_[current_].parent, current_};
         }
     }
     ChildIterator& operator++() noexcept {
-        current_ = (*rows_)[current_].nextSibling;
+        current_ = rows_[current_].nextSibling;
         return *this;
     }
     ChildIterator operator++(int) noexcept {
@@ -101,7 +102,7 @@ public:
     bool operator!=(const ChildIterator& rhs) const noexcept { return !(*this == rhs); }
 
 private:
-    const Rows* rows_{};
+    const VertexLinks<Vertex>* rows_{};
     Vertex current_{nullVertex<Vertex>};
 };
 

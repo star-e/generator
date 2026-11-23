@@ -20,10 +20,8 @@ void writeGraphInterfaces(std::ostream& out, const GraphType& model, bool shared
         implement("AdjacencyGraph");
     }
     if (model.vertexList) implement("VertexListGraph");
-    if (hasEdges) {
-        implement("EdgeListGraph");
-        if (model.mutableGraph) implement("MutableGraph");
-    }
+    if (model.edgeList) implement("EdgeListGraph");
+    if (hasEdges && model.mutableGraph) implement("MutableGraph");
     if (!model.components.empty()) implement("PropertyGraph");
     if (model.nameComponentIndex) implement("NamedGraph");
     if (!model.components.empty()) implement("ComponentGraph");
@@ -355,7 +353,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         api.insert({"parents", "numParents"});
         if (model.mutableGraph) api.insert({"removeReference", "removeReferences"});
     }
-    if (model.incidence || sharedEdges) api.insert({"edge", "source", "target", "oe", "od", "adj", "ne"});
+    if (model.incidence || sharedEdges) api.insert({"edge", "source", "target", "oe", "od", "adj"});
+    if (model.edgeList) api.insert("ne");
     if (model.bidirectional || sharedEdges) api.insert({"ie", "id", "d"});
     if (model.incidence && model.mutableGraph) api.insert({"addEdge", "removeEdge", "removeEdges"});
     if (model.nameComponentIndex) api.insert("vertexName");
@@ -418,7 +417,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         else out << "    v (): IterableIterator<number> {\n        return " << vertexList << ".keys();\n    }\n";
         out << "    nv (): number {\n        return " << vertexCount << ";\n    }\n";
     }
-    if (model.incidence || sharedEdges) {
+    if (model.edgeList) {
         out << "\n    // EdgeListGraph\n    ne (): number {\n";
         if (model.incidence) out << "        return this." << names.outEdges << ".reduce((sum, edges) => sum + edges.length, 0);\n";
         else if (model.parentGraph) out << "        return this." << names.children << ".length - this." << names.roots << ".length;\n";

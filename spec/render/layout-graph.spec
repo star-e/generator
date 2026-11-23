@@ -97,7 +97,7 @@ namespace cc::render {
     @tag struct RenderStage_ {}
     @tag struct RenderPhase_ {}
     @serialize graph LayoutGraph {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;
@@ -215,7 +215,7 @@ namespace cc::render {
     }
 
     @serialize graph LayoutGraphData {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;

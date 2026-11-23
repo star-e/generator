@@ -33,7 +33,7 @@ using cc::render::RenderPassType;
 using cc::render::RenderPhase;
 using cc::render::RenderPhase_;
 using cc::render::RenderStage_;
-using Vertex = LayoutGraph::Vertex;
+using Vertex = LayoutGraph::vertex_descriptor;
 
 bool usesResource(const DescriptorDB& db, const LayoutGraph& g) {
     const auto* resource = g.get_allocator().resource();
@@ -501,20 +501,20 @@ static bool checkForestIterators() {
     using Vertex = std::uint8_t;
     struct Link { Vertex source, target; };
     using Rows = std::array<cc::graph::VertexLinks<Vertex>, 3>;
-    using Child = cc::graph::ChildIterator<Link, Rows, false>;
+    using Child = cc::graph::ChildIterator<Link, false>;
     using Edge = cc::graph::EdgeIterator<Link, Rows>;
     constexpr auto none = cc::graph::nullVertex<Vertex>;
     Rows rows{};
     rows[1] = {none, 2, 2, none, 1};
     rows[2].parent = 1;
     const Rows copy = rows;
-    Child child{rows, 2};
+    Child child{rows.data(), 2};
     Edge edge{rows, 0};
-    if (child == Child{copy, 2} || edge == Edge{copy, 0}) return false;
+    if (child == Child{copy.data(), 2} || edge == Edge{copy, 0}) return false;
     const auto childLink = *child++;
     const auto edgeLink = *edge++;
     cc::graph::ParentLinkIterator<Link> parent{childLink};
-    return childLink.source == 1 && childLink.target == 2 && child == Child{rows, none} &&
+    return childLink.source == 1 && childLink.target == 2 && child == Child{rows.data(), none} &&
            edgeLink.source == 1 && edgeLink.target == 2 && edge == Edge{rows, 3} &&
            (*parent++).source == 1 && (*parent).source == none && (*parent).target == 2;
 }
@@ -532,18 +532,13 @@ static bool checkLayoutEdges() {
         g.add_edge(root, root).second || g.add_edge(root, g.null_vertex()).second) return false;
     const auto incoming = g.in_edges(first);
     if (std::distance(incoming.begin(), incoming.end()) != 1 || g.source(*incoming.begin()) != root ||
-        g.target(*incoming.begin()) != first || g.in_degree(root) || g.degree(first) != 2 || g.num_edges() != 3) return false;
+        g.target(*incoming.begin()) != first || g.in_degree(root) || g.degree(first) != 2) return false;
     const auto adjacent = g.adjacent_vertices(root);
     const std::initializer_list<Vertex> expected{first, last};
     if (!std::equal(adjacent.begin(), adjacent.end(), expected.begin(), expected.end())) return false;
-    const std::initializer_list<Vertex> targets{first, last, nested};
-    auto next = targets.begin();
-    for (const auto e : g.edges()) {
-        if (next == targets.end() || g.target(e) != *next++ || !g.has_link(e.source, e.target)) return false;
-    }
-    if (next != targets.end()) return false;
+    if (!hasChildren(g, first, {nested}) || !g.has_link(first, nested)) return false;
     g.remove_edge(link);
-    if (g.get_parent(first) != g.null_vertex() || g.in_degree(first) || g.num_edges() != 2 ||
+    if (g.get_parent(first) != g.null_vertex() || g.in_degree(first) || !hasChildren(g, root, {last}) ||
         g.path(nested) != "/same/nested" || g.locate("/root/same") != last) return false;
     g.remove_edge({root, last});
     g.remove_edge({root, last});
@@ -557,7 +552,7 @@ bool checkLayoutGraph(const char* pathSamples) {
     using cc::render::LayoutGraph;
     using cc::render::Name_;
     using Name = ccstd::pmr::string;
-    static_assert(std::is_same_v<LayoutGraph::Vertex, uint32_t>);
+    static_assert(std::is_same_v<LayoutGraph::vertex_descriptor, uint32_t>);
     static_assert(std::is_same_v<decltype(std::declval<LayoutGraph&>().getName(0)), Name&>);
     static_assert(std::is_same_v<decltype(std::declval<LayoutGraph&>().get(Name_{}, 0)), Name&>);
     static_assert(std::is_same_v<decltype(std::declval<const LayoutGraph&>().getName(0)), const Name&>);
@@ -578,7 +573,7 @@ bool checkLayoutGraph(const char* pathSamples) {
     if (view.getName(first) != longName.c_str() || view.get(Name_{}, second) != "lighting") return false;
     const auto vertices = view.vertices();
     if (std::distance(vertices.begin(), vertices.end()) != 2) return false;
-    LayoutGraph::Vertex expected{};
+    LayoutGraph::vertex_descriptor expected{};
     for (const auto v : vertices) {
         if (v != expected++ || &view.get(Name_{}, v) != &view.getName(v) ||
             view.getName(v).get_allocator().resource() != &arena ||
@@ -595,9 +590,9 @@ bool checkLayoutGraph(const char* pathSamples) {
     if (view.get(Name_{}, first) != "renamed" || graph.get_allocator().resource() != &arena) return false;
 
     // Fill a second graph using the same tag and a smaller descriptor, then verify failed insertion is atomic.
-    static_assert(std::is_same_v<cc::TinyNames::Index, uint8_t>);
+    static_assert(std::is_same_v<cc::TinyNames::vertex_descriptor, uint8_t>);
     cc::TinyNames tiny{&arena};
-    constexpr auto limit = (std::numeric_limits<cc::TinyNames::Index>::max)();
+    constexpr auto limit = (std::numeric_limits<cc::TinyNames::vertex_descriptor>::max)();
     for (unsigned i = 0; i < limit; ++i) {
         if (tiny.add_vertex("entry") != i) return false;
     }

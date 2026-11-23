@@ -22,19 +22,19 @@ import Sets;
 namespace cc::render {
     struct RenderGraphFilter {
         nullable validPasses: const ccstd::pmr::vector<bool>*;
-        bool operator()(RenderGraph::Vertex pass) const { return (*validPasses)[pass]; }
+        bool operator()(RenderGraph::vertex_descriptor pass) const { return (*validPasses)[pass]; }
     }
 
     class NativeRenderNode implements RenderNode {
         nullable pipelineRuntime: const PipelineRuntime*;
         nullable renderGraph: RenderGraph*;
-        nodeID: RenderGraph::Vertex = 0xFFFFFFFF;
+        nodeID: RenderGraph::vertex_descriptor = 0xFFFFFFFF;
         constructor(pipelineRuntime, renderGraph, nodeID);
     }
 
     class NativeSetter : NativeRenderNode implements Setter {
         nullable layoutGraph: const LayoutGraphData*;
-        layoutID: LayoutGraphData::Vertex = 0xFFFFFFFF;
+        layoutID: LayoutGraphData::vertex_descriptor = 0xFFFFFFFF;
         constructor(layoutGraph, layoutID);
         void setVec4ArraySize(const ccstd::string& name, uint32_t sz);
         void setVec4ArrayElem(const ccstd::string& name, const cc::Vec4& vec, uint32_t id);
@@ -57,8 +57,8 @@ namespace cc::render {
     class NativeRenderPassBuilder final : RenderPassBuilder, NativeSetter {}
 
     class NativeMultisampleRenderPassBuilder final : MultisampleRenderPassBuilder, NativeSetter {
-        subpassID: RenderGraph::Vertex = 0xFFFFFFFF;
-        subpassLayoutID: LayoutGraphData::Vertex = 0xFFFFFFFF;
+        subpassID: RenderGraph::vertex_descriptor = 0xFFFFFFFF;
+        subpassLayoutID: LayoutGraphData::vertex_descriptor = 0xFFFFFFFF;
         constructor(subpassID, subpassLayoutID);
     }
 
@@ -77,11 +77,11 @@ namespace cc::render {
 
     struct ProbeHelperQueue {
         probeMap: ccstd::pmr::vector<scene::SubModel*>;
-        static LayoutGraphData::Vertex getDefaultId(const LayoutGraphData& lg);
+        static LayoutGraphData::vertex_descriptor getDefaultId(const LayoutGraphData& lg);
         void clear() noexcept { return probeMap.clear(); }
         void removeMacro() const;
-        static int32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::Vertex phaseLayoutId);
-        void applyMacro(const LayoutGraphData& lg, const scene::Model& model, LayoutGraphData::Vertex probeLayoutId);
+        static int32_t getPassIndexFromLayout(const IntrusivePtr<scene::SubModel>& subModel, LayoutGraphData::vertex_descriptor phaseLayoutId);
+        void applyMacro(const LayoutGraphData& lg, const scene::Model& model, LayoutGraphData::vertex_descriptor probeLayoutId);
     }
 
     struct RenderInstancingQueue {
@@ -249,11 +249,11 @@ namespace cc::render {
         lightBoundsCullingResults: ccstd::pmr::vector<LightBoundsCullingResult>;
         renderQueueIndex: ccstd::pmr::unordered_map<NativeRenderQueueKey, NativeRenderQueueID>;
         renderQueues: ccstd::pmr::vector<NativeRenderQueue>;
-        renderQueueQueryIndex: PmrFlatMap<RenderGraph::Vertex, NativeRenderQueueQuery>;
+        renderQueueQueryIndex: PmrFlatMap<RenderGraph::vertex_descriptor, NativeRenderQueueQuery>;
         numFrustumCulling: uint32_t = 0;
         numLightBoundsCulling: uint32_t = 0;
         numRenderQueues: uint32_t = 0;
-        gpuCullingPassID: RenderGraph::Vertex = 0xFFFFFFFF;
+        gpuCullingPassID: RenderGraph::vertex_descriptor = 0xFFFFFFFF;
         enableLightCulling: bool = true;
 
         void clear() noexcept;
@@ -333,7 +333,7 @@ namespace cc::render {
         fullscreenQuad: QuadResource;
         sceneCulling: SceneCulling;
         lightResources: LightResource;
-        resourceGraphIndex: ccstd::pmr::unordered_map<RenderGraph::Vertex, PmrFlatMap<NameLocalID, ResourceGraph::Vertex>>;
+        resourceGraphIndex: ccstd::pmr::unordered_map<RenderGraph::vertex_descriptor, PmrFlatMap<NameLocalID, ResourceGraph::vertex_descriptor>>;
         graphNodeRenderData: ccstd::pmr::unordered_map<DescriptorSetKey, DeviceRenderData>;
         graphNodeDescriptorSets: ccstd::pmr::unordered_map<DescriptorSetKey, gfx::DescriptorSet*>;
         constructor(defaultResource);
@@ -426,7 +426,7 @@ namespace cc::render {
         void addCustomRenderQueue(std::string_view name, std::shared_ptr<CustomRenderQueue> ptr);
         void addCustomRenderCommand(std::string_view name, std::shared_ptr<CustomRenderCommand> ptr);
         void setCustomContext(std::string_view name);
-        void prepareDescriptorSets(gfx::CommandBuffer& cmdBuff, const FrameGraphDispatcher& rdg, RenderGraph::Vertex passID);
+        void prepareDescriptorSets(gfx::CommandBuffer& cmdBuff, const FrameGraphDispatcher& rdg, RenderGraph::vertex_descriptor passID);
     }
 
     class NativeProgramProxy final : ProgramProxy {

@@ -46,25 +46,30 @@ function(check_graph_order header graph)
         set(previous ${at})
     endforeach()
 endfunction()
-set(traversal "// Graph\n" "// IncidenceGraph\n" " source(Edge" "// BidirectionalGraph\n" " in_edges("
-    "// AdjacencyGraph\n" " adjacent_vertices(" "// VertexListGraph\n" " vertices()" "// EdgeListGraph\n" " edges()")
+set(traversal "// Graph\n" "// IncidenceGraph\n" " source(edge_descriptor" "// BidirectionalGraph\n" " in_edges("
+    "// AdjacencyGraph\n" " adjacent_vertices(" "// VertexListGraph\n" " vertices()")
 foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
     check_graph_order(LayoutGraphTypes.h ${layout} ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
-        "// ComponentGraph\n" " getName(" "// PolymorphicGraph\n" " kind(Vertex" "// ReferenceGraph\n" " child(Link"
+        "// ComponentGraph\n" " getName(" "// PolymorphicGraph\n" " kind(vertex_descriptor" "// ReferenceGraph\n" " child(ownership_descriptor"
         "// ParentGraph\n" " locate_child(" "// AddressableGraph\n" " locate(")
 endforeach()
-check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
-    "// ReferenceGraph\n" " child(Link" "// MutableReferenceGraph\n" " add_reference(")
+check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
+    "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(")
 foreach(header IN ITEMS LayoutGraphTypes.h RenderGraphTypes.h FGDispatcherTypes.h)
     file(READ "${work}/both/native/cocos/renderer/pipeline/custom/${header}" graphTypes)
-    if(NOT graphTypes MATCHES "using VertexIterator = ::cc::graph::VertexIterator<" OR
-       graphTypes MATCHES "(class|struct) (VertexIterator|ChildIterator|ParentLinkIterator|EdgeIterator|VertexRange|IteratorRange) [{]")
+    if(NOT graphTypes MATCHES "using vertex_iterator = ::cc::graph::VertexIterator<" OR
+       graphTypes MATCHES "(class|struct|using) (Vertex|Edge|Link|VertexIterator|ChildIterator|ChildLinkIterator|ParentLinkIterator|EdgeIterator|VertexRange|IteratorRange) [={]")
         message(FATAL_ERROR "${header} must use the shared graph iterators and ranges")
     endif()
 endforeach()
 file(GLOB_RECURSE all RELATIVE "${work}/both" "${work}/both/*")
 set(layoutTs "cocos/rendering/custom/layout-graph.ts")
 file(READ "${work}/both/${layoutTs}" compactLayout)
+file(READ "${work}/both/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h" layoutHeader)
+if(layoutHeader MATCHES "EdgeListGraph|using (edge_iterator|ownership_iterator)| num_edges[(]| edges[(]" OR
+   compactLayout MATCHES "EdgeListGraph| ne [(]")
+    message(FATAL_ERROR "Layout graphs must omit the whole-graph edge list in both languages")
+endif()
 string(JSON readableConfig REMOVE "${config}" typescriptDefaults)
 file(WRITE "${workspace}" "${readableConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/readable")

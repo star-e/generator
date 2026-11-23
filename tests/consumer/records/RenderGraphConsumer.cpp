@@ -16,7 +16,7 @@ void require(bool ok, const char* message) {
 }
 
 template<class Tag>
-void checkPayload(const RenderGraph& graph, RenderGraph::Vertex v, Tag tag, unsigned ordinal) {
+void checkPayload(const RenderGraph& graph, RenderGraph::vertex_descriptor v, Tag tag, unsigned ordinal) {
     require(static_cast<unsigned>(graph.kind(v)) == ordinal && graph.holds<Tag>(v), "payload kind");
     const auto& expected = graph.value(tag, v);
     unsigned calls = 0;
@@ -27,8 +27,8 @@ void checkPayload(const RenderGraph& graph, RenderGraph::Vertex v, Tag tag, unsi
 }
 
 template<class Range>
-std::vector<RenderGraph::Vertex> sources(Range range) {
-    std::vector<RenderGraph::Vertex> result;
+std::vector<RenderGraph::vertex_descriptor> sources(Range range) {
+    std::vector<RenderGraph::vertex_descriptor> result;
     for (auto e : range) result.push_back(e.source);
     return result;
 }

@@ -146,6 +146,7 @@ namespace cc::codegen {
         indexedVertices: bool = false;
         indexedStorage: std::optional<TypeId>;
         vertexList: bool = false;
+        edgeList: bool = false;
         incidence: bool = false;
         bidirectional: bool = false;
         mutableGraph: bool = false;
@@ -214,7 +215,7 @@ namespace cc::codegen {
 
     @tag struct Node_ {}
     graph TypeGraph {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed(graph::BidirectionalStorage<uint32_t>);
         vertex_list_graph;
         incidence_graph { out_edges: vector; }

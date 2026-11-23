@@ -862,9 +862,15 @@ private:
     void parseGraph(GraphDeclaration& graph) {
         std::set<std::string> names;
         while (!accept("}")) {
-            if (accept("vertex_descriptor")) {
+            if (atVertexDescriptorDeclaration()) {
+                advance();
                 if (graph.vertexType) fail("duplicate vertex descriptor");
-                graph.vertexAlias = uniqueName(names);
+                if (token == "=") {
+                    graph.vertexAlias = "vertex_descriptor";
+                    if (!names.insert(graph.vertexAlias).second) fail("duplicate name 'vertex_descriptor'");
+                } else {
+                    graph.vertexAlias = uniqueName(names);
+                }
                 expect("=");
                 graph.vertexType = type();
                 expect(";");
@@ -882,6 +888,10 @@ private:
                 if (graph.vertexList) fail("duplicate vertex_list_graph");
                 expect(";");
                 graph.vertexList = true;
+            } else if (accept("edge_list_graph")) {
+                if (graph.edgeList) fail("duplicate edge_list_graph");
+                expect(";");
+                graph.edgeList = true;
             } else if (accept("mutable_graph")) {
                 if (graph.mutableGraph) fail("duplicate mutable_graph");
                 graph.mutableGraph = true;
@@ -959,6 +969,8 @@ private:
         if (graph.bidirectional && !graph.incidence) fail("bidirectional_graph requires incidence_graph");
         if (graph.incidence && !graph.indexed) fail("incidence_graph requires indexed vertex storage");
         if (graph.incidence && graph.hierarchy && !graph.separateEdges) fail("explicit incidence storage conflicts with shared hierarchy edges");
+        if (graph.edgeList && !graph.incidence && !(graph.hierarchy && !graph.separateEdges))
+            fail("edge_list_graph requires incidence_graph or shared hierarchy edges");
         if (!graph.alternatives.empty() && (graph.hashable || !graph.comparisons.empty()))
             fail("polymorphic graph comparison and hashing are unsupported");
         if (graph.hierarchy && !graph.indexed) fail("hierarchy edges require indexed vertex storage");
@@ -1021,6 +1033,13 @@ private:
         auto next = *this;
         next.advance();
         return next.accept("cppOnly") && next.accept("constructor") && next.token == "(";
+    }
+
+    bool atVertexDescriptorDeclaration() const {
+        if (token != "vertex_descriptor") return false;
+        auto next = *this;
+        next.advance();
+        return next.token == "=" || (!next.token.empty() && identifierStart(next.token.front()) && next.followedBy("="));
     }
 
     bool followedBy(std::string_view expected) const {

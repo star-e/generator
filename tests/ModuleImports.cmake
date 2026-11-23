@@ -333,7 +333,7 @@ set(graph "module GraphConsumer;
 import RenderCommon;
 namespace cc::render {
     graph Passes {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         component RasterPassTag: uint32_t { member: passes; }
     }
@@ -350,6 +350,8 @@ bad_graph("RasterPassTag:" "MissingTag:" "unknown type MissingTag")
 bad_graph("RasterPassTag:" "LightInfo:" "component requires an independently declared @tag")
 bad_graph("component RasterPassTag:" "@tag struct LocalTag {} component LocalTag:" "declare graph tags outside the graph")
 bad_graph("vertex_storage: indexed;" "vertex_list_graph; vertex_list_graph;" "duplicate vertex_list_graph")
+bad_graph("vertex_storage: indexed;" "edge_list_graph; edge_list_graph;" "duplicate edge_list_graph")
+bad_graph("vertex_storage: indexed;" "vertex_storage: indexed; edge_list_graph;" "edge_list_graph requires incidence_graph or shared hierarchy edges")
 bad_graph("vertex_storage: indexed;" "mutable_graph; mutable_graph;" "duplicate mutable_graph")
 bad_graph("vertex_storage: indexed;" "hierarchy_graph { storage: separate; }" "expected 'shared_edges'")
 bad_graph("vertex_storage: indexed;" "hierarchy_graph { storage: shared_edges; }" "hierarchy edges require indexed vertex storage")

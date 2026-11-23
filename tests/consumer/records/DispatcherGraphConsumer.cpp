@@ -13,8 +13,8 @@
 namespace {
 using namespace cc::render;
 
-static_assert(std::is_same_v<decltype(std::declval<ResourceAccessGraph&>().getPassID(0)), const RenderGraph::Vertex&>);
-static_assert(std::is_same_v<decltype(std::declval<RelationGraph&>().get(DescID_{}, 0)), const ResourceAccessGraph::Vertex&>);
+static_assert(std::is_same_v<decltype(std::declval<ResourceAccessGraph&>().getPassID(0)), const RenderGraph::vertex_descriptor&>);
+static_assert(std::is_same_v<decltype(std::declval<RelationGraph&>().get(DescID_{}, 0)), const ResourceAccessGraph::vertex_descriptor&>);
 
 using Dispatcher = FrameGraphDispatcher;
 using Allocator = Dispatcher::allocator_type;

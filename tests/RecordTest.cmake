@@ -9,15 +9,15 @@ set(generate "${TOOL}" generate --workspace "${work}/config/workspace.json" --ou
 # descriptor declared in the spec while compiling against either graph header.
 set(graphSpec "${work}/spec/render/render-graph.spec")
 file(READ "${graphSpec}" renderGraph)
-string(REPLACE "graph RenderGraph {\n        vertex_descriptor Vertex = uint32_t;"
-               "graph RenderGraph {\n        vertex_descriptor Vertex = uint64_t;" wideGraph "${renderGraph}")
+string(REPLACE "graph RenderGraph {\n        vertex_descriptor = uint32_t;"
+               "graph RenderGraph {\n        vertex_descriptor = uint64_t;" wideGraph "${renderGraph}")
 file(WRITE "${graphSpec}" "${wideGraph}")
 run(${generate})
 set(customDir "${work}/stage/native/cocos/renderer/pipeline/custom")
 file(READ "${customDir}/CustomFwd.h" customForward)
 file(READ "${customDir}/CustomTypes.h" customTypes)
 if(NOT customForward MATCHES "using RenderGraphVertex = uint64_t;" OR
-   customTypes MATCHES "RenderGraph::Vertex" OR NOT customTypes MATCHES "RenderGraphVertex passID")
+   customTypes MATCHES "RenderGraph::vertex_descriptor" OR NOT customTypes MATCHES "RenderGraphVertex passID")
     message(FATAL_ERROR "Customization callbacks must use the scalar RenderGraph vertex descriptor")
 endif()
 file(WRITE "${graphSpec}" "${renderGraph}")
@@ -128,26 +128,26 @@ check_resource_error("struct Subpass {" "@moveOnly struct Subpass {"
     "subpassGraph: a record containing a move-only graph must declare @moveOnly")
 check_resource_error("graph SubpassGraph {" "@immovable graph SubpassGraph {"
     "subpassGraph: cannot use an @immovable graph as a value field")
-check_resource_error("void validateSwapchains()" "void validateSwapchains(Vertex from = 0, Vertex to)"
+check_resource_error("void validateSwapchains()" "void validateSwapchains(vertex_descriptor from = 0, vertex_descriptor to)"
     "parameters after a default argument must also have defaults")
-check_resource_error("void validateSwapchains()" "void validateSwapchains(Vertex from = 0x100000000)"
+check_resource_error("void validateSwapchains()" "void validateSwapchains(vertex_descriptor from = 0x100000000)"
     "from: invalid default 0x100000000")
 check_resource_error("void validateSwapchains()" "void validateSwapchains(SceneFlags flags = SceneFlags::MISSING)"
     "invalid enum default SceneFlags::MISSING")
 check_resource_error("void validateSwapchains()" "explicit operator bool(bool value) const" "a conversion operator cannot take parameters")
 check_resource_error("void validateSwapchains()" "static explicit operator bool()"
     "a conversion operator cannot be static")
-check_resource_error("void validateSwapchains()" "static bool operator()(Vertex v)"
+check_resource_error("void validateSwapchains()" "static bool operator()(vertex_descriptor v)"
     "a call operator cannot be static")
-check_resource_error("void validateSwapchains()" "bool operator()(Vertex v) const; int operator()(uint32_t alias) const"
+check_resource_error("void validateSwapchains()" "bool operator()(vertex_descriptor v) const; int operator()(uint32_t alias) const"
     "duplicate method signature operator[(][)]")
-check_resource_error("void validateSwapchains()" "explicit operator Vertex() const; explicit operator uint32_t() const noexcept"
+check_resource_error("void validateSwapchains()" "explicit operator vertex_descriptor() const; explicit operator uint32_t() const noexcept"
     "duplicate method signature operator uint32_t")
-check_resource_error("void validateSwapchains()" "explicit operator const Vertex&() const; explicit operator const uint32_t&() const"
+check_resource_error("void validateSwapchains()" "explicit operator const vertex_descriptor&() const; explicit operator const uint32_t&() const"
     "duplicate method signature operator const uint32_t&")
 check_resource_error("getColorTexture(scene::RenderWindow* renderWindow)" "getColorTexture(gfx::Swapchain* other)"
     "duplicate method signature getColorTexture")
-check_resource_error("isTextureView(Vertex resID)" "isTexture(uint32_t other)" "duplicate method signature isTexture")
+check_resource_error("isTextureView(vertex_descriptor resID)" "isTexture(uint32_t other)" "duplicate method signature isTexture")
 check_resource_error("void validateSwapchains()" "void getDesc()" "graph method collides with C[+][+] member getDesc")
 check_resource_error("member: names;" "member: contains;" "name index collides with C[+][+] member contains")
 check_resource_error("getColorTexture(gfx::Swapchain* swapchain) noexcept" "getColorTexture(gfx::Swapchain* swapchain) const noexcept"
@@ -317,7 +317,7 @@ expect_failure(2 "unknown or duplicate record annotation @requireAllocator" ${ge
 string(REPLACE "RenderStage_: RenderPassType" "RenderStage_: void" invalid "${layout}")
 file(WRITE "${layoutSpec}" "${invalid}")
 expect_failure(2 "LayoutGraph.stages: polymorphic storage requires an object type" ${generate})
-foreach(collision IN ITEMS getLayout getParent setUpdate clear h object visitVertex visit_object ne addReference in_degree)
+foreach(collision IN ITEMS getLayout getParent setUpdate clear h object visitVertex visit_object od addReference in_degree)
     string(REPLACE "@transient constantMacros:" "@transient ${collision}:" invalid "${layout}")
     file(WRITE "${layoutSpec}" "${invalid}")
     expect_failure(2 "LayoutGraphData: graph field collides with (C[+][+]|TypeScript) member ${collision}" ${generate})
@@ -376,7 +376,7 @@ string(REPLACE "@serialize graph" "graph" flat "${flat}")
 file(WRITE "${layoutSpec}" "${flat}")
 run(${generate})
 file(READ "${layoutHeader}" flatHeader)
-if(flatHeader MATCHES "child_links[(]|get_parent[(]|num_children[(]|VertexLinks|out_edges[(]|out_degree[(]|using Edge ="
+if(flatHeader MATCHES "child_links[(]|get_parent[(]|num_children[(]|VertexLinks|out_edges[(]|out_degree[(]|(struct|using) edge_descriptor "
    OR NOT flatHeader MATCHES "add_vertex[(]" OR NOT flatHeader MATCHES "emplace_vertex[(]")
     message(FATAL_ERROR "Flat graph did not preserve its original vertex interface")
 endif()

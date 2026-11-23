@@ -22,7 +22,7 @@ void initializeDescriptorSetLayoutInfo(const DescriptorSetLayoutData& layout, gf
 }
 
 gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(gfx::Device* device, LayoutGraphData& graph,
-                                                    LayoutGraphData::Vertex vertex) {
+                                                    LayoutGraphData::vertex_descriptor vertex) {
     auto& sets = graph.getLayout(vertex).descriptorSets;
     auto iter = sets.find(UpdateFrequency::PER_PASS);
     if (iter == sets.end()) return nullptr;

@@ -9,9 +9,16 @@
 #include <iterator>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 namespace {
 using namespace cc::codegen;
+
+static_assert(std::is_same_v<TypeGraph::vertex_descriptor, uint32_t>);
+static_assert(std::is_same_v<TypeGraph::vertex_iterator, decltype(std::declval<const TypeGraph&>().vertices().begin())>);
+static_assert(std::is_same_v<TypeGraph::out_edge_iterator, decltype(std::declval<const TypeGraph&>().out_edges(0).begin())>);
+static_assert(std::is_same_v<TypeGraph::in_edge_iterator, decltype(std::declval<const TypeGraph&>().in_edges(0).begin())>);
+static_assert(std::is_same_v<TypeGraph::adjacency_iterator, decltype(std::declval<const TypeGraph&>().adjacent_vertices(0).begin())>);
 
 void require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
@@ -321,10 +328,10 @@ void checkImports(const std::filesystem::path& specs) {
                 }
             }
             graph PassCounts {
-                vertex_descriptor Vertex = uint32_t;
+                vertex_descriptor = uint32_t;
                 vertex_storage: indexed;
                 component cc::render::RasterPassTag: uint32_t { member: counts; }
-                uint32_t count(Vertex v) const noexcept;
+                uint32_t count(vertex_descriptor v) const noexcept;
                 static uint32_t count(const PassInfo& info);
             }
             @tag struct Label_ {}
@@ -346,11 +353,13 @@ void checkImports(const std::filesystem::path& specs) {
         const auto& overload = counts.methods.at(1);
         require(query.name == "count" && query.cppOnly && query.isConst && query.isNoexcept && !query.isStatic &&
                 query.result.type == graph.findType("uint32_t") &&
-                query.parameters.at(0).type.type == graph.findType("cc::render::PassCounts::Vertex"),
+                query.parameters.at(0).type.type == graph.findType("cc::render::PassCounts::vertex_descriptor"),
                 "lost graph method qualifiers or scoped vertex type");
         require(overload.name == query.name && overload.isStatic && overload.parameters.at(0).byConstReference &&
                 overload.parameters.at(0).type.type == graph.findType("cc::render::PassInfo"), "lost graph method overload");
         require(passes.hierarchy && !counts.hierarchy, "lost graph hierarchy capability");
+        require(graph.node(graph.findType("cc::render::Passes::Vertex")).qualifiedName == "cc::render::Passes::vertex_descriptor",
+                "the spec's local descriptor spelling must resolve to the public C++ name");
         require(passes.parentGraph && passes.nameComponentIndex == 2 && !counts.parentGraph && !counts.nameComponentIndex,
                 "parent lookup did not bind the selected name component");
         require(passes.addressableGraph && !counts.addressableGraph, "lost graph path capability");

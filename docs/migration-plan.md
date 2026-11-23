@@ -88,7 +88,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 | --- | --- | --- |
 | RenderInterface | `pipeline.ts` 默认导出旧版全部 22 个类型，包含运行时、pass、subpass 和管线构建器。`PipelinePassBuilder` 的三个 Web 回调由 TS 绑定声明，`Factory` 在类型声明上标记为 `@cppOnly`。`render.i` 按 C++ 方法的 `@getter`、`@setter`、`@cppOnly` 生成属性和忽略项。`binding swig` 中的 `macro` 引用属性或方法，`releaseInGC` 指定由 JS GC 释放返回对象的方法。 | 公开 API 的中英文说明随声明输出到 C++ 和 TS，包括方法绑定成的 TS 属性。 |
 | PrivateInterface | `PrivateFwd.h`、`PrivateTypes.h/.cpp` 和 `private.ts` 已接入 cocos4。`getProgramVariant` 和 `getComputePipelineState` 省略 `key` 时均转发 `nullptr`。Web 仅公开前者，返回值可为 `null`。 | 用 `--module PrivateInterface --output ../cocos4 --check --diff` 核对四个产物。原生实现为 `NativeProgramProxy` 和 `NativeProgramLibrary`。 |
-| Customization | `CustomFwd.h`、`CustomTypes.h/.cpp` 已接入 cocos4。六组回调使用 `RenderGraphVertex`。该别名在 .spec 中引用新版 `RenderGraph::Vertex`，生成的前置声明头将其展开为 `uint32_t`，与旧图的 `vertex_descriptor` 一致。 | 用 `--module Customization --output ../cocos4 --check --diff` 核对三个产物。原生消费者包括 `NativePipeline.cpp` 的两个自定义渲染命令和 `NativeExecutor.cpp` 的回调调用点。 |
+| Customization | `CustomFwd.h`、`CustomTypes.h/.cpp` 已接入 cocos4。六组回调使用 `RenderGraphVertex`。该别名在 .spec 中引用新版 `RenderGraph::vertex_descriptor`，生成的前置声明头将其展开为 `uint32_t`，与旧图的 `vertex_descriptor` 一致。 | 用 `--module Customization --output ../cocos4 --check --diff` 核对三个产物。原生消费者包括 `NativePipeline.cpp` 的两个自定义渲染命令和 `NativeExecutor.cpp` 的回调调用点。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 已接入 cocos4。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 用 `--module PrivateTypes --output ../cocos4 --check --diff` 核对四个产物。原生消费测试按 `NativeProgramLibrary` 的插入方式验证分配器传递，Web 消费测试覆盖五参数构造和 Map 的实例隔离。 |
 | FGDispatcher | `FGDispatcherFwd.h` 提供前置声明，`FGDispatcherTypes.h/.cpp` 覆盖 14 个辅助记录、两张双向图，以及 `FrameGraphDispatcher` 的声明和构造器。原生消费测试编译并运行了引擎手写的设置和查询方法。 | 适配 `run()` 调用的重排、别名和屏障算法，在启用 pass 重排时验证可达性，再切换引擎头文件。 |
 | NativePipeline | `NativePipelineFwd.h` 和 `NativePipelineTypes.h/.cpp` 覆盖旧版全部 50 个顶层类型，包括 9 个具体构建器、原生管线、程序库、资源上下文和绘制队列。 | 引擎切换时，手写执行器和管线代码中引用旧图自由函数与嵌套标签的调用仍需适配。 |
@@ -133,7 +133,7 @@ C++ 方法可为尾部参数声明默认值，例如 `uint32_t lightByteOffset =
 
 原生 ID 可以直接声明 `explicit operator uint32_t() const { return value; }`。TypeGraph 记录目标类型，C++ 调用方使用 `static_cast<uint32_t>(id)` 取得数值，TypeScript 绑定跳过该操作。三个 ID 均沿用引擎的 `0xFFFFFFFF` 无效值。[裁剪与渲染队列声明](../spec/render/native-pipeline.spec)
 
-`RenderGraphFilter` 在 `.spec` 中直接定义 `bool operator()(RenderGraph::Vertex pass) const`，C++ 调用方用 `filter(pass)` 查询对应的 pass。调用运算符沿用成员函数的参数、重载和函数体规则，仅参与 C++ 生成。[过滤器声明](../spec/render/native-pipeline.spec)
+`RenderGraphFilter` 在 `.spec` 中直接定义 `bool operator()(RenderGraph::vertex_descriptor pass) const`，C++ 调用方用 `filter(pass)` 查询对应的 pass。调用运算符沿用成员函数的参数、重载和函数体规则，仅参与 C++ 生成。[过滤器声明](../spec/render/native-pipeline.spec)
 
 原生记录可以声明 `T&` 或 `const T&` 字段，每个 `constructor(...)` 都必须列出这些字段。生成的构造器直接绑定调用方提供的对象。生成器也会省去无参构造器和只接收分配器的构造器。`@immovable` 删除记录的复制、移动及赋值操作。`FrameGraphDispatcher` 通过引用借用资源图、渲染图和布局图，以调用方的分配器原位构造 `resourceAccessGraph` 和 `relationGraph`。[调度器声明](../spec/render/fg-dispatcher.spec) · [消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
@@ -257,6 +257,8 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 ## 图接口与算法
 
 **C++ 图操作生成在图类型上，取消每个模块的 `*Graphs.h`。** 图按声明的能力提供成员函数。遍历和计数使用 `g.vertices()`、`g.out_edges(v)`、`g.num_vertices()`，增删使用 `g.add_vertex(…)`、`g.remove_vertex(v)`、`g.add_edge(u, v)`、`g.remove_edge(e)`，层级查询使用 `g.get_parent(v)`、`g.num_children(v)`。
+
+C++ 图存储扩容后，已有的遍历区间和迭代器（包括 `end()`）失效。森林图的 `child_links(v)`、`out_edges(v)` 和 `adjacent_vertices(v)` 直接借用父子关系数组。若添加顶点导致扩容，调用方应重新取得区间再继续遍历。[迭代器实现](../runtime/cpp/GraphIterator.h)
 
 组件标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。组件访问提供两种成员调用，例如自举模型中的 `g.get(Node_{}, v)` 和 `g.getNode(v)`。具名访问器采用 `get` 加组件名的形式。[自举模型声明](../spec/codegen/typegraph.spec) · [生成的成员接口](../src/generated/TypeGraphTypes.h)
 
@@ -427,7 +429,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 
 ## 当前图接口覆盖
 
-生成的 C++ 和 TS 图按引擎 `graph.ts` 的 concept 顺序组织公开操作，只输出有成员的分组。`source`、`target` 属于 `IncidenceGraph`，`num_edges`（TS 的 `ne`）属于 `EdgeListGraph`。普通边和独立父子引用的修改接口分别归入 `MutableGraph` 和 `MutableReferenceGraph`。类外定义沿用头文件的分组顺序。C++ 多态图按类型分列保存载荷，通过顶点的 `Kind` 和列内下标定位对象。
+生成的 C++ 和 TS 图按引擎 `graph.ts` 的 concept 顺序组织公开操作，只输出有成员的分组。`source`、`target` 属于 `IncidenceGraph`，在 `.spec` 中声明 `edge_list_graph;` 才会生成 C++ 的 `edges()`、`num_edges()` 和 TS 的 `ne()`。省略它仍可按顶点遍历出边。`LayoutGraph` 和 `LayoutGraphData` 在归档时按顶点累加出度，将边数写入原有的归档头。普通边和独立父子引用的修改接口分别归入 `MutableGraph` 和 `MutableReferenceGraph`。类外定义沿用头文件的分组顺序。C++ 多态图按类型分列保存载荷，通过顶点的 `Kind` 和列内下标定位对象。
 
 TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数组，名称取自 `.spec` 的 `member`，例如 `member: names;` 生成 `_names`。组件读写、边的查询与修改、路径操作都由调用者保证顶点编号有效。父子关系和入出边按图声明分别存储。多态图用两个与顶点数等长的数组保存标签和载荷。同一个顶点编号 `v` 直接索引两列。`object(v)` 返回该顶点的载荷，`value(id, v)` 用调用者提供的标签确定返回类型，`visitVertex` 按存储的标签分派。归档读取器在添加顶点前校验标签和父编号。
 
@@ -443,7 +445,7 @@ TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数�
 
 `ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。
 
-图和普通记录使用 C++ 成员函数语法。例如 `bool isTextureView(Vertex resID) const noexcept;` 中的 `Vertex` 引用本图声明的顶点类型。`ResourceGraph` 的八个原生资源管理方法由生成头声明，由引擎提供定义。C++17 消费测试核对全部签名，并用引擎的查询逻辑区分普通纹理、格式视图和子资源视图。[图声明](../spec/render/render-graph.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp) · [消费测试](../tests/consumer/records/ResourceGraphConsumer.cpp)
+图和普通记录使用 C++ 成员函数语法。用 `vertex_descriptor = uint32_t;` 声明顶点描述符，在图内写 `bool isTextureView(vertex_descriptor resID) const noexcept;`，在图外写 `ResourceGraph::vertex_descriptor`。`ResourceGraph` 的八个原生资源管理方法由生成头声明，由引擎提供定义。C++17 消费测试核对全部签名，并用引擎的查询逻辑区分普通纹理、格式视图和子资源视图。[图声明](../spec/render/render-graph.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp) · [消费测试](../tests/consumer/records/ResourceGraphConsumer.cpp)
 
 `ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。[渲染图声明](../spec/render/render-graph.spec)
 

@@ -26,7 +26,7 @@ struct DefaultDfsVisitor {
 // The graph owns its edges. Out-edge iterators must remain valid during a visit.
 template<class Graph>
 struct DfsFrame {
-    using Edge = typename Graph::Edge;
+    using Edge = typename Graph::edge_descriptor;
     using Vertex = std::decay_t<decltype(std::declval<const Graph&>().target(std::declval<Edge>()))>;
     using EdgeRange = std::remove_reference_t<decltype(std::declval<const Graph&>().out_edges(std::declval<Vertex>()))>;
     using Iterator = decltype(std::declval<const EdgeRange&>().begin());
@@ -48,7 +48,7 @@ template<class Graph, class Visitor, class Colors, class Stack, class Terminator
 void depthFirstVisit(const Graph& graph, typename DfsFrame<Graph>::Vertex root, Visitor& visitor,
                      Colors& colors, Stack& stack, Terminator terminate = {}) {
     using Vertex = typename DfsFrame<Graph>::Vertex;
-    using Edge = typename Graph::Edge;
+    using Edge = typename Graph::edge_descriptor;
     const auto finish = [&](Vertex v, const std::optional<Edge>& incoming) {
         colors[v] = GraphColor::BLACK;
         visitor.finishVertex(v, graph);

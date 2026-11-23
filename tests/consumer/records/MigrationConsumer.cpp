@@ -43,10 +43,10 @@ static_assert(concreteImplementations<NativeSceneBuilder, NativeRenderQueueBuild
     NativeMultisampleRenderPassBuilder, NativeComputeQueueBuilder, NativeComputePassBuilder,
     NativeProgramLibrary, NativePipeline, NativeProgramProxy, NativeRenderingModule>);
 static_assert(std::is_base_of_v<Setter, NativeRenderQueueBuilder> && std::is_base_of_v<NativeSetter, NativeRenderQueueBuilder>);
-static_assert(std::is_nothrow_constructible_v<NativeRenderQueueBuilder, const PipelineRuntime*, RenderGraph*, RenderGraph::Vertex,
-                                              const LayoutGraphData*, LayoutGraphData::Vertex>);
-static_assert(std::is_nothrow_constructible_v<NativeMultisampleRenderPassBuilder, const PipelineRuntime*, RenderGraph*, RenderGraph::Vertex,
-                                              const LayoutGraphData*, LayoutGraphData::Vertex, RenderGraph::Vertex, LayoutGraphData::Vertex>);
+static_assert(std::is_nothrow_constructible_v<NativeRenderQueueBuilder, const PipelineRuntime*, RenderGraph*, RenderGraph::vertex_descriptor,
+                                              const LayoutGraphData*, LayoutGraphData::vertex_descriptor>);
+static_assert(std::is_nothrow_constructible_v<NativeMultisampleRenderPassBuilder, const PipelineRuntime*, RenderGraph*, RenderGraph::vertex_descriptor,
+                                              const LayoutGraphData*, LayoutGraphData::vertex_descriptor, RenderGraph::vertex_descriptor, LayoutGraphData::vertex_descriptor>);
 static_assert(!std::is_default_constructible_v<NativeRenderQueueBuilder>);
 static_assert(!std::is_constructible_v<cc::CombinedCtor, uint32_t>);
 static_assert(!std::is_constructible_v<cc::MoveArgumentPmr, const cc::MoveArgumentPmr&, cc::MoveArgumentPmr::allocator_type>);

@@ -208,8 +208,8 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     const auto kinds = name + "Value.";
     *ts << "\nexport function save" << name << " (a: " << output.name << ", g: " << name << "): void {\n"
         << "    const counts = new Array<number>(" << count << ").fill(0);\n"
-        << "    for (const v of g.v()) ++counts[g.w(v)];\n"
-        << "    " << number << "(g.nv());\n    " << number << "(g.ne());\n    for (const n of counts) " << number << "(n);\n"
+        << "    let edges = 0;\n    for (const v of g.v()) {\n        edges += g.od(v);\n        ++counts[g.w(v)];\n    }\n"
+        << "    " << number << "(g.nv());\n    " << number << "(edges);\n    for (const n of counts) " << number << "(n);\n"
         << "    for (const v of g.v()) {\n        " << number << "(g.w(v));\n        " << number << "(g.getParent(v));\n";
     for (const auto& c : model.components) writer.value(*ts, c.valueType, "g.get" + c.publicName + "(v)", "        ");
     *ts << "        switch (g.w(v)) {\n";

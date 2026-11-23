@@ -5,7 +5,7 @@ import Gfx;
 import PipelineExternals;
 
 namespace cc::render {
-    using RenderGraphVertex = RenderGraph::Vertex;
+    using RenderGraphVertex = RenderGraph::vertex_descriptor;
 
     interface Customization {
         virtual std::string_view getName() const noexcept = 0;

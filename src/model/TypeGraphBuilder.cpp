@@ -428,6 +428,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     result.indexedVertices = syntax.indexed;
     if (syntax.indexedStorage) result.indexedStorage = resolve(graph, *syntax.indexedStorage, scope, owner).type;
     result.vertexList = syntax.vertexList;
+    result.edgeList = syntax.edgeList;
     result.mutableGraph = syntax.mutableGraph;
     result.removeVertex = syntax.removeVertex;
     if (syntax.removeVertex && (syntax.hierarchy || !syntax.alternatives.empty()))
@@ -972,8 +973,13 @@ TypeGraph buildTypeGraph(const std::vector<ModuleInput>& inputs, std::vector<Mod
                 }
             }
             if (const auto* g = std::get_if<GraphDeclaration>(&decl.data)) {
-                graph.appendNode(TypeNode{.name = g->vertexAlias, .qualifiedName = qualify(graph.node(id).qualifiedName, g->vertexAlias),
-                                          .module = owner, .data = AliasType{}, .cppHeader = graph.node(id).cppHeader}, id);
+                const auto scopeName = graph.node(id).qualifiedName;
+                const auto descriptor = graph.appendNode(TypeNode{.name = "vertex_descriptor",
+                    .qualifiedName = qualify(scopeName, "vertex_descriptor"), .module = owner,
+                    .data = AliasType{}, .cppHeader = graph.node(id).cppHeader}, id);
+                // Older specs can refer to their local descriptor spelling during type resolution.
+                if (g->vertexAlias != "vertex_descriptor")
+                    graph.nameIndex.emplace(qualify(scopeName, g->vertexAlias), descriptor);
             }
         }
         if ((entry.inputArchive == TypeId{}) != (entry.outputArchive == TypeId{})) {

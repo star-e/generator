@@ -198,6 +198,7 @@ struct GraphDeclaration {
     std::optional<TypeRef> indexedStorage;
     bool indexed{false};
     bool vertexList{false};
+    bool edgeList{false};
     bool mutableGraph{false};
     bool incidence{false};
     bool bidirectional{false};

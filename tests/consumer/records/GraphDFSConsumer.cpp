@@ -10,6 +10,8 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -18,17 +20,35 @@ using cc::graph::depthFirstVisit;
 using cc::graph::DfsFrame;
 using cc::graph::GraphColor;
 using cc::render::LayoutGraph;
-using Vertex = LayoutGraph::Vertex;
+using Vertex = LayoutGraph::vertex_descriptor;
+
+template<class Graph>
+constexpr bool checkIteratorTypes() {
+    using G = const Graph&;
+    static_assert(std::is_same_v<typename Graph::vertex_iterator, decltype(std::declval<G>().vertices().begin())>);
+    static_assert(std::is_same_v<typename Graph::out_edge_iterator, decltype(std::declval<G>().out_edges(0).begin())>);
+    static_assert(std::is_same_v<typename Graph::in_edge_iterator, decltype(std::declval<G>().in_edges(0).begin())>);
+    static_assert(std::is_same_v<typename Graph::adjacency_iterator, decltype(std::declval<G>().adjacent_vertices(0).begin())>);
+    static_assert(std::is_same_v<typename Graph::children_iterator, decltype(std::declval<G>().child_links(0).begin())>);
+    static_assert(std::is_same_v<typename Graph::parent_iterator, decltype(std::declval<G>().parent_links(0).begin())>);
+    static_assert(std::is_same_v<typename Graph::edge_descriptor, typename Graph::out_edge_iterator::value_type>);
+    static_assert(std::is_same_v<typename Graph::ownership_descriptor, typename Graph::children_iterator::value_type>);
+    return true;
+}
+static_assert(checkIteratorTypes<LayoutGraph>());
+static_assert(checkIteratorTypes<cc::render::RenderGraph>());
+static_assert(std::is_same_v<cc::render::RenderGraph::edge_iterator, decltype(std::declval<const cc::render::RenderGraph&>().edges().begin())>);
+static_assert(std::is_same_v<cc::render::ResourceGraph::ownership_iterator, decltype(std::declval<const cc::render::ResourceGraph&>().edges().begin())>);
 
 // The hierarchy cannot represent cycles. This graph also enumerates vertex zero last.
 struct Digraph {
-    struct Edge { Vertex source, target; };
-    std::vector<std::vector<Edge>> rows;
+    struct edge_descriptor { Vertex source, target; };
+    std::vector<std::vector<edge_descriptor>> rows;
     std::vector<Vertex> order;
     const auto& vertices() const { return order; }
     const auto& out_edges(Vertex v) const { return rows.at(v); }
-    Vertex source(Edge e) const { return e.source; }
-    Vertex target(Edge e) const { return e.target; }
+    Vertex source(edge_descriptor e) const { return e.source; }
+    Vertex target(edge_descriptor e) const { return e.target; }
 };
 
 struct Trace {

@@ -257,6 +257,7 @@ struct GraphType {
     bool indexedVertices{false};
     std::optional<TypeId> indexedStorage;
     bool vertexList{false};
+    bool edgeList{false};
     bool incidence{false};
     bool bidirectional{false};
     bool mutableGraph{false};
@@ -393,17 +394,17 @@ struct TypeModule {
 struct Node_ {};
 
 struct TypeGraph : public cc::codegen::graph::BidirectionalStorage<uint32_t> {
-    using Vertex = uint32_t;
-    void reserve(Vertex capacity) {
+    using vertex_descriptor = uint32_t;
+    void reserve(vertex_descriptor capacity) {
         cc::codegen::graph::BidirectionalStorage<uint32_t>::reserve(capacity);
         this->nodes.reserve(capacity);
     }
 
-    cc::codegen::TypeNode& getNode(Vertex v) noexcept { return this->nodes[v]; }
-    cc::codegen::TypeNode& get(const ::cc::codegen::Node_&, Vertex v) noexcept { return getNode(v); }
+    cc::codegen::TypeNode& getNode(vertex_descriptor v) noexcept { return this->nodes[v]; }
+    cc::codegen::TypeNode& get(const ::cc::codegen::Node_&, vertex_descriptor v) noexcept { return getNode(v); }
 
-    cc::codegen::TypeNode const& getNode(Vertex v) const noexcept { return this->nodes[v]; }
-    cc::codegen::TypeNode const& get(const ::cc::codegen::Node_&, Vertex v) const noexcept { return getNode(v); }
+    cc::codegen::TypeNode const& getNode(vertex_descriptor v) const noexcept { return this->nodes[v]; }
+    cc::codegen::TypeNode const& get(const ::cc::codegen::Node_&, vertex_descriptor v) const noexcept { return getNode(v); }
 
     TypeId appendNode(TypeNode node, TypeId parent);
     const TypeNode& node(TypeId id) const;

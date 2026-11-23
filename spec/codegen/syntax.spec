@@ -144,6 +144,7 @@ namespace cc::codegen {
         indexedStorage: std::optional<TypeRef>;
         indexed: bool = false;
         vertexList: bool = false;
+        edgeList: bool = false;
         mutableGraph: bool = false;
         incidence: bool = false;
         bidirectional: bool = false;

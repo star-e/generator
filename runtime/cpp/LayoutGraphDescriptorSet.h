@@ -6,6 +6,6 @@ namespace cc::render {
 
 void initializeDescriptorSetLayoutInfo(const DescriptorSetLayoutData& layout, gfx::DescriptorSetLayoutInfo& info);
 gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(gfx::Device* device, LayoutGraphData& graph,
-                                                    LayoutGraphData::Vertex vertex);
+                                                    LayoutGraphData::vertex_descriptor vertex);
 
 } // namespace cc::render

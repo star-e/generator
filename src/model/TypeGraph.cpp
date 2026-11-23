@@ -21,7 +21,7 @@ TypeId TypeGraph::appendNode(TypeNode newNode, TypeId parent) {
     if (newNode.module != ModuleId{} && newNode.module.value >= modules.size()) {
         throw std::out_of_range("invalid declaration module");
     }
-    const TypeId id{static_cast<Vertex>(nodes.size())};
+    const TypeId id{static_cast<vertex_descriptor>(nodes.size())};
     VertexType adjacency;
     if (parent != TypeId{}) {
         if (parent.value >= id.value) throw std::out_of_range("invalid scope vertex");

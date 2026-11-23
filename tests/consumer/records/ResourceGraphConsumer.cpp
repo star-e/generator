@@ -2,6 +2,7 @@
 #include "cocos/renderer/gfx-empty/EmptyFramebuffer.h"
 #include "cocos/renderer/gfx-empty/EmptyRenderPass.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <iterator>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -98,7 +99,7 @@ bool checkResourceEmplacement() {
     const auto root = graph.add_vertex("root");
     ResourceDesc desc;
     desc.width = 512;
-    const auto insert = [&](auto&& nameArgs, auto payload, ResourceGraph::Vertex parent) {
+    const auto insert = [&](auto&& nameArgs, auto payload, ResourceGraph::vertex_descriptor parent) {
         return graph.emplace_vertex(FormatView_{}, std::forward<decltype(nameArgs)>(nameArgs), std::tie(desc),
             std::make_tuple(ResourceResidency::EXTERNAL), std::tuple<>{}, std::tuple<>{}, std::tie(payload), parent);
     };
@@ -150,6 +151,8 @@ bool checkViewHierarchy() {
         g.vertex("texture") != texture || g.vertex("depth-mip") != mip) return false;
 
     if (g.num_children(texture) != 2 || g.out_degree(texture) != 2 || g.in_degree(depth) != 1) return false;
+    const auto edges = g.edges();
+    if (std::distance(edges.begin(), edges.end()) != 3) return false;
     bool sawDepth = false, sawStencil = false;
     for (const auto e : g.child_links(texture)) {
         if (g.parent(e) != texture || !g.edge(texture, g.child(e)).second) return false;
@@ -167,7 +170,7 @@ bool checkResourceGraph() {
     using namespace cc::render;
     if (!checkResourceEmplacement() || !checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer() || !checkRenderViews()) return false;
     static_assert(!std::is_move_constructible_v<ResourceGraph> && !std::is_copy_constructible_v<ResourceGraph>);
-    using Vertex = ResourceGraph::Vertex;
+    using Vertex = ResourceGraph::vertex_descriptor;
     using TexturePredicate = bool (ResourceGraph::*)(Vertex) const noexcept;
     static_assert(std::is_same_v<decltype(&ResourceGraph::validateSwapchains), void (ResourceGraph::*)()>);
     static_assert(std::is_same_v<decltype(&ResourceGraph::mount), void (ResourceGraph::*)(cc::gfx::Device*, Vertex)>);
@@ -220,7 +223,7 @@ bool checkResourceGraph() {
         if (!ResourceTraits{residency}.hasSideEffects()) return false;
     for (auto residency : {ResourceResidency::MANAGED, ResourceResidency::MEMORYLESS, ResourceResidency::CUSTOM})
         if (ResourceTraits{residency}.hasSideEffects()) return false;
-    const auto matches = [&](auto tag, ResourceGraph::Vertex vertex, unsigned ordinal) {
+    const auto matches = [&](auto tag, ResourceGraph::vertex_descriptor vertex, unsigned ordinal) {
         const auto& read = std::as_const(g);
         const void* visited = read.visit_object(vertex, [](auto& payload) -> const void* {
             static_assert(std::is_const_v<std::remove_reference_t<decltype(payload)>>);

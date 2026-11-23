@@ -56,9 +56,10 @@ namespace cc::render {
 
     @tag struct Subpass_ {}
     @comparison("==") @hash graph SubpassGraph {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
+        edge_list_graph;
         mutable_graph;
         incidence_graph { out_edges: vector; }
         bidirectional_graph { in_edges: vector; }
@@ -209,9 +210,10 @@ namespace cc::render {
     @tag struct FormatView_ {}
     @tag struct SubresourceView_ {}
     @immovable graph ResourceGraph {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
+        edge_list_graph;
         mutable_graph;
         hierarchy_graph { storage: shared_edges; }
         component Name_: ccstd::pmr::string { member: names; }
@@ -237,12 +239,12 @@ namespace cc::render {
         version: uint64_t = 0;
 
         void validateSwapchains();
-        void mount(gfx::Device* device, Vertex vertID);
+        void mount(gfx::Device* device, vertex_descriptor vertID);
         void unmount(uint64_t completedFenceValue);
-        bool isTexture(Vertex resID) const noexcept;
-        bool isTextureView(Vertex resID) const noexcept;
-        gfx::Texture* getTexture(Vertex resID);
-        gfx::Buffer* getBuffer(Vertex resID);
+        bool isTexture(vertex_descriptor resID) const noexcept;
+        bool isTextureView(vertex_descriptor resID) const noexcept;
+        gfx::Texture* getTexture(vertex_descriptor resID);
+        gfx::Buffer* getBuffer(vertex_descriptor resID);
         void invalidatePersistentRenderPassAndFramebuffer(gfx::Texture* pTexture);
     }
 
@@ -335,9 +337,10 @@ namespace cc::render {
     @tag struct Clear_ {}
     @tag struct Viewport_ {}
     graph RenderGraph {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
+        edge_list_graph;
         mutable_graph;
         incidence_graph { out_edges: vector; }
         bidirectional_graph { in_edges: vector; }
@@ -366,7 +369,7 @@ namespace cc::render {
         readonly index: PmrUnorderedStringMap<ccstd::pmr::string, uint32_t>;
         readonly sortedVertices: ccstd::pmr::vector<uint32_t>;
         readonly globalRenderData: RenderData;
-        Vertex getPassID(Vertex nodeID) const;
+        vertex_descriptor getPassID(vertex_descriptor nodeID) const;
         ccstd::string print(boost::container::pmr::memory_resource* scratch) const;
     }
 }

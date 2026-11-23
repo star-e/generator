@@ -23,18 +23,18 @@ bool acceptsVertex(const FilteredGraphView<Graph, Predicate>& view, Vertex v) { 
 template<class Graph>
 class ReferenceGraphView {
 public:
-    using Edge = typename Graph::Link;
-    using Vertex = std::decay_t<decltype(std::declval<const Graph&>().child(std::declval<Edge>()))>;
+    using edge_descriptor = typename Graph::ownership_descriptor;
+    using vertex_descriptor = std::decay_t<decltype(std::declval<const Graph&>().child(std::declval<edge_descriptor>()))>;
 
     explicit ReferenceGraphView(const Graph& graph) noexcept : graph_(graph) {}
     ReferenceGraphView(const Graph&&) = delete;
 
     decltype(auto) vertices() const { return graph_.vertices(); }
     auto num_vertices() const { return graph_.num_vertices(); }
-    decltype(auto) out_edges(Vertex v) const { return graph_.child_links(v); }
-    auto out_degree(Vertex v) const { return graph_.num_children(v); }
-    Vertex source(Edge link) const { return graph_.parent(link); }
-    Vertex target(Edge link) const { return graph_.child(link); }
+    decltype(auto) out_edges(vertex_descriptor v) const { return graph_.child_links(v); }
+    auto out_degree(vertex_descriptor v) const { return graph_.num_children(v); }
+    vertex_descriptor source(edge_descriptor link) const { return graph_.parent(link); }
+    vertex_descriptor target(edge_descriptor link) const { return graph_.child(link); }
 
 private:
     const Graph& graph_;
@@ -43,22 +43,22 @@ private:
 template<class Graph, class Predicate>
 class FilteredGraphView {
 public:
-    using Edge = typename Graph::Edge;
-    using Vertex = std::decay_t<decltype(std::declval<const Graph&>().target(std::declval<Edge>()))>;
+    using edge_descriptor = typename Graph::edge_descriptor;
+    using vertex_descriptor = std::decay_t<decltype(std::declval<const Graph&>().target(std::declval<edge_descriptor>()))>;
 
     FilteredGraphView(const Graph& graph, Predicate keep) : graph_(graph), keep_(std::move(keep)) {}
     FilteredGraphView(const Graph&&, Predicate) = delete;
 
     // v must be a vertex of the underlying graph. Predicates see original vertex IDs.
-    bool contains_vertex(Vertex v) const { return detail::acceptsVertex(graph_, v) && keep_(v); }
-    Vertex source(Edge e) const { return graph_.source(e); }
-    Vertex target(Edge e) const { return graph_.target(e); }
+    bool contains_vertex(vertex_descriptor v) const { return detail::acceptsVertex(graph_, v) && keep_(v); }
+    vertex_descriptor source(edge_descriptor e) const { return graph_.source(e); }
+    vertex_descriptor target(edge_descriptor e) const { return graph_.target(e); }
 
     auto vertices() const {
         const auto& vertices = graph_.vertices();
         return Range<decltype(vertices.begin()), false>{*this, vertices.begin(), vertices.end()};
     }
-    auto out_edges(Vertex v) const {
+    auto out_edges(vertex_descriptor v) const {
         const auto& edges = graph_.out_edges(v);
         return Range<decltype(edges.begin()), true>{*this, contains_vertex(v) ? edges.begin() : edges.end(), edges.end()};
     }

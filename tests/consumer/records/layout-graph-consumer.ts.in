@@ -1,5 +1,5 @@
 import { DefaultVisitor, depthFirstSearch as engineSearch, ED, OneInEI, OutEI } from './graph';
-import type { AddressableGraph, AdjacencyGraph, BidirectionalGraph, EdgeListGraph, PolymorphicGraph, ReferenceGraph } from './graph';
+import type { AddressableGraph, AdjacencyGraph, BidirectionalGraph, PolymorphicGraph, ReferenceGraph } from './graph';
 import { depthFirstSearch } from './graph-dfs';
 import type { InputArchive } from './archive';
 import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
@@ -71,7 +71,7 @@ function checkLayoutGraphData (): void {
     assert(builder.addRenderStage('next', g.N) === 0 && g.locate('/main') === g.N && g.locate('/next') === 0);
 }
 
-function checkChildren (g: BidirectionalGraph & AdjacencyGraph & EdgeListGraph & ReferenceGraph, parent: number, expected: number[]): void {
+function checkChildren (g: BidirectionalGraph & AdjacencyGraph & ReferenceGraph, parent: number, expected: number[]): void {
     const iterator = g.children(parent);
     const edges = [...iterator];
     assert(iterator instanceof OutEI && edges.length === expected.length && g.numChildren(parent) === expected.length,

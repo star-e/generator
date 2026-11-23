@@ -142,15 +142,16 @@ namespace cc {
     }
     @comparison(\">\", \"==\") struct ComparisonProbe { major: uint32_t = 0; @notElement scratch: uint32_t = 0; minor: uint32_t = 0; }
     graph TinyNames {
-        vertex_descriptor Index = uint8_t;
+        vertex_descriptor = uint8_t;
         vertex_storage: indexed;
         vertex_list_graph;
+        edge_list_graph;
         mutable_graph;
         incidence_graph { out_edges: vector; }
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
     }
     graph FlatComponents {
-        vertex_descriptor Index = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;
@@ -161,7 +162,7 @@ namespace cc {
         named_graph { component: cc::render::Name_; }
     }
     @serialize graph IndexedNames {
-        vertex_descriptor Index = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;
@@ -174,7 +175,7 @@ namespace cc {
         @transient c: uint32_t = 7;
     }
     graph HierarchyOnly {
-        vertex_descriptor Index = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         mutable_graph;
         hierarchy_graph { storage: shared_edges; }
@@ -182,7 +183,7 @@ namespace cc {
     }
     using ToggleFlag = bool;
     graph Toggles {
-        vertex_descriptor Index = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;
@@ -248,7 +249,7 @@ import ArchiveInterface;
 namespace cc {
     @tag struct SignedKey_ {}
     @serialize graph IndexedKeys {
-        vertex_descriptor Vertex = uint32_t;
+        vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
         mutable_graph;
@@ -369,7 +370,6 @@ file(WRITE "${stage}/NativeLibraryConstructor.cpp"
     "#include \"cocos/renderer/pipeline/custom/NativePipelineTypes.h\"\n#include \"cocos/renderer/pipeline/custom/RenderingModule.h\"\n"
     "namespace cc::render {\n${libraryConstructor}\n${pipelineConstructor}}\n")
 source_between(nativeResourceGraph "bool ResourceGraph::isTextureView(" "gfx::Buffer* ResourceGraph::getBuffer(" textureViewQuery)
-string(REPLACE "vertex_descriptor" "Vertex" textureViewQuery "${textureViewQuery}")
 string(REGEX REPLACE "visitObject[(][ \t\r\n]*resID, [*]this," "visit_object(resID," textureViewQuery "${textureViewQuery}")
 file(WRITE "${stage}/ResourceGraphTextureView.cpp" [[
 #include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
@@ -379,7 +379,6 @@ namespace cc::render {
 # Exercise the dispatcher configuration and accessors directly from the handwritten engine source.
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp" dispatcherSource)
 source_between(dispatcherSource "void FrameGraphDispatcher::enablePassReorder(" "[[nodiscard]] ccstd::pmr::string concatResName(" dispatcherQueries)
-string(REPLACE "::vertex_descriptor" "::Vertex" dispatcherQueries "${dispatcherQueries}")
 string(REPLACE "resourceAccessGraph.passIndex.at(u)" "resourceAccessGraph.vertex(u)" dispatcherQueries "${dispatcherQueries}")
 foreach(tag IN ITEMS Barrier PassNode RenderPassInfo)
     string(REPLACE "get(ResourceAccessGraph::${tag}Tag{}, resourceAccessGraph, ragVertID)"

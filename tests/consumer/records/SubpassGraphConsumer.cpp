@@ -6,7 +6,7 @@
 
 namespace {
 using cc::render::SubpassGraph;
-using Vertex = SubpassGraph::Vertex;
+using Vertex = SubpassGraph::vertex_descriptor;
 using Endpoints = std::pair<Vertex, Vertex>;
 
 template<class Range>
