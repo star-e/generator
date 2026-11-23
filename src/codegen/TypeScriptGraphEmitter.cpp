@@ -445,11 +445,11 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             out << "\n    addEdge (u: number, v: number): ED | null {\n"
                 << "        if (this." << names.parents << "[v] !== this.N" << (model.serializable ? " || u >= v" : "") << ") return null;\n"
                 << "        const children = this." << names.children << "[u];\n"
-                << "        const index = children.findIndex(e => (e.target as number) > v);\n";
+                << "        const index = children.findIndex((e) => (e.target as number) > v);\n";
             if (!model.serializable)
                 out << "        for (let p = u; p !== this.N; p = this." << names.parents << "[p]) if (p === v) return null;\n";
             out << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
-            if (model.parentGraph) out << "        this." << names.roots << ".splice(this." << names.roots << ".findIndex(e => e.target === v), 1);\n";
+            if (model.parentGraph) out << "        this." << names.roots << ".splice(this." << names.roots << ".findIndex((e) => e.target === v), 1);\n";
             out << "        this." << names.parents << "[v] = u;\n        return new ED(u, v);\n    }\n";
         } else if (model.incidence) {
             adjacencyMutation(out, names, false, model.bidirectional);

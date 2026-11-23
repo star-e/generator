@@ -82,7 +82,10 @@ void ArchiveScript::value(std::ostream& out, TypeId id, const std::string& expr,
     if (save) {
         out << indent << "a." << archiveMethod(api, "writeNumber") << "(" << expr << (array ? ".length" : ".size") << ");\n"
             << indent << "for (const " << (map ? "[" + key + ", " + item + "]" : item) << " of " << expr << ") {\n";
-        if (map) value(out, keyType, json ? "JSON.parse(" + key + ")" : key, inner, false, depth + 1);
+        if (map) {
+            const auto parsedKey = json ? "JSON.parse(" + key + ") as " + graph.node(keyType).typescriptName.value() : key;
+            value(out, keyType, parsedKey, inner, false, depth + 1);
+        }
         value(out, element, item, inner, false, depth + 1);
     } else {
         const auto readNumber = "a." + archiveMethod(api, "readNumber") + "()";
@@ -216,7 +219,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         writer.value(*ts, c.valueType, "g.value(" + kind + ", v)", "            ");
         *ts << "            break;\n";
     }
-    *ts << "        }\n    }\n";
+    *ts << "        default:\n            break;\n        }\n    }\n";
     for (const auto& f : model.fields) if (!f.transient) writer.value(*ts, f.type.type, "g." + f.name, "    ");
     const auto readNumber = "a." + archiveMethod(input, "readNumber") + "()";
     *ts << "}\n\nexport function load" << name << " (a: " << input.name << ", " << destination << ": " << name << "): void {\n";
@@ -240,7 +243,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         reader.value(*ts, c.valueType, "payload", "            ", true, 1);
         *ts << "            g.addVertex(" << kind << ", payload" << arguments << ", parent);\n            break;\n        }\n";
     }
-    *ts << "        }\n    }\n    if (edges || counts.some(n => n !== 0)) throw new RangeError('Invalid graph archive counts');\n";
+    *ts << "        default:\n            break;\n        }\n    }\n    if (edges || counts.some((n) => n !== 0)) throw new RangeError('Invalid graph archive counts');\n";
     for (const auto& f : model.fields) if (!f.transient) reader.value(*ts, f.type.type, "g." + f.name, "    ");
     if (transactionalLoad) *ts << "    target[adopt" << name << "](g);\n";
     *ts << "}\n";
