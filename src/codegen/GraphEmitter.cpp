@@ -977,9 +977,12 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << privateMethods.view();
     }
     if (archive) {
-        if (std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; }))
+        const bool hasPrivateArchiveFields = std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; });
+        if (hasPrivateArchiveFields)
             out << "    friend void save(" << scope.name(graph.node(archive->outputArchive).qualifiedName) << "&, const " << name << "&);\n";
-        out << "    friend void load(" << scope.name(graph.node(archive->inputArchive).qualifiedName) << "&, " << name << "&);\n";
+        // Indexed loads use the private appendVertex to defer indexing until the key has been read.
+        if (hasPrivateArchiveFields || model.nameIndex || model.keyComponentIndex)
+            out << "    friend void load(" << scope.name(graph.node(archive->inputArchive).qualifiedName) << "&, " << name << "&);\n";
     }
     out << "};\n";
     if (!archive) return {};

@@ -175,7 +175,7 @@ string(JSON relocated SET "${config}" modules ${layoutModule} typescript [["coco
 string(JSON relocated SET "${relocated}" modules ${archiveModule} typescript [["cocos/io/archive-api.ts"]])
 file(WRITE "${workspace}" "${relocated}")
 string(REPLACE "import ArchiveInterface;" "import Streams;" probe "${originalLayout}")
-string(REPLACE "@serialize graph LayoutGraph {" "@serialize graph LayoutGraph {\n        readonly archivedColor: gfx::Color;\n        readonly bits: ccstd::vector<bool>;" probe "${probe}")
+string(REPLACE "@serialize graph LayoutGraph {" "@serialize graph LayoutGraph {\n        readonly archivedColor: gfx::Color;\n    private:\n        readonly bits: ccstd::vector<bool>;\n    public:" probe "${probe}")
 file(WRITE "${layout}" "${probe}")
 file(APPEND "${gfx}" [[binding typescript { UniformBlock archive from "cocos/codecs/uniform"; }]])
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/codecs")
@@ -213,8 +213,12 @@ file(READ "${native}/LayoutGraphSerialization.cpp" source)
 file(READ "${native}/LayoutGraphTypes.h" graphHeader)
 if(NOT header MATCHES "save[(]Writer& ar, const Descriptor& v[)]" OR NOT header MATCHES "load[(]Reader& ar, LayoutGraph& g[)]"
    OR NOT source MATCHES "load[(]Reader& ar, std::vector<bool, Allocator>& bits[)]"
-   OR NOT graphHeader MATCHES "friend void load[(]Reader&, LayoutGraphData&[)]")
+   OR NOT graphHeader MATCHES "friend void load[(]Reader&, LayoutGraph&[)]"
+   OR NOT graphHeader MATCHES "friend void save[(]Writer&, const LayoutGraph&[)]")
     message(FATAL_ERROR "Native record, graph or packed bool archive did not follow the declared roles")
+endif()
+if(graphHeader MATCHES "friend void (load|save)[(][^\n]*LayoutGraphData&[)]")
+    message(FATAL_ERROR "LayoutGraphData archive functions only use public members")
 endif()
 file(WRITE "${archive}" "${originalArchive}")
 file(WRITE "${common}" "${original}")
