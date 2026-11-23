@@ -169,7 +169,7 @@ namespace cc {
         vertex_list_graph;
         mutable_graph;
         hierarchy_graph { storage: shared_edges; }
-        component Count_: uint32_t { member: counts; }
+        component Count_: uint32_t { member: links; }
         component cc::render::Name_: ccstd::pmr::string { member: labels; }
         name_index;
         named_graph { component: cc::render::Name_; }
@@ -190,7 +190,7 @@ namespace cc {
         vertex_list_graph;
         mutable_graph;
         polymorphic_graph {
-            Count_: bool { member: handles_; }
+            Count_: bool { member: handles; }
             render::ComputeTag: ToggleFlag { member: flags; }
             Layout_: render::LayoutGraph { member: layouts; }
         }

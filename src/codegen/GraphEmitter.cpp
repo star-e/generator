@@ -217,34 +217,33 @@ void hierarchyMutation(std::ostream& out, std::ostream& source, const std::strin
     out << "    std::pair<edge_descriptor, bool> add_edge(" << vertex << " u, " << vertex << " v) noexcept;\n"
         << "    void remove_edge(edge_descriptor e) noexcept;\n";
     source << "\nstd::pair<" << name << "::edge_descriptor, bool> " << name << "::add_edge(" << vertex << " u, " << vertex << " v) noexcept {\n"
-           << "    auto& links = this->" << rows << ";\n"
-           << "    if (static_cast<std::uintmax_t>(u) >= links.size() || static_cast<std::uintmax_t>(v) >= links.size() ||\n"
-           << "        links[v].parent != null_vertex()" << (serializable ? " || u >= v" : "") << ") return {{null_vertex(), null_vertex()}, false};\n";
+           << "    if (static_cast<std::uintmax_t>(u) >= " << rows << ".size() || static_cast<std::uintmax_t>(v) >= " << rows << ".size() ||\n"
+           << "        " << rows << "[v].parent != null_vertex()" << (serializable ? " || u >= v" : "") << ") return {{null_vertex(), null_vertex()}, false};\n";
     if (!serializable)
-        source << "    for (auto p = u; p != null_vertex(); p = links[p].parent)\n"
+        source << "    for (auto p = u; p != null_vertex(); p = " << rows << "[p].parent)\n"
                << "        if (p == v) return {{null_vertex(), null_vertex()}, false};\n";
-    source << R"(    auto& parent = links[u];
-    auto* slot = &parent.firstChild;
-    while (*slot != null_vertex() && *slot < v) slot = &links[*slot].nextSibling;
-    links[v].nextSibling = *slot;
+    source << "    auto& parent = " << rows << "[u];\n"
+           << "    auto& child = " << rows << "[v];\n"
+           << "    auto* slot = &parent.firstChild;\n"
+           << "    while (*slot != null_vertex() && *slot < v) slot = &" << rows << "[*slot].nextSibling;\n"
+           << R"(    child.nextSibling = *slot;
     if (*slot == null_vertex()) parent.lastChild = v;
     *slot = v;
-    links[v].parent = u;
+    child.parent = u;
     ++parent.childCount;
     return {{u, v}, true};
 }
 )";
     source << "\nvoid " << name << "::remove_edge(edge_descriptor e) noexcept {\n"
            << "    if (!edge(e.source, e.target).second) return;\n"
-           << "    auto& links = this->" << rows << ";\n"
-           << R"(    auto& parent = links[e.source];
-    auto& child = links[e.target];
-    auto previous = null_vertex();
-    auto* slot = &parent.firstChild;
-    while (*slot != e.target) {
-        previous = *slot;
-        slot = &links[previous].nextSibling;
-    }
+           << "    auto& parent = " << rows << "[e.source];\n"
+           << "    auto& child = " << rows << "[e.target];\n"
+           << "    auto previous = null_vertex();\n"
+           << "    auto* slot = &parent.firstChild;\n"
+           << "    while (*slot != e.target) {\n"
+           << "        previous = *slot;\n"
+           << "        slot = &" << rows << "[previous].nextSibling;\n"
+           << R"(    }
     *slot = child.nextSibling;
     if (parent.lastChild == e.target) parent.lastChild = previous;
     child.parent = child.nextSibling = null_vertex();
@@ -867,7 +866,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         storage.push_back(field);
         return field;
     };
-    const std::string rows = model.hierarchy && !model.separateEdges ? internalColumn("links_") : "";
+    const std::string rows = model.hierarchy && !model.separateEdges ? internalColumn("links") : "";
     const auto adjacency = [&](const char* base) {
         auto column = internalColumn(base);
         dequeColumns.insert(column);
@@ -877,7 +876,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     const auto incoming = model.bidirectional ? adjacency("incoming_") : "";
     const auto childRows = model.separateEdges ? adjacency("children_") : "";
     const auto parentRows = model.separateEdges ? adjacency("parents_") : "";
-    const std::string handles = alternatives.empty() ? "" : internalColumn("handles_");
+    const std::string handles = alternatives.empty() ? "" : internalColumn("handles");
     // Only these columns have one entry per vertex. Each payload column grows for its own kind.
     auto allStorage = storage;
     for (const auto& alt : alternatives) allStorage.push_back(alt.member);

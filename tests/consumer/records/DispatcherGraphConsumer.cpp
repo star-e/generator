@@ -64,8 +64,8 @@ bool checkIndexedArchive() {
     const auto root = graph.add_vertex(cc::SignedKey_{}, -5, "root");
     const auto child = graph.add_vertex(cc::SignedKey_{}, 0, "child", root);
     graph.setRevision(17);
-    if (graph.labels.size() != 2 || graph.values.size() != 2 || graph.links_[child].parent != root ||
-        graph.handles_.size() != 2 || graph.componentIndex_.size() != 2 || graph.nameIndex_.size() != 2) return false;
+    if (graph.labels.size() != 2 || graph.values.size() != 2 || graph.links[child].parent != root ||
+        graph.handles.size() != 2 || graph.componentIndex_.size() != 2 || graph.nameIndex_.size() != 2) return false;
     try {
         graph.add_vertex(cc::SignedKey_{}, -5, "duplicate", root);
         return false;
