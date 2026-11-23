@@ -64,11 +64,11 @@ void componentAccessors(std::ostream& out, const TypeGraph& graph, const GraphTy
     }
 }
 
-void hierarchyInterface(GraphSections& sections, const std::string& name, const std::string& vertex,
-                        const std::string& rows, const std::string& access) {
+void hierarchyInterface(GraphSections& sections, const std::string& vertex, const std::string& rows) {
     sections.incidence.header << "    struct Link { " << vertex << " source, target; };\n"
+        << "    using VertexLinks = ::cc::graph::VertexLinks<" << vertex << ">;\n"
         << "    template<bool Adjacent>\n"
-        << "    using ChildIterator = ::cc::graph::ChildIterator<" << name << ", " << access << ", Adjacent>;\n"
+        << "    using ChildIterator = ::cc::graph::ChildIterator<Link, ccstd::pmr::vector<VertexLinks>, Adjacent>;\n"
         << "    template<class Iterator>\n"
         << "    using IteratorRange = ::cc::graph::IteratorRange<Iterator>;\n"
         << "    using ChildLinkIterator = ChildIterator<false>;\n"
@@ -83,25 +83,25 @@ void hierarchyInterface(GraphSections& sections, const std::string& name, const 
         << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
         << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
 
-    sections.bidirectional.header << "    using ParentLinkIterator = ::cc::graph::ParentLinkIterator<" << name << ">;\n"
+    sections.bidirectional.header << "    using ParentLinkIterator = ::cc::graph::ParentLinkIterator<Link>;\n"
         << "    using ParentLinkRange = IteratorRange<ParentLinkIterator>;\n"
         << "    ParentLinkRange in_edges(" << vertex << " v) const noexcept { return parent_links(v); }\n"
         << "    " << vertex << " in_degree(" << vertex << " v) const noexcept { return num_parents(v); }\n"
         << "    " << vertex << " degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
     sections.adjacency.header << "    IteratorRange<ChildIterator<true>> adjacent_vertices(" << vertex << " v) const noexcept {\n"
-        << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n";
+        << "        return {{" << rows << ", " << rows << "[v].firstChild}, {" << rows << ", null_vertex()}};\n    }\n";
     sections.edgeList.header << "    " << vertex << " num_edges() const noexcept {\n        " << vertex << " count{};\n"
         << "        for (const auto& row : this->" << rows << ") count += row.childCount;\n        return count;\n    }\n"
-        << "    using EdgeIterator = ::cc::graph::EdgeIterator<" << name << ", " << access << ">;\n"
+        << "    using EdgeIterator = ::cc::graph::EdgeIterator<Link, ccstd::pmr::vector<VertexLinks>>;\n"
         << "    IteratorRange<EdgeIterator> edges() const noexcept {\n"
-        << "        return {{this, 0}, {this, static_cast<" << vertex << ">(this->" << rows << ".size())}};\n    }\n";
+        << "        return {{" << rows << ", 0}, {" << rows << ", static_cast<" << vertex << ">(" << rows << ".size())}};\n    }\n";
 
     sections.reference.header << "    " << vertex << " child(Link link) const noexcept { return link.target; }\n"
         << "    " << vertex << " get_parent(" << vertex << " v) const noexcept { return v == null_vertex() ? v : this->"
         << rows << "[v].parent; }\n"
         << "    " << vertex << " num_children(" << vertex << " v) const noexcept { return this->" << rows << "[v].childCount; }\n"
         << "    ChildLinkRange child_links(" << vertex << " v) const noexcept {\n"
-        << "        return {{this, this->" << rows << "[v].firstChild}, {this, null_vertex()}};\n    }\n"
+        << "        return {{" << rows << ", " << rows << "[v].firstChild}, {" << rows << ", null_vertex()}};\n    }\n"
         << "    " << vertex << " parent(Link e) const noexcept { return e.source; }\n"
         << "    " << vertex << " num_parents(" << vertex << " v) const noexcept { return get_parent(v) != null_vertex(); }\n"
         << "    ParentLinkRange parent_links(" << vertex << " v) const noexcept { return {{{get_parent(v), v}}, {{null_vertex(), v}}}; }\n"
@@ -871,9 +871,10 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         emplaceVertex(sections.mutation.header, insertion, name, vertex, model.components, storage, types, dequeColumns, input, rows,
                       alternatives, handles, model, childRows);
     }
-    if (model.hierarchy || model.incidence || model.nameIndex || model.keyComponentIndex)
-        sections.graph.header << "    static constexpr " << vertex << " null_vertex() noexcept { return (std::numeric_limits<"
-            << vertex << ">::max)(); }\n";
+    if (model.hierarchy || model.incidence || model.nameIndex || model.keyComponentIndex) {
+        const auto nullVertex = rows.empty() ? "(std::numeric_limits<" + vertex + ">::max)()" : "::cc::graph::nullVertex<" + vertex + ">";
+        sections.graph.header << "    static constexpr " << vertex << " null_vertex() noexcept { return " << nullVertex << "; }\n";
+    }
     if (!rows.empty()) {
         for (const auto* symbol : {"Edge", "source", "target", "out_edges", "out_degree", "edge", "ChildIterator", "IteratorRange",
                                    "ParentLinkRange", "ParentLinkIterator", "parent", "parent_links", "num_parents", "in_edges", "in_degree", "degree",
@@ -882,12 +883,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
                 throw std::runtime_error(node.qualifiedName + ": shared-edge graph member name collision: " + symbol);
         }
         headers.insert({"cocos/base/GraphIterator.h", "cstdint", "limits", "utility"});
-        std::string access = "IteratorAccess";
-        while (members.contains(access)) access += "0";
-        out << "\nprivate:\n    struct " << access << " {\n"
-            << "        static const auto& rows(const " << name << "& graph) noexcept { return graph." << rows << "; }\n"
-            << "    };\n\npublic:\n";
-        hierarchyInterface(sections, name, vertex, rows, access);
+        hierarchyInterface(sections, vertex, rows);
         if (model.mutableGraph) {
             if (members.contains("add_edge") || members.contains("remove_edge"))
                 throw std::runtime_error(node.qualifiedName + ": mutable graph member name collision");
@@ -964,13 +960,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         if (!column.empty()) out << "    ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">> " << column << ";\n";
     }
     if (!rows.empty()) {
-        out << "    struct VertexLinks {\n"
-            << "        " << vertex << " parent{null_vertex()};\n"
-            << "        " << vertex << " firstChild{null_vertex()};\n"
-            << "        " << vertex << " lastChild{null_vertex()};\n"
-            << "        " << vertex << " nextSibling{null_vertex()};\n"
-            << "        " << vertex << " childCount{};\n    };\n"
-            << "    ccstd::pmr::vector<VertexLinks> " << rows << ";\n";
+        out << "    ccstd::pmr::vector<VertexLinks> " << rows << ";\n";
     }
     if (!alternatives.empty()) {
         out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n"

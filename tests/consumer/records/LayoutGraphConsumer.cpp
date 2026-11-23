@@ -1,12 +1,15 @@
 #include "FailingResource.h"
 #include "ShiftProbe.h"
 #include "ShiftSerialization.h"
+#include "cocos/base/GraphIterator.h"
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
 #include <boost/container/pmr/global_resource.hpp>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
@@ -494,6 +497,28 @@ int checkLayoutAllocation(const std::string& sample, int failAfter) {
     return static_cast<int>(insertWithFailure(std::stoul(sample), failAfter));
 }
 
+static bool checkForestIterators() {
+    using Vertex = std::uint8_t;
+    struct Link { Vertex source, target; };
+    using Rows = std::array<cc::graph::VertexLinks<Vertex>, 3>;
+    using Child = cc::graph::ChildIterator<Link, Rows, false>;
+    using Edge = cc::graph::EdgeIterator<Link, Rows>;
+    constexpr auto none = cc::graph::nullVertex<Vertex>;
+    Rows rows{};
+    rows[1] = {none, 2, 2, none, 1};
+    rows[2].parent = 1;
+    const Rows copy = rows;
+    Child child{rows, 2};
+    Edge edge{rows, 0};
+    if (child == Child{copy, 2} || edge == Edge{copy, 0}) return false;
+    const auto childLink = *child++;
+    const auto edgeLink = *edge++;
+    cc::graph::ParentLinkIterator<Link> parent{childLink};
+    return childLink.source == 1 && childLink.target == 2 && child == Child{rows, none} &&
+           edgeLink.source == 1 && edgeLink.target == 2 && edge == Edge{rows, 3} &&
+           (*parent++).source == 1 && (*parent).source == none && (*parent).target == 2;
+}
+
 static bool checkLayoutEdges() {
     boost::container::pmr::monotonic_buffer_resource arena;
     LayoutGraph g{&arena};
@@ -526,7 +551,7 @@ static bool checkLayoutEdges() {
 }
 
 bool checkLayoutGraph(const char* pathSamples) {
-    if (!checkLayoutEdges()) return false;
+    if (!checkForestIterators() || !checkLayoutEdges()) return false;
     if (!checkChildLookup() || !checkGraphPaths(pathSamples) || !checkFlatComponents() || !checkIndexedNames()) return false;
     if (!checkHierarchy() || !checkFailedInsertion()) return false;
     using cc::render::LayoutGraph;

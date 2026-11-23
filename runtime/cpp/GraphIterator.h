@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <limits>
 #include <type_traits>
 
 namespace cc::graph {
@@ -51,10 +52,21 @@ struct VertexRange {
     VertexIterator<Vertex> end() const noexcept { return last; }
 };
 
+template<class Vertex>
+inline constexpr Vertex nullVertex = (std::numeric_limits<Vertex>::max)();
+
+template<class Vertex>
+struct VertexLinks {
+    Vertex parent{nullVertex<Vertex>};
+    Vertex firstChild{nullVertex<Vertex>};
+    Vertex lastChild{nullVertex<Vertex>};
+    Vertex nextSibling{nullVertex<Vertex>};
+    Vertex childCount{};
+};
+
 // Children are linked in sibling order. Adjacency traversal yields just the child descriptor.
-template<class Graph, class Access, bool Adjacent>
+template<class Link, class Rows, bool Adjacent>
 class ChildIterator {
-    using Link = typename Graph::Link;
     using Vertex = decltype(Link::target);
 
 public:
@@ -65,17 +77,17 @@ public:
     using reference = value_type;
 
     ChildIterator() = default;
-    ChildIterator(const Graph* graph, Vertex v) noexcept : graph_(graph), current_(v) {}
+    ChildIterator(const Rows& rows, Vertex v) noexcept : rows_(&rows), current_(v) {}
 
     value_type operator*() const noexcept {
         if constexpr (Adjacent) {
             return current_;
         } else {
-            return {graph_->get_parent(current_), current_};
+            return {(*rows_)[current_].parent, current_};
         }
     }
     ChildIterator& operator++() noexcept {
-        current_ = Access::rows(*graph_)[current_].nextSibling;
+        current_ = (*rows_)[current_].nextSibling;
         return *this;
     }
     ChildIterator operator++(int) noexcept {
@@ -84,29 +96,30 @@ public:
         return previous;
     }
     bool operator==(const ChildIterator& rhs) const noexcept {
-        return graph_ == rhs.graph_ && current_ == rhs.current_;
+        return rows_ == rhs.rows_ && current_ == rhs.current_;
     }
     bool operator!=(const ChildIterator& rhs) const noexcept { return !(*this == rhs); }
 
 private:
-    const Graph* graph_{};
-    Vertex current_{Graph::null_vertex()};
+    const Rows* rows_{};
+    Vertex current_{nullVertex<Vertex>};
 };
 
-template<class Graph>
+template<class LinkType>
 struct ParentLinkIterator {
-    using Link = typename Graph::Link;
+    using Link = LinkType;
+    using Vertex = decltype(Link::source);
     using value_type = Link;
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::input_iterator_tag;
     using pointer = void;
     using reference = value_type;
 
-    Link link{Graph::null_vertex(), Graph::null_vertex()};
+    Link link{nullVertex<Vertex>, nullVertex<Vertex>};
 
     Link operator*() const noexcept { return link; }
     ParentLinkIterator& operator++() noexcept {
-        link.source = Graph::null_vertex();
+        link.source = nullVertex<Vertex>;
         return *this;
     }
     ParentLinkIterator operator++(int) noexcept {
@@ -121,9 +134,8 @@ struct ParentLinkIterator {
 };
 
 // Visit sources in vertex order, and each source's outgoing edges in sibling order.
-template<class Graph, class Access>
+template<class Link, class Rows>
 class EdgeIterator {
-    using Link = typename Graph::Link;
     using Vertex = decltype(Link::source);
 
 public:
@@ -134,12 +146,12 @@ public:
     using reference = value_type;
 
     EdgeIterator() = default;
-    EdgeIterator(const Graph* graph, Vertex first) noexcept : graph_(graph), source_(first) { seek(); }
+    EdgeIterator(const Rows& rows, Vertex first) noexcept : rows_(&rows), source_(first) { seek(); }
 
     Link operator*() const noexcept { return {source_, target_}; }
     EdgeIterator& operator++() noexcept {
-        target_ = Access::rows(*graph_)[target_].nextSibling;
-        if (target_ == Graph::null_vertex()) {
+        target_ = (*rows_)[target_].nextSibling;
+        if (target_ == nullVertex<Vertex>) {
             ++source_;
             seek();
         }
@@ -151,22 +163,22 @@ public:
         return previous;
     }
     bool operator==(const EdgeIterator& rhs) const noexcept {
-        return graph_ == rhs.graph_ && source_ == rhs.source_ && target_ == rhs.target_;
+        return rows_ == rhs.rows_ && source_ == rhs.source_ && target_ == rhs.target_;
     }
     bool operator!=(const EdgeIterator& rhs) const noexcept { return !(*this == rhs); }
 
 private:
     void seek() noexcept {
-        const auto& rows = Access::rows(*graph_);
+        const auto& rows = *rows_;
         while (source_ < rows.size()) {
             target_ = rows[source_].firstChild;
-            if (target_ != Graph::null_vertex()) break;
+            if (target_ != nullVertex<Vertex>) break;
             ++source_;
         }
     }
 
-    const Graph* graph_{};
-    Vertex source_{}, target_{Graph::null_vertex()};
+    const Rows* rows_{};
+    Vertex source_{}, target_{nullVertex<Vertex>};
 };
 
 } // namespace cc::graph
