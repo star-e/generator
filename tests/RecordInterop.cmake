@@ -261,7 +261,15 @@ namespace cc {
         named_graph { component: render::Name_; }
         name_index;
         component_index { component: SignedKey_; }
+    private:
         polymorphic_graph { SignedKey_: uint32_t { member: values; } }
+        _revision: uint32_t = 0;
+    public:
+        @transient stamp: uint32_t = 0;
+        uint32_t revision() const noexcept { return _revision; }
+        void setRevision(uint32_t value) { _revision = value; }
+    private:
+        bool hasRevision() const noexcept { return _revision != 0; }
     }
 }
 ]])
@@ -273,6 +281,10 @@ string(JSON config SET "${config}" modules ${count} [[{
 string(JSON transactionalConfig SET "${config}" transactionalGraphLoad true)
 file(WRITE "${workspace}" "${transactionalConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${stage}")
+file(READ "${stage}/native/IndexedKeys.h" indexedHeader)
+if(NOT indexedHeader MATCHES "private:\n    uint32_t _revision" OR NOT indexedHeader MATCHES "private:\n    bool hasRevision")
+    message(FATAL_ERROR "Graph declarations must retain explicit private access")
+endif()
 file(READ "${stage}/native/ShiftProbe.h" shiftHeader)
 if(NOT shiftHeader MATCHES "get[(]const ::cc::Count_&" OR
    NOT shiftHeader MATCHES "using vertex_iterator = ::cc::graph::VertexIterator<")

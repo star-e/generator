@@ -699,13 +699,6 @@ void validateInheritedOverloads(const TypeGraph& graph, const TypeNode& node, co
     }
 }
 
-// The emitter groups special members and fields, so each declaration carries its source access.
-void memberAccess(std::ostream& out, bool& currentPrivate, bool nextPrivate) {
-    if (currentPrivate == nextPrivate) return;
-    out << (nextPrivate ? "private:\n" : "public:\n");
-    currentPrivate = nextPrivate;
-}
-
 void inlineConstructors(std::ostream& out, const TypeGraph& graph, const std::string& name, const RecordType& record,
                         const std::vector<BoundField>& members, const ConstructorPrefix& prefix, bool specialMembers,
                         std::set<std::string>& headers, bool& currentPrivate) {
@@ -1503,14 +1496,14 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             const bool transactionalLoad = model->serializable && archive && archive->transactionalGraphLoad;
             std::string nativeLoadReset;
             if (deps.emitCpp) {
-                std::string inputArchive;
+                const TypeModule* nativeArchive = nullptr;
                 if (output.serializationHeader && model->serializable && archive) {
                     deps.headers.insert(archive->output.forwardHeader.generic_string());
-                    inputArchive = graph.node(archive->module.inputArchive).qualifiedName;
+                    nativeArchive = &archive->module;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
                 nativeLoadReset = emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods,
-                                              inputArchive, transactionalLoad);
+                                              nativeArchive, transactionalLoad);
                 if (model->compareEqual || model->compareLess || model->hashable) {
                     std::vector<std::string_view> elements;
                     for (const auto& component : model->components) elements.push_back(component.name);

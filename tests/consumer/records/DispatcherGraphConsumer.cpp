@@ -63,6 +63,9 @@ bool checkIndexedArchive() {
     cc::IndexedKeys graph{&arena};
     const auto root = graph.add_vertex(cc::SignedKey_{}, -5, "root");
     const auto child = graph.add_vertex(cc::SignedKey_{}, 0, "child", root);
+    graph.setRevision(17);
+    if (graph.labels.size() != 2 || graph.values.size() != 2 || graph.links_[child].parent != root ||
+        graph.handles_.size() != 2 || graph.componentIndex_.size() != 2 || graph.nameIndex_.size() != 2) return false;
     try {
         graph.add_vertex(cc::SignedKey_{}, -5, "duplicate", root);
         return false;
@@ -73,9 +76,11 @@ bool checkIndexedArchive() {
     BinaryOutputArchive writer(bytes, &arena);
     cc::save(writer, graph);
     cc::IndexedKeys decoded{&other};
+    decoded.stamp = 42;
     decoded.add_vertex(cc::SignedKey_{}, 41, "old");
     BinaryInputArchive reader(bytes, &other);
     cc::load(reader, decoded);
+    if (decoded.revision() != 17 || decoded.stamp != 42) return false;
     if (decoded.contains(41) || decoded.contains("old") || decoded.vertex(-5) != root || decoded.vertex("root") != root ||
         decoded.vertex(0) != child || decoded.vertex("child") != child || decoded.get_parent(child) != root) return false;
     cc::IndexedKeys copy{decoded, &arena};

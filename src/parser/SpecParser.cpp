@@ -757,11 +757,8 @@ private:
             bool cppPrivate = false;
             while (!accept("}")) {
                 const auto start = location;
-                if (token == "public" || token == "private") {
-                    cppPrivate = token == "private";
-                    advance();
-                    expect(":");
-                } else if (atConstructor()) {
+                if (acceptMemberAccess(cppPrivate)) continue;
+                if (atConstructor()) {
                     Constructor ctor{start};
                     ctor.documentation = documentation();
                     ctor.cppPrivate = cppPrivate;
@@ -859,9 +856,19 @@ private:
         return {std::move(tag), std::move(value), std::move(member), std::move(kindName)};
     }
 
+    bool acceptMemberAccess(bool& cppPrivate) {
+        if (token != "public" && token != "private") return false;
+        cppPrivate = token == "private";
+        advance();
+        expect(":");
+        return true;
+    }
+
     void parseGraph(GraphDeclaration& graph) {
         std::set<std::string> names;
+        bool cppPrivate = false;
         while (!accept("}")) {
+            if (acceptMemberAccess(cppPrivate)) continue;
             if (atVertexDescriptorDeclaration()) {
                 advance();
                 if (graph.vertexType) fail("duplicate vertex descriptor");
@@ -961,8 +968,10 @@ private:
                 fail("declare graph tags outside the graph");
             } else if (atField()) {
                 graph.fields.push_back(field(names));
+                graph.fields.back().cppPrivate = cppPrivate;
             } else {
                 graph.methods.push_back(method(names, graph.methods));
+                graph.methods.back().cppPrivate = cppPrivate;
             }
         }
         if (!graph.vertexType) fail("graph requires a vertex descriptor");

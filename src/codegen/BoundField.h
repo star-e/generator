@@ -1,8 +1,16 @@
 #pragma once
 
+#include <ostream>
 #include <string>
 
 namespace cc::codegen {
+
+// Declarations are grouped by the emitter and retain the access specified in the source.
+inline void memberAccess(std::ostream& out, bool& currentPrivate, bool nextPrivate) {
+    if (currentPrivate == nextPrivate) return;
+    out << (nextPrivate ? "private:\n" : "public:\n");
+    currentPrivate = nextPrivate;
+}
 
 struct BoundField {
     std::string name;

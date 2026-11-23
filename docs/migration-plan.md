@@ -260,7 +260,7 @@ build/staging/cocos4/    临时产物，镜像引擎相对路径
 
 C++ 图存储扩容后，已有的遍历区间和迭代器（包括 `end()`）失效。森林图的 `child_links(v)`、`out_edges(v)` 和 `adjacent_vertices(v)` 直接借用父子关系数组。若添加顶点导致扩容，调用方应重新取得区间再继续遍历。[迭代器实现](../runtime/cpp/GraphIterator.h)
 
-组件标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。组件访问提供两种成员调用，例如自举模型中的 `g.get(Node_{}, v)` 和 `g.getNode(v)`。具名访问器采用 `get` 加组件名的形式。[自举模型声明](../spec/codegen/typegraph.spec) · [生成的成员接口](../src/generated/TypeGraphTypes.h)
+C++ 图的组件列、多态载荷列、边和索引存储都是公开成员。图内普通字段和方法默认公开，可用 `private:`、`public:` 切换访问级别。组件标签在命名空间中用 `@tag struct` 声明。图内的 `component Node_: TypeNode { member: nodes; }` 引用已声明的标签，TypeGraph 按作用域和直接导入解析它。多个图可复用同一个标签类型。组件访问提供两种成员调用，例如自举模型中的 `g.get(Node_{}, v)` 和 `g.getNode(v)`。具名访问器采用 `get` 加组件名的形式。[自举模型声明](../spec/codegen/typegraph.spec) · [生成的成员接口](../src/generated/TypeGraphTypes.h)
 
 多态顶点在 `polymorphic_graph` 块内按 `RenderStage_: RenderPassType { member: stages; }` 声明。C++ 顶点保存类别和在该类别数组中的索引。用 `g.add_vertex(RenderPhase_{}, "shadow", parent)` 创建相位，用 `g.kind(v)` 或 `g.holds<RenderPhase_>(v)` 查询类别，用 `g.value(RenderPhase_{}, v)` 读写载荷。类别不符或顶点越界时，`holds` 返回 false，`value` 抛出 `std::bad_variant_access`。创建多态顶点时必须显式传入标签。`g.add_vertex(RenderStage_{}, name, parent)` 创建阶段，载荷初值为 `SINGLE_RENDER_PASS`。[布局图声明](../spec/render/layout-graph.spec)
 

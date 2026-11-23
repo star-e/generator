@@ -680,7 +680,7 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id) {
 
 std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
                          std::set<std::string>& headers, std::set<const TypeNode*>& forwards,
-                         const std::vector<BoundField>& fields, const std::string& methods, const std::string& inputArchive,
+                         const std::vector<BoundField>& fields, const std::string& methods, const TypeModule* archive,
                          bool transactionalLoad) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
@@ -837,6 +837,23 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         const bool isBoolean = payload.qualifiedName == "bool";
         alternatives.push_back({scope.name(tag.qualifiedName), alt.publicName, columnType(alt), alt.name, isBoolean});
     }
+    bool currentPrivate = false;
+    const auto writeDeclaredMethods = [&] {
+        if (methods.empty()) return;
+        out << '\n' << methods;
+        currentPrivate = model.methods.back().cppPrivate;
+        memberAccess(out, currentPrivate, false);
+    };
+    const auto writeFields = [&] {
+        for (size_t i = 0; i < fields.size(); ++i) {
+            const auto& field = fields[i];
+            memberAccess(out, currentPrivate, model.fields[i].cppPrivate);
+            writeDocumentation(out, field.documentation, "    ");
+            out << "    " << field.cpp << " " << field.name;
+            if (!field.cppDefault.empty()) out << "{" << field.cppDefault << "}";
+            out << ";\n";
+        }
+    };
     if (model.indexedStorage) {
         const auto base = formatTypeName(graph, *model.indexedStorage, [&](const TypeNode& part) {
             collectCppHeader(graph, scope.module, part, headers);
@@ -851,15 +868,10 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         for (const auto& column : storage) out << "        this->" << column << ".reserve(capacity);\n";
         out << "    }\n";
         componentAccessors(out, scope, model, vertex, storage, types, "std::vector");
-        if (!methods.empty()) out << '\n' << methods;
+        writeDeclaredMethods();
         for (size_t i = 0; i < storage.size(); ++i)
             out << "    std::vector<" << types[i] << "> " << storage[i] << ";\n";
-        for (const auto& field : fields) {
-            writeDocumentation(out, field.documentation, "    ");
-            out << "    " << field.cpp << " " << field.name;
-            if (!field.cppDefault.empty()) out << "{" << field.cppDefault << "}";
-            out << ";\n";
-        }
+        writeFields();
         out << "};\n";
         return {};
     }
@@ -896,7 +908,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     out << "struct " << name << " {\n"
         << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n"
         << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n\n";
-    const bool transactionalArchive = transactionalLoad && !inputArchive.empty();
+    const bool transactionalArchive = transactionalLoad && archive;
     graphConstructors(out, source, name, allStorage, moveOnlyColumns, fields, model, transactionalArchive);
     GraphSections sections;
     if (model.vertexList) {
@@ -905,7 +917,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         sections.vertexList.header << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
     }
     std::string input;
-    std::ostringstream insertion;
+    std::ostringstream privateMethods;
     if (model.mutableGraph) {
         headers.insert("limits");
         headers.insert("stdexcept");
@@ -914,7 +926,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         if (!input.empty()) headers.insert("string_view");
         headers.insert({"tuple", "type_traits", "utility"});
         addVertex(sections.mutation.header, sections.mutation.source, name, vertex, model.components, input, alternatives, model.hierarchy, keyColumn, keyType);
-        piecewiseAddVertex(sections.mutation.header, insertion, name, vertex, model.components, storage, types, dequeColumns, input, rows,
+        piecewiseAddVertex(sections.mutation.header, privateMethods, name, vertex, model.components, storage, types, dequeColumns, input, rows,
                            alternatives, handles, model, childRows);
     }
     if (model.hierarchy || model.incidence || model.nameIndex || model.keyComponentIndex) {
@@ -995,8 +1007,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         payloadAccess(sections.polymorphic.header, scope, alternatives, vertex, handles);
     }
     sections.write(out, source);
-    if (!methods.empty()) out << '\n' << methods;
-    out << "\nprivate:\n";
+    writeDeclaredMethods();
+    out << '\n';
     if (model.compareEqual) out << "    friend bool operator==(const " << name << "&, const " << name << "&) noexcept;\n";
     if (model.compareLess) out << "    friend bool operator<(const " << name << "&, const " << name << "&) noexcept;\n";
     if (model.hashable) out << "    friend struct " << scope.name("ccstd::hash") << "<" << name << ">;\n";
@@ -1012,7 +1024,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n"
             << "    ccstd::pmr::vector<VertexHandle> " << handles << ";\n";
         for (const auto& alt : alternatives) {
-            out << "    static constexpr Kind kindOf(" << alt.tag << "*) noexcept { return Kind::" << alt.kind << "; }\n";
+            privateMethods << "    static constexpr Kind kindOf(" << alt.tag << "*) noexcept { return Kind::" << alt.kind << "; }\n";
             // Keep value() addressable even when the C++ container specializes vector<bool>.
             if (alt.isBoolean) headers.insert("array");
             out << "    ccstd::pmr::" << (dequeColumns.contains(alt.member) ? "deque" : "vector") << "<" << (alt.isBoolean ? "std::array<bool, 1>" : alt.type)
@@ -1023,21 +1035,25 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << "    ccstd::pmr::map<ccstd::pmr::string, " << vertex << ", std::less<>> nameIndex_;\n";
     if (model.keyComponentIndex)
         out << "    ccstd::pmr::unordered_map<" << keyType << ", " << vertex << "> componentIndex_;\n";
-    out << insertion.str();
+    writeFields();
     if (transactionalArchive || (!model.immovable && (allStorage.size() > 1 || !moveOnlyColumns.empty() || !fields.empty()))) {
         const bool skipTransients = transactionalArchive && std::ranges::any_of(fields, &BoundField::transient);
-        out << "    void swapStorage(" << name << "& other"
-            << (skipTransients ? ", bool includeTransient = true" : "")
-            << ")" << (fields.empty() ? " noexcept" : "") << ";\n";
+        privateMethods << "    void swapStorage(" << name << "& other"
+                       << (skipTransients ? ", bool includeTransient = true" : "")
+                       << ")" << (fields.empty() ? " noexcept" : "") << ";\n";
     }
-    if (!inputArchive.empty()) out << "    friend void load(" << scope.name(inputArchive) << "&, " << name << "&);\n";
-    if (!fields.empty()) out << "\npublic:\n";
-    for (const auto& f : fields) {
-        writeDocumentation(out, f.documentation, "    ");
-        out << "    " << f.cpp << " " << f.name << (f.cppDefault.empty() ? "" : "{" + f.cppDefault + "}") << ";\n";
+    if (!privateMethods.view().empty()) {
+        out << '\n';
+        memberAccess(out, currentPrivate, true);
+        out << privateMethods.view();
+    }
+    if (archive) {
+        if (std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; }))
+            out << "    friend void save(" << scope.name(graph.node(archive->outputArchive).qualifiedName) << "&, const " << name << "&);\n";
+        out << "    friend void load(" << scope.name(graph.node(archive->inputArchive).qualifiedName) << "&, " << name << "&);\n";
     }
     out << "};\n";
-    if (inputArchive.empty() || transactionalLoad) return {};
+    if (!archive || transactionalLoad) return {};
     std::ostringstream reset;
     for (const auto& member : allStorage) reset << "    g." << member << ".clear();\n";
     for (size_t i = 0; i < fields.size(); ++i) {
