@@ -61,7 +61,6 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     native/cocos/renderer/pipeline/custom/LayoutGraphFwd.h
     native/cocos/renderer/pipeline/custom/LayoutGraphNames.h
     native/cocos/renderer/pipeline/custom/LayoutGraphPrint.h native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp
-    native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.h native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp
     native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.h native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp
     native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp
     native/cocos/renderer/pipeline/custom/RenderCommonTypes.h native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp)

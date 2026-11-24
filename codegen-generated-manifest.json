@@ -111,16 +111,6 @@
       "module": "FGDispatcher",
       "source": "spec/render/fg-dispatcher.spec"
     },
-    "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp": {
-      "copiedFrom": "runtime/cpp/LayoutGraphDescriptorSet.cpp",
-      "module": "LayoutGraph",
-      "source": "spec/render/layout-graph.spec"
-    },
-    "native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.h": {
-      "copiedFrom": "runtime/cpp/LayoutGraphDescriptorSet.h",
-      "module": "LayoutGraph",
-      "source": "spec/render/layout-graph.spec"
-    },
     "native/cocos/renderer/pipeline/custom/LayoutGraphFwd.h": {
       "module": "LayoutGraph",
       "source": "spec/render/layout-graph.spec"

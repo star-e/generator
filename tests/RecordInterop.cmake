@@ -427,20 +427,17 @@ namespace cc::render {
 namespace {
 ]] "${legacyPrint}\n} // namespace cc::render\n")
 file(READ "${ENGINE}/${nativeCustom}/LayoutGraphUtils.cpp" nativeLayoutUtils)
-source_between(nativeLayoutUtils "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" descriptorTypeMapping)
-file(WRITE "${stage}/DescriptorTypeMapping.cpp" [[
-#include "cocos/base/Log.h"
-#include "cocos/renderer/pipeline/custom/LayoutGraphTypes.h"
-namespace cc::render {
-]] "${descriptorTypeMapping}\n}\n")
-source_between(legacyLayoutUtils "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" legacyMapping)
-source_between(legacyLayoutUtils "void initializeDescriptorSetLayoutInfo(" "\nnamespace {" legacyBindings)
-source_between(legacyLayoutUtils "gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(" "void generateConstantMacros(" legacyPerPass)
-file(WRITE "${stage}/LegacyLayoutDescriptorSet.cpp" [[
-#include "gfx-base/GFXDevice.h"
-#include "cocos/renderer/pipeline/custom/LayoutGraphGraphs.h"
-namespace cc::render {
-]] "${legacyMapping}\n${legacyBindings}\n${legacyPerPass}\n}\n")
+# Link only the descriptor helpers from each engine version into its standalone consumer.
+function(write_descriptor_helpers source output graphHeader)
+    source_between(${source} "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" mapping)
+    source_between(${source} "void initializeDescriptorSetLayoutInfo(" "\nnamespace {" bindings)
+    source_between(${source} "gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(" "void generateConstantMacros(" perPass)
+    file(WRITE "${stage}/${output}" "#include \"cocos/renderer/pipeline/custom/${graphHeader}\"\n"
+        "#include \"cocos/renderer/pipeline/custom/details/GslUtils.h\"\n#include \"cocos/base/Log.h\"\n#include \"gfx-base/GFXDevice.h\"\n"
+        "namespace cc::render {\n${mapping}\n${bindings}\n${perPass}\n}\n")
+endfunction()
+write_descriptor_helpers(nativeLayoutUtils LayoutDescriptorHelpers.cpp LayoutGraphUtils.h)
+write_descriptor_helpers(legacyLayoutUtils LegacyLayoutDescriptorSet.cpp LayoutGraphGraphs.h)
 set(build "${work}/build")
 build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}" "-DLEGACY_ENGINE=${legacy}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)

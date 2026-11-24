@@ -34,7 +34,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     "${STAGING}/native/IndexedKeys.cpp"
     "${STAGING}/native/IndexedKeysSerialization.cpp"
-    "${STAGING}/DispatcherQueries.cpp" "${STAGING}/DescriptorTypeMapping.cpp"
+    "${STAGING}/DispatcherQueries.cpp" "${STAGING}/LayoutDescriptorHelpers.cpp"
     DispatcherGraphConsumer.cpp
     MigrationConsumer.cpp
     RenderQueueConsumer.cpp
@@ -46,7 +46,6 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/ResourceGraphTextureView.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp"
-    "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp")

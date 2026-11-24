@@ -1,8 +1,4 @@
-#ifdef CC_TEST_LEGACY_LAYOUT
 #include "cocos/renderer/pipeline/custom/LayoutGraphUtils.h"
-#else
-#include "cocos/renderer/pipeline/custom/LayoutGraphDescriptorSet.h"
-#endif
 #include "cocos/renderer/pipeline/custom/BinaryArchive.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphSerialization.h"
 #include "gfx-base/GFXDevice.h"

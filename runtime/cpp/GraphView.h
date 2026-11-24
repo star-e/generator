@@ -1,4 +1,4 @@
-#pragma once
+#pragma once // NOLINT(portability-avoid-pragma-once)
 
 #include <iterator>
 #include <type_traits>
@@ -12,7 +12,7 @@ class FilteredGraphView;
 namespace detail {
 // Plain graphs accept every existing vertex. A view can exclude a root supplied by its caller.
 template<class Graph, class Vertex>
-constexpr bool acceptsVertex(const Graph&, Vertex) noexcept { return true; }
+constexpr bool acceptsVertex(const Graph& /*graph*/, Vertex /*vertex*/) noexcept { return true; }
 
 template<class Graph, class Predicate, class Vertex>
 bool acceptsVertex(const FilteredGraphView<Graph, Predicate>& view, Vertex v) { return view.contains_vertex(v); }
@@ -31,36 +31,36 @@ public:
 
         Iterator() = default;
         Iterator(const View& view, BaseIterator current, BaseIterator last)
-        : view_(&view), current_(current), last_(last) { skipExcluded(); }
+        : _view(&view), _current(current), _last(last) { skipExcluded(); }
 
-        reference operator*() const { return *current_; }
-        Iterator& operator++() { ++current_; skipExcluded(); return *this; }
+        reference operator*() const { return *_current; }
+        Iterator& operator++() { ++_current; skipExcluded(); return *this; }
         Iterator operator++(int) { auto previous = *this; ++*this; return previous; }
-        bool operator==(const Iterator& other) const { return current_ == other.current_; }
+        bool operator==(const Iterator& other) const { return _current == other._current; }
         bool operator!=(const Iterator& other) const { return !(*this == other); }
 
     private:
         void skipExcluded() {
-            while (current_ != last_) {
+            while (_current != _last) {
                 if constexpr (Edges) {
-                    if (view_->contains_vertex(view_->target(*current_))) break;
+                    if (_view->contains_vertex(_view->target(*_current))) break;
                 } else {
-                    if (view_->contains_vertex(*current_)) break;
+                    if (_view->contains_vertex(*_current)) break;
                 }
-                ++current_;
+                ++_current;
             }
         }
-        const View* view_{};
-        BaseIterator current_{}, last_{};
+        const View* _view{};
+        BaseIterator _current{}, _last{};
     };
 
     FilteredRange(const View& view, BaseIterator first, BaseIterator last)
-    : first_(view, first, last), last_(view, last, last) {}
-    Iterator begin() const { return first_; }
-    Iterator end() const { return last_; }
+    : _first(view, first, last), _last(view, last, last) {}
+    Iterator begin() const { return _first; }
+    Iterator end() const { return _last; }
 
 private:
-    Iterator first_, last_;
+    Iterator _first, _last;
 };
 
 // Only vertex-list graphs supply a vertex iterator. Rooted visits also work without one.
@@ -91,18 +91,18 @@ public:
     using vertex_descriptor = typename Graph::vertex_descriptor;
     using out_edge_iterator = typename Graph::children_iterator;
 
-    explicit ReferenceGraphView(const Graph& graph) noexcept : graph_(graph) {}
+    explicit ReferenceGraphView(const Graph& graph) noexcept : _graph(graph) {}
     ReferenceGraphView(const Graph&&) = delete;
 
-    decltype(auto) vertices() const { return graph_.vertices(); }
-    auto num_vertices() const { return graph_.num_vertices(); }
-    decltype(auto) out_edges(vertex_descriptor v) const { return graph_.child_links(v); }
-    auto out_degree(vertex_descriptor v) const { return graph_.num_children(v); }
-    vertex_descriptor source(edge_descriptor link) const { return graph_.parent(link); }
-    vertex_descriptor target(edge_descriptor link) const { return graph_.child(link); }
+    decltype(auto) vertices() const { return _graph.vertices(); }
+    auto num_vertices() const { return _graph.num_vertices(); } // NOLINT(readability-identifier-naming)
+    decltype(auto) out_edges(vertex_descriptor v) const { return _graph.child_links(v); } // NOLINT(readability-identifier-naming)
+    auto out_degree(vertex_descriptor v) const { return _graph.num_children(v); } // NOLINT(readability-identifier-naming)
+    vertex_descriptor source(edge_descriptor link) const { return _graph.parent(link); }
+    vertex_descriptor target(edge_descriptor link) const { return _graph.child(link); }
 
 private:
-    const Graph& graph_;
+    const Graph& _graph;
 };
 
 template<class Graph, class Predicate>
@@ -114,26 +114,28 @@ public:
     using vertex_descriptor = typename Graph::vertex_descriptor;
     using out_edge_iterator = typename EdgeRange::Iterator;
 
-    FilteredGraphView(const Graph& graph, Predicate keep) : graph_(graph), keep_(std::move(keep)) {}
+    FilteredGraphView(const Graph& graph, Predicate keep) : _graph(graph), _keep(std::move(keep)) {}
     FilteredGraphView(const Graph&&, Predicate) = delete;
 
     // v must be a vertex of the underlying graph. Predicates see original vertex IDs.
-    bool contains_vertex(vertex_descriptor v) const { return detail::acceptsVertex(graph_, v) && keep_(v); }
-    vertex_descriptor source(edge_descriptor e) const { return graph_.source(e); }
-    vertex_descriptor target(edge_descriptor e) const { return graph_.target(e); }
+    bool contains_vertex(vertex_descriptor v) const { // NOLINT(readability-identifier-naming)
+        return detail::acceptsVertex(_graph, v) && _keep(v);
+    }
+    vertex_descriptor source(edge_descriptor e) const { return _graph.source(e); }
+    vertex_descriptor target(edge_descriptor e) const { return _graph.target(e); }
 
     auto vertices() const {
-        const auto& vertices = graph_.vertices();
+        const auto& vertices = _graph.vertices();
         return typename FilteredGraphView::VertexRange{*this, vertices.begin(), vertices.end()};
     }
-    auto out_edges(vertex_descriptor v) const {
-        const auto& edges = graph_.out_edges(v);
+    auto out_edges(vertex_descriptor v) const { // NOLINT(readability-identifier-naming)
+        const auto& edges = _graph.out_edges(v);
         return EdgeRange{*this, contains_vertex(v) ? edges.begin() : edges.end(), edges.end()};
     }
 
 private:
-    const Graph& graph_;
-    Predicate keep_;
+    const Graph& _graph;
+    Predicate _keep;
 };
 
 } // namespace cc::graph
