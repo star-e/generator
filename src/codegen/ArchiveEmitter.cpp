@@ -174,7 +174,7 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         << "    uint32_t counts[" << count << "];\n    for (auto& n : counts) n = readSize();\n"
         << "    for (uint32_t i = 0; i < size; ++i) {\n        const auto kind = readSize();\n        const auto parent = readSize();\n"
         << "        if (kind >= " << count << " || counts[kind] == 0) throw std::runtime_error(\"Invalid graph archive kind\");\n"
-        << "        --counts[kind];\n        if (parent != g.null_vertex()) {\n"
+        << "        --counts[kind];\n        if (parent != " << name << "::null_vertex()) {\n"
         << "            if (parent >= i || !edges) throw std::runtime_error(\"Invalid graph archive parent\");\n            --edges;\n        }\n";
     // Decode through the last indexed key before insertion, preserving the archive's component order.
     size_t prefix = model.nameIndex ? *model.nameComponentIndex + 1 : 0;
