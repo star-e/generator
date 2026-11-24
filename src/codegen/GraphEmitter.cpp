@@ -651,7 +651,6 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     headers.insert("utility");
     if (!integer.cppHeader.empty()) headers.insert(integer.cppHeader);
     bool copyable = true;
-    std::set<std::string> dequeColumns;
     const auto columnValue = [&](TypeId type) -> const TypeNode& {
         while (const auto* aliasType = std::get_if<AliasType>(&graph.node(type).data)) type = aliasType->target;
         return graph.node(type);
@@ -773,11 +772,6 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         if (payload.qualifiedName == "void" || std::holds_alternative<InterfaceType>(payload.data))
             throw std::runtime_error(node.qualifiedName + "." + alt.name + ": polymorphic storage requires an object type");
         const bool isBoolean = payload.qualifiedName == "bool";
-        if (!std::holds_alternative<BuiltinType>(payload.data) && !std::holds_alternative<EnumType>(payload.data) &&
-            !std::holds_alternative<PointerType>(payload.data)) {
-            dequeColumns.insert(alt.name);
-            headers.insert("cocos/base/std/container/deque.h");
-        }
         alternatives.push_back({scope.name(tag.qualifiedName), alt.publicName, columnType(alt), alt.name, isBoolean});
     }
     bool currentPrivate = false;
@@ -824,9 +818,10 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         return field;
     };
     const std::string rows = model.hierarchy && !model.separateEdges ? internalColumn("links") : "";
+    std::set<std::string> adjacencyColumns;
     const auto adjacency = [&](const char* base) {
         auto column = internalColumn(base);
-        dequeColumns.insert(column);
+        adjacencyColumns.insert(column);
         return column;
     };
     const auto outgoing = model.incidence ? adjacency("outgoing_") : "";
@@ -917,7 +912,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         auto& definition = sections.mutation.source;
         definition << "\nvoid " << name << "::reserve(" << vertex << " capacity) {\n";
         for (const auto& column : storage)
-            if (!dequeColumns.contains(column)) definition << "    this->" << column << ".reserve(capacity);\n";
+            if (!adjacencyColumns.contains(column)) definition << "    this->" << column << ".reserve(capacity);\n";
         definition << "    this->componentIndex_.reserve(capacity);\n}\n";
     }
     if (model.removeVertex) {
@@ -969,7 +964,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         for (const auto& alt : alternatives) {
             // Keep value() addressable even when the C++ container specializes vector<bool>.
             if (alt.isBoolean) headers.insert("array");
-            out << "    ccstd::pmr::" << (dequeColumns.contains(alt.member) ? "deque" : "vector") << "<" << (alt.isBoolean ? "std::array<bool, 1>" : alt.type)
+            out << "    ccstd::pmr::vector<" << (alt.isBoolean ? "std::array<bool, 1>" : alt.type)
                 << "> " << alt.member << ";\n";
         }
     }

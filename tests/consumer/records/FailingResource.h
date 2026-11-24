@@ -11,11 +11,15 @@ struct InjectedFailure final : std::bad_alloc {};
 class FailingResource final : public boost::container::pmr::memory_resource {
 public:
     int allocationsBeforeFailure{-1};
+    inline static thread_local bool failureInjected{false};
     std::size_t outstandingAllocations() const noexcept { return outstanding_; }
 private:
     std::size_t outstanding_{};
     void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-        if (allocationsBeforeFailure == 0) throw InjectedFailure{};
+        if (allocationsBeforeFailure == 0) {
+            failureInjected = true;
+            throw InjectedFailure{};
+        }
         if (allocationsBeforeFailure > 0) --allocationsBeforeFailure;
         auto* memory = boost::container::pmr::new_delete_resource()->allocate(bytes, alignment);
         ++outstanding_;

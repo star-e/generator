@@ -339,7 +339,7 @@ TS 多态图根据 `polymorphic_graph` 生成引擎的 `PolymorphicGraph` 接口
 
 记录的比较、哈希和接口方法的原生可见性在 `.spec` 中声明。`@comparison` 可组合 `"=="`、`"<"`、`">"`，其中 `"=="` 同时生成 `!=`，`">"` 复用反向的 `<`。`@hash` 独立请求哈希。同一模块的绑定块声明 TS 名称、枚举形式、对象池、编辑器注册和 JSB 导出。工作区 JSON 选择 C++ 和 TS 产物及其输出路径。
 
-C++ 索引图的每个 `component` 独占一个 vector，按顶点编号访问。组件列扩容会使该列已有的引用、指针和迭代器失效，调用方可以保留顶点编号并重新取组件。多态载荷按类型分列，记录类型的载荷使用 PMR deque。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。普通移动构造使用 `noexcept = default`，移动后源图只用于析构。带 allocator 的复制、移动和赋值使用目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(RenderStage_{}, name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。修改图时若抛出 `std::bad_alloc`，调用方直接销毁该图。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
+C++ 索引图的每个 `component` 独占一个 vector，按顶点编号访问。多态载荷也按类型分列，每列使用一个 PMR vector。组件列或载荷列扩容时，该列已有的引用、指针和迭代器失效。调用方可以保留顶点编号，通过组件访问器或 `value(tag, v)` 重新取值。组件或载荷包含 `@moveOnly` 记录时，生成的图只支持移动。普通移动构造使用 `noexcept = default`，移动后源图只用于析构。带 allocator 的复制、移动和赋值使用目标资源。`LayoutGraph` 在图外声明 `Name_` 和 `Descriptors_`。调用 `add_vertex(RenderStage_{}, name, parent)` 时，每个新顶点都获得独立的空 `DescriptorDB`，其中两个 map 使用图的内存资源。`getDescriptors(v)` 与 `get(Descriptors_{}, v)` 返回同一对象的引用，并提供 const 重载。修改图时若抛出 `std::bad_alloc`，调用方直接销毁该图。[图声明](../spec/render/layout-graph.spec) · [生成实现](../src/codegen/GraphEmitter.cpp) · [消费测试](../tests/consumer/records/LayoutGraphConsumer.cpp)
 
 `add_vertex` 将每组构造参数直接转发给对应组件列的 `emplace_back`。调用方应保证参数在整个调用期间有效。从同一张图取值且插入可能触发扩容时，先复制所需的值，再传入构造参数。
 

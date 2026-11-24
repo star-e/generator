@@ -33,6 +33,7 @@ using cc::render::RenderPhase;
 using cc::render::RenderPhase_;
 using cc::render::RenderStage_;
 using Vertex = LayoutGraph::vertex_descriptor;
+static_assert(std::is_same_v<decltype(LayoutGraph::phases), ccstd::pmr::vector<RenderPhase>>);
 
 struct AddLayoutVertex {
     template<class... Args>
@@ -158,6 +159,8 @@ bool insertDescriptorsWithFailure(FailingResource& resource, int failAfter) {
 }
 
 using cc::render::LayoutGraphData;
+static_assert(std::is_same_v<decltype(LayoutGraphData::stages), ccstd::pmr::vector<cc::render::RenderStageData>>);
+static_assert(std::is_same_v<decltype(LayoutGraphData::phases), ccstd::pmr::vector<cc::render::RenderPhaseData>>);
 constexpr auto frequency = cc::render::UpdateFrequency::PER_PASS;
 constexpr auto visibility = cc::gfx::ShaderStageFlagBit::VERTEX;
 constexpr std::string_view layoutName{"vertex name long enough to allocate from the graph resource"};
@@ -219,6 +222,9 @@ enum class InsertionResult { complete = 0, mismatch = 1, discarded = 42, debugPr
         try { std::rethrow_exception(exception); }
         catch (const InjectedFailure&) { std::_Exit(static_cast<int>(result)); }
         catch (...) {}
+    } else if (FailingResource::failureInjected) {
+        // MSVC can enter terminate from a defaulted noexcept assignment with no current exception.
+        std::_Exit(static_cast<int>(result));
     }
     std::_Exit(static_cast<int>(InsertionResult::mismatch));
 }
@@ -448,6 +454,7 @@ bool checkFlatComponents() {
 } // namespace
 
 int checkLayoutAllocation(const std::string& sample, int failAfter) {
+    FailingResource::failureInjected = false;
 #if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL != 0
     // Some noexcept STL constructors allocate an iterator proxy.
     std::set_terminate([] { exitOnAllocationFailure(InsertionResult::debugProxyTermination); });
