@@ -269,8 +269,11 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
         << "    ccstd::pmr::string path(" << vertex << " v) const;\n";
     source << "\n" << name << "::" << vertex << " " << name << "::locate(std::string_view refPath, " << vertex << " start) const noexcept {\n"
            << "    if (refPath.empty()) return null_vertex();\n"
-           << "    if (refPath.front() == '/') start = null_vertex();\n"
-           << "    else if (start != null_vertex() && static_cast<std::uintmax_t>(start) >= this->" << member << ".size()) return null_vertex();\n"
+           << "    if (refPath.front() == '/') {\n"
+           << "        start = null_vertex();\n"
+           << "    } else if (start != null_vertex() && static_cast<std::uintmax_t>(start) >= this->" << member << ".size()) {\n"
+           << "        return null_vertex();\n"
+           << "    }\n"
            << R"(
     while (!refPath.empty()) {
         const auto slash = refPath.find('/');
@@ -289,8 +292,9 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
 }
 )";
     source << "\nccstd::pmr::string " << name << "::path(" << vertex << " v) const {\n"
-           << "    if (v != null_vertex() && static_cast<std::uintmax_t>(v) >= this->" << member << ".size())\n"
+           << "    if (v != null_vertex() && static_cast<std::uintmax_t>(v) >= this->" << member << ".size()) {\n"
            << "        throw std::out_of_range(\"invalid " << name << " vertex\");\n"
+           << "    }\n"
            << "    ccstd::pmr::string result(get_allocator());\n"
            << "    std::size_t length = 0;\n"
            << "    for (auto u = v; u != null_vertex(); u = get_parent(u)) {\n"
