@@ -829,16 +829,31 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     const auto childRows = model.separateEdges ? adjacency("children_") : "";
     const auto parentRows = model.separateEdges ? adjacency("parents_") : "";
     const std::string handles = alternatives.empty() ? "" : internalColumn("handles");
-    // Only these columns have one entry per vertex. Each payload column grows for its own kind.
-    auto allStorage = storage;
-    for (const auto& alt : alternatives) allStorage.push_back(alt.member);
-    if (model.keyComponentIndex) {
-        allStorage.emplace_back("componentIndex_");
-        headers.insert({"cocos/base/std/container/unordered_map.h", "cocos/base/std/hash/hash.h", "limits", "stdexcept"});
+    std::vector<std::string> allStorage;
+    std::ostringstream storageDeclarations;
+    const auto addStorage = [&](const std::string& member, const std::string& type) {
+        allStorage.push_back(member);
+        storageDeclarations << "    " << type << " " << member << ";\n";
+    };
+    if (!rows.empty()) addStorage(rows, "ccstd::pmr::vector<TreeEdge>");
+    if (!handles.empty()) addStorage(handles, "ccstd::pmr::vector<VertexHandle>");
+    for (const auto& column : {outgoing, incoming, childRows, parentRows}) {
+        if (!column.empty()) addStorage(column, "ccstd::pmr::deque<ccstd::pmr::vector<" + vertex + ">>");
+    }
+    for (size_t i = 0; i < types.size(); ++i)
+        addStorage(storage[i], "ccstd::pmr::vector<" + types[i] + ">");
+    for (const auto& alt : alternatives) {
+        // Keep value() addressable even when the C++ container specializes vector<bool>.
+        if (alt.isBoolean) headers.insert("array");
+        addStorage(alt.member, "ccstd::pmr::vector<" + (alt.isBoolean ? "std::array<bool, 1>" : alt.type) + ">");
     }
     if (model.nameIndex) {
-        allStorage.emplace_back("nameIndex_");
+        addStorage("nameIndex_", "ccstd::pmr::map<ccstd::pmr::string, " + vertex + ", std::less<>>");
         headers.insert({"cocos/base/std/container/map.h", "cocos/base/std/container/string.h", "functional", "limits", "stdexcept", "string_view"});
+    }
+    if (model.keyComponentIndex) {
+        addStorage("componentIndex_", "ccstd::pmr::unordered_map<" + keyType + ", " + vertex + ">");
+        headers.insert({"cocos/base/std/container/unordered_map.h", "cocos/base/std/hash/hash.h", "limits", "stdexcept"});
     }
 
     out << '\n';
@@ -952,27 +967,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     if (model.hashable) out << "    friend struct " << scope.name("ccstd::hash") << "<" << name << ">;\n";
     if (!alternatives.empty())
         out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n\n";
-    for (size_t i = 0; i < types.size(); ++i)
-        out << "    ccstd::pmr::vector<" << types[i] << "> " << storage[i] << ";\n";
-    for (const auto& column : {outgoing, incoming, childRows, parentRows}) {
-        if (!column.empty()) out << "    ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">> " << column << ";\n";
-    }
-    if (!rows.empty()) {
-        out << "    ccstd::pmr::vector<TreeEdge> " << rows << ";\n";
-    }
-    if (!alternatives.empty()) {
-        out << "    ccstd::pmr::vector<VertexHandle> " << handles << ";\n";
-        for (const auto& alt : alternatives) {
-            // Keep value() addressable even when the C++ container specializes vector<bool>.
-            if (alt.isBoolean) headers.insert("array");
-            out << "    ccstd::pmr::vector<" << (alt.isBoolean ? "std::array<bool, 1>" : alt.type)
-                << "> " << alt.member << ";\n";
-        }
-    }
-    if (model.nameIndex)
-        out << "    ccstd::pmr::map<ccstd::pmr::string, " << vertex << ", std::less<>> nameIndex_;\n";
-    if (model.keyComponentIndex)
-        out << "    ccstd::pmr::unordered_map<" << keyType << ", " << vertex << "> componentIndex_;\n";
+    out << storageDeclarations.view();
     writeFields();
     if (archive) {
         const bool hasPrivateArchiveFields = std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; });

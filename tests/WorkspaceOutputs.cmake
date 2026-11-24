@@ -56,14 +56,18 @@ foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
     check_graph_order(LayoutGraphTypes.h ${layout} ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
         "// ComponentGraph\n" " getName(" "// PolymorphicGraph\n" " kind(vertex_descriptor" "// ReferenceGraph\n" " child(ownership_descriptor"
         "// ParentGraph\n" " locate_child(" "// AddressableGraph\n" " locate("
-        "    struct VertexHandle {" "    ccstd::pmr::vector<ccstd::pmr::string> names")
+        "    struct VertexHandle {" "vector<TreeEdge> links" "vector<VertexHandle> handles"
+        "vector<ccstd::pmr::string> names" "> stages" "> phases")
     string(FIND "${layoutTail}" "\n${layout}::vertex_descriptor ${layout}::add_vertex(" definition)
     if(definition LESS_EQUAL endOfClass)
         message(FATAL_ERROR "${layout}::add_vertex template definition must follow the graph declarations in the header")
     endif()
 endforeach()
 check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
-    "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(vertex_descriptor u, vertex_descriptor v)")
+    "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(vertex_descriptor u, vertex_descriptor v)"
+    "vector<VertexHandle> handles" ">> outgoing_" ">> incoming_" ">> children_" ">> parents_"
+    "vector<ccstd::pmr::string> names" "vector<RasterPass> rasterPasses" "vector<gfx::Viewport> viewports"
+    "PmrUnorderedStringMap<ccstd::pmr::string, uint32_t> index")
 foreach(header IN ITEMS LayoutGraphTypes.h RenderGraphTypes.h FGDispatcherTypes.h)
     file(READ "${work}/both/native/cocos/renderer/pipeline/custom/${header}" graphTypes)
     if(NOT graphTypes MATCHES "using vertex_iterator = graph::VertexIterator<" OR
