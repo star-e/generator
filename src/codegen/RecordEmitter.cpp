@@ -771,6 +771,7 @@ void pmrInitializers(std::ostream& source, const ConstructorPrefix& prefix, cons
         source << (first ? "\n: " : ",\n  ") << base.name << '(' << arguments << ')';
         first = false;
     }
+    std::string_view lineEnd = "\n";
     for (uint32_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
         const bool hasArg = args == CtorArgs::move || args == CtorArgs::copy ||
@@ -779,10 +780,13 @@ void pmrInitializers(std::ostream& source, const ConstructorPrefix& prefix, cons
         std::string value;
         if (hasArg) value = args == CtorArgs::fields ? m.name + "In" : "rhs." + m.name;
         const bool moveValue = args == CtorArgs::move || (args == CtorArgs::fields && !m.byConstReference);
-        source << (first ? "\n: " : ",\n  ") << m.name << "(" << pmrArguments(m, value, moveValue) << ")";
+        const auto arguments = pmrArguments(m, value, moveValue);
+        if (!first) source << ',';
+        source << lineEnd << (first ? ": " : "  ") << m.name << '(' << arguments << ')';
+        lineEnd = arguments.empty() ? " // NOLINT(readability-redundant-member-init)\n" : "\n";
         first = false;
     }
-    source << " {}\n";
+    source << " {}" << lineEnd;
 }
 
 void pmrFieldConstructors(std::ostream& header, std::ostream& source, const TypeGraph& graph, const std::string& name,
