@@ -365,12 +365,9 @@ file(WRITE "${stage}/NativeQueueSort.cpp" [[
 #include <tuple>
 namespace cc::render {
 ]] "${drawSort}\n${instanceSort}\n${queueSort}\n}\n")
-# Compile the engine's texture-view query with the generated descriptor and visitor member.
-file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp" nativeResourceGraph)
-source_between(nativeResourceGraph "ResourceGroup::~ResourceGroup()" "void ProgramResource::syncResources(" groupDestructor)
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/InstancedBuffer.cpp" instancedBuffer)
 source_between(instancedBuffer "void InstancedBuffer::clear()" "void InstancedBuffer::setDynamicOffset(" clearInstances)
-file(APPEND "${stage}/NativeQueueSort.cpp" "\nnamespace cc::render {\n${groupDestructor}}\nnamespace cc::pipeline {\n${clearInstances}}\n")
+file(APPEND "${stage}/NativeQueueSort.cpp" "\nnamespace cc::pipeline {\n${clearInstances}}\n")
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/NativeRenderGraph.cpp" nativeRenderGraph)
 source_between(nativeRenderGraph "ccstd::string NativeRenderNode::getName()" "RenderGraph::vertex_descriptor RenderGraph::getPassID(" renderNodeMethods)
 foreach(component IN ITEMS Name Data)
@@ -393,13 +390,14 @@ source_between(nativePipelineImplementation "NativePipeline::NativePipeline(" "g
 file(WRITE "${stage}/NativeLibraryConstructor.cpp"
     "#include \"cocos/renderer/pipeline/custom/NativePipelineTypes.h\"\n#include \"cocos/renderer/pipeline/custom/RenderingModule.h\"\n"
     "namespace cc::render {\n${libraryConstructor}\n${pipelineConstructor}}\n")
-source_between(nativeResourceGraph "bool ResourceGraph::isTextureView(" "gfx::Buffer* ResourceGraph::getBuffer(" textureViewQuery)
-string(REGEX REPLACE "visitObject[(][ \t\r\n]*resID, [*]this," "visit_object(resID," textureViewQuery "${textureViewQuery}")
-file(WRITE "${stage}/ResourceGraphTextureView.cpp" [[
-#include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
-#include <tuple>
-namespace cc::render {
-]] "${textureViewQuery}\n}\n")
+# Apply the pending engine migration only to the isolated copy beside the generated headers.
+file(READ "${ENGINE}/${nativeCustom}/NativeResourceGraph.cpp" nativeResourceGraph)
+file(WRITE "${stage}/${nativeCustom}/NativeResourceGraph.cpp" "${nativeResourceGraph}")
+find_package(Git REQUIRED)
+execute_process(COMMAND "${CMAKE_COMMAND}" -E env "GIT_CEILING_DIRECTORIES=${work}"
+    "${GIT_EXECUTABLE}" -c core.autocrlf=false apply "${SOURCE}/migrations/render-graph/NativeResourceGraph.patch"
+    WORKING_DIRECTORY "${stage}" COMMAND_ERROR_IS_FATAL ANY)
+configure_file("${ENGINE}/${nativeCustom}/NativePools.cpp" "${stage}/${nativeCustom}/NativePools.cpp" COPYONLY)
 # Exercise the dispatcher configuration and accessors directly from the handwritten engine source.
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp" dispatcherSource)
 source_between(dispatcherSource "void FrameGraphDispatcher::enablePassReorder(" "[[nodiscard]] ccstd::pmr::string concatResName(" dispatcherQueries)

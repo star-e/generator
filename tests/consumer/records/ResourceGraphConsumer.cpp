@@ -1,6 +1,9 @@
 #include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
+#include "TestDevice.h"
+#include "cocos/renderer/gfx-empty/EmptyBuffer.h"
 #include "cocos/renderer/gfx-empty/EmptyFramebuffer.h"
 #include "cocos/renderer/gfx-empty/EmptyRenderPass.h"
+#include "cocos/renderer/gfx-empty/EmptyTexture.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <iterator>
 #include <tuple>
@@ -129,6 +132,71 @@ bool checkResourceEmplacement() {
            graph.value(FormatView_{}, child).format == cc::gfx::Format::RGBA8;
 }
 
+class ResourceDevice final : public cc::gfx::test::TestDevice {
+    cc::gfx::Texture* createTexture() override { return new cc::gfx::EmptyTexture; }
+    cc::gfx::Buffer* createBuffer() override { return new cc::gfx::EmptyBuffer; }
+};
+
+bool checkMountedResources() {
+    using namespace cc::render;
+    namespace gfx = cc::gfx;
+    ResourceDevice device;
+    boost::container::pmr::monotonic_buffer_resource arena;
+    ResourceGraph g{&arena};
+    const auto root = g.add_vertex(ManagedTexture_{}, "texture");
+    const auto middle = g.add_vertex(SubresourceView_{}, "layers", root);
+    const auto leaf = g.add_vertex(SubresourceView_{}, "mip", middle);
+    auto& desc = g.getDesc(root);
+    desc.dimension = ResourceDimension::TEXTURE2D;
+    desc.viewType = gfx::TextureType::TEX2D_ARRAY;
+    desc.width = desc.height = 64;
+    desc.depthOrArraySize = 8;
+    desc.mipLevels = 5;
+    desc.format = gfx::Format::DEPTH_STENCIL;
+    desc.flags = ResourceFlags::DEPTH_STENCIL_ATTACHMENT;
+    g.getDesc(middle) = g.getDesc(leaf) = desc;
+    auto& parentView = g.value(SubresourceView_{}, middle);
+    parentView.format = desc.format;
+    parentView.indexOrFirstMipLevel = 1;
+    parentView.numMipLevels = 3;
+    parentView.firstArraySlice = 2;
+    parentView.numArraySlices = 4;
+    parentView.firstPlane = 1;
+    parentView.numPlanes = 1;
+    auto& childView = g.value(SubresourceView_{}, leaf);
+    childView.format = desc.format;
+    childView.indexOrFirstMipLevel = 2;
+    childView.numMipLevels = 1;
+    childView.firstArraySlice = 1;
+    childView.numArraySlices = 2;
+    childView.numPlanes = 1;
+
+    g.nextFenceValue = 7;
+    g.mount(&device, leaf);
+    auto* texture = g.getTexture(root);
+    auto* view = g.getTexture(leaf);
+    if (!texture || !view || !view->isTextureView() || view == g.getTexture(middle)) return false;
+    const auto& info = view->getViewInfo();
+    if (info.texture != texture || info.baseLevel != 3 || info.baseLayer != 3 || info.basePlane != 1 ||
+        info.levelCount != 1 || info.layerCount != 2 || info.planeCount != 1) return false;
+
+    const auto buffer = g.add_vertex(ManagedBuffer_{}, "buffer");
+    g.getDesc(buffer).width = 128;
+    g.getDesc(buffer).flags = ResourceFlags::STORAGE;
+    g.mount(&device, buffer);
+    auto* storage = g.getBuffer(buffer);
+    const auto externalBuffer = g.add_vertex(PersistentBuffer_{}, "external-buffer");
+    const auto externalTexture = g.add_vertex(PersistentTexture_{}, "external-texture");
+    g.value(PersistentBuffer_{}, externalBuffer).buffer = storage;
+    g.value(PersistentTexture_{}, externalTexture).texture = texture;
+    if (!storage || g.isTexture(buffer) || g.isTexture(externalBuffer) || !g.isTexture(externalTexture)) return false;
+    g.unmount(6);
+    if (g.getTexture(root) != texture || g.getBuffer(buffer) != storage) return false;
+    g.unmount(7);
+    return !g.value(ManagedTexture_{}, root).texture && !g.value(ManagedBuffer_{}, buffer).buffer &&
+           g.getTexture(externalTexture) == texture && g.getBuffer(externalBuffer) == storage;
+}
+
 bool checkViewHierarchy() {
     using namespace cc::render;
     boost::container::pmr::monotonic_buffer_resource arena;
@@ -172,7 +240,8 @@ bool checkViewHierarchy() {
 
 bool checkResourceGraph() {
     using namespace cc::render;
-    if (!checkResourceEmplacement() || !checkViewHierarchy() || !checkPersistentRenderPassAndFramebuffer() || !checkRenderViews()) return false;
+    if (!checkResourceEmplacement() || !checkViewHierarchy() || !checkMountedResources() ||
+        !checkPersistentRenderPassAndFramebuffer() || !checkRenderViews()) return false;
     static_assert(!std::is_move_constructible_v<ResourceGraph> && !std::is_copy_constructible_v<ResourceGraph>);
     using Vertex = ResourceGraph::vertex_descriptor;
     using TexturePredicate = bool (ResourceGraph::*)(Vertex) const noexcept;
