@@ -736,6 +736,7 @@ run("${consumer}" layout-read "${work}/layout-legacy.bin")
 run("${CMAKE_COMMAND}" -E compare_files "${legacyFixture}" "${work}/layout-legacy.bin")
 run("${consumer}" layout-read "${legacyFixture}")
 run("${consumer}" layout-invalid "${work}/layout-invalid.bin")
+run("${consumer}" layout-invalid "${work}/layout-invalid.bin.kind")
 
 # Reuse the same consumers and archive bytes with the default in-place loader.
 file(WRITE "${workspace}" "${config}")
@@ -750,6 +751,7 @@ endif()
 run("${CMAKE_COMMAND}" --build "${build}" ${buildConfig} --target RecordConsumer)
 run("${consumer}" layout-read "${legacyFixture}")
 run("${consumer}" layout-invalid-in-place "${work}/layout-invalid.bin")
+run("${consumer}" layout-invalid-in-place "${work}/layout-invalid.bin.kind")
 run("${consumer}" pipeline-read "${work}/pipeline-web.bin")
 run("${node}" "${tsc}" --strict --skipLibCheck --target es6 --module commonjs --outDir "${work}/js"
     --rootDir "${stage}/cocos" ${declarations} "${custom}/layout-graph.ts")

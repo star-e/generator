@@ -198,8 +198,9 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     }
     for (size_t i = prefix; i < model.components.size(); ++i)
         cpp << "            load(ar, g.get" << model.components[i].publicName << "(v));\n";
-    cpp << "            load(ar, g.value(tag, v));\n        };\n        switch (kind) {\n";
-    for (size_t i = 0; i != count; ++i) cpp << "        case " << i << ": readVertex(" << tag(model.alternatives[i]) << "); break;\n";
+    cpp << "            load(ar, g.value(tag, v));\n        };\n        switch (static_cast<" << name << "::Kind>(kind)) {\n";
+    for (const auto& c : model.alternatives)
+        cpp << "        case " << name << "::Kind::" << c.publicName << ": readVertex(" << tag(c) << "); break;\n";
     cpp << "        }\n    }\n    if (edges) throw std::runtime_error(\"Invalid graph archive edge count\");\n"
         << "    for (auto n : counts) if (n) throw std::runtime_error(\"Invalid graph archive kind count\");\n";
     for (const auto& f : model.fields) if (!f.transient) cpp << "    load(ar, g." << f.name << ");\n";

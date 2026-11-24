@@ -109,6 +109,10 @@ const valid = previousBytes.subarray(4 * 8);
 const invalid = Buffer.from(valid);
 invalid.writeDoubleLE(invalid.readDoubleLE(8) + 1, 8);
 fs.writeFileSync(invalidFile, invalid);
+// This unknown kind would wrap to the first vertex's valid stage tag in a uint8_t enum.
+const unknownKind = Buffer.from(valid);
+unknownKind.writeDoubleLE(256, 4 * 8);
+fs.writeFileSync(`${invalidFile}.kind`, unknownKind);
 const reused = new current.LayoutGraph();
 reused.addVertex(stage, 0, 'previous', new current.DescriptorDB());
 // Four header counts and a tag precede the first vertex's parent. A vertex cannot parent itself.
