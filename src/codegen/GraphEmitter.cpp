@@ -9,7 +9,10 @@
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace cc::codegen {
 namespace {
@@ -24,6 +27,31 @@ struct GraphSection {
     std::ostringstream source{};
 };
 
+void writeWithAlignedLintComments(std::ostream& header, std::string_view body) {
+    std::vector<std::pair<std::string, size_t>> annotated;
+    size_t column = 0;
+    const auto flush = [&] {
+        for (auto& [line, comment] : annotated) {
+            line.insert(comment, column - comment, ' ');
+            header << line << '\n';
+        }
+        annotated.clear();
+        column = 0;
+    };
+    std::istringstream lines{std::string(body)};
+    for (std::string line; std::getline(lines, line);) {
+        const auto comment = line.find(" // NOLINT(");
+        if (comment == std::string::npos) {
+            flush();
+            header << line << '\n';
+        } else {
+            column = std::max(column, comment);
+            annotated.emplace_back(std::move(line), comment);
+        }
+    }
+    flush();
+}
+
 struct GraphSections {
     GraphSection graph{"Graph"}, incidence{"IncidenceGraph"}, bidirectional{"BidirectionalGraph"},
         adjacency{"AdjacencyGraph"}, vertexList{"VertexListGraph"}, edgeList{"EdgeListGraph"},
@@ -36,14 +64,17 @@ struct GraphSections {
                                &mutation, &components, &polymorphic, &reference, &referenceMutation,
                                &parent, &addressable, &uuid};
         for (const auto* section : sections) {
-            if (!section->types.view().empty())
-                header << "\n    // " << section->name << " types\n" << section->types.view();
+            if (!section->types.view().empty()) {
+                header << "\n    // " << section->name << " types\n";
+                writeWithAlignedLintComments(header, section->types.view());
+            }
         }
         for (const auto* section : sections) {
             auto body = section->header.view();
             if (body.empty()) continue;
             if (body.front() == '\n') body.remove_prefix(1);
-            header << "\n    // " << section->name << '\n' << body;
+            header << "\n    // " << section->name << '\n';
+            writeWithAlignedLintComments(header, body);
             source << section->source.view();
         }
     }
@@ -413,7 +444,7 @@ void payloadAccess(GraphSection& section, const GraphScope& scope, const std::ve
     section.types << "    };\n";
     auto& out = section.header;
     out << "    Kind kind(" << vertex << " v) const { return this->" << handles << ".at(v).kind; }\n"
-        << "    template<class " << tagParam << ">\n    bool holds(" << vertex << " v) const noexcept {\n"
+        << "    template <class " << tagParam << ">\n    bool holds(" << vertex << " v) const noexcept {\n"
         << "        if (static_cast<std::uintmax_t>(v) >= this->" << handles << ".size()) return false;\n";
     tagBranches(out, alternatives, tagParam, "        ", false, [&](const auto& alt, const auto& indent) {
         out << indent << "return this->" << handles << "[v].kind == Kind::" << alt.kind << ";\n";
@@ -429,7 +460,7 @@ void payloadAccess(GraphSection& section, const GraphScope& scope, const std::ve
     const auto visitorType = vertex == "Visitor" ? "ObjectVisitor" : "Visitor";
     const auto othersType = vertex == "Others" ? "OtherVisitors" : "Others";
     for (const std::string qualifier : {"", " const"}) {
-        out << "\n    template<class " << visitorType << ", class... " << othersType << ">\n"
+        out << "\n    template <class " << visitorType << ", class... " << othersType << ">\n"
             << "    decltype(auto) visit_object(" << vertex << " v, " << visitorType << "&& visitor, " << othersType << "&&... others)" << qualifier << " {" << snakeCaseMethodLineEnd
             << "        if constexpr (sizeof...(others) > 0) {\n"
             << "            auto handlers = " << scope.name("cc::overloaded") << "{std::forward<" << visitorType << ">(visitor), std::forward<" << othersType << ">(others)...};\n"
@@ -437,7 +468,7 @@ void payloadAccess(GraphSection& section, const GraphScope& scope, const std::ve
             << "        } else {\n            const auto& handle = this->" << handles << ".at(v);\n"
             << "            switch (handle.kind) {\n";
         for (const auto& alt : alternatives)
-            out << "            case Kind::" << alt.kind << ": return std::forward<" << visitorType
+            out << "                case Kind::" << alt.kind << ": return std::forward<" << visitorType
                 << ">(visitor)(" << alt.element("handle.index") << ");\n";
         out << "            }\n            throw std::bad_variant_access{};\n        }\n    }\n";
     }
@@ -536,7 +567,7 @@ void piecewiseAddVertex(std::ostream& declaration, std::ostream& out, const std:
     const auto tupleParam = [&](const std::string& type, const std::string& arg) {
         append(templateParams, "class " + type);
         append(tupleParams, type + "&& " + arg);
-        if (!tupleTypes.empty()) tupleTypes += ",\n                                 ";
+        if (!tupleTypes.empty()) tupleTypes += ",\n                                  ";
         tupleTypes += "typename std::tuple_size<std::decay_t<" + type + ">>::type";
         return "std::forward<" + type + ">(" + arg + ")";
     };
@@ -544,24 +575,25 @@ void piecewiseAddVertex(std::ostream& declaration, std::ostream& out, const std:
     for (size_t i = 0; i < components.size(); ++i)
         componentArgs.push_back(tupleParam(typeParam("Args" + std::to_string(i)), "args" + components[i].publicName));
     const auto templateHead = [&](std::ostream& stream, std::string_view indent) {
-        stream << '\n' << indent << "template<" << templateParams;
+        stream << '\n' << indent << "template <" << templateParams;
         if (!tagged) return;
-        stream << ",\n" << indent << "         std::enable_if_t<";
+        stream << ",\n" << indent << "          std::enable_if_t<";
         for (size_t i = 0; i < alternatives.size(); ++i) {
-            if (i) stream << " ||\n" << indent << "                          ";
+            if (i) stream << " ||\n" << indent << "                               ";
             stream << "std::is_same_v<" << tagType << ", " << alternatives[i].tag << ">";
         }
-        stream << ", int>";
+        stream << ",\n" << indent << "                           int>";
     };
     std::string params = tagged ? "const " + tagType + "& /*tag*/, " : "";
     params += "std::piecewise_construct_t /*piecewise*/, " + tupleParams;
     if (hierarchy) params += ", " + vertex + " parent";
     templateHead(declaration, "    ");
     if (tagged) declaration << " = 0";
-    declaration << ",\n             class = std::void_t<" << tupleTypes << ">>\n    " << vertex << " add_vertex("
+    declaration << ",\n              class = std::void_t<" << tupleTypes << ">>\n    " << vertex << " add_vertex("
                 << params << (hierarchy ? " = null_vertex()" : "") << ");" << snakeCaseMethodLineEnd;
     templateHead(out, "");
-    out << ", class>\n" << name << "::" << vertex << " " << name << "::add_vertex(" << params << ") {\n";
+    out << (tagged ? ",\n          class>\n" : ", class>\n")
+        << name << "::" << vertex << " " << name << "::add_vertex(" << params << ") {\n";
     const auto count = "this->" + storage.front() + ".size()";
     const auto descriptor = name + "::" + vertex;
     if (hierarchy) {
@@ -993,7 +1025,10 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     if (model.compareLess) out << "    friend bool operator<(const " << name << "&, const " << name << "&) noexcept;\n";
     if (model.hashable) out << "    friend struct " << scope.name("ccstd::hash") << "<" << name << ">;\n";
     if (!alternatives.empty())
-        out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n\n";
+        out << "    struct VertexHandle {\n"
+            << "        Kind kind;\n"
+            << "        " << vertex << " index;\n"
+            << "    };\n\n";
     out << storageDeclarations.view();
     writeFields();
     if (archive && std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; })) {
