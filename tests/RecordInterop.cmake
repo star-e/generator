@@ -391,13 +391,30 @@ file(WRITE "${stage}/NativeLibraryConstructor.cpp"
     "#include \"cocos/renderer/pipeline/custom/NativePipelineTypes.h\"\n#include \"cocos/renderer/pipeline/custom/RenderingModule.h\"\n"
     "namespace cc::render {\n${libraryConstructor}\n${pipelineConstructor}}\n")
 # Apply the pending engine migration only to the isolated copy beside the generated headers.
-file(READ "${ENGINE}/${nativeCustom}/NativeResourceGraph.cpp" nativeResourceGraph)
-file(WRITE "${stage}/${nativeCustom}/NativeResourceGraph.cpp" "${nativeResourceGraph}")
+foreach(file IN ITEMS NativeResourceGraph.cpp NativePools.cpp)
+    configure_file("${ENGINE}/${nativeCustom}/${file}" "${stage}/${nativeCustom}/${file}" COPYONLY)
+endforeach()
 find_package(Git REQUIRED)
 execute_process(COMMAND "${CMAKE_COMMAND}" -E env "GIT_CEILING_DIRECTORIES=${work}"
-    "${GIT_EXECUTABLE}" -c core.autocrlf=false apply "${SOURCE}/migrations/render-graph/NativeResourceGraph.patch"
+    "${GIT_EXECUTABLE}" -c core.autocrlf=input apply "${SOURCE}/migrations/render-graph/NativeResourceGraph.patch"
     WORKING_DIRECTORY "${stage}" COMMAND_ERROR_IS_FATAL ANY)
-configure_file("${ENGINE}/${nativeCustom}/NativePools.cpp" "${stage}/${nativeCustom}/NativePools.cpp" COPYONLY)
+# Compile the same method bodies against the real NativePipeline and the device-only test fixture.
+file(READ "${ENGINE}/${nativeCustom}/NativeRenderGraphUtils.h" graphUtils)
+source_between(graphUtils "static constexpr std::string_view DEPTH_PLANE_NAME" "static constexpr std::string_view CUBE_TOP_NAME" planeNames)
+source_between(nativePipelineImplementation "template <gfx::Format>" "} // namespace" subresourceNodes)
+source_between(nativePipelineImplementation "void updateDepthStencilImpl(" "void tryAddRenderWindowDepthStencil(" depthStencilImpl)
+source_between(nativePipelineImplementation "uint32_t NativePipeline::addDepthStencil(" "uint32_t NativePipeline::addTexture(" addDepthStencil)
+source_between(nativePipelineImplementation "void NativePipeline::updateDepthStencil(" "void NativePipeline::updateStorageTexture(" updateDepthStencil)
+file(WRITE "${stage}/PipelineDepthStencil.inc" "namespace {\n${planeNames}${subresourceNodes}${depthStencilImpl}}\n${addDepthStencil}${updateDepthStencil}")
+file(WRITE "${stage}/NativePipelineDepthStencil.cpp" [[
+#include "cocos/renderer/pipeline/custom/NativePipelineTypes.h"
+#include "cocos/renderer/pipeline/custom/details/GslUtils.h"
+#include "cocos/renderer/gfx-base/GFXSwapchain.h"
+#include <stdexcept>
+namespace cc::render {
+#include "PipelineDepthStencil.inc"
+}
+]])
 # Exercise the dispatcher configuration and accessors directly from the handwritten engine source.
 file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp" dispatcherSource)
 source_between(dispatcherSource "void FrameGraphDispatcher::enablePassReorder(" "[[nodiscard]] ccstd::pmr::string concatResName(" dispatcherQueries)

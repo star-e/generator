@@ -10,6 +10,8 @@
 #include <type_traits>
 #include <utility>
 
+bool checkPipelineDepthStencil(cc::gfx::Device& device);
+
 namespace {
 template<class... Fields>
 ccstd::hash_t hashFields(const Fields&... fields) {
@@ -141,11 +143,14 @@ bool checkMountedResources() {
     using namespace cc::render;
     namespace gfx = cc::gfx;
     ResourceDevice device;
+    if (!checkPipelineDepthStencil(device)) return false;
     boost::container::pmr::monotonic_buffer_resource arena;
     ResourceGraph g{&arena};
     const auto root = g.add_vertex(ManagedTexture_{}, "texture");
     const auto middle = g.add_vertex(SubresourceView_{}, "layers", root);
     const auto leaf = g.add_vertex(SubresourceView_{}, "mip", middle);
+    const auto format = g.add_vertex(FormatView_{}, "format", middle);
+    const auto formatLeaf = g.add_vertex(SubresourceView_{}, "format-mip", format);
     auto& desc = g.getDesc(root);
     desc.dimension = ResourceDimension::TEXTURE2D;
     desc.viewType = gfx::TextureType::TEX2D_ARRAY;
@@ -154,7 +159,10 @@ bool checkMountedResources() {
     desc.mipLevels = 5;
     desc.format = gfx::Format::DEPTH_STENCIL;
     desc.flags = ResourceFlags::DEPTH_STENCIL_ATTACHMENT;
-    g.getDesc(middle) = g.getDesc(leaf) = desc;
+    g.getDesc(middle) = desc;
+    g.getDesc(leaf) = desc;
+    g.getDesc(formatLeaf) = desc;
+    g.value(FormatView_{}, format).format = desc.format;
     auto& parentView = g.value(SubresourceView_{}, middle);
     parentView.format = desc.format;
     parentView.indexOrFirstMipLevel = 1;
@@ -170,6 +178,7 @@ bool checkMountedResources() {
     childView.firstArraySlice = 1;
     childView.numArraySlices = 2;
     childView.numPlanes = 1;
+    g.value(SubresourceView_{}, formatLeaf) = childView;
 
     g.nextFenceValue = 7;
     g.mount(&device, leaf);
@@ -179,6 +188,10 @@ bool checkMountedResources() {
     const auto& info = view->getViewInfo();
     if (info.texture != texture || info.baseLevel != 3 || info.baseLayer != 3 || info.basePlane != 1 ||
         info.levelCount != 1 || info.layerCount != 2 || info.planeCount != 1) return false;
+    g.mount(&device, formatLeaf);
+    const auto& throughFormat = g.getTexture(formatLeaf)->getViewInfo();
+    if (throughFormat.texture != texture || throughFormat.baseLevel != info.baseLevel ||
+        throughFormat.baseLayer != info.baseLayer || throughFormat.basePlane != info.basePlane) return false;
 
     const auto buffer = g.add_vertex(ManagedBuffer_{}, "buffer");
     g.getDesc(buffer).width = 128;

@@ -448,7 +448,9 @@ TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数�
 
 `ResourceGraph` 用 `hierarchy_graph { storage: shared_edges; }` 让普通边和父子引用共用一份关系。每个顶点最多有一个父节点，纹理可以有多个子视图，视图也可以派生子视图。创建时可指定父节点，已有根节点也可挂到编号比它大的节点下。挂接会拒绝重复边、第二个父节点和环。已有父子关系和名称索引在失败后保持一致。
 
-图和普通记录使用 C++ 成员函数语法。用 `vertex_descriptor = uint32_t;` 声明顶点描述符，在图内写 `bool isTextureView(vertex_descriptor resID) const noexcept;`，在图外写 `ResourceGraph::vertex_descriptor`。`ResourceGraph` 的八个原生资源管理方法由生成头声明，由引擎提供定义。C++17 消费测试核对全部签名，并用引擎的查询逻辑区分普通纹理、格式视图和子资源视图。[图声明](../spec/render/render-graph.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp) · [消费测试](../tests/consumer/records/ResourceGraphConsumer.cpp)
+图和普通记录使用 C++ 成员函数语法。用 `vertex_descriptor = uint32_t;` 声明顶点描述符，在图内写 `bool isTextureView(vertex_descriptor resID) const noexcept;`，在图外写 `ResourceGraph::vertex_descriptor`。`ResourceGraph` 的八个原生资源管理方法由生成头声明，由引擎提供定义。C++17 消费测试把迁移补丁应用到引擎手写源文件的隔离副本，使用生成头编译并链接整个 `NativeResourceGraph.cpp`。测试通过 Empty GFX 纹理核对两层子资源视图的根纹理、mip、数组层和纹理平面，检查缓冲区与纹理按 fence 值卸载。[图声明](../spec/render/render-graph.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp) · [待切换的引擎补丁](../migrations/render-graph/NativeResourceGraph.patch) · [消费测试](../tests/consumer/records/ResourceGraphConsumer.cpp)
+
+原生管线在 `NativePipeline.cpp` 中直接调用 `ResourceGraph` 成员。消费测试从该文件提取 `addDepthStencil` 和 `updateDepthStencil` 的实现，检查创建和调整尺寸后，`<name>/depth` 和 `<name>/stencil` 属于同一纹理，分别使用 plane 0 和 1。[引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativePipeline.cpp) · [消费测试](../tests/consumer/records/PipelineDepthStencilConsumer.cpp)
 
 `ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。[渲染图声明](../spec/render/render-graph.spec)
 

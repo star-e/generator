@@ -42,7 +42,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativeTypes.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/FGDispatcherTypes.cpp"
     "${STAGING}/NativeData.cpp"
-    ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
+    ResourceGraphConsumer.cpp PipelineDepthStencilConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativePools.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"
@@ -59,7 +59,8 @@ target_include_directories(LegacyArchiveConsumer PRIVATE "${legacyNative}" "${le
 # NativeData.cpp inherits the adjacent generated header's include directory.
 set_property(SOURCE "${STAGING}/NativeData.cpp" PROPERTY INCLUDE_DIRECTORIES "${STAGING}/native/cocos/renderer/pipeline/custom")
 set_property(SOURCE "${STAGING}/native/cocos/renderer/pipeline/custom/NativePools.cpp" PROPERTY INCLUDE_DIRECTORIES "${native}/cocos/renderer/pipeline/custom")
-add_library(NativeLibraryConstructor STATIC "${STAGING}/NativeLibraryConstructor.cpp")
+set_property(SOURCE PipelineDepthStencilConsumer.cpp PROPERTY INCLUDE_DIRECTORIES "${STAGING}")
+add_library(NativeLibraryConstructor STATIC "${STAGING}/NativeLibraryConstructor.cpp" "${STAGING}/NativePipelineDepthStencil.cpp")
 target_link_libraries(RecordConsumer PRIVATE NativeLibraryConstructor)
 # Material and Model transitively include the engine's native typed array headers.
 foreach(target IN ITEMS RecordConsumer NativeLibraryConstructor)

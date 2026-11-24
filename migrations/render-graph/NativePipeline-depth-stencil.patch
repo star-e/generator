@@ -1,0 +1,191 @@
+diff --git a/native/cocos/renderer/pipeline/custom/NativePipeline.cpp b/native/cocos/renderer/pipeline/custom/NativePipeline.cpp
+--- a/native/cocos/renderer/pipeline/custom/NativePipeline.cpp
++++ b/native/cocos/renderer/pipeline/custom/NativePipeline.cpp
+@@ -44,6 +44,8 @@
+ #include "cocos/scene/RenderWindow.h"
+ #include "cocos/scene/SpotLight.h"
+ 
++#include <stdexcept>
++
+ #if CC_USE_DEBUG_RENDERER
+     #include "profiler/DebugRenderer.h"
+ #endif
+@@ -59,53 +61,27 @@ namespace render {
+ namespace {
+ 
+ template <gfx::Format>
+-void addSubresourceNode(ResourceGraph::vertex_descriptor v, const ccstd::string &name, ResourceGraph &resg);
++void addSubresourceNode(ResourceGraph::vertex_descriptor v, const ccstd::string &depthName, const ccstd::string &stencilName, ResourceGraph &resg);
+ 
+ template <>
+-void addSubresourceNode<gfx::Format::DEPTH_STENCIL>(ResourceGraph::vertex_descriptor v, const ccstd::string &name, ResourceGraph &resg) {
+-    const auto desc = get(ResourceGraph::DescTag{}, resg, v);
+-    const auto traits = get(ResourceGraph::TraitsTag{}, resg, v);
+-    const auto samplerInfo = get(ResourceGraph::SamplerTag{}, resg, v);
+-
+-    SubresourceView view{
+-        nullptr,
+-        gfx::Format::DEPTH_STENCIL,
+-        0, // indexOrFirstMipLevel
+-        1, // numMipLevels
+-        0, // firstArraySlice
+-        1, // numArraySlices
+-        0, // firstPlane
+-        1, // numPlanes
++void addSubresourceNode<gfx::Format::DEPTH_STENCIL>(ResourceGraph::vertex_descriptor v, const ccstd::string &depthName, const ccstd::string &stencilName, ResourceGraph &resg) {
++    // Adding the first view can reallocate the graph's component vectors.
++    const auto desc = resg.getDesc(v);
++    const auto residency = resg.getTraits(v).residency;
++    const auto samplerInfo = resg.getSampler(v);
++    const auto addPlane = [&](const ccstd::string &name, uint16_t plane) {
++        SubresourceView view{};
++        view.format = gfx::Format::DEPTH_STENCIL;
++        view.numMipLevels = 1;
++        view.numArraySlices = 1;
++        view.firstPlane = plane;
++        view.numPlanes = 1;
++        resg.add_vertex(SubresourceView_{}, std::piecewise_construct, std::tie(view),
++                        std::forward_as_tuple(name.data(), name.size()), std::tie(desc), std::tie(residency),
++                        std::tuple<>{}, std::tie(samplerInfo), v);
+     };
+-
+-    ccstd::string depthName{name};
+-    depthName += "/";
+-    depthName += DEPTH_PLANE_NAME;
+-    const auto depthID = addVertex(
+-        SubresourceViewTag{},
+-        std::forward_as_tuple(depthName.c_str()),
+-        std::forward_as_tuple(desc),
+-        std::forward_as_tuple(traits.residency),
+-        std::forward_as_tuple(),
+-        std::forward_as_tuple(samplerInfo),
+-        std::forward_as_tuple(view),
+-        resg,
+-        v);
+-
+-    view.firstPlane = 1;
+-    ccstd::string stencilName{name};
+-    stencilName += "/";
+-    stencilName += STENCIL_PLANE_NAME;
+-    const auto stencilID = addVertex(
+-        SubresourceViewTag{},
+-        std::forward_as_tuple(stencilName.c_str()),
+-        std::forward_as_tuple(desc),
+-        std::forward_as_tuple(traits.residency),
+-        std::forward_as_tuple(),
+-        std::forward_as_tuple(samplerInfo),
+-        std::forward_as_tuple(view),
+-        resg,
+-        v);
++    addPlane(depthName, 0);
++    addPlane(stencilName, 1);
+ }
+ 
+ } // namespace
+@@ -258,7 +234,7 @@ void updateDepthStencilImpl(
+     ResourceGraph::vertex_descriptor resID, uint32_t width, uint32_t height, gfx::Format format,
+     gfx::Swapchain *swapchain) {
+     CC_EXPECTS(resID != ResourceGraph::null_vertex());
+-    auto &desc = get(ResourceGraph::DescTag{}, ppl.resourceGraph, resID);
++    auto &desc = ppl.resourceGraph.getDesc(resID);
+ 
+     // update format
+     if (format == gfx::Format::UNKNOWN) {
+@@ -270,20 +246,19 @@ void updateDepthStencilImpl(
+     }
+     CC_ENSURES(format != gfx::Format::UNKNOWN);
+ 
+-    visitObject(
+-        resID, ppl.resourceGraph,
++    ppl.resourceGraph.visit_object(
++        resID,
+         [&](ManagedTexture &tex) {
+             CC_EXPECTS(!swapchain || !ppl.defaultFramebufferHasDepthStencil);
+             bool invalidated =
+                 std::forward_as_tuple(desc.width, desc.height, desc.format) !=
+                 std::forward_as_tuple(width, height, format);
+             if (invalidated) {
+-                for (const auto &e : makeRange(children(resID, ppl.resourceGraph))) {
+-                    const auto childID = child(e, ppl.resourceGraph);
+-                    auto &desc = get(ResourceGraph::DescTag{}, ppl.resourceGraph, childID);
+-                    desc.width = width;
+-                    desc.height = height;
+-                    desc.format = format;
++                for (const auto &e : ppl.resourceGraph.child_links(resID)) {
++                    auto &childDesc = ppl.resourceGraph.getDesc(ppl.resourceGraph.child(e));
++                    childDesc.width = width;
++                    childDesc.height = height;
++                    childDesc.format = format;
+                 }
+                 desc.width = width;
+                 desc.height = height;
+@@ -321,7 +296,7 @@ uint32_t addDepthStencilImpl(
+     const ccstd::string &name, gfx::Format format, uint32_t width, uint32_t height,
+     ResourceResidency residency,
+     gfx::Swapchain *swapchain) {
+-    auto resID = findVertex(ccstd::pmr::string(name, ppl.get_allocator()), ppl.resourceGraph);
++    auto resID = ppl.resourceGraph.find(name);
+ 
+     // Resource already exists
+     if (resID != ResourceGraph::null_vertex()) {
+@@ -329,6 +304,14 @@ uint32_t addDepthStencilImpl(
+         return resID;
+     }
+ 
++    auto depthName = name + '/';
++    depthName += DEPTH_PLANE_NAME;
++    auto stencilName = name + '/';
++    stencilName += STENCIL_PLANE_NAME;
++    if (ppl.resourceGraph.contains(depthName) || ppl.resourceGraph.contains(stencilName)) {
++        throw std::invalid_argument("depth/stencil view name already exists");
++    }
++
+     ResourceDesc desc{};
+     desc.dimension = ResourceDimension::TEXTURE2D;
+     desc.width = width;
+@@ -351,29 +334,17 @@ uint32_t addDepthStencilImpl(
+         CC_EXPECTS(ppl.defaultFramebufferHasDepthStencil);
+         RenderSwapchain sc{swapchain, true};
+         sc.texture = RenderSwapchain::getDepthStencilTexture(swapchain);
+-        resID = addVertex(
+-            SwapchainTag{},
+-            std::forward_as_tuple(name.c_str()),
+-            std::forward_as_tuple(desc),
+-            std::forward_as_tuple(ResourceTraits{residency}),
+-            std::forward_as_tuple(),
+-            std::forward_as_tuple(samplerInfo),
+-            std::forward_as_tuple(sc),
+-            ppl.resourceGraph);
++        resID = ppl.resourceGraph.add_vertex(Swapchain_{}, std::piecewise_construct, std::tie(sc),
++                                             std::forward_as_tuple(name.data(), name.size()), std::tie(desc), std::tie(residency),
++                                             std::tuple<>{}, std::tie(samplerInfo));
+     } else {
+         CC_EXPECTS(residency == ResourceResidency::MANAGED || residency == ResourceResidency::MEMORYLESS);
+-        resID = addVertex(
+-            ManagedTextureTag{},
+-            std::forward_as_tuple(name.c_str()),
+-            std::forward_as_tuple(desc),
+-            std::forward_as_tuple(ResourceTraits{residency}),
+-            std::forward_as_tuple(),
+-            std::forward_as_tuple(samplerInfo),
+-            std::forward_as_tuple(),
+-            ppl.resourceGraph);
++        resID = ppl.resourceGraph.add_vertex(ManagedTexture_{}, std::piecewise_construct, std::tuple<>{},
++                                             std::forward_as_tuple(name.data(), name.size()), std::tie(desc), std::tie(residency),
++                                             std::tuple<>{}, std::tie(samplerInfo));
+     }
+ 
+-    addSubresourceNode<gfx::Format::DEPTH_STENCIL>(resID, name, ppl.resourceGraph);
++    addSubresourceNode<gfx::Format::DEPTH_STENCIL>(resID, depthName, stencilName, ppl.resourceGraph);
+ 
+     return resID;
+ }
+@@ -934,7 +905,7 @@ void NativePipeline::updateRenderTarget(
+ void NativePipeline::updateDepthStencil(
+     const ccstd::string &name,
+     uint32_t width, uint32_t height, gfx::Format format) { // NOLINT(bugprone-easily-swappable-parameters)
+-    auto resID = findVertex(ccstd::pmr::string(name, get_allocator()), resourceGraph);
++    const auto resID = resourceGraph.find(name);
+     if (resID == ResourceGraph::null_vertex()) {
+         return;
+     }
