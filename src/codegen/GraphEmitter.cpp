@@ -549,11 +549,14 @@ void piecewiseAddVertex(std::ostream& declaration, std::ostream& out, const std:
     out << ", class>\n" << name << "::" << vertex << " " << name << "::add_vertex(" << params << ") {\n";
     const auto count = "this->" + storage.front() + ".size()";
     const auto descriptor = name + "::" + vertex;
-    if (hierarchy)
-        out << "    if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= " << count << ")\n"
-             << "        throw std::out_of_range(\"invalid " << name << " parent\");\n";
-    out << "    if (" << count << " >= (std::numeric_limits<" << descriptor << ">::max)())\n"
+    if (hierarchy) {
+        out << "    if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= " << count << ") {\n"
+             << "        throw std::out_of_range(\"invalid " << name << " parent\");\n"
+             << "    }\n";
+    }
+    out << "    if (" << count << " >= (std::numeric_limits<" << descriptor << ">::max)()) {\n"
          << "        throw std::length_error(\"" << name << " vertex limit exceeded\");\n"
+         << "    }\n"
          << "    const auto vertex = static_cast<" << descriptor << ">(" << count << ");\n";
     if (tagged && model.keyComponentIndex) out << "    bool indexedKey = false;\n";
     if (indexedNames) out << "    auto entry = this->nameIndex_.end();\n";
@@ -587,8 +590,9 @@ void piecewiseAddVertex(std::ostream& declaration, std::ostream& out, const std:
     if (!rows.empty()) out << "        edges.push_back(TreeEdge{parent});\n";
     if (!children.empty()) out << "        if (parent != null_vertex()) linked = add_reference(parent, vertex).second;\n";
     if (model.keyComponentIndex) {
-        out << "        if (!this->componentIndex_.emplace(this->" << storage[*model.keyComponentIndex] << ".back(), vertex).second)\n"
-             << "            throw std::invalid_argument(\"duplicate vertex key\");\n";
+        out << "        if (!this->componentIndex_.emplace(this->" << storage[*model.keyComponentIndex] << ".back(), vertex).second) {\n"
+             << "            throw std::invalid_argument(\"duplicate vertex key\");\n"
+             << "        }\n";
         if (tagged) out << "        indexedKey = true;\n";
     }
     // Append the payload last so rollback only needs the common per-vertex storage and indices.
