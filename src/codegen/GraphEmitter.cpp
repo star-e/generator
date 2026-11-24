@@ -14,6 +14,7 @@ namespace cc::codegen {
 namespace {
 
 constexpr std::string_view snakeCaseMethodLineEnd = " // NOLINT(readability-identifier-naming)\n";
+constexpr std::string_view endpointMethodLineEnd = " // NOLINT(readability-convert-member-functions-to-static)\n";
 
 struct GraphSection {
     std::string_view name;
@@ -86,8 +87,8 @@ void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const 
     sections.graph.types << "    using edge_descriptor = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n";
     sections.incidence.types << "    using TreeEdge = " << scope.name("cc::graph::TreeEdge") << "<" << vertex << ">;\n"
         << "    using out_edge_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, false>;\n";
-    sections.incidence.header << "    " << vertex << " source(edge_descriptor e) const noexcept { return e.source; }\n"
-        << "    " << vertex << " target(edge_descriptor e) const noexcept { return e.target; }\n"
+    sections.incidence.header << "    " << vertex << " source(edge_descriptor e) const noexcept { return e.source; }" << endpointMethodLineEnd
+        << "    " << vertex << " target(edge_descriptor e) const noexcept { return e.target; }" << endpointMethodLineEnd
         << "    " << scope.name("cc::graph::IteratorRange") << "<out_edge_iterator> out_edges(" << vertex << " v) const noexcept { return child_links(v); }" << snakeCaseMethodLineEnd
         << "    " << vertex << " out_degree(" << vertex << " v) const noexcept { return num_children(v); }" << snakeCaseMethodLineEnd
         << "    std::pair<edge_descriptor, bool> edge(" << vertex << " u, " << vertex << " v) const noexcept {\n"
@@ -116,14 +117,14 @@ void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const 
         << "    using children_iterator = out_edge_iterator;\n"
         << "    using parent_iterator = in_edge_iterator;\n";
     if (edgeList) sections.reference.types << "    using ownership_iterator = edge_iterator;\n";
-    sections.reference.header << "    " << vertex << " child(ownership_descriptor link) const noexcept { return link.target; }\n"
+    sections.reference.header << "    " << vertex << " child(ownership_descriptor link) const noexcept { return link.target; }" << endpointMethodLineEnd
         << "    " << vertex << " get_parent(" << vertex << " v) const noexcept { return v == null_vertex() ? v : this->"
         << rows << "[v].parent; }" << snakeCaseMethodLineEnd
         << "    " << vertex << " num_children(" << vertex << " v) const noexcept { return this->" << rows << "[v].childCount; }" << snakeCaseMethodLineEnd
         << "    " << scope.name("cc::graph::IteratorRange") << "<children_iterator> child_links(" << vertex << " v) const noexcept {" << snakeCaseMethodLineEnd
         << "        const auto* rows = " << rows << ".data();\n"
         << "        return {{rows, rows[v].firstChild}, {rows, null_vertex()}};\n    }\n"
-        << "    " << vertex << " parent(ownership_descriptor e) const noexcept { return e.source; }\n"
+        << "    " << vertex << " parent(ownership_descriptor e) const noexcept { return e.source; }" << endpointMethodLineEnd
         << "    " << vertex << " num_parents(" << vertex << " v) const noexcept { return get_parent(v) != null_vertex(); }" << snakeCaseMethodLineEnd
         << "    " << scope.name("cc::graph::IteratorRange") << "<parent_iterator> parent_links(" << vertex << " v) const noexcept { return {{{get_parent(v), v}}, {{null_vertex(), v}}}; }" << snakeCaseMethodLineEnd
         << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return edge(u, v).second; }" << snakeCaseMethodLineEnd;
@@ -136,8 +137,8 @@ void directedEdges(GraphSections& sections, const GraphScope& scope, const std::
     auto& traversal = references ? sections.reference : sections.incidence;
     auto& descriptorTypes = references ? sections.reference.types : sections.graph.types;
     descriptorTypes << "    using " << descriptor << " = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n";
-    traversal.header << "    " << vertex << (references ? " parent(" : " source(") << descriptor << " e) const noexcept { return e.source; }\n"
-        << "    " << vertex << (references ? " child(" : " target(") << descriptor << " e) const noexcept { return e.target; }\n";
+    traversal.header << "    " << vertex << (references ? " parent(" : " source(") << descriptor << " e) const noexcept { return e.source; }" << endpointMethodLineEnd
+        << "    " << vertex << (references ? " child(" : " target(") << descriptor << " e) const noexcept { return e.target; }" << endpointMethodLineEnd;
     const auto incident = [&](GraphSection& section, const char* range, const char* count, const std::string& rows, bool reversed) {
         const auto* iterator = references ? (reversed ? "parent_iterator" : "children_iterator")
                                           : (reversed ? "in_edge_iterator" : "out_edge_iterator");
