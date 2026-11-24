@@ -52,7 +52,6 @@ set(expectedFiles ${baselineFiles} cocos/rendering/custom/types.ts cocos/renderi
     native/cocos/renderer/pipeline/custom/RenderInterfaceTypes.h
     native/cocos/renderer/pipeline/custom/RenderGraphFwd.h
     native/cocos/renderer/pipeline/custom/RenderGraphTypes.h native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp
-    cocos/rendering/custom/graph-dfs.ts
     native/cocos/base/GraphDFS.h
     native/cocos/base/GraphDescriptor.h
     native/cocos/base/GraphIterator.h
@@ -173,8 +172,8 @@ if(NOT restored STREQUAL manifest)
     message(FATAL_ERROR "Generation did not restore the original manifest")
 endif()
 
-file(APPEND "${work}/runtime/typescript/graph-dfs.ts" "// runtime source edit\n")
-expect_failure(1 "changed: cocos/rendering/custom/graph-dfs[.]ts" ${generate} --check --diff)
+file(APPEND "${work}/runtime/cpp/GraphDFS.h" "// runtime source edit\n")
+expect_failure(1 "changed: native/cocos/base/GraphDFS[.]h" ${generate} --check --diff)
 run(${generate})
 run(${generate} --check --diff)
 
@@ -194,10 +193,10 @@ set(spec "${work}/spec/render/archive.spec")
 file(READ "${spec}" original)
 set(workspace "${work}/config/workspace.json")
 file(READ "${workspace}" config)
-string(REPLACE "cocos/rendering/custom/graph-dfs.ts" "Codegen-Generated-Manifest.json" reserved "${config}")
+string(REPLACE "native/cocos/base/GraphDFS.h" "Codegen-Generated-Manifest.json" reserved "${config}")
 file(WRITE "${workspace}" "${reserved}")
 expect_failure(2 "reserved manifest output" ${generate})
-string(REPLACE "cocos/rendering/custom/graph-dfs.ts" "cocos/rendering/custom/Layout-Graph.ts" collision "${config}")
+string(REPLACE "native/cocos/base/GraphDFS.h" "cocos/rendering/custom/Layout-Graph.ts" collision "${config}")
 file(WRITE "${workspace}" "${collision}")
 expect_failure(2 "duplicate output cocos/rendering/custom/layout-graph[.]ts" ${generate})
 string(JSON old SET "${config}" modules 0 projection [["unused.json"]])

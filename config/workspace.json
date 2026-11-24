@@ -49,8 +49,7 @@
         "native/cocos/base/GraphDFS.h": "../runtime/cpp/GraphDFS.h",
         "native/cocos/base/GraphDescriptor.h": "../runtime/cpp/GraphDescriptor.h",
         "native/cocos/base/GraphIterator.h": "../runtime/cpp/GraphIterator.h",
-        "native/cocos/base/GraphView.h": "../runtime/cpp/GraphView.h",
-        "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts"
+        "native/cocos/base/GraphView.h": "../runtime/cpp/GraphView.h"
       }
     },
     { "spec": "../spec/extern/scene.spec" },

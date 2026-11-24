@@ -1,8 +1,7 @@
 import { DescriptorSet, DescriptorSetInfo, DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutInfo, DescriptorType,
     Format, MemoryAccessBit, SampleType, ShaderStageFlagBit, Type, Uniform, UniformBlock, ViewDimension } from '../../gfx';
 import { BinaryInputArchive, BinaryOutputArchive } from './binary-archive';
-import { DefaultVisitor, GraphColor, MutableVertexPropertyMap } from './graph';
-import { depthFirstSearch } from './@dfsModule@';
+import { DefaultVisitor, depthFirstSearch, GraphColor, MutableVertexPropertyMap } from './graph';
 import { getDescriptorTypeOrderName } from './layout-graph-names';
 import { ParameterType, UpdateFrequency } from './types';
 import { getUpdateFrequencyName } from './types-names';

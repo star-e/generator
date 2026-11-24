@@ -4,11 +4,6 @@
       "module": "ArchiveInterface",
       "source": "spec/render/archive.spec"
     },
-    "cocos/rendering/custom/graph-dfs.ts": {
-      "copiedFrom": "runtime/typescript/graph-dfs.ts",
-      "module": "LayoutGraph",
-      "source": "spec/render/layout-graph.spec"
-    },
     "cocos/rendering/custom/layout-graph-names.ts": {
       "module": "LayoutGraph",
       "source": "spec/render/layout-graph.spec"

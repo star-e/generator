@@ -1,6 +1,6 @@
-import { DefaultVisitor, depthFirstSearch as engineSearch, ED, OneInEI, OutEI } from './graph';
+import { DefaultVisitor, depthFirstSearch, ED, OneInEI, OutEI } from './graph';
 import type { AddressableGraph, AdjacencyGraph, BidirectionalGraph, PolymorphicGraph, ReferenceGraph } from './graph';
-import { depthFirstSearch } from './graph-dfs';
+import { depthFirstSearch as legacySearch } from '../legacy/graph';
 import type { InputArchive } from './archive';
 import { Descriptor, DescriptorBlock, DescriptorBlockIndex, DescriptorDB, DescriptorGroupBlockIndex,
     EffectData, LayoutGraph, LayoutGraphData, LayoutGraphDataValue, LayoutGraphValue, RenderPassType,
@@ -188,7 +188,7 @@ class EditorFixture {
         }
         assert(this.updatePasses() === 0, 'Editor pass traversal');
         const referencePrint = new LayoutGraphPrintVisitor();
-        engineSearch(lg, referencePrint, new VectorGraphColorMap(lg.nv()));
+        legacySearch(lg, referencePrint, new VectorGraphColorMap(lg.nv()));
         assert(referencePrint.oss.indexOf('descriptors: [deferred]') >= 0 &&
             referencePrint.oss.indexOf('"forward": RenderStage') >= 0 &&
             this.print() === referencePrint.oss, 'Full editor output with descriptors and multiple roots');

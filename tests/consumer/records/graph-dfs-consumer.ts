@@ -1,6 +1,5 @@
-import { DefaultVisitor, GraphColor, OutE, OutEI, ReferenceGraphView } from './graph';
+import { DefaultVisitor, depthFirstSearch, depthFirstVisit, GraphColor, OutE, OutEI, ReferenceGraphView } from './graph';
 import type { edge_descriptor, IncidenceGraph, VertexListGraph } from './graph';
-import { depthFirstSearch, depthFirstVisit } from './graph-dfs';
 import type { InputArchive } from './archive';
 import { DescriptorDB, LayoutGraph, LayoutGraphValue, RenderPassType } from './layout-graph';
 import { HierarchyOnly } from './shift-probe';
@@ -86,6 +85,12 @@ export function checkNativeDfs (samples: InputArchive): void {
     visit.expect('start0 open0 examine0>1 tree0>1 open1 close1 finish0>1 examine0>2 forward/cross0>2 finish0>2 close0');
     check(colors.get(3) === GraphColor.WHITE && colors.get(4) === GraphColor.WHITE, 'Visit reached a disconnected vertex');
     visit.compareNative(samples);
+
+    const view = new Digraph([[new OutE(0)], []], [0, 1]);
+    view.target = () => 1;
+    const viewColors = new Colors([GraphColor.WHITE, GraphColor.WHITE]);
+    depthFirstVisit(view, 0, new DefaultVisitor(), viewColors);
+    check(viewColors.get(1) === GraphColor.BLACK, 'DFS follows the target exposed by the graph view');
 
     const empty = new Trace(new Colors([]));
     depthFirstSearch(new Digraph([], []), empty, empty.color, 0);

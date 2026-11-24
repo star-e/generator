@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 56 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDescriptor.h`、`GraphDFS.h`、`GraphIterator.h`、`GraphView.h` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 55 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDescriptor.h`、`GraphDFS.h`、`GraphIterator.h` 和 `GraphView.h`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -48,7 +48,7 @@ build/host/cocos-codegen generate --workspace config/workspace.json --output ../
 
 `--module` 取 `.spec` 声明的模块名，区分大小写，只能与 `--check` 一起使用。生成器加载完整工作区以解析导入，按模块归属检查生成文件和 `runtimeFiles` 副本。目标目录可包含手写代码，也可省略工作区清单。匹配时显示文件数，缺失或变化时列出路径并返回 1，加 `--diff` 可查看第一处字节差异。引擎代码、自举代码、运行时副本和 JSON 清单默认使用运行生成器的平台换行，Windows 为 CRLF，其他平台为 LF。工作区可用 `lineEnding` 显式选择 `native`、`lf` 或 `crlf`。未知模块返回 2。
 
-引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `cocos/rendering/custom/graph-dfs.ts` 来源于 `runtime/typescript/graph-dfs.ts`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序，与同一工作区的源码采用相同的换行规则，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
+引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `native/cocos/base/GraphDFS.h` 来源于 `runtime/cpp/GraphDFS.h`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序，与同一工作区的源码采用相同的换行规则，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
 
 工作区通过 `ModuleInput` 把每个模块的声明、C++ 定义头、前置声明头和 TS 输出信息交给建图器。建图时，标量别名使用前置声明头，模板实例别名和图标签使用定义头。外部类型的头文件和 TS 导入来源沿用 `extern module` 的声明与配置。[建图输入](../src/model/TypeGraphBuilder.h) · [工作区](../src/workspace/Workspace.cpp)
 
@@ -218,7 +218,6 @@ spec/extern/             引擎、标准库和 Boost 外部类型
 spec/render/             管线模块声明与语言绑定
 spec/codegen/            生成器自身的模型声明
 config/                  workspace、模块输出配置、文件归属和版本基线
-runtime/typescript/      随模块暂存的手写 TS 运行时
 runtime/cpp/             随模块暂存的手写 C++17 运行时
 src/cli/                 命令入口
 src/parser/              声明解析与源位置诊断
@@ -297,7 +296,7 @@ C++ 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`out_edges(v)` 
 
 原生运行时按消费者切换。`NativeExecutor.cpp` 在过滤视图上利用发现和完成事件执行渲染命令，`FrameGraphDispatcher.cpp` 在启用 pass 重排时计算传递闭包。阶段 3 迁移图遍历、引用视图和过滤视图时，同批适配执行器等手写调用方。阶段 4 接管 `FGDispatcher` 时，再用 Cocos 的可达性实现验证重排约束。[原生执行器](../../cocos4/native/cocos/renderer/pipeline/custom/NativeExecutor.cpp) · [帧图调度](../../cocos4/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp)
 
-TS 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`oe`、`od`、`edge`、`source` 和 `target` 共用父子关系的存储。编辑器迁入时从 `./graph-dfs` 导入 `depthFirstVisit` 和 `depthFirstSearch`，访问器、颜色和边类型继续从 `./graph` 导入。互操作测试用编辑器的 `print()` 对照完整布局文本，并验证 DFS 事件顺序和长链。[TS 遍历源码](../runtime/typescript/graph-dfs.ts) · [Web 图接口](../../cocos4/cocos/rendering/custom/graph.ts)
+TS 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`oe`、`od`、`edge`、`source` 和 `target` 共用父子关系的存储。布局编辑器、编译器和执行器共用引擎 `graph.ts` 中的 DFS。互操作测试用编辑器的 `print()` 对照完整布局文本，并验证 DFS 事件顺序和长链。[TS 图接口与遍历](../../cocos4/cocos/rendering/custom/graph.ts)
 
 对声明了 `polymorphic_graph` 的图，C++ 生成成员函数 `g.visit_object(v, visitor)`，也接受多个按载荷类型重载的 lambda。图按顶点类别调用一次处理函数，并保留其返回值或引用。可修改图传入 `T&`，只读图传入 `const T&`，两者都直接访问该顶点的载荷。无效编号会在调用访问器之前抛出 `std::out_of_range`。原生 DFS 用这一接口分派 Pass、Queue、Scene 的进入与退出操作。[渲染图访问用例](../tests/consumer/records/RenderGraphConsumer.cpp) · [DFS 用例](../tests/consumer/records/GraphDFSConsumer.cpp)
 
@@ -420,7 +419,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 1 | ArchiveInterface | 4 | 4 | `ArchiveFwd.h`、`ArchiveTypes.h`、`ArchiveTypes.cpp`、`archive.ts`。验证虚方法、原生 `scratch()` 与 TS 的 `b/n/s`。 |
 | 2 | RenderSettings | 1 | 1 | 编辑器的 `editor/assets/default_renderpipeline/builtin-pipeline-types.ts`。用旧设置调用 `fillRequiredBloom`，验证 `material` 迁移到 `kawaseFilterMaterial`。 |
 | 2 | RenderCommon | 10 | 10 | `RenderCommon*`、`types.ts`、`types-names.ts`。覆盖枚举数值、构造默认值、对象池复用、归档筛选和 `RenderCommonJsb` 转换。 |
-| 3 | LayoutGraph | 9 | 8 | 八个生成产物和五个配套运行时文件已接入 cocos4，`--module LayoutGraph --output ../cocos4 --check` 核对全部 13 个文件。原生调用方使用成员接口，布局编辑器使用迭代 DFS，`LayoutGraphGraphs.h` 已退役。 |
+| 3 | LayoutGraph | 9 | 8 | 八个生成产物和四个配套运行时文件已接入 cocos4，`--module LayoutGraph --output ../cocos4 --check` 核对全部 12 个文件。原生调用方使用成员接口，布局编辑器使用迭代 DFS，`LayoutGraphGraphs.h` 已退役。 |
 | 3 | RenderGraph | 5 | 4 | `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp`、`render-graph.ts`。分别验证 `ResourceGraph` 的别名引用关系、`RenderGraph` 的独立引用关系，以及 TS 可执行的组件访问和对象池。 |
 | 4 | RenderInterface | 5 | 5 | `RenderInterface*`、`pipeline.ts`、`native/tools/swig-config/render.i`。覆盖重载、getter、条件宏、返回对象的 GC 规则和公开注释。 |
 | 4 | PrivateInterface | 4 | 4 | `PrivateFwd.h`、`PrivateTypes.h/.cpp`、`private.ts`。使用 `RenderInterface` 和外部 `ProgramLib` 核对签名。 |
