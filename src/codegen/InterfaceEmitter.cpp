@@ -167,8 +167,7 @@ void cppMethod(std::ostream& out, const ClassScope& scope, const MethodInfo& met
     if (method.isNoexcept) out << " noexcept";
     if (overrides) out << " override";
     if (method.isPureVirtual) out << " = 0";
-    if (method.cppBody.empty()) out << ";\n";
-    else out << ' ' << method.cppBody << '\n';
+    writeCppMethodBody(out, method.cppBody);
 }
 
 void forwardArgument(std::ostream& out, const TypeGraph& graph, const ParameterInfo& p, std::set<std::string>& headers) {
@@ -351,6 +350,22 @@ void tsInterface(std::ostream& out, const TypeGraph& graph, const TypeNode& decl
 }
 
 } // namespace
+
+void writeCppMethodBody(std::ostream& out, std::string_view body) {
+    if (body.empty()) {
+        out << ";\n";
+    } else if (body.find_first_of("\r\n") != body.npos) {
+        out << ' ' << body << '\n';
+    } else {
+        body = body.substr(1, body.size() - 2);
+        const auto first = body.find_first_not_of(" \t");
+        if (first == body.npos) {
+            out << " {}\n";
+        } else {
+            out << " {\n        " << body.substr(first, body.find_last_not_of(" \t") - first + 1) << "\n    }\n";
+        }
+    }
+}
 
 void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers,
                                std::set<const TypeNode*>& forwardTypes, bool spaceBeforeReference) {

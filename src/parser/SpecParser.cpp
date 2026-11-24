@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -1190,11 +1191,11 @@ private:
         consume(1);
     }
 
-    // Keep the native body verbatim. Braces in literals and comments do not
-    // participate in matching the brace that returns control to the spec lexer.
-    std::string cppBody() {
+    // Only reindent code lines. Whitespace inside literals and line splices is significant.
+    std::string cppBody(std::optional<std::string_view> methodIndent = std::nullopt) {
         const char* start = token.data();
         const auto opening = location;
+        std::vector<const char*> codeLines;
         size_t depth = 1;
         while (!remaining.empty()) {
             location = position;
@@ -1215,10 +1216,14 @@ private:
                 consume(1);
                 finishLiteral(ch, "unterminated C++ literal");
             } else {
+                const char* here = remaining.data();
                 consume(1);
+                if (methodIndent && ch == '\n' && here[-1] != '\\' &&
+                    !(here[-1] == '\r' && here[-2] == '\\')) codeLines.push_back(remaining.data());
                 if (ch == '{') ++depth;
                 if (ch == '}' && --depth == 0) {
-                    std::string body(start, remaining.data());
+                    auto body = methodIndent ? indentedMethodBody(start, codeLines, *methodIndent)
+                                             : std::string(start, remaining.data());
                     advance();
                     return body;
                 }
@@ -1348,10 +1353,7 @@ private:
         fail("unterminated TypeScript method body");
     }
 
-    std::string tsMethodBody(std::string_view indent) {
-        const char* start = token.data();
-        std::vector<const char*> codeLines;
-        tsBracedBody(&codeLines);
+    std::string indentedMethodBody(const char* start, const std::vector<const char*>& codeLines, std::string_view indent) const {
         std::string body;
         if (indent.find_first_not_of(" \t") == indent.npos) {
             for (const auto* line : codeLines) {
@@ -1363,11 +1365,20 @@ private:
             }
         }
         body.append(start, remaining.data());
+        return body;
+    }
+
+    std::string tsMethodBody(std::string_view indent) {
+        const char* start = token.data();
+        std::vector<const char*> codeLines;
+        tsBracedBody(&codeLines);
+        auto body = indentedMethodBody(start, codeLines, indent);
         advance();
         return body;
     }
 
     Method method(std::set<std::string>& names, const std::vector<Method>& methods, bool inInterface = false) {
+        const auto indent = std::string_view(token.data() - (location.column - 1), location.column - 1);
         Method result;
         result.documentation = documentation();
         bool cppOnly = false;
@@ -1433,7 +1444,7 @@ private:
             expect("0");
             expect(";");
         } else if (token == "{") {
-            result.cppBody = cppBody();
+            result.cppBody = cppBody(indent);
             accept(";");
         } else {
             if (token == "=") fail("pure virtual method requires 'virtual'");

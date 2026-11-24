@@ -390,14 +390,10 @@ source_between(nativePipelineImplementation "NativePipeline::NativePipeline(" "g
 file(WRITE "${stage}/NativeLibraryConstructor.cpp"
     "#include \"cocos/renderer/pipeline/custom/NativePipelineTypes.h\"\n#include \"cocos/renderer/pipeline/custom/RenderingModule.h\"\n"
     "namespace cc::render {\n${libraryConstructor}\n${pipelineConstructor}}\n")
-# Apply the pending engine migration only to the isolated copy beside the generated headers.
+# Compile the handwritten engine sources beside the generated headers.
 foreach(file IN ITEMS NativeResourceGraph.cpp NativePools.cpp)
     configure_file("${ENGINE}/${nativeCustom}/${file}" "${stage}/${nativeCustom}/${file}" COPYONLY)
 endforeach()
-find_package(Git REQUIRED)
-execute_process(COMMAND "${CMAKE_COMMAND}" -E env "GIT_CEILING_DIRECTORIES=${work}"
-    "${GIT_EXECUTABLE}" -c core.autocrlf=input apply "${SOURCE}/migrations/render-graph/NativeResourceGraph.patch"
-    WORKING_DIRECTORY "${stage}" COMMAND_ERROR_IS_FATAL ANY)
 # Compile the same method bodies against the real NativePipeline and the device-only test fixture.
 file(READ "${ENGINE}/${nativeCustom}/NativeRenderGraphUtils.h" graphUtils)
 source_between(graphUtils "static constexpr std::string_view DEPTH_PLANE_NAME" "static constexpr std::string_view CUBE_TOP_NAME" planeNames)

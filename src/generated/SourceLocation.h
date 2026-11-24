@@ -38,10 +38,11 @@ namespace cc {
 namespace codegen {
 
 struct SourceLocation {
+    std::string describe() const;
+
     std::filesystem::path file;
     std::size_t line{0};
     std::size_t column{0};
-    std::string describe() const;
 };
 
 } // namespace codegen

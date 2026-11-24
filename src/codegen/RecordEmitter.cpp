@@ -1012,7 +1012,7 @@ std::string namesHeader(const TypeGraph& graph, const TypeModule& module, const 
 }
 
 std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module, const std::vector<MethodInfo>& methods,
-                               const RecordOutput& output, Dependencies& deps, bool currentPrivate = false) {
+                               const RecordOutput& output, Dependencies& deps, bool& currentPrivate) {
     std::ostringstream out;
     for (const auto& method : methods) {
         memberAccess(out, currentPrivate, method.cppPrivate);
@@ -1036,8 +1036,7 @@ std::string cppMemberFunctions(const TypeGraph& graph, const TypeModule& module,
         out << ")";
         if (method.isConst) out << " const";
         if (method.isNoexcept) out << " noexcept";
-        if (method.cppBody.empty()) out << ";\n";
-        else out << ' ' << method.cppBody << '\n';
+        writeCppMethodBody(out, method.cppBody);
     }
     return out.str();
 }
@@ -1082,27 +1081,6 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     if (record.isClass) out << "public:\n";
     cppRecordFriends(out, graph, module, node, archive, deps);
     bool currentPrivate = false;
-    std::map<uint32_t, bool> staticDefaults;
-    for (size_t i = 0; i < statics.size(); ++i) {
-        const auto& [member, forwardEnum] = statics[i];
-        const auto& field = record.staticFields[i];
-        memberAccess(out, currentPrivate, field.cppPrivate);
-        writeDocumentation(out, field.documentation, "    ");
-        const auto& type = graph.node(field.type.type);
-        if (member.cppDefault.empty() && !hasNativeValueDefault(graph, field.type.type, staticDefaults))
-            invalid(field, "no C++ default for static field of type " + type.qualifiedName);
-        const auto* alias = std::get_if<AliasType>(&type.data);
-        const bool scalarAlias = alias && !std::holds_alternative<TemplateInstanceType>(graph.node(alias->target).data);
-        const auto declaration = formatCppDeclarator(member.cpp, member.name, output.spaceBeforeReference);
-        if (std::holds_alternative<BuiltinType>(type.data) || scalarAlias ||
-            (std::holds_alternative<EnumType>(type.data) && !forwardEnum) || std::holds_alternative<PointerType>(type.data)) {
-            out << "    inline static " << declaration << "{" << member.cppDefault << "};\n";
-        } else {
-            out << "    static " << declaration << ";\n";
-            source << "\n" << formatCppDeclarator(member.cpp, node.name + "::" + member.name, output.spaceBeforeReference)
-                   << "{" << member.cppDefault << "};\n";
-        }
-    }
     const auto allocator = std::ranges::find(members, true, &BoundField::usesAllocator);
     std::vector<ConstructorPrefix> prefixes;
     for (const auto& calls : baseConstructors(graph, record)) prefixes.push_back(bindBaseArguments(graph, node, calls, deps));
@@ -1154,6 +1132,29 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
     }
     if (!record.cppMembers.empty()) memberAccess(out, currentPrivate, false);
     out << record.cppMembers;
+    out << cppMemberFunctions(graph, module, record.methods, output, deps, currentPrivate);
+    if (!record.methods.empty() && (!statics.empty() || !members.empty())) out << '\n';
+    std::map<uint32_t, bool> staticDefaults;
+    for (size_t i = 0; i < statics.size(); ++i) {
+        const auto& [member, forwardEnum] = statics[i];
+        const auto& field = record.staticFields[i];
+        memberAccess(out, currentPrivate, field.cppPrivate);
+        writeDocumentation(out, field.documentation, "    ");
+        const auto& type = graph.node(field.type.type);
+        if (member.cppDefault.empty() && !hasNativeValueDefault(graph, field.type.type, staticDefaults))
+            invalid(field, "no C++ default for static field of type " + type.qualifiedName);
+        const auto* alias = std::get_if<AliasType>(&type.data);
+        const bool scalarAlias = alias && !std::holds_alternative<TemplateInstanceType>(graph.node(alias->target).data);
+        const auto declaration = formatCppDeclarator(member.cpp, member.name, output.spaceBeforeReference);
+        if (std::holds_alternative<BuiltinType>(type.data) || scalarAlias ||
+            (std::holds_alternative<EnumType>(type.data) && !forwardEnum) || std::holds_alternative<PointerType>(type.data)) {
+            out << "    inline static " << declaration << "{" << member.cppDefault << "};\n";
+        } else {
+            out << "    static " << declaration << ";\n";
+            source << "\n" << formatCppDeclarator(member.cpp, node.name + "::" + member.name, output.spaceBeforeReference)
+                   << "{" << member.cppDefault << "};\n";
+        }
+    }
     for (size_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
         memberAccess(out, currentPrivate, record.fields[i].cppPrivate);
@@ -1164,7 +1165,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         if (!m.cppDefault.empty()) out << "{" << m.cppDefault << "}";
         out << ";\n";
     }
-    out << cppMemberFunctions(graph, module, record.methods, output, deps, currentPrivate) << "};\n";
+    out << "};\n";
 }
 
 std::string tsClassMethods(const TypeScriptClassMethods& methods) {
@@ -1506,7 +1507,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             std::string nativeLoadStorage;
             if (deps.emitCpp) {
                 const auto* nativeArchive = output.serializationHeader && model->serializable && archive ? &*archive : nullptr;
-                const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
+                bool privateMethod = false;
+                const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps, privateMethod);
                 nativeLoadStorage = emitCppGraph(graph, id, cpp, templateDefinitions, definitions, deps.headers, deps.forwardTypes,
                                                  fields, methods, nativeArchive);
                 if (model->compareEqual || model->compareLess || model->hashable) {

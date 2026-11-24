@@ -48,6 +48,78 @@ namespace cc::render {
         bool isWrite() const { return accessType != AccessType::READ; }
     }
 
+    struct ResourceDesc {
+        dimension: ResourceDimension = ResourceDimension::BUFFER;
+        alignment: uint32_t = 0;
+        width: uint32_t = 0;
+        height: uint32_t = 0;
+        depthOrArraySize: uint16_t = 0;
+        mipLevels: uint16_t = 0;
+        format: gfx::Format = gfx::Format::UNKNOWN;
+        sampleCount: gfx::SampleCount = gfx::SampleCount::X1;
+        textureFlags: gfx::TextureFlagBit = gfx::TextureFlagBit::NONE;
+        flags: ResourceFlags = ResourceFlags::NONE;
+        viewType: gfx::TextureType = gfx::TextureType::TEX2D;
+    }
+
+    struct ResourceTraits {
+        residency: ResourceResidency = ResourceResidency::MANAGED;
+        constructor(residency) defaults;
+        bool hasSideEffects() const noexcept {
+            return residency == ResourceResidency::PERSISTENT ||
+                   residency == ResourceResidency::EXTERNAL ||
+                   residency == ResourceResidency::BACKBUFFER;
+        }
+    }
+
+    struct RenderSwapchain {
+        nullable swapchain: gfx::Swapchain*;
+        nullable renderWindow: scene::RenderWindow*;
+        currentID: uint32_t = 0;
+        numBackBuffers: uint32_t = 0;
+        generation: uint32_t = 0xFFFFFFFF;
+        isDepthStencil: bool = false;
+        @cppOnly nullable texture: gfx::Texture*;
+        constructor(swapchain, isDepthStencil) defaults;
+        static gfx::Texture* getColorTexture(gfx::Swapchain* swapchain) noexcept;
+        static gfx::Texture* getColorTexture(scene::RenderWindow* renderWindow) noexcept;
+        static gfx::Texture* getDepthStencilTexture(gfx::Swapchain* swapchain) noexcept;
+    }
+
+    struct ResourceStates {
+        states: gfx::AccessFlagBit = gfx::AccessFlagBit::NONE;
+    }
+
+    struct ManagedBuffer {
+        nullable buffer: IntrusivePtr<gfx::Buffer>;
+        fenceValue: uint64_t = 0;
+        constructor(buffer) defaults;
+    }
+
+    struct PersistentBuffer {
+        nullable buffer: IntrusivePtr<gfx::Buffer>;
+        fenceValue: uint64_t = 0;
+        constructor(buffer) defaults;
+    }
+
+    struct ManagedTexture {
+        nullable texture: IntrusivePtr<gfx::Texture>;
+        fenceValue: uint64_t = 0;
+        constructor(texture) defaults;
+        bool checkResource(const ResourceDesc& desc) const;
+    }
+
+    struct PersistentTexture {
+        nullable texture: IntrusivePtr<gfx::Texture>;
+        fenceValue: uint64_t = 0;
+        constructor(texture) defaults;
+        bool checkResource(const ResourceDesc& desc) const;
+    }
+
+    struct ManagedResource {
+        unused: uint32_t = 0;
+    }
+
     @comparison("==") @hash struct Subpass {
         readonly rasterViews: PmrTransparentMap<ccstd::pmr::string, RasterView>;
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
@@ -104,74 +176,6 @@ namespace cc::render {
         @notElement showStatistics: bool = false;
     }
 
-    struct ResourceDesc {
-        dimension: ResourceDimension = ResourceDimension::BUFFER;
-        alignment: uint32_t = 0;
-        width: uint32_t = 0;
-        height: uint32_t = 0;
-        depthOrArraySize: uint16_t = 0;
-        mipLevels: uint16_t = 0;
-        format: gfx::Format = gfx::Format::UNKNOWN;
-        sampleCount: gfx::SampleCount = gfx::SampleCount::X1;
-        textureFlags: gfx::TextureFlagBit = gfx::TextureFlagBit::NONE;
-        flags: ResourceFlags = ResourceFlags::NONE;
-        viewType: gfx::TextureType = gfx::TextureType::TEX2D;
-    }
-
-    struct ResourceStates {
-        states: gfx::AccessFlagBit = gfx::AccessFlagBit::NONE;
-    }
-
-    struct ResourceTraits {
-        residency: ResourceResidency = ResourceResidency::MANAGED;
-        constructor(residency) defaults;
-        bool hasSideEffects() const noexcept { return residency == ResourceResidency::PERSISTENT || residency == ResourceResidency::EXTERNAL || residency == ResourceResidency::BACKBUFFER; }
-    }
-
-    struct ManagedResource {
-        unused: uint32_t = 0;
-    }
-
-    struct ManagedBuffer {
-        nullable buffer: IntrusivePtr<gfx::Buffer>;
-        fenceValue: uint64_t = 0;
-        constructor(buffer) defaults;
-    }
-
-    struct ManagedTexture {
-        nullable texture: IntrusivePtr<gfx::Texture>;
-        fenceValue: uint64_t = 0;
-        constructor(texture) defaults;
-        bool checkResource(const ResourceDesc& desc) const;
-    }
-
-    struct PersistentBuffer {
-        nullable buffer: IntrusivePtr<gfx::Buffer>;
-        fenceValue: uint64_t = 0;
-        constructor(buffer) defaults;
-    }
-
-    struct PersistentTexture {
-        nullable texture: IntrusivePtr<gfx::Texture>;
-        fenceValue: uint64_t = 0;
-        constructor(texture) defaults;
-        bool checkResource(const ResourceDesc& desc) const;
-    }
-
-    struct RenderSwapchain {
-        nullable swapchain: gfx::Swapchain*;
-        nullable renderWindow: scene::RenderWindow*;
-        currentID: uint32_t = 0;
-        numBackBuffers: uint32_t = 0;
-        generation: uint32_t = 0xFFFFFFFF;
-        isDepthStencil: bool = false;
-        @cppOnly nullable texture: gfx::Texture*;
-        constructor(swapchain, isDepthStencil) defaults;
-        static gfx::Texture* getColorTexture(gfx::Swapchain* swapchain) noexcept;
-        static gfx::Texture* getColorTexture(scene::RenderWindow* renderWindow) noexcept;
-        static gfx::Texture* getDepthStencilTexture(gfx::Swapchain* swapchain) noexcept;
-    }
-
     struct PersistentRenderPassAndFramebuffer {
         nullable renderPass: IntrusivePtr<gfx::RenderPass>;
         nullable framebuffer: IntrusivePtr<gfx::Framebuffer>;
@@ -180,6 +184,17 @@ namespace cc::render {
         clearStencil: uint8_t = 0;
         constructor(renderPass, framebuffer) defaults;
     }
+
+    @tag struct Managed_ {}
+    @tag struct ManagedBuffer_ {}
+    @tag struct ManagedTexture_ {}
+    @tag struct PersistentBuffer_ {}
+    @tag struct PersistentTexture_ {}
+    @tag struct Framebuffer_ {}
+    @tag struct Swapchain_ {}
+    @tag struct Sampler_ {}
+    @tag struct FormatView_ {}
+    @tag struct SubresourceView_ {}
 
     struct FormatView {
         format: gfx::Format = gfx::Format::UNKNOWN;
@@ -199,16 +214,6 @@ namespace cc::render {
     @tag struct Desc_ {}
     @tag struct Traits_ {}
     @tag struct States_ {}
-    @tag struct Sampler_ {}
-    @tag struct Managed_ {}
-    @tag struct ManagedBuffer_ {}
-    @tag struct ManagedTexture_ {}
-    @tag struct PersistentBuffer_ {}
-    @tag struct PersistentTexture_ {}
-    @tag struct Framebuffer_ {}
-    @tag struct Swapchain_ {}
-    @tag struct FormatView_ {}
-    @tag struct SubresourceView_ {}
     @immovable graph ResourceGraph {
         vertex_descriptor = uint32_t;
         vertex_storage: indexed;
@@ -270,6 +275,13 @@ namespace cc::render {
         readonly computeViews: PmrTransparentMap<ccstd::pmr::string, ccstd::pmr::vector<ComputeView>>;
     }
 
+    @tag struct Queue_ {}
+    @tag struct Scene_ {}
+    @tag struct Dispatch_ {}
+    @tag struct Blit_ {}
+    @tag struct Clear_ {}
+    @tag struct Viewport_ {}
+
     struct ClearView {
         slotName: ccstd::pmr::string;
         clearFlags: gfx::ClearFlagBit = gfx::ClearFlagBit::ALL;
@@ -330,12 +342,6 @@ namespace cc::render {
 
     @tag struct Data_ {}
     @tag struct Valid_ {}
-    @tag struct Queue_ {}
-    @tag struct Scene_ {}
-    @tag struct Blit_ {}
-    @tag struct Dispatch_ {}
-    @tag struct Clear_ {}
-    @tag struct Viewport_ {}
     graph RenderGraph {
         vertex_descriptor = uint32_t;
         vertex_storage: indexed;
@@ -376,9 +382,9 @@ namespace cc::render {
 
 binding typescript {
     ComputeView => class { pool cv1; };
+    ResourceStates => class { pool rs1; };
     RasterSubpass => class { pool rs2; };
     RasterPass => class { mapKey string; };
-    ResourceStates => class { pool rs1; };
     ResolvePass => class { pool rp1; };
     CopyPass => class { pool cp1; };
     RaytracePass => class { pool rp2; };

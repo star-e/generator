@@ -43,12 +43,15 @@ namespace cc {
 namespace codegen {
 
 struct ModuleInput {
+    bool modelOnly() const noexcept {
+        return nativeHeader.empty() && typescriptModule.empty();
+    }
+
     Module syntax;
     std::string nativeHeader;
     std::string forwardHeader;
     std::string typescriptModule;
     bool typescriptSettings{false};
-    bool modelOnly() const noexcept { return nativeHeader.empty() && typescriptModule.empty(); }
 };
 
 struct RecordOutput {

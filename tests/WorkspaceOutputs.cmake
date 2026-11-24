@@ -422,7 +422,10 @@ namespace cc {
         @cppOnly virtual Parent* fork(Count* value) const = 0;
         @cppOnly virtual int inspect(const int& value, int mode = 1) = 0;
         @cppOnly virtual int select(int select = 2, int mode = 3) = 0;
-        static int helper() { return 1; }
+        static int helper() {
+            return sizeof(R"cpp(first
+            second)cpp");
+        }
         static int Item() { return 0; }
     }
     interface Middle : Parent { @cppOnly virtual int count() = 0; }
@@ -438,10 +441,12 @@ namespace cc {
 }]=])
 run(${generate})
 file(READ "${work}/mixed/native/cocos/renderer/pipeline/custom/ProviderTypes.h" header)
-foreach(line IN ITEMS "Item &assign(const Item &other);"
-                      "const Item *link{nullptr};" "inline static Item *current{nullptr};"
+foreach(line IN ITEMS "Item &assign(const Item &other);\n    Item *clone() const;\n\n    inline static Item *current{nullptr};\n    const Item *link{nullptr};"
+                      [=[static int helper() {
+        return sizeof(R"cpp(first
+            second)cpp");
+    }]=]
                       "virtual ~Adapter() noexcept = default;"
-                      "Item *clone() const;"
                       "    return select(2, 3);"
                       "    return this->select(select, 3);"
                       "virtual int &revise(int &value, const int &other) = 0;"
@@ -450,7 +455,7 @@ foreach(line IN ITEMS "Item &assign(const Item &other);"
                       "virtual void borrow(int Count, ::cc::Count *value, ::cc::Item *item, ::vendor::Device *device) = 0;"
                       "virtual int inspect(const int &value) = 0;"
                       "virtual int helper() = 0;"
-                      "int count() override { return 2; }")
+                      "int count() override {\n        return 2;\n    }")
     string(FIND "${header}" "    ${line}" index)
     if(index EQUAL -1)
         message(FATAL_ERROR "Unexpected C++ override or overload declaration; expected ${line}")
