@@ -50,11 +50,16 @@ set(graphTypes "using allocator_type =" "allocator_type get_allocator() const" "
     "// Graph types\n" "using vertex_descriptor =" "using edge_descriptor ="
     "// IncidenceGraph types\n" "using out_edge_iterator =" "// BidirectionalGraph types\n" "using in_edge_iterator ="
     "// AdjacencyGraph types\n" "using adjacency_iterator =" "// VertexListGraph types\n" "using vertex_iterator =")
-set(referenceTypes "// PolymorphicGraph types\n" "    enum class Kind {\n        " "// ReferenceGraph types\n"
+set(referenceTypes "// PolymorphicGraph types\n" "    enum class Kind : uint8_t {\n        " "// ReferenceGraph types\n"
     "using ownership_descriptor =" "using children_iterator =" "using parent_iterator =")
 set(traversal "// Graph\n" "// IncidenceGraph\n" " source(edge_descriptor" "// BidirectionalGraph\n" " in_edges("
     "// AdjacencyGraph\n" " adjacent_vertices(" "// VertexListGraph\n" " vertices()")
 file(READ "${work}/both/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h" layoutHeader)
+foreach(method IN ITEMS get_allocator out_edges add_vertex visit_object)
+    if(NOT layoutHeader MATCHES "\n    [^\n]+ ${method}[(][^\n]* // NOLINT[(]readability-identifier-naming[)]\n")
+        message(FATAL_ERROR "Missing naming exemption on the generated ${method} declaration")
+    endif()
+endforeach()
 string(FIND "${layoutHeader}" "struct LayoutGraphData {" lastGraph)
 string(SUBSTRING "${layoutHeader}" ${lastGraph} -1 layoutTail)
 string(FIND "${layoutTail}" "\n};" endOfClass)
