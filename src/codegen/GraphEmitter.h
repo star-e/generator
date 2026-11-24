@@ -12,7 +12,7 @@ namespace cc::codegen {
 
 bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id);
 // Returns the statements that clear graph storage or commit a transactional native load.
-std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& header, std::ostream& source,
+std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& header, std::ostream& templateDefinitions, std::ostream& source,
                          std::set<std::string>& headers, std::set<const TypeNode*>& forwardTypes,
                          const std::vector<BoundField>& fields, const std::string& methods, const TypeModule* archive,
                          bool transactionalLoad);

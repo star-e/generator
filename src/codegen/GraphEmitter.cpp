@@ -498,14 +498,15 @@ void addVertex(std::ostream& out, std::ostream& source, const std::string& name,
     for (const auto& alt : alternatives) overload(alt.tag);
 }
 
-void piecewiseAddVertex(std::ostream& out, const std::string& name, const std::string& vertex,
+void piecewiseAddVertex(std::ostream& declaration, std::ostream& out, const std::string& name, const std::string& vertex,
                    const std::vector<ComponentInfo>& components, const std::vector<std::string>& storage,
                    const std::string& rows, const std::vector<Alternative>& alternatives,
                    const std::string& handles, const GraphType& model, const std::string& children, const std::string& tagType) {
     const bool indexedNames = model.nameIndex;
     const bool tagged = !alternatives.empty();
     const bool hierarchy = !rows.empty() || !children.empty();
-    std::string templateParams, tupleParams, tupleTypes;
+    std::string templateParams = tagged ? "class " + tagType : "";
+    std::string tupleParams, tupleTypes;
     const auto append = [](std::string& list, const std::string& item) {
         if (!list.empty()) list += ", ";
         list += item;
@@ -522,63 +523,70 @@ void piecewiseAddVertex(std::ostream& out, const std::string& name, const std::s
     const auto payloadArgs = tagged ? tupleParam(typeParam("PayloadArgs"), "payloadArgs") : "";
     for (size_t i = 0; i < components.size(); ++i)
         componentArgs.push_back(tupleParam(typeParam("Args" + std::to_string(i)), "args" + components[i].publicName));
-    out << "\n    template<";
-    if (tagged) out << "class " << tagType << ", ";
-    out << templateParams;
-    if (tagged) {
-        out << ",\n             std::enable_if_t<";
-        for (size_t i = 0; i < alternatives.size(); ++i)
-            out << (i ? " ||\n                              " : "") << "std::is_same_v<" << tagType << ", " << alternatives[i].tag << ">";
-        out << ", int> = 0";
-    }
-    out << ",\n             class = std::void_t<" << tupleTypes << ">>\n    " << vertex << " add_vertex(";
-    if (tagged) out << "const " << tagType << "&, ";
-    out << "std::piecewise_construct_t, " << tupleParams << (hierarchy ? ", " + vertex + " parent = null_vertex()" : "") << ") {\n";
+    const auto templateHead = [&](std::ostream& stream, std::string_view indent) {
+        stream << '\n' << indent << "template<" << templateParams;
+        if (!tagged) return;
+        stream << ",\n" << indent << "         std::enable_if_t<";
+        for (size_t i = 0; i < alternatives.size(); ++i) {
+            if (i) stream << " ||\n" << indent << "                          ";
+            stream << "std::is_same_v<" << tagType << ", " << alternatives[i].tag << ">";
+        }
+        stream << ", int>";
+    };
+    std::string params = tagged ? "const " + tagType + "&, " : "";
+    params += "std::piecewise_construct_t, " + tupleParams;
+    if (hierarchy) params += ", " + vertex + " parent";
+    templateHead(declaration, "    ");
+    if (tagged) declaration << " = 0";
+    declaration << ",\n             class = std::void_t<" << tupleTypes << ">>\n    " << vertex << " add_vertex("
+                << params << (hierarchy ? " = null_vertex()" : "") << ");\n";
+    templateHead(out, "");
+    out << ", class>\n" << name << "::" << vertex << " " << name << "::add_vertex(" << params << ") {\n";
     const auto count = "this->" + storage.front() + ".size()";
     const auto descriptor = name + "::" + vertex;
     if (hierarchy)
-        out << "        if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= " << count << ")\n"
-             << "            throw std::out_of_range(\"invalid " << name << " parent\");\n";
-    out << "        if (" << count << " >= (std::numeric_limits<" << descriptor << ">::max)())\n"
-         << "            throw std::length_error(\"" << name << " vertex limit exceeded\");\n"
-         << "        const auto vertex = static_cast<" << descriptor << ">(" << count << ");\n";
-    if (tagged && model.keyComponentIndex) out << "        bool indexedKey = false;\n";
-    if (indexedNames) out << "        auto entry = this->nameIndex_.end();\n";
-    if (!rows.empty()) out << "        auto& edges = this->" << rows << ";\n";
-    if (!children.empty()) out << "        bool linked = false;\n";
-    out << "        try {\n";
+        out << "    if (parent != null_vertex() && static_cast<std::uintmax_t>(parent) >= " << count << ")\n"
+             << "        throw std::out_of_range(\"invalid " << name << " parent\");\n";
+    out << "    if (" << count << " >= (std::numeric_limits<" << descriptor << ">::max)())\n"
+         << "        throw std::length_error(\"" << name << " vertex limit exceeded\");\n"
+         << "    const auto vertex = static_cast<" << descriptor << ">(" << count << ");\n";
+    if (tagged && model.keyComponentIndex) out << "    bool indexedKey = false;\n";
+    if (indexedNames) out << "    auto entry = this->nameIndex_.end();\n";
+    if (!rows.empty()) out << "    auto& edges = this->" << rows << ";\n";
+    if (!children.empty()) out << "    bool linked = false;\n";
+    out << "    try {\n";
     const auto emplaceTuple = [&](const std::string& column, const std::string& tuple, std::string_view indent) {
         out << indent << "std::apply([&](auto&&... args) {\n"
              << indent << "    " << column << ".emplace_back(std::forward<decltype(args)>(args)...);\n"
              << indent << "}, " << tuple << ");\n";
     };
     const auto emplaceComponent = [&](size_t i) {
-        emplaceTuple("this->" + storage[i], componentArgs[i], "            ");
+        emplaceTuple("this->" + storage[i], componentArgs[i], "        ");
     };
     if (indexedNames) {
         const auto i = *model.nameComponentIndex;
         emplaceComponent(i);
-        out << "            const auto inserted = this->nameIndex_.emplace(this->" << storage[i] << ".back(), vertex);\n"
-            << "            if (!inserted.second) throw std::invalid_argument(\"duplicate vertex name\");\n"
-            << "            entry = inserted.first;\n";
+        out << "        const auto inserted = this->nameIndex_.emplace(this->" << storage[i] << ".back(), vertex);\n"
+            << "        if (!inserted.second) throw std::invalid_argument(\"duplicate vertex name\");\n"
+            << "        entry = inserted.first;\n";
     }
     for (size_t i = 0; i < components.size(); ++i)
         if (!indexedNames || i != *model.nameComponentIndex) emplaceComponent(i);
     for (size_t i = components.size(); i < storage.size(); ++i) {
         const auto& field = storage[i];
         if (field != rows && field != handles)
-            out << "            this->" << field << ".emplace_back();\n";
+            out << "        this->" << field << ".emplace_back();\n";
     }
-    if (!rows.empty()) out << "            edges.push_back(TreeEdge{parent});\n";
-    if (!children.empty()) out << "            if (parent != null_vertex()) linked = add_reference(parent, vertex).second;\n";
+    if (!rows.empty()) out << "        edges.push_back(TreeEdge{parent});\n";
+    if (!children.empty()) out << "        if (parent != null_vertex()) linked = add_reference(parent, vertex).second;\n";
     if (model.keyComponentIndex) {
-        out << "            if (!this->componentIndex_.emplace(this->" << storage[*model.keyComponentIndex] << ".back(), vertex).second)\n"
-             << "                throw std::invalid_argument(\"duplicate vertex key\");\n";
-        if (tagged) out << "            indexedKey = true;\n";
+        out << "        if (!this->componentIndex_.emplace(this->" << storage[*model.keyComponentIndex] << ".back(), vertex).second)\n"
+             << "            throw std::invalid_argument(\"duplicate vertex key\");\n";
+        if (tagged) out << "        indexedKey = true;\n";
     }
     // Append the payload last so rollback only needs the common per-vertex storage and indices.
     if (tagged) {
-        tagBranches(out, alternatives, tagType, "            ", true, [&](const auto& alt, const auto& indent) {
+        tagBranches(out, alternatives, tagType, "        ", true, [&](const auto& alt, const auto& indent) {
             const auto column = "this->" + alt.member;
             out << indent << "this->" << handles << ".push_back({Kind::" << alt.kind << ", static_cast<" << descriptor
                 << ">(" << column << ".size())});\n";
@@ -587,28 +595,28 @@ void piecewiseAddVertex(std::ostream& out, const std::string& name, const std::s
             else emplaceTuple(column, payloadArgs, indent);
         });
     }
-    out << "        } catch (...) {\n";
-    if (indexedNames) out << "            if (entry != this->nameIndex_.end()) this->nameIndex_.erase(entry);\n";
-    if (!children.empty()) out << "            if (linked) this->" << children << "[parent].pop_back();\n";
+    out << "    } catch (...) {\n";
+    if (indexedNames) out << "        if (entry != this->nameIndex_.end()) this->nameIndex_.erase(entry);\n";
+    if (!children.empty()) out << "        if (linked) this->" << children << "[parent].pop_back();\n";
     if (tagged && model.keyComponentIndex)
-        out << "            if (indexedKey) this->componentIndex_.erase(this->" << storage[*model.keyComponentIndex] << ".back());\n";
+        out << "        if (indexedKey) this->componentIndex_.erase(this->" << storage[*model.keyComponentIndex] << ".back());\n";
     for (const auto& field : storage)
-        out << "            if (this->" << field << ".size() > vertex) this->" << field << ".pop_back();\n";
-    out << "            throw;\n        }\n";
+        out << "        if (this->" << field << ".size() > vertex) this->" << field << ".pop_back();\n";
+    out << "        throw;\n    }\n";
     if (!rows.empty()) {
-        out << R"(        if (parent != null_vertex()) {
-            auto& parentLinks = edges[parent];
-            if (parentLinks.lastChild == null_vertex()) {
-                parentLinks.firstChild = vertex;
-            } else {
-                edges[parentLinks.lastChild].nextSibling = vertex;
-            }
-            parentLinks.lastChild = vertex;
-            ++parentLinks.childCount;
+        out << R"(    if (parent != null_vertex()) {
+        auto& parentLinks = edges[parent];
+        if (parentLinks.lastChild == null_vertex()) {
+            parentLinks.firstChild = vertex;
+        } else {
+            edges[parentLinks.lastChild].nextSibling = vertex;
         }
+        parentLinks.lastChild = vertex;
+        ++parentLinks.childCount;
+    }
 )";
     }
-    out << "        return vertex;\n    }\n";
+    out << "    return vertex;\n}\n";
 }
 
 } // namespace
@@ -618,7 +626,7 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id) {
     return hasMoveOnlyValue(graph, id, visited);
 }
 
-std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& source,
+std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& templateDefinitions, std::ostream& source,
                          std::set<std::string>& headers, std::set<const TypeNode*>& forwards,
                          const std::vector<BoundField>& fields, const std::string& methods, const TypeModule* archive,
                          bool transactionalLoad) {
@@ -861,7 +869,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         if (!input.empty()) headers.insert("string_view");
         headers.insert({"tuple", "type_traits", "utility"});
         addVertex(sections.mutation.header, sections.mutation.source, name, vertex, model.components, input, alternatives, model.hierarchy, keyColumn, keyType);
-        piecewiseAddVertex(sections.mutation.header, name, vertex, model.components, storage, rows,
+        piecewiseAddVertex(sections.mutation.header, templateDefinitions, name, vertex, model.components, storage, rows,
                            alternatives, handles, model, childRows, tagParam);
     }
     if (model.hierarchy || model.incidence || model.nameIndex || model.keyComponentIndex) {

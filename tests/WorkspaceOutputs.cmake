@@ -48,10 +48,18 @@ function(check_graph_order header graph)
 endfunction()
 set(traversal "// Graph\n" "// IncidenceGraph\n" " source(edge_descriptor" "// BidirectionalGraph\n" " in_edges("
     "// AdjacencyGraph\n" " adjacent_vertices(" "// VertexListGraph\n" " vertices()")
+file(READ "${work}/both/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h" layoutHeader)
+string(FIND "${layoutHeader}" "struct LayoutGraphData {" lastGraph)
+string(SUBSTRING "${layoutHeader}" ${lastGraph} -1 layoutTail)
+string(FIND "${layoutTail}" "\n};" endOfClass)
 foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
     check_graph_order(LayoutGraphTypes.h ${layout} ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
         "// ComponentGraph\n" " getName(" "// PolymorphicGraph\n" " kind(vertex_descriptor" "// ReferenceGraph\n" " child(ownership_descriptor"
         "// ParentGraph\n" " locate_child(" "// AddressableGraph\n" " locate(")
+    string(FIND "${layoutTail}" "\n${layout}::vertex_descriptor ${layout}::add_vertex(" definition)
+    if(definition LESS_EQUAL endOfClass)
+        message(FATAL_ERROR "${layout}::add_vertex template definition must follow the graph declarations in the header")
+    endif()
 endforeach()
 check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
     "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(vertex_descriptor u, vertex_descriptor v)")

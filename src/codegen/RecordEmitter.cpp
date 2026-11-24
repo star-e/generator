@@ -1460,7 +1460,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     ArchiveImports archiveImports{deps.valueImports, output.typescript ? (output.typescript->parent_path() / "serialization").generic_string() : ""};
     Pool pool;
     RecordArchives archives;
-    std::ostringstream cpp, definitions, hashDeclarations, hashDefinitions, ts, staticInitializers, nameFunctions;
+    std::ostringstream cpp, templateDefinitions, definitions, hashDeclarations, hashDefinitions, ts, staticInitializers, nameFunctions;
     if (deps.emitCpp) {
         for (const auto& constant : module.cppConstants) {
             cpp << '\n';
@@ -1507,8 +1507,8 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                     nativeArchive = &archive->module;
                 }
                 const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
-                nativeLoadStorage = emitCppGraph(graph, id, cpp, definitions, deps.headers, deps.forwardTypes, fields, methods,
-                                              nativeArchive, transactionalLoad);
+                nativeLoadStorage = emitCppGraph(graph, id, cpp, templateDefinitions, definitions, deps.headers, deps.forwardTypes,
+                                                 fields, methods, nativeArchive, transactionalLoad);
                 if (model->compareEqual || model->compareLess || model->hashable) {
                     std::vector<std::string_view> elements;
                     for (const auto& component : model->components) elements.push_back(component.name);
@@ -1669,6 +1669,7 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             const auto include = output.forwardHeader.lexically_relative(output.header.parent_path());
             cppIncludes(header, deps.headers, {include.generic_string()});
             header << forwards;
+            cpp << templateDefinitions.view();
             writeNamespace(header, module, cpp);
             if (!hashDefinitions.view().empty()) {
                 header << "\nnamespace ccstd {\n" << hashDefinitions.str() << "\n} // namespace ccstd\n";
