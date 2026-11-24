@@ -50,8 +50,6 @@
         "native/cocos/base/GraphDescriptor.h": "../runtime/cpp/GraphDescriptor.h",
         "native/cocos/base/GraphIterator.h": "../runtime/cpp/GraphIterator.h",
         "native/cocos/base/GraphView.h": "../runtime/cpp/GraphView.h",
-        "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.h": "../runtime/cpp/LayoutGraphPrint.h",
-        "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp": "../runtime/cpp/LayoutGraphPrint.cpp",
         "cocos/rendering/custom/graph-dfs.ts": "../runtime/typescript/graph-dfs.ts"
       }
     },

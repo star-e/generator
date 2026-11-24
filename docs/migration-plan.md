@@ -24,7 +24,7 @@
 
 ## 运行生成器
 
-默认工作区暂存 58 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDescriptor.h`、`GraphDFS.h`、`GraphIterator.h`、`GraphView.h`、`LayoutGraphPrint.h/.cpp` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
+默认工作区暂存 56 个文件。归档接口占四个文件，编辑器设置占一个文件，`RenderCommon` 占十个文件。`LayoutGraph` 生成 `LayoutGraphFwd.h`、`LayoutGraphNames.h`、`LayoutGraphTypes.h/.cpp`、`LayoutGraphSerialization.h/.cpp`、`layout-graph.ts` 和 `layout-graph-names.ts`，并通过模块的 `runtimeFiles` 一同暂存手写的 `GraphDescriptor.h`、`GraphDFS.h`、`GraphIterator.h`、`GraphView.h` 和 `graph-dfs.ts`。各图共用的名称和布局组件标签 `Name_`、`Layout_` 定义在 `RenderCommonTypes.h`，对应的 `getName` 重载在 `RenderCommonNames.h`。`RenderGraph` 生成 `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp` 和 `render-graph.ts`，并暂存有向边遍历所用的 `GraphEdges.h`。在 `generator` 根目录运行以下命令。Windows 使用 x64 开发者命令行，示例选择 Ninja 单配置构建。
 
 ```sh
 cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -379,7 +379,7 @@ TS 用 `locate(absPath)` 从虚根查找，用 `locateRelative(path, start = thi
 
 同一份转换结果也用于核对 TS 调用方。`printLayoutGraphData()` 与构建器的 `print()` 通过 `getName(v)` 读取顶点名，测试逐字比较两种图的打印文本。`createGfxDescriptorSetsAndPipelines()` 用 `v()` 遍历顶点，再用 `getLayout(v)` 获取布局。测试分别在普通集合和 WebGPU 描述符组上检查绑定编号、类型、数量、可见性和图像属性，并用测试设备核对布局句柄如何传给描述符集合。[调用方对照测试](../tests/consumer/records/layout-bindings.cjs)
 
-原生 `printLayoutGraphData()` 只输出根顶点及其描述符集合。暂存版使用图的成员接口和命名空间标签。两个 C++17 消费程序分别链接引擎原有的打印函数和暂存实现，读取同一份归档并逐字节比较输出。带数组描述符、空预留块和子节点的样本还对照固定文本，检查标签、可见性、缩进与换行。[暂存实现](../runtime/cpp/LayoutGraphPrint.cpp) · [预期文本](../tests/consumer/records/fixtures/layout-print.txt)
+原生 `printLayoutGraphData()` 只输出根顶点及其描述符集合。打印函数由引擎的 `LayoutGraphUtils` 维护。两个 C++17 消费程序分别链接基线和当前引擎的打印实现，读取同一份归档并逐字节比较输出。带数组描述符、空预留块和子节点的样本还对照固定文本，检查标签、可见性、缩进与换行。[引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/LayoutGraphUtils.cpp) · [预期文本](../tests/consumer/records/fixtures/layout-print.txt)
 
 原生 `initializeDescriptorSetLayoutInfo()` 向现有绑定列表追加条目。每个块从自己的 `offset` 开始，按描述符的 `count` 推进绑定编号，类型转换沿用引擎的 `getGfxDescriptorType()`。`getOrCreatePerPassDescriptorSet()` 用 `getLayout(vertex)` 查找普通集合的 `PER_PASS` 项，按需创建并缓存布局和集合。新旧消费程序读取同一份转换归档，对照绑定字段，再通过 `gfx::Device` 的创建入口检查缓存命中时的调用次数与对象身份。[引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/LayoutGraphUtils.cpp) · [原生对照测试](../tests/consumer/records/LayoutDescriptorConsumer.cpp)
 
@@ -420,7 +420,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 1 | ArchiveInterface | 4 | 4 | `ArchiveFwd.h`、`ArchiveTypes.h`、`ArchiveTypes.cpp`、`archive.ts`。验证虚方法、原生 `scratch()` 与 TS 的 `b/n/s`。 |
 | 2 | RenderSettings | 1 | 1 | 编辑器的 `editor/assets/default_renderpipeline/builtin-pipeline-types.ts`。用旧设置调用 `fillRequiredBloom`，验证 `material` 迁移到 `kawaseFilterMaterial`。 |
 | 2 | RenderCommon | 10 | 10 | `RenderCommon*`、`types.ts`、`types-names.ts`。覆盖枚举数值、构造默认值、对象池复用、归档筛选和 `RenderCommonJsb` 转换。 |
-| 3 | LayoutGraph | 9 | 8 | 八个生成产物和七个配套运行时文件已接入 cocos4，`--module LayoutGraph --output ../cocos4 --check` 核对全部 15 个文件。原生调用方使用成员接口，布局编辑器使用迭代 DFS，`LayoutGraphGraphs.h` 已退役。 |
+| 3 | LayoutGraph | 9 | 8 | 八个生成产物和五个配套运行时文件已接入 cocos4，`--module LayoutGraph --output ../cocos4 --check` 核对全部 13 个文件。原生调用方使用成员接口，布局编辑器使用迭代 DFS，`LayoutGraphGraphs.h` 已退役。 |
 | 3 | RenderGraph | 5 | 4 | `RenderGraphFwd.h`、`RenderGraphTypes.h/.cpp`、`render-graph.ts`。分别验证 `ResourceGraph` 的别名引用关系、`RenderGraph` 的独立引用关系，以及 TS 可执行的组件访问和对象池。 |
 | 4 | RenderInterface | 5 | 5 | `RenderInterface*`、`pipeline.ts`、`native/tools/swig-config/render.i`。覆盖重载、getter、条件宏、返回对象的 GC 规则和公开注释。 |
 | 4 | PrivateInterface | 4 | 4 | `PrivateFwd.h`、`PrivateTypes.h/.cpp`、`private.ts`。使用 `RenderInterface` 和外部 `ProgramLib` 核对签名。 |

@@ -34,7 +34,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.cpp"
     "${STAGING}/native/IndexedKeys.cpp"
     "${STAGING}/native/IndexedKeysSerialization.cpp"
-    "${STAGING}/DispatcherQueries.cpp" "${STAGING}/LayoutDescriptorHelpers.cpp"
+    "${STAGING}/DispatcherQueries.cpp" "${STAGING}/CurrentLayoutUtils.cpp"
     DispatcherGraphConsumer.cpp
     MigrationConsumer.cpp
     RenderQueueConsumer.cpp
@@ -45,14 +45,12 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     ResourceGraphConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
     "${STAGING}/ResourceGraphTextureView.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"
-    "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonSerialization.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderCommonTypes.cpp")
 set(legacyNative "${LEGACY_ENGINE}/native")
 set(custom "${legacyNative}/cocos/renderer/pipeline/custom")
-add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${STAGING}/LegacyLayoutDescriptorSet.cpp"
-    "${STAGING}/LegacyLayoutGraphPrint.cpp"
+add_executable(LegacyArchiveConsumer LegacyArchiveConsumer.cpp "${STAGING}/LegacyLayoutUtils.cpp"
     "${custom}/ArchiveTypes.cpp" "${custom}/RenderCommonTypes.cpp" "${custom}/LayoutGraphTypes.cpp"
     "${custom}/LayoutGraphSerialization.cpp")
 target_compile_definitions(LegacyArchiveConsumer PRIVATE CC_TEST_LEGACY_LAYOUT=1)

@@ -415,29 +415,27 @@ file(WRITE "${stage}/DispatcherQueries.cpp" [[
 #include "cocos/math/Vec2.h"
 namespace cc::render {
 ]] "${dispatcherQueries}\n}\n")
-# Compile the engine's original printer and visibility formatter against its own graph types.
-file(READ "${legacy}/${nativeCustom}/LayoutGraphUtils.cpp" legacyLayoutUtils)
-source_between(legacyLayoutUtils "ccstd::string getName(gfx::ShaderStageFlagBit" "gfx::TextureType getTextureType(" legacyPrint)
-file(WRITE "${stage}/LegacyLayoutGraphPrint.cpp" [[
-#include "cocos/renderer/pipeline/custom/LayoutGraphGraphs.h"
+# Link each standalone consumer with its engine version's printer and descriptor helpers.
+function(write_layout_utils engine output extraHeaders)
+    file(READ "${engine}/${nativeCustom}/LayoutGraphUtils.cpp" layoutUtils)
+    source_between(layoutUtils "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" mapping)
+    source_between(layoutUtils "void initializeDescriptorSetLayoutInfo(" "\nnamespace {" bindings)
+    source_between(layoutUtils "gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(" "void generateConstantMacros(" perPass)
+    source_between(layoutUtils "ccstd::string getName(gfx::ShaderStageFlagBit" "gfx::TextureType getTextureType(" printer)
+    file(WRITE "${stage}/${output}" [[
+#include "cocos/renderer/pipeline/custom/LayoutGraphUtils.h"
 #include "cocos/renderer/pipeline/custom/LayoutGraphNames.h"
 #include "cocos/renderer/pipeline/custom/details/DebugUtils.h"
-#include "cocos/renderer/pipeline/custom/details/Range.h"
-namespace cc::render {
-namespace {
-]] "${legacyPrint}\n} // namespace cc::render\n")
-file(READ "${ENGINE}/${nativeCustom}/LayoutGraphUtils.cpp" nativeLayoutUtils)
-# Link only the descriptor helpers from each engine version into its standalone consumer.
-function(write_descriptor_helpers source output graphHeader)
-    source_between(${source} "gfx::DescriptorType getGfxDescriptorType(" "DescriptorTypeOrder getDescriptorTypeOrder(" mapping)
-    source_between(${source} "void initializeDescriptorSetLayoutInfo(" "\nnamespace {" bindings)
-    source_between(${source} "gfx::DescriptorSet* getOrCreatePerPassDescriptorSet(" "void generateConstantMacros(" perPass)
-    file(WRITE "${stage}/${output}" "#include \"cocos/renderer/pipeline/custom/${graphHeader}\"\n"
-        "#include \"cocos/renderer/pipeline/custom/details/GslUtils.h\"\n#include \"cocos/base/Log.h\"\n#include \"gfx-base/GFXDevice.h\"\n"
-        "namespace cc::render {\n${mapping}\n${bindings}\n${perPass}\n}\n")
+#include "cocos/renderer/pipeline/custom/details/GslUtils.h"
+#include "cocos/base/Log.h"
+#include <ostream>
+]] "${extraHeaders}\nnamespace cc::render {\n${mapping}\n${bindings}\n${perPass}\nnamespace {\n${printer}\n}\n")
 endfunction()
-write_descriptor_helpers(nativeLayoutUtils LayoutDescriptorHelpers.cpp LayoutGraphUtils.h)
-write_descriptor_helpers(legacyLayoutUtils LegacyLayoutDescriptorSet.cpp LayoutGraphGraphs.h)
+write_layout_utils("${ENGINE}" CurrentLayoutUtils.cpp "")
+write_layout_utils("${legacy}" LegacyLayoutUtils.cpp [[
+#include "cocos/renderer/pipeline/custom/LayoutGraphGraphs.h"
+#include "cocos/renderer/pipeline/custom/details/Range.h"
+]])
 set(build "${work}/build")
 build_consumer("${SOURCE}/tests/consumer/records" "${build}" "${stage}" "-DLEGACY_ENGINE=${legacy}")
 file(READ "${build}/consumer-${CONFIG}.txt" consumer)

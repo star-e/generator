@@ -119,16 +119,6 @@
       "module": "LayoutGraph",
       "source": "spec/render/layout-graph.spec"
     },
-    "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.cpp": {
-      "copiedFrom": "runtime/cpp/LayoutGraphPrint.cpp",
-      "module": "LayoutGraph",
-      "source": "spec/render/layout-graph.spec"
-    },
-    "native/cocos/renderer/pipeline/custom/LayoutGraphPrint.h": {
-      "copiedFrom": "runtime/cpp/LayoutGraphPrint.h",
-      "module": "LayoutGraph",
-      "source": "spec/render/layout-graph.spec"
-    },
     "native/cocos/renderer/pipeline/custom/LayoutGraphSerialization.cpp": {
       "module": "LayoutGraph",
       "source": "spec/render/layout-graph.spec"
