@@ -561,9 +561,11 @@ void piecewiseAddVertex(std::ostream& declaration, std::ostream& out, const std:
     if (!children.empty()) out << "    bool linked = false;\n";
     out << "    try {\n";
     const auto emplaceTuple = [&](const std::string& column, const std::string& tuple, std::string_view indent) {
-        out << indent << "std::apply([&](auto&&... args) {\n"
-             << indent << "    " << column << ".emplace_back(std::forward<decltype(args)>(args)...);\n"
-             << indent << "}, " << tuple << ");\n";
+        out << indent << "std::apply(\n"
+            << indent << "    [&](auto&&... args) {\n"
+            << indent << "        " << column << ".emplace_back(std::forward<decltype(args)>(args)...);\n"
+            << indent << "    },\n"
+            << indent << "    " << tuple << ");\n";
     };
     const auto emplaceComponent = [&](size_t i) {
         emplaceTuple("this->" + storage[i], componentArgs[i], "        ");
