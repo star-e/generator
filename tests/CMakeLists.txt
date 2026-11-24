@@ -40,6 +40,9 @@ add_test(NAME cocos.selfhost COMMAND "${CMAKE_COMMAND}"
     "-DTOOL=$<TARGET_FILE:CocosCodegen>" ${self_host_options} -P "${CMAKE_CURRENT_SOURCE_DIR}/SelfHost.cmake")
 
 if(COCOS_CODEGEN_ENGINE_ROOT)
+    add_test(NAME cocos.layout-graph.check COMMAND CocosCodegen generate
+        --workspace "${PROJECT_SOURCE_DIR}/config/workspace.json"
+        --output "${COCOS_CODEGEN_ENGINE_ROOT}" --module LayoutGraph --check --diff)
     add_test(NAME cocos.swig.interop COMMAND "${CMAKE_COMMAND}"
         "-DTOOL=$<TARGET_FILE:CocosCodegen>" "-DSOURCE=${PROJECT_SOURCE_DIR}"
         "-DENGINE=${COCOS_CODEGEN_ENGINE_ROOT}" -P "${CMAKE_CURRENT_SOURCE_DIR}/SwigInterop.cmake")
