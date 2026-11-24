@@ -263,6 +263,7 @@ struct GraphType {
     bool mutableGraph{false};
     bool hierarchy{false};
     bool separateEdges{false};
+    bool multipleParents{false};
     std::optional<uint32_t> nameComponentIndex;
     bool nameIndex{false};
     std::optional<uint32_t> keyComponentIndex;

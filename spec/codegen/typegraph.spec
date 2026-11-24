@@ -152,6 +152,7 @@ namespace cc::codegen {
         mutableGraph: bool = false;
         hierarchy: bool = false;
         separateEdges: bool = false;
+        multipleParents: bool = false;
         nameComponentIndex: std::optional<uint32_t>;
         nameIndex: bool = false;
         keyComponentIndex: std::optional<uint32_t>;

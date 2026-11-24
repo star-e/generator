@@ -128,7 +128,7 @@ std::vector<VertexColumn> vertexMetadataColumns(const GraphType& model, const Gr
     if (model.bidirectional) columns.push_back({names.inEdges, "OutE[][]", "[]"});
     if (model.hierarchy) {
         columns.push_back({names.children, "OutE[][]", "[]"});
-        if (model.separateEdges) columns.push_back({names.parents, "OutE[][]", "[]"});
+        if (model.multipleParents) columns.push_back({names.parents, "OutE[][]", "[]"});
         else columns.push_back({names.parents, "number[]", "parent"});
     }
     if (!model.alternatives.empty()) {
@@ -162,7 +162,7 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
     }
     if (model.parentGraph)
         out << "        const siblings = parent === this.N ? this." << names.roots << " : this." << names.children << "[parent];\n";
-    else if (model.hierarchy && !model.separateEdges)
+    else if (model.hierarchy && !model.multipleParents)
         out << "        const siblings = this." << names.children << "[parent];\n";
     out << "        try {\n";
     for (const auto& column : columns)
@@ -171,7 +171,7 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
         out << "            this." << names.nameIndex << ".set(component" << components.at(*model.nameComponentIndex).tagName << ", v);\n";
     if (model.parentGraph)
         out << "            siblings.push(new OutE(v));\n";
-    else if (model.separateEdges)
+    else if (model.multipleParents)
         out << "            if (parent !== this.N) this.addReference(parent, v);\n";
     else if (model.hierarchy)
         out << "            if (parent !== this.N) siblings.push(new OutE(v));\n";
@@ -233,13 +233,15 @@ void edgeTraversal(std::ostream& out, const GraphStorageNames& names, bool share
 )";
 }
 
-void referenceQueries(std::ostream& out, const GraphStorageNames& names, bool separateEdges) {
+void referenceQueries(std::ostream& out, const GraphStorageNames& names, const GraphType& model) {
     out << "\n    // ReferenceGraph\n";
-    if (separateEdges)
+    if (model.multipleParents)
         out << R"(    reference (u: number, v: number): boolean {
         return this.)" << names.children << R"([u].some(e => e.target === v);
     }
 )";
+    else if (model.separateEdges)
+        out << "    reference (u: number, v: number): boolean {\n        return u !== this.N && this." << names.parents << "[v] === u;\n    }\n";
     else
         out << R"(    reference (u: number, v: number): boolean {
         return this.)" << names.parents << R"([v] === u;
@@ -252,32 +254,48 @@ void referenceQueries(std::ostream& out, const GraphStorageNames& names, bool se
         return e.target as number;
     }
 )";
-    if (separateEdges)
+    if (model.multipleParents)
         out << R"(    parents (v: number): InEI {
         return new InEI(this.)" << names.parents << R"([v].values(), v);
     }
 )";
+    else if (model.separateEdges)
+        out << "    parents (v: number): OneInEI {\n        return new OneInEI(this." << names.parents << "[v], v, this.N);\n    }\n";
     out << R"(    children (v: number): OutEI {
         return new OutEI(this.)" << names.children << R"([v].values(), v);
     }
 )";
-    if (separateEdges)
+    if (model.multipleParents)
         out << R"(    numParents (v: number): number {
         return this.)" << names.parents << R"([v].length;
     }
 )";
+    else if (model.separateEdges)
+        out << "    numParents (v: number): number {\n        return this." << names.parents << "[v] === this.N ? 0 : 1;\n    }\n";
     out << R"(    numChildren (v: number): number {
         return this.)" << names.children << R"([v].length;
     }
     getParent (v: number): number {
 )";
-    if (separateEdges)
+    if (model.multipleParents)
         out << R"(        const parents = this.)" << names.parents << R"([v];
         return parents.length ? parents[0].target as number : this.N;
 )";
     else
         out << "        return this." << names.parents << "[v];\n";
     out << "    }\n";
+}
+
+void attachToParent(std::ostream& out, const GraphType& model, const GraphStorageNames& names, std::string_view operation) {
+    out << "    " << operation << " (u: number, v: number): ED | null {\n"
+        << "        if (this." << names.parents << "[v] !== this.N" << (model.serializable ? " || u >= v" : "") << ") return null;\n"
+        << "        const children = this." << names.children << "[u];\n"
+        << "        const index = children.findIndex((e) => (e.target as number) > v);\n";
+    if (!model.serializable)
+        out << "        for (let p = u; p !== this.N; p = this." << names.parents << "[p]) if (p === v) return null;\n";
+    out << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
+    if (model.parentGraph) out << "        this." << names.roots << ".splice(this." << names.roots << ".findIndex((e) => e.target === v), 1);\n";
+    out << "        this." << names.parents << "[v] = u;\n        return new ED(u, v);\n    }\n";
 }
 
 void adjacencyMutation(std::ostream& out, const GraphStorageNames& names, bool references, bool bidirectional) {
@@ -344,7 +362,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         (model.mutableGraph ? values : typeImports[runtime]).insert("ED");
         (model.mutableGraph ? values : typeImports[runtime]).insert("OutE");
         if (model.incidence || sharedEdges) values.insert("AdjI");
-        if (model.hierarchy || model.bidirectional) values.insert(sharedEdges ? "OneInEI" : "InEI");
+        if (model.hierarchy && !model.multipleParents) values.insert("OneInEI");
+        if (model.multipleParents || model.bidirectional) values.insert("InEI");
         if (model.addressableGraph) values.insert({"findRelative", "getPath"});
     }
     if (model.mutableGraph && model.hierarchy) api.insert("addReference");
@@ -441,15 +460,8 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "    }\n";
         addVertex(out, model, kinds, components, columns, vertexCount, names);
         if (sharedEdges) {
-            out << "\n    addEdge (u: number, v: number): ED | null {\n"
-                << "        if (this." << names.parents << "[v] !== this.N" << (model.serializable ? " || u >= v" : "") << ") return null;\n"
-                << "        const children = this." << names.children << "[u];\n"
-                << "        const index = children.findIndex((e) => (e.target as number) > v);\n";
-            if (!model.serializable)
-                out << "        for (let p = u; p !== this.N; p = this." << names.parents << "[p]) if (p === v) return null;\n";
-            out << "        children.splice(index < 0 ? children.length : index, 0, new OutE(v));\n";
-            if (model.parentGraph) out << "        this." << names.roots << ".splice(this." << names.roots << ".findIndex((e) => e.target === v), 1);\n";
-            out << "        this." << names.parents << "[v] = u;\n        return new ED(u, v);\n    }\n";
+            out << '\n';
+            attachToParent(out, model, names, "addEdge");
         } else if (model.incidence) {
             adjacencyMutation(out, names, false, model.bidirectional);
         }
@@ -494,11 +506,24 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
             << "        return this." << names.objects << "[v] as T;\n    }\n";
     }
     if (model.hierarchy) {
-        referenceQueries(out, names, model.separateEdges);
+        referenceQueries(out, names, model);
         if (model.mutableGraph) {
             out << "\n    // MutableReferenceGraph\n";
-            if (model.separateEdges) adjacencyMutation(out, names, true, true);
-            else out << R"(    addReference (u: number, v: number): ED | null {
+            if (model.multipleParents) adjacencyMutation(out, names, true, true);
+            else if (model.separateEdges) {
+                attachToParent(out, model, names, "addReference");
+                out << "    removeReference (e: ED): void {\n        this.removeReferences(e.source as number, e.target as number);\n    }\n"
+                    << "    removeReferences (u: number, v: number): void {\n"
+                    << "        if (!this.reference(u, v)) return;\n"
+                    << "        const children = this." << names.children << "[u];\n";
+                if (model.parentGraph) {
+                    out << "        const roots = this." << names.roots << ";\n"
+                        << "        const index = roots.findIndex(e => (e.target as number) > v);\n"
+                        << "        roots.splice(index < 0 ? roots.length : index, 0, new OutE(v));\n";
+                }
+                out << "        children.splice(children.findIndex(e => e.target === v), 1);\n"
+                    << "        this." << names.parents << "[v] = this.N;\n    }\n";
+            } else out << R"(    addReference (u: number, v: number): ED | null {
         return this.addEdge(u, v);
     }
 )";

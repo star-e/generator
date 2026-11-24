@@ -1,5 +1,5 @@
 #include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
-#include "FailingResource.h"
+#include "ShiftProbe.h"
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <stdexcept>
@@ -35,18 +35,6 @@ std::vector<RenderGraph::vertex_descriptor> sources(Range range) {
 }
 
 void checkReferenceFailures() {
-    for (int failAfter : {0, 1}) {
-        FailingResource arena;
-        RenderGraph graph{&arena};
-        const auto pass = graph.add_vertex(RasterPassTag{}, "pass");
-        const auto queue = graph.add_vertex(Queue_{}, "queue");
-        graph.add_edge(pass, queue);
-        arena.allocationsBeforeFailure = failAfter;
-        try {
-            graph.add_reference(pass, queue);
-            throw std::runtime_error("expected allocation failure");
-        } catch (const InjectedFailure&) {}
-    }
     struct FailedConstruction {};
     struct BadPhase { operator uint32_t() const { throw FailedConstruction{}; } };
     Arena arena;
@@ -65,11 +53,26 @@ void checkReferenceFailures() {
     require(queue == 1 && graph.num_children(root) == 1 && graph.num_parents(queue) == 1 &&
             graph.get_parent(queue) == root && graph.value(Queue_{}, queue).phaseID == 7, "emplace reference retry");
 }
+void checkMultipleParents() {
+    Arena arena;
+    cc::MultiParentProbe g{&arena};
+    const auto a = g.add_vertex();
+    const auto b = g.add_vertex();
+    const auto child = g.add_vertex(a);
+    const auto link = g.add_reference(b, child);
+    require(link.second && g.add_reference(a, child).second &&
+            sources(g.parent_links(child)) == std::vector<unsigned>{a, b, a}, "multiple parent links");
+    g.remove_reference(link.first);
+    require(g.get_parent(child) == a && g.num_parents(child) == 2, "remove one parent link");
+    g.remove_reference(a, child);
+    require(g.num_parents(child) == 0, "remove parallel parent links");
+}
 } // namespace
 
 bool checkRenderGraph() {
     static_assert(!std::is_copy_constructible_v<RenderGraph> && !std::is_copy_assignable_v<RenderGraph>);
     checkReferenceFailures();
+    checkMultipleParents();
     Arena destination;
     RenderGraph graph{&destination};
     {
@@ -89,17 +92,21 @@ bool checkRenderGraph() {
         require(g.add_edge(pass, compute).second && g.add_edge(queue, compute).second &&
                 g.add_edge(pass, compute).second, "execution dependencies");
         const auto link = g.add_reference(pass, compute);
-        require(link.second && g.add_reference(queue, compute).second && g.add_reference(pass, compute).second, "ownership references");
+        require(link.second && !g.add_reference(queue, compute).second && !g.add_reference(pass, compute).second &&
+                !g.add_reference(compute, pass).second && !g.add_reference(pass, pass).second, "single-parent forest");
         require(sources(g.in_edges(compute)) == std::vector<unsigned>{pass, queue, pass} &&
-                sources(g.parent_links(compute)) == std::vector<unsigned>{pass, queue, pass}, "insertion order");
-        g.remove_reference(link.first);
-        require(g.get_parent(compute) == queue && g.num_parents(compute) == 2 && g.in_degree(compute) == 3, "remove one reference");
-        g.remove_edge(g.edge(pass, compute).first);
-        require(g.edge(pass, compute).second && g.num_parents(compute) == 2, "remove one parallel edge");
-        g.remove_edge(pass, compute);
-        require(!g.edge(pass, compute).second && g.has_link(pass, compute), "erase only dependencies");
+                sources(g.parent_links(compute)) == std::vector<unsigned>{pass}, "independent incoming edges");
         g.remove_reference(queue, compute);
-        require(g.edge(queue, compute).second && !g.has_link(queue, compute) && g.get_parent(compute) == pass, "erase only references");
+        require(g.get_parent(compute) == pass, "remove unrelated reference");
+        g.remove_reference(link.first);
+        require(g.get_parent(compute) == g.null_vertex() && g.num_parents(compute) == 0 && g.in_degree(compute) == 3, "detach");
+        require(g.add_reference(queue, compute).second && g.num_parents(compute) == 1, "reparent");
+        g.remove_edge(g.edge(pass, compute).first);
+        require(g.edge(pass, compute).second && g.num_parents(compute) == 1, "remove one parallel edge");
+        g.remove_edge(pass, compute);
+        require(!g.edge(pass, compute).second && g.has_link(queue, compute), "erase only dependencies");
+        g.remove_reference(queue, compute);
+        require(g.edge(queue, compute).second && !g.has_link(queue, compute) && g.add_reference(pass, compute).second, "erase only references");
         const auto child = *g.child_links(queue).begin();
         require(g.child(child) == scene && g.parent(child) == queue && g.get_parent(g.null_vertex()) == g.null_vertex(), "reference endpoints");
         require(!g.add_reference(g.null_vertex(), compute).second && !g.add_edge(pass, g.null_vertex()).second, "invalid endpoints");

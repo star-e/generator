@@ -466,7 +466,9 @@ TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数�
 
 `ClearView`、`RenderQueue`、`SceneData`、`Dispatch`、`Blit` 和 `RenderData` 已接入渲染图规格，剔除标志 `CullingFlags` 和绘制类型 `BlitType` 随模块生成。`RenderQueue.viewport` 在 C++ 中按值存储，TS 通过 `field viewport default null` 声明为 `Viewport | null`。`SceneData` 复用 `LightInfo` 时，按声明模块中的参数顺序和默认值调用其重置方法。`RenderData` 通过 `@moveOnly` 声明移动语义，常量字节和四张资源表使用目标分配器。[渲染图规格](../spec/render/render-graph.spec) · [C++ 资源所有权测试](../tests/consumer/records/RenderDataConsumer.cpp) · [TS 对象池测试](../tests/consumer/records/render-node-consumer.ts)
 
-`RenderGraph` 同时声明双向执行边和 `hierarchy_graph { storage: separate_edges; }`。创建顶点时传入父节点只会添加一条父子引用。每个顶点可以有多个父节点，`get_parent`／`getParent` 返回仍在图中的第一个父节点。两种关系都保留平行边和插入顺序。按描述符删除一条，按端点删除对应关系的全部匹配项。四个组件和 14 种载荷保留引擎定义的顺序。`RasterPassTag as RasterPass` 复用既有原生标签，并指定两端公开的枚举名。顶点可以重名，调用方单独维护 `index`。[渲染图规格](../spec/render/render-graph.spec) · [C++ 跨分配器与边操作](../tests/consumer/records/RenderGraphConsumer.cpp) · [TS 边操作与对象池](../tests/consumer/records/render-graph-consumer.ts)
+`RenderGraph` 通过 `hierarchy_graph { storage: separate_edges; parents: single; }` 将渲染节点组织成森林。创建顶点时传入父节点只添加父子引用。向已有父节点的顶点添加引用或创建环都会失败。更换父节点时先解除旧引用，再挂到新父节点。执行依赖边独立维护，允许多个入边和平行边。四个组件和 14 种载荷保留引擎定义的顺序。`RasterPassTag as RasterPass` 复用既有原生标签，并指定两端公开的枚举名。顶点可以重名，调用方单独维护 `index`。[渲染图规格](../spec/render/render-graph.spec) · [C++ 跨分配器与边操作](../tests/consumer/records/RenderGraphConsumer.cpp) · [TS 边操作与对象池](../tests/consumer/records/render-graph-consumer.ts)
+
+其他图可以在 `separate_edges` 下选择 `parents: multiple;`，允许多个父节点和平行引用，`get_parent`／`getParent` 返回第一个仍相连的父节点。为兼容已有规格，省略 `parents` 时，`separate_edges` 默认为多父，`shared_edges` 只支持单父。
 
 ## 第一次合并及后续验收
 

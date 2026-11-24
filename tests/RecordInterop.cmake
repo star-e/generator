@@ -183,6 +183,13 @@ namespace cc {
         hierarchy_graph { storage: shared_edges; }
         component Count_: uint32_t { member: counts; }
     }
+    graph MultiParentProbe {
+        vertex_descriptor = uint32_t;
+        vertex_storage: indexed;
+        mutable_graph;
+        hierarchy_graph { parents: multiple; storage: separate_edges; }
+        component Count_: uint32_t { member: counts; }
+    }
     using ToggleFlag = bool;
     graph Toggles {
         vertex_descriptor = uint32_t;

@@ -435,6 +435,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
         throw std::runtime_error(syntax.vertexType->location.describe() + ": remove_vertex requires a flat component graph");
     result.hierarchy = syntax.hierarchy;
     result.separateEdges = syntax.separateEdges;
+    result.multipleParents = syntax.multipleParents;
     result.incidence = syntax.incidence;
     result.bidirectional = syntax.bidirectional;
     result.fields = resolveFields(graph, syntax.fields, scope, owner);
@@ -493,7 +494,7 @@ GraphType resolveGraph(TypeGraph& graph, const GraphDeclaration& syntax, const s
     }
     if (syntax.parentGraph) {
         if (!result.hierarchy) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires hierarchy_graph");
-        if (result.separateEdges) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires single-parent shared edges");
+        if (result.multipleParents) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires single-parent hierarchy");
         if (!result.nameComponentIndex) throw std::runtime_error(syntax.parentGraph->describe() + ": parent_graph requires named_graph");
         result.parentGraph = true;
     }

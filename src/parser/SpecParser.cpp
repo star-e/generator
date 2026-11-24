@@ -924,12 +924,27 @@ private:
             } else if (accept("hierarchy_graph")) {
                 if (graph.hierarchy) fail("duplicate hierarchy_graph");
                 expect("{");
-                expect("storage");
-                expect(":");
-                graph.separateEdges = accept("separate_edges");
-                if (!graph.separateEdges && !accept("shared_edges")) fail("expected 'shared_edges' or 'separate_edges'");
-                expect(";");
-                expect("}");
+                bool hasStorage = false;
+                std::optional<bool> multipleParents;
+                while (!accept("}")) {
+                    if (accept("storage")) {
+                        if (hasStorage) fail("duplicate hierarchy storage");
+                        expect(":");
+                        graph.separateEdges = accept("separate_edges");
+                        if (!graph.separateEdges && !accept("shared_edges")) fail("expected 'shared_edges' or 'separate_edges'");
+                        hasStorage = true;
+                    } else if (accept("parents")) {
+                        if (multipleParents.has_value()) fail("duplicate hierarchy parents");
+                        expect(":");
+                        if (accept("single")) multipleParents = false;
+                        else if (accept("multiple")) multipleParents = true;
+                        else fail("expected 'single' or 'multiple'");
+                    } else fail("expected 'storage' or 'parents'");
+                    expect(";");
+                }
+                if (!hasStorage) fail("hierarchy_graph requires storage");
+                graph.multipleParents = multipleParents.value_or(graph.separateEdges);
+                if (graph.multipleParents && !graph.separateEdges) fail("multiple parents require separate_edges");
                 graph.hierarchy = true;
             } else if (token == "named_graph" || (token == "component_index" && !followedBy(":"))) {
                 auto& selected = token == "named_graph" ? graph.nameComponent : graph.indexedComponent;

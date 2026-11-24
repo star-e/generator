@@ -115,18 +115,23 @@ void componentAccessors(std::ostream& out, const GraphScope& scope, const GraphT
     }
 }
 
-void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const std::string& vertex, const std::string& rows, bool edgeList) {
+void treeEdgeQuery(std::ostream& out, const std::string& vertex, const std::string& rows, bool separate) {
+    out << "    std::pair<" << (separate ? "ownership_descriptor, bool> reference(" : "edge_descriptor, bool> edge(")
+        << vertex << " u, " << vertex << " v) const noexcept {\n"
+        << "        if (u != null_vertex() && static_cast<std::uintmax_t>(v) < this->" << rows
+        << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
+        << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
+}
+
+void sharedHierarchyEdges(GraphSections& sections, const GraphScope& scope, const std::string& vertex, const std::string& rows, bool edgeList) {
     sections.graph.types << "    using edge_descriptor = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n";
     sections.incidence.types << "    using TreeEdge = " << scope.name("cc::graph::TreeEdge") << "<" << vertex << ">;\n"
         << "    using out_edge_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, false>;\n";
     sections.incidence.header << "    " << vertex << " source(edge_descriptor e) const noexcept { return e.source; }" << endpointMethodLineEnd
         << "    " << vertex << " target(edge_descriptor e) const noexcept { return e.target; }" << endpointMethodLineEnd
         << "    " << scope.name("cc::graph::IteratorRange") << "<out_edge_iterator> out_edges(" << vertex << " v) const noexcept { return child_links(v); }" << snakeCaseMethodLineEnd
-        << "    " << vertex << " out_degree(" << vertex << " v) const noexcept { return num_children(v); }" << snakeCaseMethodLineEnd
-        << "    std::pair<edge_descriptor, bool> edge(" << vertex << " u, " << vertex << " v) const noexcept {\n"
-        << "        if (u != null_vertex() && static_cast<std::uintmax_t>(v) < this->" << rows
-        << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
-        << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
+        << "    " << vertex << " out_degree(" << vertex << " v) const noexcept { return num_children(v); }" << snakeCaseMethodLineEnd;
+    treeEdgeQuery(sections.incidence.header, vertex, rows, false);
 
     sections.bidirectional.types << "    using in_edge_iterator = " << scope.name("cc::graph::ParentLinkIterator") << "<edge_descriptor>;\n";
     sections.bidirectional.header << "    " << scope.name("cc::graph::IteratorRange") << "<in_edge_iterator> in_edges(" << vertex << " v) const noexcept { return parent_links(v); }" << snakeCaseMethodLineEnd
@@ -144,11 +149,24 @@ void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const 
             << "    " << scope.name("cc::graph::IteratorRange") << "<edge_iterator> edges() const noexcept {\n"
             << "        return {{" << rows << ", 0}, {" << rows << ", static_cast<" << vertex << ">(" << rows << ".size())}};\n    }\n";
     }
+}
 
-    sections.reference.types << "    using ownership_descriptor = edge_descriptor;\n"
-        << "    using children_iterator = out_edge_iterator;\n"
-        << "    using parent_iterator = in_edge_iterator;\n";
-    if (edgeList) sections.reference.types << "    using ownership_iterator = edge_iterator;\n";
+void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const std::string& vertex, const std::string& rows, const GraphType& model) {
+    if (model.separateEdges) {
+        auto& types = sections.reference.types;
+        types << "    using TreeEdge = " << scope.name("cc::graph::TreeEdge") << "<" << vertex << ">;\n"
+              << "    using ownership_descriptor = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n"
+              << "    using children_iterator = " << scope.name("cc::graph::ChildIterator") << "<ownership_descriptor, false>;\n"
+              << "    using parent_iterator = " << scope.name("cc::graph::ParentLinkIterator") << "<ownership_descriptor>;\n";
+        if (model.edgeList) types << "    using ownership_iterator = " << scope.name("cc::graph::EdgeIterator") << "<ownership_descriptor, ccstd::pmr::vector<TreeEdge>>;\n";
+        treeEdgeQuery(sections.reference.header, vertex, rows, true);
+    } else {
+        sharedHierarchyEdges(sections, scope, vertex, rows, model.edgeList);
+        sections.reference.types << "    using ownership_descriptor = edge_descriptor;\n"
+            << "    using children_iterator = out_edge_iterator;\n"
+            << "    using parent_iterator = in_edge_iterator;\n";
+        if (model.edgeList) sections.reference.types << "    using ownership_iterator = edge_iterator;\n";
+    }
     sections.reference.header << "    " << vertex << " child(ownership_descriptor link) const noexcept { return link.target; }" << endpointMethodLineEnd
         << "    " << vertex << " get_parent(" << vertex << " v) const noexcept { return v == null_vertex() ? v : this->"
         << rows << "[v].parent; }" << snakeCaseMethodLineEnd
@@ -159,7 +177,7 @@ void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const 
         << "    " << vertex << " parent(ownership_descriptor e) const noexcept { return e.source; }" << endpointMethodLineEnd
         << "    " << vertex << " num_parents(" << vertex << " v) const noexcept { return get_parent(v) != null_vertex(); }" << snakeCaseMethodLineEnd
         << "    " << scope.name("cc::graph::IteratorRange") << "<parent_iterator> parent_links(" << vertex << " v) const noexcept { return {{{get_parent(v), v}}, {{null_vertex(), v}}}; }" << snakeCaseMethodLineEnd
-        << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return edge(u, v).second; }" << snakeCaseMethodLineEnd;
+        << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return " << (model.separateEdges ? "reference" : "edge") << "(u, v).second; }" << snakeCaseMethodLineEnd;
 }
 
 void directedEdges(GraphSections& sections, const GraphScope& scope, const std::string& name, const std::string& vertex,
@@ -253,13 +271,16 @@ void parentLookup(std::ostream& out, std::ostream& source, const std::string& na
 }
 
 void hierarchyMutation(std::ostream& out, std::ostream& source, const std::string& name, const std::string& vertex,
-                       const std::string& rows, bool serializable) {
-    out << "    std::pair<edge_descriptor, bool> add_edge(" << vertex << " u, " << vertex << " v) noexcept;" << snakeCaseMethodLineEnd
-        << "    void remove_edge(edge_descriptor e) noexcept;" << snakeCaseMethodLineEnd;
-    source << "\nstd::pair<" << name << "::edge_descriptor, bool> " << name << "::add_edge(" << vertex << " u, " << vertex << " v) noexcept {\n"
+                       const std::string& rows, const GraphType& model) {
+    const auto* operation = model.separateEdges ? "reference" : "edge";
+    const auto* descriptor = model.separateEdges ? "ownership_descriptor" : "edge_descriptor";
+    out << "    std::pair<" << descriptor << ", bool> add_" << operation << "(" << vertex << " u, " << vertex << " v) noexcept;" << snakeCaseMethodLineEnd
+        << "    void remove_" << operation << "(" << descriptor << " e) noexcept;" << snakeCaseMethodLineEnd;
+    if (model.separateEdges) out << "    void remove_reference(" << vertex << " u, " << vertex << " v) noexcept { remove_reference({u, v}); }" << snakeCaseMethodLineEnd;
+    source << "\nstd::pair<" << name << "::" << descriptor << ", bool> " << name << "::add_" << operation << "(" << vertex << " u, " << vertex << " v) noexcept {\n"
            << "    if (static_cast<std::uintmax_t>(u) >= " << rows << ".size() || static_cast<std::uintmax_t>(v) >= " << rows << ".size() ||\n"
-           << "        " << rows << "[v].parent != null_vertex()" << (serializable ? " || u >= v" : "") << ") return {{null_vertex(), null_vertex()}, false};\n";
-    if (!serializable)
+           << "        " << rows << "[v].parent != null_vertex()" << (model.serializable ? " || u >= v" : "") << ") return {{null_vertex(), null_vertex()}, false};\n";
+    if (!model.serializable)
         source << "    for (auto p = u; p != null_vertex(); p = " << rows << "[p].parent)\n"
                << "        if (p == v) return {{null_vertex(), null_vertex()}, false};\n";
     source << "    auto& parent = " << rows << "[u];\n"
@@ -274,8 +295,8 @@ void hierarchyMutation(std::ostream& out, std::ostream& source, const std::strin
     return {{u, v}, true};
 }
 )";
-    source << "\nvoid " << name << "::remove_edge(edge_descriptor e) noexcept {\n"
-           << "    if (!edge(e.source, e.target).second) return;\n"
+    source << "\nvoid " << name << "::remove_" << operation << "(" << descriptor << " e) noexcept {\n"
+           << "    if (!" << operation << "(e.source, e.target).second) return;\n"
            << "    auto& parent = " << rows << "[e.source];\n"
            << "    auto& child = " << rows << "[e.target];\n"
            << "    auto previous = null_vertex();\n"
@@ -781,6 +802,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         std::set<std::string> symbols{"null_vertex", "ownership_descriptor", "parent_iterator", "children_iterator", "get_parent", "num_children", "child_links", "child", "parent",
                                       "parent_links", "num_parents", "reference", "has_link"};
         if (model.mutableGraph) symbols.insert({"add_reference", "remove_reference"});
+        if (!model.multipleParents) symbols.insert("TreeEdge");
         for (const auto& symbol : symbols)
             if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": reference API collides with " + symbol);
         api.insert(symbols.begin(), symbols.end());
@@ -875,11 +897,11 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         storage.push_back(field);
         return field;
     };
-    const std::string rows = model.hierarchy && !model.separateEdges ? internalColumn("links") : "";
+    const std::string rows = model.hierarchy && !model.multipleParents ? internalColumn("links") : "";
     const auto outgoing = model.incidence ? internalColumn("outEdges") : "";
     const auto incoming = model.bidirectional ? internalColumn("inEdges") : "";
-    const auto childRows = model.separateEdges ? internalColumn("children_") : "";
-    const auto parentRows = model.separateEdges ? internalColumn("parents_") : "";
+    const auto childRows = model.multipleParents ? internalColumn("children_") : "";
+    const auto parentRows = model.multipleParents ? internalColumn("parents_") : "";
     const std::string handles = alternatives.empty() ? "" : internalColumn("handles");
     std::vector<std::string> allStorage;
     std::ostringstream storageDeclarations;
@@ -940,24 +962,26 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
                               << vertex << ">::max)(); }" << snakeCaseMethodLineEnd;
     }
     if (!rows.empty()) {
-        for (const auto* symbol : {"TreeEdge", "edge_descriptor", "source", "target", "out_edges", "out_degree", "edge", "out_edge_iterator", "in_edge_iterator", "adjacency_iterator",
-                                   "ownership_descriptor", "children_iterator", "parent_iterator", "parent", "parent_links", "num_parents", "in_edges", "in_degree", "degree",
-                                   "adjacent_vertices", "has_link"}) {
-            if (members.contains(symbol))
-                throw std::runtime_error(node.qualifiedName + ": shared-edge graph member name collision: " + symbol);
+        if (!model.separateEdges) {
+            for (const auto* symbol : {"TreeEdge", "edge_descriptor", "source", "target", "out_edges", "out_degree", "edge", "out_edge_iterator", "in_edge_iterator", "adjacency_iterator",
+                                       "ownership_descriptor", "children_iterator", "parent_iterator", "parent", "parent_links", "num_parents", "in_edges", "in_degree", "degree",
+                                       "adjacent_vertices", "has_link"}) {
+                if (members.contains(symbol)) throw std::runtime_error(node.qualifiedName + ": shared-edge graph member name collision: " + symbol);
+            }
+            if (model.mutableGraph && (members.contains("add_edge") || members.contains("remove_edge")))
+                throw std::runtime_error(node.qualifiedName + ": mutable graph member name collision");
         }
         headers.insert({"cocos/base/GraphDescriptor.h", "cocos/base/GraphIterator.h", "cstdint", "limits", "utility"});
-        hierarchyInterface(sections, scope, vertex, rows, model.edgeList);
+        hierarchyInterface(sections, scope, vertex, rows, model);
         if (model.mutableGraph) {
-            if (members.contains("add_edge") || members.contains("remove_edge"))
-                throw std::runtime_error(node.qualifiedName + ": mutable graph member name collision");
-            hierarchyMutation(sections.mutation.header, sections.mutation.source, name, vertex, rows, model.serializable);
+            auto& mutations = model.separateEdges ? sections.referenceMutation : sections.mutation;
+            hierarchyMutation(mutations.header, mutations.source, name, vertex, rows, model);
         }
     }
-    if (model.incidence || model.separateEdges) {
+    if (model.incidence || model.multipleParents) {
         headers.insert({"algorithm", "limits", "cocos/base/GraphDescriptor.h", "cocos/base/GraphEdges.h"});
         if (model.incidence) directedEdges(sections, scope, name, vertex, outgoing, incoming, model, false);
-        if (model.separateEdges) directedEdges(sections, scope, name, vertex, childRows, parentRows, model, true);
+        if (model.multipleParents) directedEdges(sections, scope, name, vertex, childRows, parentRows, model, true);
     }
     if (model.parentGraph) {
         headers.insert("string_view");

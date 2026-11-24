@@ -204,6 +204,7 @@ struct GraphDeclaration {
     bool bidirectional{false};
     bool hierarchy{false};
     bool separateEdges{false};
+    bool multipleParents{false};
     std::optional<TypeRef> nameComponent;
     std::optional<SourceLocation> nameIndex;
     std::optional<TypeRef> indexedComponent;

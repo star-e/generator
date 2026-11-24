@@ -27,18 +27,21 @@ const edge = g.addEdge(pass, compute), link = g.addReference(pass, compute);
 if (!edge || !link) throw new Error('missing edge or reference');
 g.addEdge(queue, compute);
 g.addEdge(pass, compute);
-g.addReference(queue, compute);
-g.addReference(pass, compute);
+check(g.addReference(queue, compute) === null && g.addReference(pass, compute) === null &&
+    g.addReference(compute, pass) === null && g.addReference(pass, pass) === null, 'single-parent forest');
 check(Array.from(deps.ie(compute), e => g.source(e)).join() === [pass, queue, pass].join() &&
-    Array.from(g.parents(compute), e => g.parent(e)).join() === [pass, queue, pass].join(), 'insertion order');
-g.removeReference(link);
-check(g.getParent(compute) === queue && g.numParents(compute) === 2 && deps.id(compute) === 3, 'remove one reference');
-g.removeEdge(edge);
-check(g.edge(pass, compute) && g.numParents(compute) === 2, 'remove one parallel edge');
-g.removeEdges(pass, compute);
-check(!g.edge(pass, compute) && g.reference(pass, compute), 'erase only dependencies');
+    Array.from(g.parents(compute), e => g.parent(e)).join() === String(pass), 'independent incoming edges');
 g.removeReferences(queue, compute);
-check(g.edge(queue, compute) && !g.reference(queue, compute) && g.getParent(compute) === pass, 'erase only references');
+check(g.getParent(compute) === pass, 'remove unrelated reference');
+g.removeReference(link);
+check(g.getParent(compute) === g.N && g.numParents(compute) === 0 && deps.id(compute) === 3, 'detach');
+check(g.addReference(queue, compute) !== null && g.numParents(compute) === 1, 'reparent');
+g.removeEdge(edge);
+check(g.edge(pass, compute) && g.numParents(compute) === 1, 'remove one parallel edge');
+g.removeEdges(pass, compute);
+check(!g.edge(pass, compute) && g.reference(queue, compute), 'erase only dependencies');
+g.removeReferences(queue, compute);
+check(g.edge(queue, compute) && !g.reference(queue, compute) && g.addReference(pass, compute) !== null, 'erase only references');
 check(Array.from(refs.children(pass), e => refs.child(e)).join() === [queue, compute].join() &&
     g.numChildren(queue) === 1 && g.ne() === 1, 'children and edge count');
 

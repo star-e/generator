@@ -84,8 +84,7 @@ endforeach()
 check_graph_order(RenderGraphTypes.h RenderGraph ${graphTypes} "// EdgeListGraph types\n" "using edge_iterator ="
     ${referenceTypes} "using ownership_iterator =" ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
     "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(vertex_descriptor u, vertex_descriptor v)"
-    "vector<VertexHandle> handles" "vector<ccstd::pmr::vector<vertex_descriptor>> outEdges" "vector<ccstd::pmr::vector<vertex_descriptor>> inEdges"
-    "vector<ccstd::pmr::vector<vertex_descriptor>> children_" "vector<ccstd::pmr::vector<vertex_descriptor>> parents_"
+    "vector<TreeEdge> links" "vector<VertexHandle> handles" "vector<ccstd::pmr::vector<vertex_descriptor>> outEdges" "vector<ccstd::pmr::vector<vertex_descriptor>> inEdges"
     "vector<ccstd::pmr::string> names" "vector<RasterPass> rasterPasses" "vector<gfx::Viewport> viewports"
     "PmrUnorderedStringMap<ccstd::pmr::string, uint32_t> index")
 foreach(header IN ITEMS LayoutGraphTypes.h RenderGraphTypes.h FGDispatcherTypes.h)

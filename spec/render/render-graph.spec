@@ -350,7 +350,7 @@ namespace cc::render {
         mutable_graph;
         incidence_graph { out_edges: vector; }
         bidirectional_graph { in_edges: vector; }
-        hierarchy_graph { storage: separate_edges; }
+        hierarchy_graph { storage: separate_edges; parents: single; }
         component Name_: ccstd::pmr::string { member: names; }
         component Layout_: ccstd::pmr::string { member: layoutNodes; }
         component Data_: RenderData { member: data; }

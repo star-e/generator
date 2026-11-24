@@ -132,6 +132,7 @@ void checkRenderGraphViews(cc::render::OutputArchive& samples, boost::container:
         throw std::runtime_error("Unexpected payload dispatch order");
 
     const auto alternate = graph.add_vertex(Queue_{}, "alternate", pass);
+    graph.remove_reference(queue, scene);
     graph.add_reference(alternate, scene);
     colors.assign(refs.num_vertices(), GraphColor::WHITE);
     depthFirstVisit(refs, pass, trace, colors, {}, scratch);

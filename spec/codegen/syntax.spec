@@ -150,6 +150,7 @@ namespace cc::codegen {
         bidirectional: bool = false;
         hierarchy: bool = false;
         separateEdges: bool = false;
+        multipleParents: bool = false;
         nameComponent: std::optional<TypeRef>;
         nameIndex: std::optional<SourceLocation>;
         indexedComponent: std::optional<TypeRef>;

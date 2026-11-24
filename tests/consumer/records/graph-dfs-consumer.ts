@@ -2,7 +2,7 @@ import { DefaultVisitor, depthFirstSearch, depthFirstVisit, GraphColor, OutE, Ou
 import type { edge_descriptor, IncidenceGraph, VertexListGraph } from './graph';
 import type { InputArchive } from './archive';
 import { DescriptorDB, LayoutGraph, LayoutGraphValue, RenderPassType } from './layout-graph';
-import { HierarchyOnly } from './shift-probe';
+import { HierarchyOnly, MultiParentProbe } from './shift-probe';
 import { ComputePass, RasterPass, RenderData, RenderGraph, RenderGraphValue, RenderQueue, SceneData } from './render-graph';
 
 function check (ok: boolean, message: string): void {
@@ -104,6 +104,17 @@ export function checkNativeDfs (samples: InputArchive): void {
     depthFirstVisit(hierarchy, top, new DefaultVisitor(), hierarchyColors);
     check(hierarchyColors.get(leaf) === GraphColor.BLACK, 'Single-root visit without vertex enumeration');
 
+    const multi = new MultiParentProbe();
+    const a = multi.addVertex(0), b = multi.addVertex(0), child = multi.addVertex(0, a);
+    const second = multi.addReference(b, child);
+    if (!second) throw new Error('expected second parent');
+    check(multi.addReference(a, child) !== null &&
+        Array.from(multi.parents(child), e => multi.parent(e)).join() === [a, b, a].join(), 'multiple parent links');
+    multi.removeReference(second);
+    check(multi.getParent(child) === a && multi.numParents(child) === 2, 'remove one parent link');
+    multi.removeReferences(a, child);
+    check(multi.numParents(child) === 0, 'remove parallel parent links');
+
     const forest = new LayoutGraph();
     const size = samples.n();
     for (let v = 0; v < size; ++v) addStage(forest, samples.n());
@@ -145,8 +156,10 @@ function checkRenderGraphView (samples: InputArchive): void {
     const branch = 'start0 open0 examine0>1 tree0>1 open1 examine1>2 tree1>2 open2 close2 finish1>2 close1 finish0>1 ';
     visit(branch + 'close0');
     const alternate = graph.addVertex(RenderGraphValue.Queue, new RenderQueue(), 'alternate', '', new RenderData(), true, pass);
+    graph.removeReferences(queue, scene);
     graph.addReference(alternate, scene);
-    visit(branch + 'examine0>4 tree0>4 open4 examine4>2 forward/cross4>2 finish4>2 close4 finish0>4 close0');
+    visit('start0 open0 examine0>1 tree0>1 open1 close1 finish0>1 ' +
+        'examine0>4 tree0>4 open4 examine4>2 tree4>2 open2 close2 finish4>2 close4 finish0>4 close0');
 }
 
 function addStage (g: LayoutGraph, parent: number): number {
