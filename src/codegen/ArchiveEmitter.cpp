@@ -146,7 +146,8 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
         graph.node(model.components.front().valueType).qualifiedName == "ccstd::pmr::string");
     declarations << '\n' << save << ";\n" << load << ";\n";
     cpp << '\n' << save << " {\n"
-        << "    uint32_t edges = 0, counts[" << count << "]{};\n"
+        << "    uint32_t edges = 0;\n"
+        << "    uint32_t counts[" << count << "]{};\n"
         << "    for (auto v : g.vertices()) {\n        edges += g.out_degree(v);\n"
         << "        ++counts[static_cast<uint32_t>(g.kind(v))];\n    }\n"
         << "    save(ar, g.num_vertices());\n    save(ar, edges);\n    for (auto n : counts) save(ar, n);\n"
@@ -162,9 +163,10 @@ void emitGraphArchive(const TypeGraph& graph, const TypeNode& node, const TypeMo
     else cpp << nativeLoadStorage;
     cpp << R"(    const auto readSize = [&ar]() -> uint32_t {
         const auto n = ar.readNumber();
-        if (!(n >= 0 && n <= UINT32_MAX) || n != static_cast<uint32_t>(n))
-            throw std::runtime_error("Invalid graph archive size");
-        return static_cast<uint32_t>(n);
+        if (n >= 0 && n <= UINT32_MAX && n == static_cast<uint32_t>(n)) {
+            return static_cast<uint32_t>(n);
+        }
+        throw std::runtime_error("Invalid graph archive size");
     };
     const auto size = readSize();
     auto edges = readSize();
