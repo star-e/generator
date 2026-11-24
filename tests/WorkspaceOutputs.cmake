@@ -64,6 +64,8 @@ string(FIND "${layoutHeader}" "struct LayoutGraphData {" lastGraph)
 string(SUBSTRING "${layoutHeader}" ${lastGraph} -1 layoutTail)
 string(FIND "${layoutTail}" "\n};" endOfClass)
 foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
+    check_graph_order(LayoutGraphTypes.h ${layout} "        RenderStage, // NOLINT(readability-identifier-naming)\n"
+        "        RenderPhase // NOLINT(readability-identifier-naming)\n")
     check_graph_order(LayoutGraphTypes.h ${layout} ${graphTypes} ${referenceTypes} ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
         "// ComponentGraph\n" " getName(" "// PolymorphicGraph\n" " kind(vertex_descriptor" "// ReferenceGraph\n" " child(ownership_descriptor"
         "// ParentGraph\n" " locate_child(" "// AddressableGraph\n" " locate("

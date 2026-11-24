@@ -402,7 +402,8 @@ void payloadAccess(GraphSection& section, const GraphScope& scope, const std::ve
     else if (maxKind > UINT8_MAX) underlyingType = "uint16_t";
     section.types << "    enum class Kind : " << scope.name(underlyingType) << " {\n";
     for (size_t i = 0; i < alternatives.size(); ++i)
-        section.types << "        " << alternatives[i].kind << (i + 1 < alternatives.size() ? ",\n" : "\n");
+        section.types << "        " << alternatives[i].kind << (i + 1 < alternatives.size() ? "," : "")
+                      << " // NOLINT(readability-identifier-naming)\n";
     section.types << "    };\n";
     auto& out = section.header;
     out << "    Kind kind(" << vertex << " v) const { return this->" << handles << ".at(v).kind; }\n"
