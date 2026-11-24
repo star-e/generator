@@ -1,6 +1,7 @@
 #include "codegen/ArchiveEmitter.h"
 #include "codegen/Documentation.h"
 #include "codegen/GraphEmitter.h"
+#include "codegen/RecordEmitter.h"
 #include "model/TypeName.h"
 
 #include <algorithm>
@@ -649,8 +650,7 @@ bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id) {
 
 std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, std::ostream& templateDefinitions, std::ostream& source,
                          std::set<std::string>& headers, std::set<const TypeNode*>& forwards,
-                         const std::vector<BoundField>& fields, const std::string& methods, const TypeModule* archive,
-                         bool transactionalLoad) {
+                         const std::vector<BoundField>& fields, const std::string& methods, const ArchiveOutput* archive) {
     const auto& node = graph.node(id);
     const auto& model = std::get<GraphType>(node.data);
     if (!model.indexedVertices || (model.components.empty() && model.alternatives.empty()))
@@ -992,16 +992,14 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n\n";
     out << storageDeclarations.view();
     writeFields();
-    if (archive) {
-        const bool hasPrivateArchiveFields = std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; });
-        if (hasPrivateArchiveFields) {
-            out << "    friend void save(" << scope.name(graph.node(archive->outputArchive).qualifiedName) << "&, const " << name << "&);\n";
-            out << "    friend void load(" << scope.name(graph.node(archive->inputArchive).qualifiedName) << "&, " << name << "&);\n";
-        }
+    if (archive && std::ranges::any_of(model.fields, [](const auto& f) { return f.cppPrivate && !f.transient; })) {
+        headers.insert(archive->output.forwardHeader.generic_string());
+        out << "    friend void save(" << scope.name(graph.node(archive->module.outputArchive).qualifiedName) << "&, const " << name << "&);\n";
+        out << "    friend void load(" << scope.name(graph.node(archive->module.inputArchive).qualifiedName) << "&, " << name << "&);\n";
     }
     out << "};\n";
     if (!archive) return {};
-    if (transactionalLoad) {
+    if (archive->transactionalGraphLoad) {
         std::ostringstream commit;
         for (const auto& member : allStorage) commit << "    target." << member << ".swap(g." << member << ");\n";
         if (std::ranges::any_of(fields, [](const auto& f) { return !f.transient; })) commit << "    using std::swap;\n";

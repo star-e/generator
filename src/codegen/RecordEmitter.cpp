@@ -1501,14 +1501,10 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             const bool transactionalLoad = model->serializable && archive && archive->transactionalGraphLoad;
             std::string nativeLoadStorage;
             if (deps.emitCpp) {
-                const TypeModule* nativeArchive = nullptr;
-                if (output.serializationHeader && model->serializable && archive) {
-                    deps.headers.insert(archive->output.forwardHeader.generic_string());
-                    nativeArchive = &archive->module;
-                }
+                const auto* nativeArchive = output.serializationHeader && model->serializable && archive ? &*archive : nullptr;
                 const auto methods = cppMemberFunctions(graph, module, model->methods, output, deps);
                 nativeLoadStorage = emitCppGraph(graph, id, cpp, templateDefinitions, definitions, deps.headers, deps.forwardTypes,
-                                                 fields, methods, nativeArchive, transactionalLoad);
+                                                 fields, methods, nativeArchive);
                 if (model->compareEqual || model->compareLess || model->hashable) {
                     std::vector<std::string_view> elements;
                     for (const auto& component : model->components) elements.push_back(component.name);

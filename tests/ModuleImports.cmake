@@ -5,6 +5,11 @@ set(workspace "${work}/config/workspace.json")
 set(generate "${TOOL}" generate --workspace "${workspace}" --output "${work}/stage")
 run(${generate})
 
+file(READ "${work}/stage/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h" graphHeader)
+if(graphHeader MATCHES "ArchiveFwd[.]h")
+    message(FATAL_ERROR "Public graph fields do not require an archive header in LayoutGraphTypes.h")
+endif()
+
 set(resources "${work}/spec/extern/gfx.spec")
 file(READ "${resources}" resourceSource)
 set(resourcePattern "cocos/renderer/gfx-base/GFX{name}.h")
@@ -213,6 +218,7 @@ file(READ "${native}/LayoutGraphSerialization.cpp" source)
 file(READ "${native}/LayoutGraphTypes.h" graphHeader)
 if(NOT header MATCHES "save[(]Writer& ar, const Descriptor& v[)]" OR NOT header MATCHES "load[(]Reader& ar, LayoutGraph& g[)]"
    OR NOT source MATCHES "load[(]Reader& ar, std::vector<bool, Allocator>& bits[)]"
+   OR NOT graphHeader MATCHES "#include \"cocos/renderer/pipeline/custom/ArchiveFwd[.]h\""
    OR NOT graphHeader MATCHES "friend void load[(]Reader&, LayoutGraph&[)]"
    OR NOT graphHeader MATCHES "friend void save[(]Writer&, const LayoutGraph&[)]")
     message(FATAL_ERROR "Native record, graph or packed bool archive did not follow the declared roles")
