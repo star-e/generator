@@ -403,10 +403,10 @@ struct TypeGraph : public graph::BidirectionalStorage<uint32_t> {
     }
 
     TypeNode& getNode(vertex_descriptor v) noexcept { return this->nodes[v]; }
-    TypeNode& get(const Node_&, vertex_descriptor v) noexcept { return getNode(v); }
+    TypeNode& get(const Node_& /*tag*/, vertex_descriptor v) noexcept { return getNode(v); }
 
     TypeNode const& getNode(vertex_descriptor v) const noexcept { return this->nodes[v]; }
-    TypeNode const& get(const Node_&, vertex_descriptor v) const noexcept { return getNode(v); }
+    TypeNode const& get(const Node_& /*tag*/, vertex_descriptor v) const noexcept { return getNode(v); }
 
     TypeId appendNode(TypeNode node, TypeId parent);
     const TypeNode& node(TypeId id) const;

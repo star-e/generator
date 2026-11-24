@@ -73,7 +73,7 @@ void componentAccessors(std::ostream& out, const GraphScope& scope, const GraphT
                 : types[i] + qualifier + "&";
             out << "\n    " << result << " " << accessor << "(" << vertex << " v)" << qualifier
                 << " noexcept { return this->" << storage[i] << "[v]; }\n"
-                << "    " << result << " get(const " << scope.name(tag.qualifiedName) << "&, " << vertex << " v)"
+                << "    " << result << " get(const " << scope.name(tag.qualifiedName) << "& /*tag*/, " << vertex << " v)"
                 << qualifier << " noexcept { return " << accessor << "(v); }\n";
         }
     }
@@ -406,7 +406,7 @@ void payloadAccess(GraphSection& section, const GraphScope& scope, const std::ve
     out << "    }\n";
     for (const auto& alt : alternatives) {
         for (const std::string qualifier : {"", " const"}) {
-            out << "    " << alt.type << qualifier << "& value(const " << alt.tag << "&, " << vertex << " v)" << qualifier << " {\n"
+            out << "    " << alt.type << qualifier << "& value(const " << alt.tag << "& /*tag*/, " << vertex << " v)" << qualifier << " {\n"
                 << "        if (!holds<" << alt.tag << ">(v)) throw std::bad_variant_access{};\n"
                 << "        return " << alt.element("this->" + handles + "[v].index") << ";\n    }\n";
         }
@@ -538,8 +538,8 @@ void piecewiseAddVertex(std::ostream& declaration, std::ostream& out, const std:
         }
         stream << ", int>";
     };
-    std::string params = tagged ? "const " + tagType + "&, " : "";
-    params += "std::piecewise_construct_t, " + tupleParams;
+    std::string params = tagged ? "const " + tagType + "& /*tag*/, " : "";
+    params += "std::piecewise_construct_t /*piecewise*/, " + tupleParams;
     if (hierarchy) params += ", " + vertex + " parent";
     templateHead(declaration, "    ");
     if (tagged) declaration << " = 0";
