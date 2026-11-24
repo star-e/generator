@@ -286,12 +286,12 @@ TS 后端从同一声明生成 `LayoutGraphValue`、类别到载荷的类型映�
 | 职责 | 实现与可验证的行为 |
 | --- | --- |
 | 图与视图 | 图拥有顶点、邻接关系和组件。单源遍历只要求枚举顶点的出边、从边取得终点，全图遍历额外要求枚举顶点。引用视图枚举父子边，过滤视图只呈现入选顶点和边，两者都保留原图描述符。C++17 生成图可直接满足这些接口。 |
-| 深度优先遍历 | 在 `GraphDFS.h` 实现显式栈 DFS，调用方提供访问者、颜色表和临时存储。`depthFirstVisit` 从给定顶点出发并沿用颜色，`depthFirstSearch` 初始化颜色，按枚举顺序从剩余未访问顶点继续搜索。按出边顺序访问，遇到灰色终点时报告回边，子顶点完成后再完成对应的树边。 |
+| 深度优先遍历 | 在 `GraphDFS.h` 实现显式栈 DFS，调用方提供访问者和颜色表。`depthFirstVisit` 从给定顶点出发并沿用颜色，`depthFirstSearch` 初始化颜色，按枚举顺序从剩余未访问顶点继续搜索。按出边顺序访问，遇到灰色终点时报告回边，子顶点完成后再完成对应的树边。 |
 | 依赖分析 | 模块边从导入方指向依赖方。按 DFS 的顶点完成顺序输出模块，例如 A 导入 B 时先输出 B，菱形依赖中的公共模块只输出一次。遇到回边时用当前访问路径和导入位置报告完整环。类型构建按需遍历继承和按值成员依赖，指针或引用允许指向自身。 |
 
 C++ 图声明 `hierarchy_graph { storage: shared_edges; }` 后，`out_edges(v)` 和 `out_degree(v)` 直接复用子边迭代器和计数。用 `source(e)`、`target(e)` 读取端点，`edge(u, v)` 通过父节点在 O(1) 时间内返回 `std::pair<Edge, bool>`。未命中时两个端点均为 `null_vertex()`。
 
-包含 `cocos/base/GraphDFS.h` 后可调用 `cc::graph::depthFirstSearch(g, visitor, colors, stack)`。颜色表支持按顶点下标访问，栈可用 `std::vector<cc::graph::DfsFrame<LayoutGraph>>` 或 PMR vector。`depthFirstVisit(g, root, visitor, colors, stack, terminate)` 沿用已有颜色，可选谓词在发现顶点后决定是否跳过其出边。互操作测试将原生图拓扑和每个回调写入样本，TS 用同一拓扑逐项比较，包括 25,000 层的长链。[C++ DFS](../runtime/cpp/GraphDFS.h) · [原生消费者](../tests/consumer/records/GraphDFSConsumer.cpp) · [TS 消费者](../tests/consumer/records/graph-dfs-consumer.ts)
+包含 `cocos/base/GraphDFS.h` 后可调用 `cc::graph::depthFirstSearch(g, visitor, colors)`。颜色表按顶点下标访问。`depthFirstVisit(g, root, visitor, colors, terminate)` 沿用已有颜色，可选谓词在发现顶点后决定是否跳过其出边。遍历栈默认使用引擎的默认 PMR 资源，也可以在起点或谓词之后传入临时内存资源，例如 `depthFirstSearch(g, visitor, colors, std::nullopt, scratch)`。互操作测试将原生图拓扑和每个回调写入样本，TS 用同一拓扑逐项比较，包括 25,000 层的长链。[C++ DFS](../runtime/cpp/GraphDFS.h) · [原生消费者](../tests/consumer/records/GraphDFSConsumer.cpp) · [TS 消费者](../tests/consumer/records/graph-dfs-consumer.ts)
 
 在 C++ 中，`cc::graph::ReferenceGraphView refs{graph}` 让 DFS 沿父子引用遍历。再用 `cc::graph::FilteredGraphView visible{refs, keep}` 按顶点谓词筛选，两个视图都借用底层图。颜色表按原图的顶点编号分配。被过滤的起点不触发回调。若共享子节点还挂在另一个可见父节点下，从该父节点仍能访问它。TS 使用引擎的 `ReferenceGraphView`。互操作用例逐项对照两端的进入、退出及边事件。[原生视图](../runtime/cpp/GraphView.h) · [C++ 用例](../tests/consumer/records/GraphDFSConsumer.cpp) · [TS 用例](../tests/consumer/records/graph-dfs-consumer.ts)
 

@@ -16,15 +16,80 @@ constexpr bool acceptsVertex(const Graph&, Vertex) noexcept { return true; }
 
 template<class Graph, class Predicate, class Vertex>
 bool acceptsVertex(const FilteredGraphView<Graph, Predicate>& view, Vertex v) { return view.contains_vertex(v); }
+
+// Iterators borrow the view and underlying graph, so DFS can retain them after the range expires.
+template<class View, class BaseIterator, bool Edges>
+class FilteredRange {
+public:
+    class Iterator {
+    public:
+        using iterator_category = std::input_iterator_tag;
+        using difference_type = typename std::iterator_traits<BaseIterator>::difference_type;
+        using value_type = typename std::iterator_traits<BaseIterator>::value_type;
+        using pointer = void;
+        using reference = decltype(*std::declval<const BaseIterator&>());
+
+        Iterator() = default;
+        Iterator(const View& view, BaseIterator current, BaseIterator last)
+        : view_(&view), current_(current), last_(last) { skipExcluded(); }
+
+        reference operator*() const { return *current_; }
+        Iterator& operator++() { ++current_; skipExcluded(); return *this; }
+        Iterator operator++(int) { auto previous = *this; ++*this; return previous; }
+        bool operator==(const Iterator& other) const { return current_ == other.current_; }
+        bool operator!=(const Iterator& other) const { return !(*this == other); }
+
+    private:
+        void skipExcluded() {
+            while (current_ != last_) {
+                if constexpr (Edges) {
+                    if (view_->contains_vertex(view_->target(*current_))) break;
+                } else {
+                    if (view_->contains_vertex(*current_)) break;
+                }
+                ++current_;
+            }
+        }
+        const View* view_{};
+        BaseIterator current_{}, last_{};
+    };
+
+    FilteredRange(const View& view, BaseIterator first, BaseIterator last)
+    : first_(view, first, last), last_(view, last, last) {}
+    Iterator begin() const { return first_; }
+    Iterator end() const { return last_; }
+
+private:
+    Iterator first_, last_;
+};
+
+// Only vertex-list graphs supply a vertex iterator. Rooted visits also work without one.
+template<class Graph, class FilteredView = void, class = void>
+struct ViewVertexList {};
+
+template<class Graph>
+struct ViewVertexList<Graph, void, std::void_t<typename Graph::vertex_iterator>> {
+    using vertex_iterator = typename Graph::vertex_iterator;
+};
+
+template<class Graph, class View>
+struct ViewVertexList<Graph, View, std::void_t<typename Graph::vertex_iterator>> {
+protected:
+    using VertexRange = FilteredRange<View, typename Graph::vertex_iterator, false>;
+
+public:
+    using vertex_iterator = typename VertexRange::Iterator;
+};
 } // namespace detail
 
 // Both views borrow the graph and its descriptors. Give the base graph (or view) a name
 // so that it outlives the view and all iterators used during traversal.
 template<class Graph>
-class ReferenceGraphView {
+class ReferenceGraphView : public detail::ViewVertexList<Graph> {
 public:
     using edge_descriptor = typename Graph::ownership_descriptor;
-    using vertex_descriptor = std::decay_t<decltype(std::declval<const Graph&>().child(std::declval<edge_descriptor>()))>;
+    using vertex_descriptor = typename Graph::vertex_descriptor;
+    using out_edge_iterator = typename Graph::children_iterator;
 
     explicit ReferenceGraphView(const Graph& graph) noexcept : graph_(graph) {}
     ReferenceGraphView(const Graph&&) = delete;
@@ -41,10 +106,13 @@ private:
 };
 
 template<class Graph, class Predicate>
-class FilteredGraphView {
+class FilteredGraphView : public detail::ViewVertexList<Graph, FilteredGraphView<Graph, Predicate>> {
+    using EdgeRange = detail::FilteredRange<FilteredGraphView, typename Graph::out_edge_iterator, true>;
+
 public:
     using edge_descriptor = typename Graph::edge_descriptor;
-    using vertex_descriptor = std::decay_t<decltype(std::declval<const Graph&>().target(std::declval<edge_descriptor>()))>;
+    using vertex_descriptor = typename Graph::vertex_descriptor;
+    using out_edge_iterator = typename EdgeRange::Iterator;
 
     FilteredGraphView(const Graph& graph, Predicate keep) : graph_(graph), keep_(std::move(keep)) {}
     FilteredGraphView(const Graph&&, Predicate) = delete;
@@ -56,60 +124,14 @@ public:
 
     auto vertices() const {
         const auto& vertices = graph_.vertices();
-        return Range<decltype(vertices.begin()), false>{*this, vertices.begin(), vertices.end()};
+        return typename FilteredGraphView::VertexRange{*this, vertices.begin(), vertices.end()};
     }
     auto out_edges(vertex_descriptor v) const {
         const auto& edges = graph_.out_edges(v);
-        return Range<decltype(edges.begin()), true>{*this, contains_vertex(v) ? edges.begin() : edges.end(), edges.end()};
+        return EdgeRange{*this, contains_vertex(v) ? edges.begin() : edges.end(), edges.end()};
     }
 
 private:
-    // Iterators borrow the view and underlying graph, so DFS can retain them after the range expires.
-    template<class BaseIterator, bool Edges>
-    class Range {
-    public:
-        class Iterator {
-        public:
-            using iterator_category = std::input_iterator_tag;
-            using difference_type = typename std::iterator_traits<BaseIterator>::difference_type;
-            using value_type = typename std::iterator_traits<BaseIterator>::value_type;
-            using pointer = void;
-            using reference = decltype(*std::declval<const BaseIterator&>());
-
-            Iterator() = default;
-            Iterator(const FilteredGraphView& view, BaseIterator current, BaseIterator last)
-            : view_(&view), current_(current), last_(last) { skipExcluded(); }
-
-            reference operator*() const { return *current_; }
-            Iterator& operator++() { ++current_; skipExcluded(); return *this; }
-            Iterator operator++(int) { auto previous = *this; ++*this; return previous; }
-            bool operator==(const Iterator& other) const { return current_ == other.current_; }
-            bool operator!=(const Iterator& other) const { return !(*this == other); }
-
-        private:
-            void skipExcluded() {
-                while (current_ != last_) {
-                    if constexpr (Edges) {
-                        if (view_->contains_vertex(view_->target(*current_))) break;
-                    } else {
-                        if (view_->contains_vertex(*current_)) break;
-                    }
-                    ++current_;
-                }
-            }
-            const FilteredGraphView* view_{};
-            BaseIterator current_{}, last_{};
-        };
-
-        Range(const FilteredGraphView& view, BaseIterator first, BaseIterator last)
-        : first_(view, first, last), last_(view, last, last) {}
-        Iterator begin() const { return first_; }
-        Iterator end() const { return last_; }
-
-    private:
-        Iterator first_, last_;
-    };
-
     const Graph& graph_;
     Predicate keep_;
 };

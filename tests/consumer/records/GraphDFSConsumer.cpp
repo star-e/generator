@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -17,7 +18,6 @@
 namespace {
 using cc::graph::depthFirstSearch;
 using cc::graph::depthFirstVisit;
-using cc::graph::DfsFrame;
 using cc::graph::GraphColor;
 using cc::render::LayoutGraph;
 using Vertex = LayoutGraph::vertex_descriptor;
@@ -43,7 +43,10 @@ static_assert(std::is_same_v<cc::render::ResourceGraph::ownership_iterator, decl
 
 // The hierarchy cannot represent cycles. This graph also enumerates vertex zero last.
 struct Digraph {
+    using vertex_descriptor = Vertex;
     using edge_descriptor = cc::graph::EdgeDescriptor<Vertex>;
+    using vertex_iterator = std::vector<Vertex>::const_iterator;
+    using out_edge_iterator = std::vector<edge_descriptor>::const_iterator;
     std::vector<std::vector<edge_descriptor>> rows;
     std::vector<Vertex> order;
     const auto& vertices() const { return order; }
@@ -115,58 +118,58 @@ void checkRenderGraphViews(cc::render::OutputArchive& samples, boost::container:
     graph.add_edge(pass, compute);
 
     cc::graph::ReferenceGraphView refs{graph};
+    static_assert(std::is_same_v<decltype(refs)::vertex_iterator, RenderGraph::vertex_iterator>);
+    static_assert(std::is_same_v<decltype(refs)::out_edge_iterator, RenderGraph::children_iterator>);
     std::vector<GraphColor> colors(refs.num_vertices(), GraphColor::WHITE);
     Trace trace(colors);
-    ccstd::pmr::vector<DfsFrame<decltype(refs)>> stack{scratch};
-    depthFirstVisit(refs, pass, trace, colors, stack);
+    depthFirstVisit(refs, pass, trace, colors, {}, scratch);
     trace.write(samples);
 
     RenderActions actions{graph};
     std::fill(colors.begin(), colors.end(), GraphColor::WHITE);
-    depthFirstVisit(refs, pass, actions, colors, stack);
+    depthFirstVisit(refs, pass, actions, colors, {}, scratch);
     if (actions.events != std::vector<std::string>{"beginPass", "beginQueue", "beginScene", "endScene", "endQueue", "endPass"})
         throw std::runtime_error("Unexpected payload dispatch order");
 
     const auto alternate = graph.add_vertex(Queue_{}, "alternate", pass);
     graph.add_reference(alternate, scene);
     colors.assign(refs.num_vertices(), GraphColor::WHITE);
-    depthFirstVisit(refs, pass, trace, colors, stack);
+    depthFirstVisit(refs, pass, trace, colors, {}, scratch);
     trace.write(samples);
 
     for (const auto v : {pass, scene, compute}) graph.getValid(v) = true;
     cc::graph::FilteredGraphView visible{refs, [&](Vertex v) { return graph.getValid(v); }};
-    ccstd::pmr::vector<DfsFrame<decltype(visible)>> filteredStack{scratch};
     colors.assign(refs.num_vertices(), GraphColor::WHITE);
-    depthFirstVisit(visible, pass, trace, colors, filteredStack);
+    depthFirstVisit(visible, pass, trace, colors, {}, scratch);
     trace.expect({"start0", "open0", "close0"});
 
     graph.getValid(alternate) = true;
     const auto vertices = visible.vertices();
+    static_assert(std::is_same_v<decltype(visible)::vertex_iterator, decltype(vertices.begin())>);
     if (std::vector<Vertex>(vertices.begin(), vertices.end()) != std::vector<Vertex>{pass, scene, compute, alternate})
         throw std::runtime_error("Filtered vertices lost their original IDs or order");
     const auto excludedEdges = visible.out_edges(queue);
     if (excludedEdges.begin() != excludedEdges.end()) throw std::runtime_error("Excluded queue has visible edges");
-    depthFirstVisit(visible, queue, trace, colors, filteredStack);
+    depthFirstVisit(visible, queue, trace, colors, {}, scratch);
     trace.expect({});
-    depthFirstVisit(visible, pass, trace, colors, filteredStack);
+    depthFirstVisit(visible, pass, trace, colors, {}, scratch);
     trace.expect({"start0", "open0", "examine0>4", "tree0>4", "open4", "examine4>2", "tree4>2", "open2",
                   "close2", "finish4>2", "close4", "finish0>4", "close0"});
     if (colors.at(queue) != GraphColor::WHITE || colors.at(compute) != GraphColor::WHITE)
         throw std::runtime_error("Rooted reference traversal reached an excluded queue or execution dependency");
 
-    depthFirstSearch(visible, trace, colors, filteredStack, queue);
+    depthFirstSearch(visible, trace, colors, queue, scratch);
     trace.expect({"init0", "init2", "init3", "init4", "start0", "open0", "examine0>4", "tree0>4", "open4",
                   "examine4>2", "tree4>2", "open2", "close2", "finish4>2", "close4", "finish0>4", "close0",
                   "start3", "open3", "close3"});
 
     cc::graph::FilteredGraphView dependencies{graph, [&](Vertex v) { return graph.getValid(v); }};
-    ccstd::pmr::vector<DfsFrame<decltype(dependencies)>> dependencyStack{scratch};
     colors.assign(graph.num_vertices(), GraphColor::WHITE);
-    depthFirstVisit(dependencies, pass, trace, colors, dependencyStack);
+    depthFirstVisit(dependencies, pass, trace, colors, {}, scratch);
     trace.expect({"start0", "open0", "examine0>3", "tree0>3", "open3", "close3", "finish0>3", "close0"});
 
     for (const auto v : graph.vertices()) graph.getValid(v) = false;
-    depthFirstSearch(visible, trace, colors, filteredStack, pass);
+    depthFirstSearch(visible, trace, colors, pass, scratch);
     trace.expect({});
 }
 } // namespace
@@ -185,24 +188,27 @@ bool writeDfsCases(const char* path) {
 
     std::vector<GraphColor> colors(graph.rows.size(), GraphColor::BLACK);
     Trace trace(colors);
-    std::vector<DfsFrame<Digraph>> stack;
-    depthFirstSearch(graph, trace, colors, stack, 0);
+    depthFirstSearch(graph, trace, colors, 0);
     trace.write(samples);
     std::fill(colors.begin(), colors.end(), GraphColor::WHITE);
     colors[2] = GraphColor::BLACK;
-    depthFirstVisit(graph, 0, trace, colors, stack, [](Vertex v, const Digraph&) { return v == 1; });
+    depthFirstVisit(graph, 0, trace, colors, [](Vertex v, const Digraph&) { return v == 1; });
     if (colors[3] != GraphColor::WHITE || colors[4] != GraphColor::WHITE) return false;
     trace.write(samples);
-    depthFirstSearch(Digraph{}, trace, colors, stack, 0);
+    depthFirstSearch(Digraph{}, trace, colors, 0);
     trace.write(samples);
 
     cc::HierarchyOnly hierarchy{&scratch};
     const auto top = hierarchy.add_vertex();
     const auto leaf = hierarchy.add_vertex(top);
-    std::vector<DfsFrame<cc::HierarchyOnly>> hierarchyStack;
     cc::graph::DefaultDfsVisitor quiet;
     colors.assign(2, GraphColor::WHITE);
-    depthFirstVisit(hierarchy, top, quiet, colors, hierarchyStack);
+    depthFirstVisit(hierarchy, top, quiet, colors);
+    if (colors.at(leaf) != GraphColor::BLACK) return false;
+    cc::graph::ReferenceGraphView refs{hierarchy};
+    cc::graph::FilteredGraphView filtered{refs, [](Vertex) { return true; }};
+    std::fill(colors.begin(), colors.end(), GraphColor::WHITE);
+    depthFirstVisit(filtered, top, quiet, colors);
     if (colors.at(leaf) != GraphColor::BLACK) return false;
 
     LayoutGraph forest{&scratch};
@@ -215,8 +221,7 @@ bool writeDfsCases(const char* path) {
     samples.writeNumber(forest.num_vertices());
     for (const auto v : forest.vertices()) samples.writeNumber(forest.get_parent(v));
     colors.assign(forest.num_vertices(), GraphColor::BLACK);
-    ccstd::pmr::vector<DfsFrame<LayoutGraph>> layoutStack{&scratch};
-    depthFirstSearch(forest, trace, colors, layoutStack);
+    depthFirstSearch(forest, trace, colors, std::nullopt, &scratch);
     trace.write(samples);
 
     constexpr Vertex length = 25000;
@@ -225,9 +230,9 @@ bool writeDfsCases(const char* path) {
     auto parent = LayoutGraph::null_vertex();
     for (Vertex v = 0; v != length; ++v) parent = chain.add_vertex(cc::render::RenderStage_{}, "v", parent);
     colors.assign(length, GraphColor::WHITE);
-    depthFirstVisit(chain, 0, trace, colors, layoutStack);
+    depthFirstVisit(chain, 0, trace, colors, {}, &scratch);
     trace.write(samples);
     checkRenderGraphViews(samples, &scratch);
     file.close();
-    return !file.fail() && stack.empty() && layoutStack.empty();
+    return !file.fail();
 }
