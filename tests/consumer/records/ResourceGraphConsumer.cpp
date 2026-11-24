@@ -5,7 +5,6 @@
 #include "cocos/renderer/gfx-empty/EmptyRenderPass.h"
 #include "cocos/renderer/gfx-empty/EmptyTexture.h"
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include <iterator>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -127,7 +126,7 @@ bool checkResourceEmplacement() {
         return false;
     } catch (const FailedConstruction&) {}
     if (graph.num_vertices() != 1 || graph.vertex("root") != root || graph.num_children(root) ||
-        graph.num_edges() || graph.contains("invalid") || graph.contains("xxx")) return false;
+        graph.contains("invalid") || graph.contains("xxx")) return false;
     const auto child = insert(std::make_tuple(3U, 'x'), FormatView{cc::gfx::Format::RGBA8}, root);
     return child == 1 && graph.vertex("xxx") == child && graph.num_children(root) == 1 && graph.get_parent(child) == root &&
            graph.getDesc(child).width == 512 && graph.getTraits(child).residency == ResourceResidency::EXTERNAL &&
@@ -231,13 +230,11 @@ bool checkViewHierarchy() {
         (void)g.add_vertex(SubresourceView_{}, "orphan", g.num_vertices());
         return false;
     } catch (const std::out_of_range&) {}
-    if (g.contains("orphan") || g.num_vertices() != 4 || g.num_edges() != 3 || g.get_parent(texture) != none ||
+    if (g.contains("orphan") || g.num_vertices() != 4 || g.get_parent(texture) != none ||
         g.get_parent(depth) != texture || g.get_parent(stencil) != texture || g.get_parent(mip) != depth ||
         g.vertex("texture") != texture || g.vertex("depth-mip") != mip) return false;
 
     if (g.num_children(texture) != 2 || g.out_degree(texture) != 2 || g.in_degree(depth) != 1) return false;
-    const auto edges = g.edges();
-    if (std::distance(edges.begin(), edges.end()) != 3) return false;
     bool sawDepth = false, sawStencil = false;
     for (const auto e : g.child_links(texture)) {
         if (g.parent(e) != texture || !g.edge(texture, g.child(e)).second) return false;
@@ -247,7 +244,7 @@ bool checkViewHierarchy() {
     if (!sawDepth || !sawStencil) return false;
     g.remove_edge(link);
     return !g.has_link(texture, depth) && g.get_parent(depth) == none && g.get_parent(mip) == depth &&
-           g.has_link(texture, stencil) && g.num_edges() == 2 && g.vertex("depth") == depth;
+           g.has_link(texture, stencil) && g.out_degree(texture) == 1 && g.vertex("depth") == depth;
 }
 } // namespace
 

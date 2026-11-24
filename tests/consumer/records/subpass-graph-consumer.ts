@@ -23,7 +23,7 @@ assert(graph.vertexName(a) === graph.vertexName(b) && graph.getSubpass(c) === su
 const edge = graph.addEdge(a, c);
 if (edge === null) throw new Error('Expected a valid edge');
 assert(graph.addEdge(b, c) !== null && graph.addEdge(a, c) !== null && graph.addEdge(c, c) !== null);
-assert(graph.ne() === 4 && !graph.edge(c, a));
+assert(graph.id(c) === 4 && !graph.edge(c, a));
 assert(Array.from(api.ie(c), e => graph.source(e)).join(',') === [a, b, a, c].join(',') &&
     Array.from(api.oe(a), e => graph.target(e)).join(',') === [c, c].join(',') &&
     Array.from(graph.adj(c)).join(',') === String(c) && api.d(c) === 5);
@@ -33,9 +33,9 @@ graph.addEdge(a, c);
 graph.removeEdges(a, c);
 graph.removeEdge(edge);
 graph.removeEdges(c, c);
-assert(!graph.edge(a, c) && graph.edge(b, c) && graph.id(c) === 1 && graph.od(c) === 0 && graph.ne() === 1);
+assert(!graph.edge(a, c) && graph.edge(b, c) && graph.id(c) === 1 && graph.od(c) === 0);
 pool.reset();
-assert(pool.createSubpassGraph() === graph && graph.ne() === 0 && graph.nv() === 0);
+assert(pool.createSubpassGraph() === graph && graph.nv() === 0);
 assert(pool.createSubpass() === subpass && subpass.rasterViews === rasterViews && rasterViews.size === 0 &&
     subpass.computeViews === computeViews && computeViews.size === 0 && subpass.resolvePairs === resolvePairs && resolvePairs.length === 0);
 assert(graph.addVertex('again', subpass) === 0 && graph.id(0) === 0 && graph.od(0) === 0);

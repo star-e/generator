@@ -74,17 +74,18 @@ foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
     check_graph_order(LayoutGraphTypes.h ${layout} ${graphTypes} ${referenceTypes} ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
         "// ComponentGraph\n" " getName(" "// PolymorphicGraph\n" " kind(vertex_descriptor" "// ReferenceGraph\n" " child(ownership_descriptor"
         "// ParentGraph\n" " locate_child(" "// AddressableGraph\n" " locate("
-        "    struct VertexHandle {" "vector<TreeEdge> links" "vector<VertexHandle> handles"
+        "    struct VertexHandle {" "vector<VertexHandle> handles" "vector<TreeEdge> links"
         "vector<ccstd::pmr::string> names" "> stages" "> phases")
     string(FIND "${layoutTail}" "\n${layout}::vertex_descriptor ${layout}::add_vertex(" definition)
     if(definition LESS_EQUAL endOfClass)
         message(FATAL_ERROR "${layout}::add_vertex template definition must follow the graph declarations in the header")
     endif()
 endforeach()
-check_graph_order(RenderGraphTypes.h RenderGraph ${graphTypes} "// EdgeListGraph types\n" "using edge_iterator ="
-    ${referenceTypes} "using ownership_iterator =" ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
+check_graph_order(RenderGraphTypes.h RenderGraph ${graphTypes} ${referenceTypes} ${traversal}
+    "// MutableGraph\n" " add_vertex(" " add_edge("
     "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(vertex_descriptor u, vertex_descriptor v)"
-    "vector<TreeEdge> links" "vector<VertexHandle> handles" "vector<ccstd::pmr::vector<vertex_descriptor>> outEdges" "vector<ccstd::pmr::vector<vertex_descriptor>> inEdges"
+    "vector<VertexHandle> handles" "vector<ccstd::pmr::vector<vertex_descriptor>> outEdges"
+    "vector<ccstd::pmr::vector<vertex_descriptor>> inEdges" "vector<TreeEdge> links"
     "vector<ccstd::pmr::string> names" "vector<RasterPass> rasterPasses" "vector<gfx::Viewport> viewports"
     "PmrUnorderedStringMap<ccstd::pmr::string, uint32_t> index")
 foreach(header IN ITEMS LayoutGraphTypes.h RenderGraphTypes.h FGDispatcherTypes.h)
@@ -97,11 +98,15 @@ endforeach()
 file(GLOB_RECURSE all RELATIVE "${work}/both" "${work}/both/*")
 set(layoutTs "cocos/rendering/custom/layout-graph.ts")
 file(READ "${work}/both/${layoutTs}" compactLayout)
-file(READ "${work}/both/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h" layoutHeader)
-if(layoutHeader MATCHES "EdgeListGraph|using (edge_iterator|ownership_iterator)| num_edges[(]| edges[(]" OR
-   compactLayout MATCHES "EdgeListGraph| ne [(]")
-    message(FATAL_ERROR "Layout graphs must omit the whole-graph edge list in both languages")
-endif()
+foreach(graph IN ITEMS Layout Render)
+    string(TOLOWER "${graph}" prefix)
+    file(READ "${work}/both/native/cocos/renderer/pipeline/custom/${graph}GraphTypes.h" header)
+    file(READ "${work}/both/cocos/rendering/custom/${prefix}-graph.ts" script)
+    if(header MATCHES "EdgeListGraph|using (edge_iterator|ownership_iterator)| num_edges[(]| edges[(]" OR
+       script MATCHES "EdgeListGraph| ne [(]")
+        message(FATAL_ERROR "${graph}Graph module must omit the whole-graph edge list in both languages")
+    endif()
+endforeach()
 string(JSON readableConfig REMOVE "${config}" typescriptDefaults)
 file(WRITE "${workspace}" "${readableConfig}")
 run("${TOOL}" generate --workspace "${workspace}" --output "${work}/readable")

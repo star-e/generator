@@ -38,8 +38,7 @@ constexpr bool checkIteratorTypes() {
 }
 static_assert(checkIteratorTypes<LayoutGraph>());
 static_assert(checkIteratorTypes<cc::render::RenderGraph>());
-static_assert(std::is_same_v<cc::render::RenderGraph::edge_iterator, decltype(std::declval<const cc::render::RenderGraph&>().edges().begin())>);
-static_assert(std::is_same_v<cc::render::ResourceGraph::ownership_iterator, decltype(std::declval<const cc::render::ResourceGraph&>().edges().begin())>);
+static_assert(checkIteratorTypes<cc::render::ResourceGraph>());
 
 // The hierarchy cannot represent cycles. This graph also enumerates vertex zero last.
 struct Digraph {

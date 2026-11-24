@@ -1,62 +1,95 @@
-#pragma once
+#pragma once // NOLINT(portability-avoid-pragma-once)
 
 #include "GraphDescriptor.h"
 
 #include <cstddef>
 #include <iterator>
 
-namespace cc::detail {
+namespace cc::graph {
 
-// A single row yields incident edges. All outgoing rows yield the graph's edges in vertex order.
-template<bool Incoming, class Rows>
-class DirectedEdgeRange {
+template<class Row, bool Incoming>
+class IncidentEdgeIterator {
+    using Vertex = typename Row::value_type;
+    using NeighborIterator = typename Row::const_iterator;
+
+public:
+    using value_type = EdgeDescriptor<Vertex>;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::input_iterator_tag;
+    using pointer = void;
+    using reference = value_type;
+
+    IncidentEdgeIterator() = default;
+    IncidentEdgeIterator(Vertex vertex, NeighborIterator current) noexcept : _vertex(vertex), _current(current) {}
+
+    value_type operator*() const noexcept {
+        if constexpr (Incoming) {
+            return {*_current, _vertex};
+        } else {
+            return {_vertex, *_current};
+        }
+    }
+    IncidentEdgeIterator& operator++() noexcept {
+        ++_current;
+        return *this;
+    }
+    IncidentEdgeIterator operator++(int) noexcept {
+        auto previous = *this;
+        ++*this;
+        return previous;
+    }
+    bool operator==(const IncidentEdgeIterator& rhs) const noexcept {
+        return _vertex == rhs._vertex && _current == rhs._current;
+    }
+    bool operator!=(const IncidentEdgeIterator& rhs) const noexcept { return !(*this == rhs); }
+
+private:
+    Vertex _vertex{};
+    NeighborIterator _current{};
+};
+
+// Visit all outgoing rows of a graph that declares edge_list_graph.
+template<class Rows>
+class DirectedEdgeIterator {
     using Vertex = typename Rows::value_type::value_type;
 
 public:
-    class Iterator {
-    public:
-        using value_type = graph::EdgeDescriptor<Vertex>;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
-        using pointer = void;
-        using reference = value_type;
+    using value_type = EdgeDescriptor<Vertex>;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::input_iterator_tag;
+    using pointer = void;
+    using reference = value_type;
 
-        Iterator() = default;
-        Iterator(const Rows& rows, std::size_t first, std::size_t last) noexcept
-        : rows_(&rows), row_(first), last_(last) { skipEmpty(); }
+    DirectedEdgeIterator() = default;
+    DirectedEdgeIterator(const Rows& rows, std::size_t first) noexcept : _rows(&rows), _row(first) { skipEmpty(); }
 
-        value_type operator*() const noexcept {
-            const auto vertex = static_cast<Vertex>(row_);
-            const auto neighbor = (*rows_)[row_][offset_];
-            if constexpr (Incoming) return {neighbor, vertex};
-            return {vertex, neighbor};
-        }
-        Iterator& operator++() noexcept { ++offset_; skipEmpty(); return *this; }
-        Iterator operator++(int) noexcept { auto previous = *this; ++*this; return previous; }
-        bool operator==(const Iterator& rhs) const noexcept {
-            return rows_ == rhs.rows_ && row_ == rhs.row_ && offset_ == rhs.offset_;
-        }
-        bool operator!=(const Iterator& rhs) const noexcept { return !(*this == rhs); }
-
-    private:
-        void skipEmpty() noexcept {
-            while (row_ < last_ && offset_ == (*rows_)[row_].size()) {
-                ++row_;
-                offset_ = 0;
-            }
-        }
-        const Rows* rows_{};
-        std::size_t row_{}, last_{}, offset_{};
-    };
-
-    DirectedEdgeRange(const Rows& rows, std::size_t first, std::size_t last) noexcept
-    : rows_(rows), first_(first), last_(last) {}
-    Iterator begin() const noexcept { return {rows_, first_, last_}; }
-    Iterator end() const noexcept { return {rows_, last_, last_}; }
+    value_type operator*() const noexcept { return {static_cast<Vertex>(_row), (*_rows)[_row][_offset]}; }
+    DirectedEdgeIterator& operator++() noexcept {
+        ++_offset;
+        skipEmpty();
+        return *this;
+    }
+    DirectedEdgeIterator operator++(int) noexcept {
+        auto previous = *this;
+        ++*this;
+        return previous;
+    }
+    bool operator==(const DirectedEdgeIterator& rhs) const noexcept {
+        return _rows == rhs._rows && _row == rhs._row && _offset == rhs._offset;
+    }
+    bool operator!=(const DirectedEdgeIterator& rhs) const noexcept { return !(*this == rhs); }
 
 private:
-    const Rows& rows_;
-    std::size_t first_, last_;
+    void skipEmpty() noexcept {
+        while (_row < _rows->size() && _offset == (*_rows)[_row].size()) {
+            ++_row;
+            _offset = 0;
+        }
+    }
+
+    const Rows* _rows{};
+    std::size_t _row{};
+    std::size_t _offset{};
 };
 
-} // namespace cc::detail
+} // namespace cc::graph

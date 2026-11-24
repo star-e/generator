@@ -73,7 +73,7 @@ bool checkRasterPassCache() {
         --(lookup.*member);
     }
     RasterPass moved{std::move(lookup), &scratch};
-    return moved == pass && moved.subpassGraph.num_edges() == 1 &&
+    return moved == pass && moved.subpassGraph.edge(0, 0).second &&
            moved.subpassGraph.getSubpass(0).resolvePairs.front().get_allocator().resource() == &scratch &&
-           cache.find(moved) == it && it->first.subpassGraph.num_edges() == 0;
+           cache.find(moved) == it && it->first.subpassGraph.out_degree(0) == 0;
 }

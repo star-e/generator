@@ -164,7 +164,7 @@ const link = resources.addReference(base, depth);
 assert(link !== null && resources.source(link) === base && resources.target(link) === depth);
 assert(resources.addEdge(base, depth) === null && resources.addReference(stencil, depth) === null &&
     resources.addEdge(base, base) === null && resources.addReference(mip, base) === null);
-assert(resources.ne() === 3 && resources.getParent(base) === resources.N && resources.getParent(depth) === base &&
+assert(resources.getParent(base) === resources.N && resources.getParent(depth) === base &&
     resources.getParent(stencil) === base && resources.getParent(mip) === depth);
 const children = [...resources.children(base)].map(e => resources.child(e));
 assert(children.length === 2 && children.indexOf(depth) >= 0 && children.indexOf(stencil) >= 0 &&
@@ -174,7 +174,7 @@ resourcePool.reset();
 assert(resourcePool.createRasterPass() === rasterPass && rasterPass.rasterViews === rasterViews && rasterViews.size === 0 &&
     rasterPass.computeViews === computeViews && computeViews.size === 0 && rasterPass.textures === textures && textures.size === 0 &&
     rasterPass.attachmentIndexMap === attachmentIndexMap && attachmentIndexMap.size === 0);
-assert(rasterPass.subpassGraph === subpassGraph && subpassGraph.nv() === 0 && subpassGraph.ne() === 0 &&
+assert(rasterPass.subpassGraph === subpassGraph && subpassGraph.nv() === 0 &&
     rasterPass.viewport === viewport && viewport.left === 0 && viewport.top === 0 && viewport.width === 0 &&
     viewport.height === 0 && viewport.minDepth === 0 && viewport.maxDepth === 1);
 assert(rasterPass.width === 0 && rasterPass.height === 0 && rasterPass.count === 1 && rasterPass.quality === 0 &&
@@ -188,7 +188,7 @@ assert(resourcePool.createComputeView() === compute && compute.name === '' && co
     compute.shaderStageFlags === ShaderStageFlagBit.NONE && compute.clearValue === computeValue);
 assert(resourcePool.createClearValue() === pooledValue);
 for (const v of [rasterColor, computeValue, pooledValue]) assert(v.x === 0 && v.y === 0 && v.z === 0 && v.w === 0);
-assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 && resources.ne() === 0 && !resources.contains('depth') &&
+assert(resourcePool.createResourceGraph() === resources && resources.nv() === 0 && !resources.contains('depth') &&
     resourcePool.createResourceDesc().width === 0 && resourcePool.createFormatView().format === Format.UNKNOWN);
 assert(resources.nextFenceValue === 0 && resources.version === 0);
 const recycled = resourcePool.createPersistentRenderPassAndFramebuffer();

@@ -73,7 +73,7 @@ for (const [file, names] of [[layoutTs, ['LayoutGraph', 'LayoutGraphData']],
     ['cocos/rendering/custom/render-graph.ts', ['SubpassGraph', 'ResourceGraph', 'RenderGraph']]]) {
     for (const name of names) {
         const concepts = graphConcepts(legacy, file, name);
-        const expected = file === layoutTs ? concepts.filter(([concept]) => concept !== 'EdgeListGraph') : concepts;
+        const expected = concepts.filter(([concept]) => concept !== 'EdgeListGraph');
         assert.deepEqual(graphConcepts(stage, file, name), expected, name);
     }
 }

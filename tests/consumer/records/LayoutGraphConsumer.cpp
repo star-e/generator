@@ -577,7 +577,12 @@ bool checkLayoutGraph(const char* pathSamples) {
         if (!tiny.add_edge(0, limit - 1).second) return false;
     }
     if (tiny.out_degree(0) != 260 || tiny.num_edges() != 260) return false;
+    if (!tiny.add_edge(limit - 1, 0).second) return false;
     tiny.remove_edge(0, limit - 1);
+    const auto edges = tiny.edges();
+    auto iter = edges.begin();
+    if (iter == edges.end() || (*iter).source != limit - 1 || (*iter).target != 0 || ++iter != edges.end()) return false;
+    tiny.remove_edge(limit - 1, 0);
     if (tiny.num_edges() != 0) return false;
     try {
         tiny.add_vertex();

@@ -48,7 +48,7 @@ void checkReferenceFailures() {
         insert(BadPhase{});
         throw std::runtime_error("expected queue construction failure");
     } catch (const FailedConstruction&) {}
-    require(graph.num_vertices() == 1 && !graph.num_children(root) && !graph.num_edges(), "emplace reference rollback");
+    require(graph.num_vertices() == 1 && !graph.num_children(root) && !graph.out_degree(root), "emplace reference rollback");
     const auto queue = insert(7U);
     require(queue == 1 && graph.num_children(root) == 1 && graph.num_parents(queue) == 1 &&
             graph.get_parent(queue) == root && graph.value(Queue_{}, queue).phaseID == 7, "emplace reference retry");
@@ -88,7 +88,7 @@ bool checkRenderGraph() {
         const auto scene = g.add_vertex(Scene_{}, "scene", queue);
         const auto compute = g.add_vertex(ComputeTag{}, "pass");
         require(g.getName(pass) == g.getName(compute) && g.index.empty(), "independent name index");
-        require(g.num_edges() == 0 && g.get_parent(queue) == pass && g.get_parent(scene) == queue, "initial ownership");
+        require(g.out_degree(pass) == 0 && g.out_degree(queue) == 0 && g.get_parent(queue) == pass && g.get_parent(scene) == queue, "initial ownership");
         require(g.add_edge(pass, compute).second && g.add_edge(queue, compute).second &&
                 g.add_edge(pass, compute).second, "execution dependencies");
         const auto link = g.add_reference(pass, compute);
@@ -181,7 +181,7 @@ bool checkRenderGraph() {
     const auto& clearView = graph.value(Clear_{}, clear).at(0);
     return graph.get_allocator().resource() == &destination && graph.num_vertices() == 14 &&
            graph.index.begin()->first.get_allocator().resource() == &destination && graph.index.at("execution-index") == 3 &&
-           graph.edge(1, 3).second && graph.num_edges() == 1 && graph.get_parent(3) == 0 && graph.num_children(0) == 2 &&
+           graph.edge(1, 3).second && graph.in_degree(3) == 1 && graph.get_parent(3) == 0 && graph.num_children(0) == 2 &&
            graph.getLayout(0) == "main-layout" && graph.getValid(2) && graph.getData(2).constants.at(7).at(0) == 's' &&
            graph.getData(2).constants.at(7).get_allocator().resource() == &destination &&
            graph.globalRenderData.constants.at(2).get_allocator().resource() == &destination &&

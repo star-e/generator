@@ -67,11 +67,10 @@ bool checkSubpassGraph() {
     copy.getSubpass(c).resolvePairs.front().target.clear();
     if (g == copy || subpass.resolvePairs.front().target != "resolved") return false;
     copy = g;
-    if (copy != g || copy.num_edges() != 4 || copy.get_allocator().resource() != &other) return false;
+    if (copy != g || copy.in_degree(c) != 4 || copy.get_allocator().resource() != &other) return false;
     copy.getName(a) = "changed";
     if (g == copy || g.degree(c) != 5 || g.out_degree(a) != 2 ||
         endpoints(g, g.in_edges(c)) != std::vector<Endpoints>{{a,c}, {b,c}, {a,c}, {c,c}} ||
-        endpoints(g, g.edges()) != std::vector<Endpoints>{{a,c}, {a,c}, {b,c}, {c,c}} ||
         endpoints(g, g.out_edges(a)) != std::vector<Endpoints>{{a,c}, {a,c}}) return false;
     const auto& adjacent = g.adjacent_vertices(a);
     if (adjacent.size() != 2 || adjacent[0] != c || adjacent[1] != c) return false;
@@ -81,6 +80,6 @@ bool checkSubpassGraph() {
     g.remove_edge(a, c);
     g.remove_edge(firstEdge.first);
     g.remove_edge(c, c);
-    return endpoints(g, g.edges()) == std::vector<Endpoints>{{b,c}} && g.num_edges() == 1 &&
-           g.in_degree(c) == 1 && !g.edge(a, c).second && copy.num_edges() == 4 && checkEdgeAllocationFailure();
+    return endpoints(g, g.in_edges(c)) == std::vector<Endpoints>{{b,c}} && g.out_degree(c) == 0 &&
+           !g.edge(a, c).second && copy.in_degree(c) == 4 && checkEdgeAllocationFailure();
 }

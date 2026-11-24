@@ -131,7 +131,6 @@ namespace cc::render {
         vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
-        edge_list_graph;
         mutable_graph;
         incidence_graph { out_edges: vector; }
         bidirectional_graph { in_edges: vector; }
@@ -218,7 +217,6 @@ namespace cc::render {
         vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
-        edge_list_graph;
         mutable_graph;
         hierarchy_graph { storage: shared_edges; }
         component Name_: ccstd::pmr::string { member: names; }
@@ -346,7 +344,6 @@ namespace cc::render {
         vertex_descriptor = uint32_t;
         vertex_storage: indexed;
         vertex_list_graph;
-        edge_list_graph;
         mutable_graph;
         incidence_graph { out_edges: vector; }
         bidirectional_graph { in_edges: vector; }

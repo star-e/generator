@@ -192,11 +192,11 @@ void directedEdges(GraphSections& sections, const GraphScope& scope, const std::
     const auto incident = [&](GraphSection& section, const char* range, const char* count, const std::string& rows, bool reversed) {
         const auto* iterator = references ? (reversed ? "parent_iterator" : "children_iterator")
                                           : (reversed ? "in_edge_iterator" : "out_edge_iterator");
-        section.types << "    using " << iterator << " = " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false")
-            << ", ccstd::pmr::vector<ccstd::pmr::vector<" << vertex << ">>>::Iterator;\n";
-        section.header << "    auto " << range << "(" << vertex << " v) const noexcept {" << snakeCaseMethodLineEnd
-            << "        return " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false") << ", decltype(" << rows
-            << ")>{" << rows << ", v, static_cast<std::size_t>(v) + 1};\n    }\n"
+        section.types << "    using " << iterator << " = " << scope.name("cc::graph::IncidentEdgeIterator") << "<ccstd::pmr::vector<" << vertex
+            << ">, " << (reversed ? "true" : "false") << ">;\n";
+        section.header << "    " << scope.name("cc::graph::IteratorRange") << "<" << iterator << "> " << range << "(" << vertex << " v) const noexcept {" << snakeCaseMethodLineEnd
+            << "        const auto& neighbors = this->" << rows << "[v];\n"
+            << "        return {{v, neighbors.begin()}, {v, neighbors.end()}};\n    }\n"
             << "    std::size_t " << count << "(" << vertex << " v) const noexcept { return " << rows << "[v].size(); }" << snakeCaseMethodLineEnd;
     };
     incident(traversal, references ? "child_links" : "out_edges", references ? "num_children" : "out_degree", outgoing, false);
@@ -212,11 +212,14 @@ void directedEdges(GraphSections& sections, const GraphScope& scope, const std::
         sections.adjacency.types << "    using adjacency_iterator = ccstd::pmr::vector<" << vertex << ">::const_iterator;\n";
         sections.adjacency.header << "    const auto& adjacent_vertices(" << vertex << " v) const noexcept { return " << outgoing << "[v]; }" << snakeCaseMethodLineEnd;
     }
-    if (model.edgeList && references) traversal.types << "    using ownership_iterator = children_iterator;\n";
+    if (model.edgeList) {
+        auto& types = references ? traversal.types : sections.edgeList.types;
+        types << "    using " << (references ? "ownership_iterator" : "edge_iterator") << " = " << scope.name("cc::graph::DirectedEdgeIterator")
+              << "<ccstd::pmr::vector<ccstd::pmr::vector<" << vertex << ">>>;\n";
+    }
     if (model.edgeList && !references) {
-        sections.edgeList.types << "    using edge_iterator = out_edge_iterator;\n";
-        sections.edgeList.header << "    auto edges() const noexcept { return " << scope.name("cc::detail::DirectedEdgeRange") << "<false, decltype(" << outgoing
-            << ")>{" << outgoing << ", 0, " << outgoing << ".size()}; }\n"
+        sections.edgeList.header << "    " << scope.name("cc::graph::IteratorRange") << "<edge_iterator> edges() const noexcept {\n"
+            << "        return {{" << outgoing << ", 0}, {" << outgoing << ", " << outgoing << ".size()}};\n    }\n"
             << "    std::size_t num_edges() const noexcept {" << snakeCaseMethodLineEnd << "        std::size_t count{};\n"
             << "        for (const auto& row : " << outgoing << ") count += row.size();\n        return count;\n    }\n";
     }
@@ -909,11 +912,11 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         allStorage.push_back(member);
         storageDeclarations << "    " << type << " " << member << ";\n";
     };
-    if (!rows.empty()) addStorage(rows, "ccstd::pmr::vector<TreeEdge>");
     if (!handles.empty()) addStorage(handles, "ccstd::pmr::vector<VertexHandle>");
     for (const auto& column : {outgoing, incoming, childRows, parentRows}) {
         if (!column.empty()) addStorage(column, "ccstd::pmr::vector<ccstd::pmr::vector<" + vertex + ">>");
     }
+    if (!rows.empty()) addStorage(rows, "ccstd::pmr::vector<TreeEdge>");
     for (size_t i = 0; i < types.size(); ++i)
         addStorage(storage[i], "ccstd::pmr::vector<" + types[i] + ">");
     for (const auto& alt : alternatives) {
@@ -979,7 +982,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         }
     }
     if (model.incidence || model.multipleParents) {
-        headers.insert({"algorithm", "limits", "cocos/base/GraphDescriptor.h", "cocos/base/GraphEdges.h"});
+        headers.insert({"algorithm", "limits", "cocos/base/GraphDescriptor.h", "cocos/base/GraphEdges.h", "cocos/base/GraphIterator.h"});
         if (model.incidence) directedEdges(sections, scope, name, vertex, outgoing, incoming, model, false);
         if (model.multipleParents) directedEdges(sections, scope, name, vertex, childRows, parentRows, model, true);
     }

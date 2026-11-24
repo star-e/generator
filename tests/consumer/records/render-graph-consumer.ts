@@ -21,7 +21,7 @@ const pass = add(Kind.RasterPass, pool.createRasterPass(), 'pass');
 const queue = add(Kind.Queue, pool.createRenderQueue(), 'queue', pass);
 const scene = add(Kind.Scene, pool.createSceneData(), 'scene', queue);
 const compute = add(Kind.Compute, pool.createComputePass(), 'pass');
-check(g.ne() === 0 && refs.getParent(queue) === pass && g.getParent(scene) === queue && g.getParent(pass) === g.N, 'initial ownership');
+check(g.od(pass) === 0 && g.od(queue) === 0 && refs.getParent(queue) === pass && g.getParent(scene) === queue && g.getParent(pass) === g.N, 'initial ownership');
 check(g.vertexName(pass) === g.vertexName(compute) && g.index.size === 0, 'duplicate names');
 const edge = g.addEdge(pass, compute), link = g.addReference(pass, compute);
 if (!edge || !link) throw new Error('missing edge or reference');
@@ -43,7 +43,7 @@ check(!g.edge(pass, compute) && g.reference(queue, compute), 'erase only depende
 g.removeReferences(queue, compute);
 check(g.edge(queue, compute) && !g.reference(queue, compute) && g.addReference(pass, compute) !== null, 'erase only references');
 check(Array.from(refs.children(pass), e => refs.child(e)).join() === [queue, compute].join() &&
-    g.numChildren(queue) === 1 && g.ne() === 1, 'children and edge count');
+    g.numChildren(queue) === 1 && g.id(compute) === 1, 'children and incoming dependency');
 
 add(Kind.RasterSubpass, pool.createRasterSubpass());
 add(Kind.ComputeSubpass, pool.createComputeSubpass());
@@ -69,7 +69,7 @@ sorted.push(pass, compute);
 globalData.constants.set(2, [67]);
 globalData.custom = 'global';
 pool.reset();
-check(pool.createRenderGraph() === g && g.nv() === 0 && g.ne() === 0, 'graph pool reset');
+check(pool.createRenderGraph() === g && g.nv() === 0, 'graph pool reset');
 check(g.index === index && !index.size && g.sortedVertices === sorted && !sorted.length &&
     g.globalRenderData === globalData && !globalData.constants.size && globalData.custom === '', 'graph field reset');
 check(add(Kind.Queue, pool.createRenderQueue()) === 0 && g.numChildren(0) === 0 && g.getParent(0) === g.N, 'reuse');
