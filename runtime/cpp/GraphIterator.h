@@ -1,4 +1,4 @@
-#pragma once
+#pragma once // NOLINT(portability-avoid-pragma-once)
 
 #include <cstddef>
 #include <iterator>
@@ -25,11 +25,11 @@ public:
     using reference = value_type;
 
     VertexIterator() = default;
-    explicit VertexIterator(Vertex value) noexcept : current_(value) {}
+    explicit VertexIterator(Vertex value) noexcept : _current(value) {}
 
-    Vertex operator*() const noexcept { return current_; }
+    Vertex operator*() const noexcept { return _current; }
     VertexIterator& operator++() noexcept {
-        ++current_;
+        ++_current;
         return *this;
     }
     VertexIterator operator++(int) noexcept {
@@ -37,11 +37,11 @@ public:
         ++*this;
         return previous;
     }
-    bool operator==(VertexIterator rhs) const noexcept { return current_ == rhs.current_; }
+    bool operator==(VertexIterator rhs) const noexcept { return _current == rhs._current; }
     bool operator!=(VertexIterator rhs) const noexcept { return !(*this == rhs); }
 
 private:
-    Vertex current_{};
+    Vertex _current{};
 };
 
 template<class Vertex>
@@ -75,17 +75,17 @@ public:
     using reference = value_type;
 
     ChildIterator() = default;
-    ChildIterator(const TreeEdge<Vertex>* rows, Vertex v) noexcept : rows_(rows), current_(v) {}
+    ChildIterator(const TreeEdge<Vertex>* rows, Vertex v) noexcept : _rows(rows), _current(v) {}
 
     value_type operator*() const noexcept {
         if constexpr (Adjacent) {
-            return current_;
+            return _current;
         } else {
-            return {rows_[current_].parent, current_};
+            return {_rows[_current].parent, _current};
         }
     }
     ChildIterator& operator++() noexcept {
-        current_ = rows_[current_].nextSibling;
+        _current = _rows[_current].nextSibling;
         return *this;
     }
     ChildIterator operator++(int) noexcept {
@@ -94,13 +94,13 @@ public:
         return previous;
     }
     bool operator==(const ChildIterator& rhs) const noexcept {
-        return rows_ == rhs.rows_ && current_ == rhs.current_;
+        return _rows == rhs._rows && _current == rhs._current;
     }
     bool operator!=(const ChildIterator& rhs) const noexcept { return !(*this == rhs); }
 
 private:
-    const TreeEdge<Vertex>* rows_{};
-    Vertex current_{(std::numeric_limits<Vertex>::max)()};
+    const TreeEdge<Vertex>* _rows{};
+    Vertex _current{(std::numeric_limits<Vertex>::max)()};
 };
 
 template<class LinkType>
@@ -144,13 +144,13 @@ public:
     using reference = value_type;
 
     EdgeIterator() = default;
-    EdgeIterator(const Rows& rows, Vertex first) noexcept : rows_(&rows), source_(first) { seek(); }
+    EdgeIterator(const Rows& rows, Vertex first) noexcept : _rows(&rows), _source(first) { seek(); }
 
-    Link operator*() const noexcept { return {source_, target_}; }
+    Link operator*() const noexcept { return {_source, _target}; }
     EdgeIterator& operator++() noexcept {
-        target_ = (*rows_)[target_].nextSibling;
-        if (target_ == (std::numeric_limits<Vertex>::max)()) {
-            ++source_;
+        _target = (*_rows)[_target].nextSibling;
+        if (_target == (std::numeric_limits<Vertex>::max)()) {
+            ++_source;
             seek();
         }
         return *this;
@@ -161,22 +161,22 @@ public:
         return previous;
     }
     bool operator==(const EdgeIterator& rhs) const noexcept {
-        return rows_ == rhs.rows_ && source_ == rhs.source_ && target_ == rhs.target_;
+        return _rows == rhs._rows && _source == rhs._source && _target == rhs._target;
     }
     bool operator!=(const EdgeIterator& rhs) const noexcept { return !(*this == rhs); }
 
 private:
     void seek() noexcept {
-        const auto& rows = *rows_;
-        while (source_ < rows.size()) {
-            target_ = rows[source_].firstChild;
-            if (target_ != (std::numeric_limits<Vertex>::max)()) break;
-            ++source_;
+        const auto& rows = *_rows;
+        while (_source < rows.size()) {
+            _target = rows[_source].firstChild;
+            if (_target != (std::numeric_limits<Vertex>::max)()) break;
+            ++_source;
         }
     }
 
-    const Rows* rows_{};
-    Vertex source_{}, target_{(std::numeric_limits<Vertex>::max)()};
+    const Rows* _rows{};
+    Vertex _source{}, _target{(std::numeric_limits<Vertex>::max)()};
 };
 
 } // namespace cc::graph
