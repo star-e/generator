@@ -175,7 +175,7 @@ void directedEdges(GraphSections& sections, const GraphScope& scope, const std::
         const auto* iterator = references ? (reversed ? "parent_iterator" : "children_iterator")
                                           : (reversed ? "in_edge_iterator" : "out_edge_iterator");
         section.types << "    using " << iterator << " = " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false")
-            << ", ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">>>::Iterator;\n";
+            << ", ccstd::pmr::vector<ccstd::pmr::vector<" << vertex << ">>>::Iterator;\n";
         section.header << "    auto " << range << "(" << vertex << " v) const noexcept {" << snakeCaseMethodLineEnd
             << "        return " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false") << ", decltype(" << rows
             << ")>{" << rows << ", v, static_cast<std::size_t>(v) + 1};\n    }\n"
@@ -876,16 +876,10 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         return field;
     };
     const std::string rows = model.hierarchy && !model.separateEdges ? internalColumn("links") : "";
-    std::set<std::string> adjacencyColumns;
-    const auto adjacency = [&](const char* base) {
-        auto column = internalColumn(base);
-        adjacencyColumns.insert(column);
-        return column;
-    };
-    const auto outgoing = model.incidence ? adjacency("outgoing_") : "";
-    const auto incoming = model.bidirectional ? adjacency("incoming_") : "";
-    const auto childRows = model.separateEdges ? adjacency("children_") : "";
-    const auto parentRows = model.separateEdges ? adjacency("parents_") : "";
+    const auto outgoing = model.incidence ? internalColumn("outEdges") : "";
+    const auto incoming = model.bidirectional ? internalColumn("inEdges") : "";
+    const auto childRows = model.separateEdges ? internalColumn("children_") : "";
+    const auto parentRows = model.separateEdges ? internalColumn("parents_") : "";
     const std::string handles = alternatives.empty() ? "" : internalColumn("handles");
     std::vector<std::string> allStorage;
     std::ostringstream storageDeclarations;
@@ -896,7 +890,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     if (!rows.empty()) addStorage(rows, "ccstd::pmr::vector<TreeEdge>");
     if (!handles.empty()) addStorage(handles, "ccstd::pmr::vector<VertexHandle>");
     for (const auto& column : {outgoing, incoming, childRows, parentRows}) {
-        if (!column.empty()) addStorage(column, "ccstd::pmr::deque<ccstd::pmr::vector<" + vertex + ">>");
+        if (!column.empty()) addStorage(column, "ccstd::pmr::vector<ccstd::pmr::vector<" + vertex + ">>");
     }
     for (size_t i = 0; i < types.size(); ++i)
         addStorage(storage[i], "ccstd::pmr::vector<" + types[i] + ">");
@@ -961,7 +955,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         }
     }
     if (model.incidence || model.separateEdges) {
-        headers.insert({"algorithm", "limits", "cocos/base/GraphDescriptor.h", "cocos/base/GraphEdges.h", "cocos/base/std/container/deque.h"});
+        headers.insert({"algorithm", "limits", "cocos/base/GraphDescriptor.h", "cocos/base/GraphEdges.h"});
         if (model.incidence) directedEdges(sections, scope, name, vertex, outgoing, incoming, model, false);
         if (model.separateEdges) directedEdges(sections, scope, name, vertex, childRows, parentRows, model, true);
     }
@@ -985,8 +979,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         sections.mutation.header << "    void reserve(" << vertex << " capacity);\n";
         auto& definition = sections.mutation.source;
         definition << "\nvoid " << name << "::reserve(" << vertex << " capacity) {\n";
-        for (const auto& column : storage)
-            if (!adjacencyColumns.contains(column)) definition << "    this->" << column << ".reserve(capacity);\n";
+        for (const auto& column : storage) definition << "    this->" << column << ".reserve(capacity);\n";
         definition << "    this->componentIndex_.reserve(capacity);\n}\n";
     }
     if (model.removeVertex) {
