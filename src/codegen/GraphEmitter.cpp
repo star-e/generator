@@ -392,9 +392,10 @@ void tagBranches(std::ostream& out, const std::vector<Alternative>& alternatives
 
 void payloadAccess(GraphSection& section, const GraphScope& scope, const std::vector<Alternative>& alternatives,
                    const std::string& vertex, const std::string& handles, const std::string& tagParam) {
-    section.types << "    enum class Kind { ";
-    for (size_t i = 0; i < alternatives.size(); ++i) section.types << (i ? ", " : "") << alternatives[i].kind;
-    section.types << " };\n";
+    section.types << "    enum class Kind {\n";
+    for (size_t i = 0; i < alternatives.size(); ++i)
+        section.types << "        " << alternatives[i].kind << (i + 1 < alternatives.size() ? ",\n" : "\n");
+    section.types << "    };\n";
     auto& out = section.header;
     out << "    Kind kind(" << vertex << " v) const { return this->" << handles << ".at(v).kind; }\n"
         << "    template<class " << tagParam << ">\n    bool holds(" << vertex << " v) const noexcept {\n"

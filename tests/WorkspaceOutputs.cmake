@@ -50,7 +50,7 @@ set(graphTypes "using allocator_type =" "allocator_type get_allocator() const" "
     "// Graph types\n" "using vertex_descriptor =" "using edge_descriptor ="
     "// IncidenceGraph types\n" "using out_edge_iterator =" "// BidirectionalGraph types\n" "using in_edge_iterator ="
     "// AdjacencyGraph types\n" "using adjacency_iterator =" "// VertexListGraph types\n" "using vertex_iterator =")
-set(referenceTypes "// PolymorphicGraph types\n" "enum class Kind" "// ReferenceGraph types\n"
+set(referenceTypes "// PolymorphicGraph types\n" "    enum class Kind {\n        " "// ReferenceGraph types\n"
     "using ownership_descriptor =" "using children_iterator =" "using parent_iterator =")
 set(traversal "// Graph\n" "// IncidenceGraph\n" " source(edge_descriptor" "// BidirectionalGraph\n" " in_edges("
     "// AdjacencyGraph\n" " adjacent_vertices(" "// VertexListGraph\n" " vertices()")
