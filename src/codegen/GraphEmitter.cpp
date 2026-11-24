@@ -950,6 +950,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     if (model.compareEqual) out << "    friend bool operator==(const " << name << "&, const " << name << "&) noexcept;\n";
     if (model.compareLess) out << "    friend bool operator<(const " << name << "&, const " << name << "&) noexcept;\n";
     if (model.hashable) out << "    friend struct " << scope.name("ccstd::hash") << "<" << name << ">;\n";
+    if (!alternatives.empty())
+        out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n\n";
     for (size_t i = 0; i < types.size(); ++i)
         out << "    ccstd::pmr::vector<" << types[i] << "> " << storage[i] << ";\n";
     for (const auto& column : {outgoing, incoming, childRows, parentRows}) {
@@ -959,8 +961,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << "    ccstd::pmr::vector<TreeEdge> " << rows << ";\n";
     }
     if (!alternatives.empty()) {
-        out << "    struct VertexHandle { Kind kind; " << vertex << " index; };\n"
-            << "    ccstd::pmr::vector<VertexHandle> " << handles << ";\n";
+        out << "    ccstd::pmr::vector<VertexHandle> " << handles << ";\n";
         for (const auto& alt : alternatives) {
             // Keep value() addressable even when the C++ container specializes vector<bool>.
             if (alt.isBoolean) headers.insert("array");
