@@ -55,12 +55,22 @@ using InEdgeIterator = IncidentIterator<Edge, Iterator, true>;
 
 template<class Vertex>
 struct BidirectionalStorage {
+    // Graph types
     using vertex_descriptor = Vertex;
-    using adjacency_iterator = typename std::vector<Vertex>::const_iterator;
     using edge_descriptor = EdgeDescriptor<Vertex>;
-    using vertex_iterator = IntegerIterator<Vertex>;
+
+    // IncidenceGraph types
     using out_edge_iterator = graph::OutEdgeIterator<edge_descriptor, typename std::vector<Vertex>::const_iterator>;
+
+    // BidirectionalGraph types
     using in_edge_iterator = graph::InEdgeIterator<edge_descriptor, typename std::vector<Vertex>::const_iterator>;
+
+    // AdjacencyGraph types
+    using adjacency_iterator = typename std::vector<Vertex>::const_iterator;
+
+    // VertexListGraph types
+    using vertex_iterator = IntegerIterator<Vertex>;
+
     struct VertexType {
         std::vector<Vertex> mOutEdges;
         std::vector<Vertex> mInEdges;

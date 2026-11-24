@@ -14,6 +14,7 @@ namespace {
 
 struct GraphSection {
     std::string_view name;
+    std::ostringstream types{};
     std::ostringstream header{};
     std::ostringstream source{};
 };
@@ -26,9 +27,14 @@ struct GraphSections {
         addressable{"AddressableGraph"}, uuid{"UuidGraph"};
 
     void write(std::ostream& header, std::ostream& source) const {
-        for (const auto* section : {&graph, &incidence, &bidirectional, &adjacency, &vertexList, &edgeList,
-                                   &mutation, &components, &polymorphic, &reference, &referenceMutation,
-                                   &parent, &addressable, &uuid}) {
+        const auto sections = {&graph, &incidence, &bidirectional, &adjacency, &vertexList, &edgeList,
+                               &mutation, &components, &polymorphic, &reference, &referenceMutation,
+                               &parent, &addressable, &uuid};
+        for (const auto* section : sections) {
+            if (!section->types.view().empty())
+                header << "\n    // " << section->name << " types\n" << section->types.view();
+        }
+        for (const auto* section : sections) {
             auto body = section->header.view();
             if (body.empty()) continue;
             if (body.front() == '\n') body.remove_prefix(1);
@@ -52,11 +58,6 @@ struct GraphScope {
     }
 };
 
-void vertexRange(std::ostream& out, const GraphScope& scope, const std::string& vertex) {
-    out << "    using vertex_iterator = " << scope.name("cc::graph::VertexIterator") << "<" << vertex << ">;\n"
-        << "    " << scope.name("cc::graph::VertexRange") << "<" << vertex << "> vertices() const noexcept { return {vertex_iterator(num_vertices())}; }\n";
-}
-
 void componentAccessors(std::ostream& out, const GraphScope& scope, const GraphType& model, const std::string& vertex,
                         const std::vector<std::string>& storage, const std::vector<std::string>& types,
                         std::string_view vectorType) {
@@ -79,10 +80,10 @@ void componentAccessors(std::ostream& out, const GraphScope& scope, const GraphT
 }
 
 void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const std::string& vertex, const std::string& rows, bool edgeList) {
-    sections.incidence.header << "    using edge_descriptor = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n"
-        << "    using TreeEdge = " << scope.name("cc::graph::TreeEdge") << "<" << vertex << ">;\n"
-        << "    using out_edge_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, false>;\n"
-        << "    " << vertex << " source(edge_descriptor e) const noexcept { return e.source; }\n"
+    sections.graph.types << "    using edge_descriptor = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n";
+    sections.incidence.types << "    using TreeEdge = " << scope.name("cc::graph::TreeEdge") << "<" << vertex << ">;\n"
+        << "    using out_edge_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, false>;\n";
+    sections.incidence.header << "    " << vertex << " source(edge_descriptor e) const noexcept { return e.source; }\n"
         << "    " << vertex << " target(edge_descriptor e) const noexcept { return e.target; }\n"
         << "    " << scope.name("cc::graph::IteratorRange") << "<out_edge_iterator> out_edges(" << vertex << " v) const noexcept { return child_links(v); }\n"
         << "    " << vertex << " out_degree(" << vertex << " v) const noexcept { return num_children(v); }\n"
@@ -91,26 +92,26 @@ void hierarchyInterface(GraphSections& sections, const GraphScope& scope, const 
         << ".size() && get_parent(v) == u) return {{u, v}, true};\n"
         << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
 
-    sections.bidirectional.header << "    using in_edge_iterator = " << scope.name("cc::graph::ParentLinkIterator") << "<edge_descriptor>;\n"
-        << "    " << scope.name("cc::graph::IteratorRange") << "<in_edge_iterator> in_edges(" << vertex << " v) const noexcept { return parent_links(v); }\n"
+    sections.bidirectional.types << "    using in_edge_iterator = " << scope.name("cc::graph::ParentLinkIterator") << "<edge_descriptor>;\n";
+    sections.bidirectional.header << "    " << scope.name("cc::graph::IteratorRange") << "<in_edge_iterator> in_edges(" << vertex << " v) const noexcept { return parent_links(v); }\n"
         << "    " << vertex << " in_degree(" << vertex << " v) const noexcept { return num_parents(v); }\n"
         << "    " << vertex << " degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
-    sections.adjacency.header << "    using adjacency_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, true>;\n"
-        << "    " << scope.name("cc::graph::IteratorRange") << "<adjacency_iterator> adjacent_vertices(" << vertex << " v) const noexcept {\n"
+    sections.adjacency.types << "    using adjacency_iterator = " << scope.name("cc::graph::ChildIterator") << "<edge_descriptor, true>;\n";
+    sections.adjacency.header << "    " << scope.name("cc::graph::IteratorRange") << "<adjacency_iterator> adjacent_vertices(" << vertex << " v) const noexcept {\n"
         << "        const auto* rows = " << rows << ".data();\n"
         << "        return {{rows, rows[v].firstChild}, {rows, null_vertex()}};\n    }\n";
     if (edgeList) {
+        sections.edgeList.types << "    using edge_iterator = " << scope.name("cc::graph::EdgeIterator") << "<edge_descriptor, ccstd::pmr::vector<TreeEdge>>;\n";
         sections.edgeList.header << "    " << vertex << " num_edges() const noexcept {\n        " << vertex << " count{};\n"
             << "        for (const auto& row : this->" << rows << ") count += row.childCount;\n        return count;\n    }\n"
-            << "    using edge_iterator = " << scope.name("cc::graph::EdgeIterator") << "<edge_descriptor, ccstd::pmr::vector<TreeEdge>>;\n"
             << "    " << scope.name("cc::graph::IteratorRange") << "<edge_iterator> edges() const noexcept {\n"
             << "        return {{" << rows << ", 0}, {" << rows << ", static_cast<" << vertex << ">(" << rows << ".size())}};\n    }\n";
     }
 
-    sections.reference.header << "    using ownership_descriptor = edge_descriptor;\n"
+    sections.reference.types << "    using ownership_descriptor = edge_descriptor;\n"
         << "    using children_iterator = out_edge_iterator;\n"
         << "    using parent_iterator = in_edge_iterator;\n";
-    if (edgeList) sections.reference.header << "    using ownership_iterator = edge_iterator;\n";
+    if (edgeList) sections.reference.types << "    using ownership_iterator = edge_iterator;\n";
     sections.reference.header << "    " << vertex << " child(ownership_descriptor link) const noexcept { return link.target; }\n"
         << "    " << vertex << " get_parent(" << vertex << " v) const noexcept { return v == null_vertex() ? v : this->"
         << rows << "[v].parent; }\n"
@@ -128,45 +129,47 @@ void directedEdges(GraphSections& sections, const GraphScope& scope, const std::
                    const std::string& outgoing, const std::string& incoming, const GraphType& model, bool references) {
     const std::string descriptor = references ? "ownership_descriptor" : "edge_descriptor";
     const std::string operation = references ? "reference" : "edge";
-    auto& traversal = references ? sections.reference.header : sections.incidence.header;
-    traversal << "    using " << descriptor << " = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n"
-        << "    " << vertex << (references ? " parent(" : " source(") << descriptor << " e) const noexcept { return e.source; }\n"
+    auto& traversal = references ? sections.reference : sections.incidence;
+    auto& descriptorTypes = references ? sections.reference.types : sections.graph.types;
+    descriptorTypes << "    using " << descriptor << " = " << scope.name("cc::graph::EdgeDescriptor") << "<" << vertex << ">;\n";
+    traversal.header << "    " << vertex << (references ? " parent(" : " source(") << descriptor << " e) const noexcept { return e.source; }\n"
         << "    " << vertex << (references ? " child(" : " target(") << descriptor << " e) const noexcept { return e.target; }\n";
-    const auto incident = [&](std::ostream& out, const char* range, const char* count, const std::string& rows, bool reversed) {
+    const auto incident = [&](GraphSection& section, const char* range, const char* count, const std::string& rows, bool reversed) {
         const auto* iterator = references ? (reversed ? "parent_iterator" : "children_iterator")
                                           : (reversed ? "in_edge_iterator" : "out_edge_iterator");
-        out << "    using " << iterator << " = " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false")
-            << ", ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">>>::Iterator;\n"
-            << "    auto " << range << "(" << vertex << " v) const noexcept {\n"
+        section.types << "    using " << iterator << " = " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false")
+            << ", ccstd::pmr::deque<ccstd::pmr::vector<" << vertex << ">>>::Iterator;\n";
+        section.header << "    auto " << range << "(" << vertex << " v) const noexcept {\n"
             << "        return " << scope.name("cc::detail::DirectedEdgeRange") << "<" << (reversed ? "true" : "false") << ", decltype(" << rows
             << ")>{" << rows << ", v, static_cast<std::size_t>(v) + 1};\n    }\n"
             << "    std::size_t " << count << "(" << vertex << " v) const noexcept { return " << rows << "[v].size(); }\n";
     };
     incident(traversal, references ? "child_links" : "out_edges", references ? "num_children" : "out_degree", outgoing, false);
     if (!incoming.empty()) {
-        auto& in = references ? sections.reference.header : sections.bidirectional.header;
+        auto& in = references ? sections.reference : sections.bidirectional;
         incident(in, references ? "parent_links" : "in_edges", references ? "num_parents" : "in_degree", incoming, true);
         if (references)
-            in << "    " << vertex << " get_parent(" << vertex << " v) const noexcept {\n"
+            in.header << "    " << vertex << " get_parent(" << vertex << " v) const noexcept {\n"
                 << "        return v >= " << incoming << ".size() || " << incoming << "[v].empty() ? null_vertex() : " << incoming << "[v].front();\n    }\n";
-        else in << "    std::size_t degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
+        else in.header << "    std::size_t degree(" << vertex << " v) const noexcept { return in_degree(v) + out_degree(v); }\n";
     }
-    if (!references)
-        sections.adjacency.header << "    using adjacency_iterator = ccstd::pmr::vector<" << vertex << ">::const_iterator;\n"
-            << "    const auto& adjacent_vertices(" << vertex << " v) const noexcept { return " << outgoing << "[v]; }\n";
-    if (model.edgeList && references) traversal << "    using ownership_iterator = children_iterator;\n";
+    if (!references) {
+        sections.adjacency.types << "    using adjacency_iterator = ccstd::pmr::vector<" << vertex << ">::const_iterator;\n";
+        sections.adjacency.header << "    const auto& adjacent_vertices(" << vertex << " v) const noexcept { return " << outgoing << "[v]; }\n";
+    }
+    if (model.edgeList && references) traversal.types << "    using ownership_iterator = children_iterator;\n";
     if (model.edgeList && !references) {
-        sections.edgeList.header << "    using edge_iterator = out_edge_iterator;\n"
-            << "    auto edges() const noexcept { return " << scope.name("cc::detail::DirectedEdgeRange") << "<false, decltype(" << outgoing
+        sections.edgeList.types << "    using edge_iterator = out_edge_iterator;\n";
+        sections.edgeList.header << "    auto edges() const noexcept { return " << scope.name("cc::detail::DirectedEdgeRange") << "<false, decltype(" << outgoing
             << ")>{" << outgoing << ", 0, " << outgoing << ".size()}; }\n"
             << "    std::size_t num_edges() const noexcept {\n        std::size_t count{};\n"
             << "        for (const auto& row : " << outgoing << ") count += row.size();\n        return count;\n    }\n";
     }
-    traversal << "    std::pair<" << descriptor << ", bool> " << operation << "(" << vertex << " u, " << vertex << " v) const noexcept {\n"
+    traversal.header << "    std::pair<" << descriptor << ", bool> " << operation << "(" << vertex << " u, " << vertex << " v) const noexcept {\n"
         << "        if (u < " << outgoing << ".size()) {\n            const auto& row = " << outgoing << "[u];\n"
         << "            if (std::find(row.begin(), row.end(), v) != row.end()) return {{u, v}, true};\n        }\n"
         << "        return {{null_vertex(), null_vertex()}, false};\n    }\n";
-    if (references) traversal << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return reference(u, v).second; }\n";
+    if (references) traversal.header << "    bool has_link(" << vertex << " u, " << vertex << " v) const noexcept { return reference(u, v).second; }\n";
     if (!model.mutableGraph) return;
     auto& mutations = references ? sections.referenceMutation : sections.mutation;
     mutations.header << "    std::pair<" << descriptor << ", bool> add_" << operation << "(" << vertex << " u, " << vertex << " v);\n"
@@ -326,8 +329,7 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
     out << "    " << name << "(" << name << "&&)" << (immovable ? " = delete;\n" : " noexcept = default;\n")
         << "    " << name << "(const " << name << "&) = delete;\n"
         << "    " << name << "& operator=(" << name << "&&)" << (immovable ? " = delete;\n" : " noexcept = default;\n")
-        << "    " << name << "& operator=(const " << name << "&)" << (copyable && !immovable ? " = default;\n" : " = delete;\n")
-        << "    allocator_type get_allocator() const noexcept { return {this->" << first << ".get_allocator().resource()}; }\n";
+        << "    " << name << "& operator=(const " << name << "&)" << (copyable && !immovable ? " = default;\n" : " = delete;\n");
 }
 
 bool hasMoveOnlyValue(const TypeGraph& graph, TypeId id, std::set<uint32_t>& visited) {
@@ -388,11 +390,13 @@ void tagBranches(std::ostream& out, const std::vector<Alternative>& alternatives
     if (hasElse) out << indent << "}\n";
 }
 
-void payloadAccess(std::ostream& out, const GraphScope& scope, const std::vector<Alternative>& alternatives,
+void payloadAccess(GraphSection& section, const GraphScope& scope, const std::vector<Alternative>& alternatives,
                    const std::string& vertex, const std::string& handles, const std::string& tagParam) {
-    out << "\n    enum class Kind { ";
-    for (size_t i = 0; i < alternatives.size(); ++i) out << (i ? ", " : "") << alternatives[i].kind;
-    out << " };\n    Kind kind(" << vertex << " v) const { return this->" << handles << ".at(v).kind; }\n"
+    section.types << "    enum class Kind { ";
+    for (size_t i = 0; i < alternatives.size(); ++i) section.types << (i ? ", " : "") << alternatives[i].kind;
+    section.types << " };\n";
+    auto& out = section.header;
+    out << "    Kind kind(" << vertex << " v) const { return this->" << handles << ".at(v).kind; }\n"
         << "    template<class " << tagParam << ">\n    bool holds(" << vertex << " v) const noexcept {\n"
         << "        if (static_cast<std::uintmax_t>(v) >= this->" << handles << ".size()) return false;\n";
     tagBranches(out, alternatives, tagParam, "        ", false, [&](const auto& alt, const auto& indent) {
@@ -799,7 +803,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
         out << '\n';
         writeDocumentation(out, node.documentation);
         out << "struct " << name << " : public " << base << " {\n"
-            << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n";
+            << "    // Graph types\n"
+            << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n\n";
         if (model.edgeList) out << "    using " << base << "::edges;\n    using " << base << "::num_edges;\n";
         out << "    void reserve(" << vertex << " capacity) {\n        " << base << "::reserve(capacity);\n";
         for (const auto& column : storage) out << "        this->" << column << ".reserve(capacity);\n";
@@ -859,16 +864,17 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     out << '\n';
     writeDocumentation(out, node.documentation);
     out << "struct " << name << " {\n"
-        << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n"
-        << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n";
-    out << '\n';
+        << "    using allocator_type = boost::container::pmr::polymorphic_allocator<char>;\n"
+        << "    allocator_type get_allocator() const noexcept { return {this->" << allStorage.front() << ".get_allocator().resource()}; }\n\n";
     graphConstructors(out, source, name, allStorage, fields, copyable, model.immovable);
     GraphSections sections;
+    sections.graph.types << "    using " << vertex << " = " << scope.name(integer.qualifiedName) << ";\n";
     const auto tagParam = templateParam("Tag", name, vertex, alternatives);
     if (model.vertexList) {
         headers.insert("cocos/base/GraphIterator.h");
-        vertexRange(sections.vertexList.header, scope, vertex);
-        sections.vertexList.header << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
+        sections.vertexList.types << "    using vertex_iterator = " << scope.name("cc::graph::VertexIterator") << "<" << vertex << ">;\n";
+        sections.vertexList.header << "    " << scope.name("cc::graph::VertexRange") << "<" << vertex << "> vertices() const noexcept { return {vertex_iterator(num_vertices())}; }\n"
+            << "    " << vertex << " num_vertices() const noexcept { return static_cast<" << vertex << ">(this->" << storage.front() << ".size()); }\n";
     }
     std::string input;
     if (model.mutableGraph) {
@@ -957,7 +963,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     }
     if (!alternatives.empty()) {
         headers.insert({"cstdint", "type_traits", "variant", "cocos/base/TemplateUtils.h"});
-        payloadAccess(sections.polymorphic.header, scope, alternatives, vertex, handles, tagParam);
+        payloadAccess(sections.polymorphic, scope, alternatives, vertex, handles, tagParam);
     }
     sections.write(out, source);
     writeDeclaredMethods();

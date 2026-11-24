@@ -46,6 +46,12 @@ function(check_graph_order header graph)
         set(previous ${at})
     endforeach()
 endfunction()
+set(graphTypes "using allocator_type =" "allocator_type get_allocator() const" "    explicit " " operator=(const "
+    "// Graph types\n" "using vertex_descriptor =" "using edge_descriptor ="
+    "// IncidenceGraph types\n" "using out_edge_iterator =" "// BidirectionalGraph types\n" "using in_edge_iterator ="
+    "// AdjacencyGraph types\n" "using adjacency_iterator =" "// VertexListGraph types\n" "using vertex_iterator =")
+set(referenceTypes "// PolymorphicGraph types\n" "enum class Kind" "// ReferenceGraph types\n"
+    "using ownership_descriptor =" "using children_iterator =" "using parent_iterator =")
 set(traversal "// Graph\n" "// IncidenceGraph\n" " source(edge_descriptor" "// BidirectionalGraph\n" " in_edges("
     "// AdjacencyGraph\n" " adjacent_vertices(" "// VertexListGraph\n" " vertices()")
 file(READ "${work}/both/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h" layoutHeader)
@@ -53,7 +59,7 @@ string(FIND "${layoutHeader}" "struct LayoutGraphData {" lastGraph)
 string(SUBSTRING "${layoutHeader}" ${lastGraph} -1 layoutTail)
 string(FIND "${layoutTail}" "\n};" endOfClass)
 foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
-    check_graph_order(LayoutGraphTypes.h ${layout} ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
+    check_graph_order(LayoutGraphTypes.h ${layout} ${graphTypes} ${referenceTypes} ${traversal} "// MutableGraph\n" " add_vertex(" " add_edge("
         "// ComponentGraph\n" " getName(" "// PolymorphicGraph\n" " kind(vertex_descriptor" "// ReferenceGraph\n" " child(ownership_descriptor"
         "// ParentGraph\n" " locate_child(" "// AddressableGraph\n" " locate("
         "    struct VertexHandle {" "vector<TreeEdge> links" "vector<VertexHandle> handles"
@@ -63,7 +69,8 @@ foreach(layout IN ITEMS LayoutGraph LayoutGraphData)
         message(FATAL_ERROR "${layout}::add_vertex template definition must follow the graph declarations in the header")
     endif()
 endforeach()
-check_graph_order(RenderGraphTypes.h RenderGraph ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
+check_graph_order(RenderGraphTypes.h RenderGraph ${graphTypes} "// EdgeListGraph types\n" "using edge_iterator ="
+    ${referenceTypes} "using ownership_iterator =" ${traversal} "// EdgeListGraph\n" " edges()" "// MutableGraph\n" " add_vertex(" " add_edge("
     "// ReferenceGraph\n" " child(ownership_descriptor" "// MutableReferenceGraph\n" " add_reference(vertex_descriptor u, vertex_descriptor v)"
     "vector<VertexHandle> handles" ">> outgoing_" ">> incoming_" ">> children_" ">> parents_"
     "vector<ccstd::pmr::string> names" "vector<RasterPass> rasterPasses" "vector<gfx::Viewport> viewports"

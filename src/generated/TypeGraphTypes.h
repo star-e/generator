@@ -394,7 +394,9 @@ struct TypeModule {
 struct Node_ {};
 
 struct TypeGraph : public graph::BidirectionalStorage<uint32_t> {
+    // Graph types
     using vertex_descriptor = uint32_t;
+
     void reserve(vertex_descriptor capacity) {
         graph::BidirectionalStorage<uint32_t>::reserve(capacity);
         this->nodes.reserve(capacity);
