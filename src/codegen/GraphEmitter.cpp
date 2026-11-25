@@ -485,10 +485,10 @@ void payloadAccess(GraphSection& section, const GraphScope& scope, const std::ve
     const auto othersType = vertex == "Others" ? "OtherVisitors" : "Others";
     for (const std::string qualifier : {"", " const"}) {
         out << "\n    template <class " << visitorType << ", class... " << othersType << ">\n"
-            << "    decltype(auto) visit_object(" << vertex << " v, " << visitorType << "&& visitor, " << othersType << "&&... others)" << qualifier << " {" << snakeCaseMethodLineEnd
+            << "    decltype(auto) visit_vertex(" << vertex << " v, " << visitorType << "&& visitor, " << othersType << "&&... others)" << qualifier << " {" << snakeCaseMethodLineEnd
             << "        if constexpr (sizeof...(others) > 0) {\n"
             << "            auto handlers = " << scope.name("cc::overloaded") << "{std::forward<" << visitorType << ">(visitor), std::forward<" << othersType << ">(others)...};\n"
-            << "            return this->visit_object(v, handlers);\n"
+            << "            return this->visit_vertex(v, handlers);\n"
             << "        } else {\n            const auto& handle = this->" << handles << ".at(v);\n"
             << "            switch (handle.kind) {\n";
         for (const auto& alt : alternatives)
@@ -745,7 +745,7 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     for (const auto& alt : model.alternatives) members.insert(alt.name);
     std::set<std::string> api{"allocator_type", "get_allocator"};
     if (!model.alternatives.empty()) {
-        for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_object", "VertexHandle"}) {
+        for (const auto* symbol : {"Kind", "kind", "holds", "value", "visit_vertex", "VertexHandle"}) {
             if (members.contains(symbol))
                 throw std::runtime_error(node.qualifiedName + ": polymorphic graph member name collision: " + symbol);
             api.insert(symbol);

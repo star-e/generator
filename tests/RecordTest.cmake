@@ -324,7 +324,7 @@ expect_failure(2 "unknown or duplicate record annotation @requireAllocator" ${ge
 string(REPLACE "RenderStage_: RenderPassType" "RenderStage_: void" invalid "${layout}")
 file(WRITE "${layoutSpec}" "${invalid}")
 expect_failure(2 "LayoutGraph.stages: polymorphic storage requires an object type" ${generate})
-foreach(collision IN ITEMS getLayout getParent setUpdate clear h object visitVertex visit_object od addReference in_degree)
+foreach(collision IN ITEMS getLayout getParent setUpdate clear h object visitVertex visit_vertex od addReference in_degree)
     string(REPLACE "@transient constantMacros:" "@transient ${collision}:" invalid "${layout}")
     file(WRITE "${layoutSpec}" "${invalid}")
     expect_failure(2 "LayoutGraphData: graph field collides with (C[+][+]|TypeScript) member ${collision}" ${generate})

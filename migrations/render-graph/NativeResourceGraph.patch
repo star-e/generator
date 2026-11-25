@@ -77,7 +77,7 @@ diff --git a/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp b/nat
  void ResourceGraph::mount(gfx::Device* device, vertex_descriptor vertID) {
 -    visitObject(
 -        vertID, *this,
-+    visit_object(
++    visit_vertex(
 +        vertID,
          [&](const ManagedResource& resource) {
              // to be removed
@@ -221,7 +221,7 @@ diff --git a/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp b/nat
      gfx::Buffer* buffer = nullptr;
 -    visitObject(
 -        resID, *this,
-+    visit_object(
++    visit_vertex(
 +        resID,
          [&](const ManagedBuffer& res) {
              buffer = res.buffer.get();
@@ -239,7 +239,7 @@ diff --git a/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp b/nat
  gfx::Texture* ResourceGraph::getTexture(vertex_descriptor resID) {
 -    gfx::Texture* texture = visitObject(
 -        resID, *this,
-+    auto* const texture = visit_object(
++    auto* const texture = visit_vertex(
 +        resID,
          [](const ManagedTexture& res) -> gfx::Texture* {
              return res.texture.get();

@@ -172,7 +172,7 @@ auto addLayout(LayoutGraphData& graph, unsigned i) {
 
 void fillLayout(LayoutGraphData& graph, unsigned i) {
     graph.getLayout(i).descriptorSets[frequency].descriptorSetLayoutData.capacity = i + 1;
-    graph.visit_object(i,
+    graph.visit_vertex(i,
         [&](cc::render::RenderPhaseData& phase) {
             phase.rootSignature.assign(layoutName.data(), layoutName.size());
             phase.shaderPrograms.emplace_back().layout.descriptorGroups[frequency].descriptorSetLayoutData.slot = i;
@@ -343,7 +343,7 @@ bool checkGraphPaths(const char* sampleFile) {
         for (const auto v : view.vertices()) {
             samples.writeNumber(view.get_parent(v));
             samples.writeString(view.getName(v));
-            view.visit_object(v,
+            view.visit_vertex(v,
                 [&](RenderPassType pass) {
                     samples.writeBool(false);
                     samples.writeNumber(static_cast<unsigned>(pass));
@@ -431,8 +431,8 @@ bool checkFlatComponents() {
     const auto disabled = toggles.add_vertex(cc::render::ComputeTag{});
     const auto selectFlag = [](bool& flag) -> bool& { return flag; };
     const auto unexpectedLayout = [](LayoutGraph&) -> bool& { throw std::runtime_error("expected bool"); };
-    if (!toggles.visit_object(enabled, selectFlag, unexpectedLayout)) return false;
-    if (&toggles.visit_object(disabled, selectFlag, unexpectedLayout) != &toggles.value(cc::render::ComputeTag{}, disabled)) return false;
+    if (!toggles.visit_vertex(enabled, selectFlag, unexpectedLayout)) return false;
+    if (&toggles.visit_vertex(disabled, selectFlag, unexpectedLayout) != &toggles.value(cc::render::ComputeTag{}, disabled)) return false;
     if (toggles.num_vertices() != 2 || toggles.holds<cc::Count_>(2) || !toggles.holds<cc::Count_>(enabled) ||
         !toggles.value(cc::Count_{}, enabled) || toggles.value(cc::render::ComputeTag{}, disabled)) return false;
     cc::FlatComponents source{&sourceArena};

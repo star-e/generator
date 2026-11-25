@@ -97,7 +97,7 @@ struct RenderActions : cc::graph::DefaultDfsVisitor {
 
     void record(const char* action, Vertex v) {
         using namespace cc::render;
-        graph.visit_object(v,
+        graph.visit_vertex(v,
             [&](const RasterPass&) { events.emplace_back(std::string(action) + "Pass"); },
             [&](const RenderQueue&) { events.emplace_back(std::string(action) + "Queue"); },
             [&](const SceneData&) { events.emplace_back(std::string(action) + "Scene"); },

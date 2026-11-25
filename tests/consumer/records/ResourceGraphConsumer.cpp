@@ -308,7 +308,7 @@ bool checkResourceGraph() {
         if (ResourceTraits{residency}.hasSideEffects()) return false;
     const auto matches = [&](auto tag, ResourceGraph::vertex_descriptor vertex, unsigned ordinal) {
         const auto& read = std::as_const(g);
-        const void* visited = read.visit_object(vertex, [](auto& payload) -> const void* {
+        const void* visited = read.visit_vertex(vertex, [](auto& payload) -> const void* {
             static_assert(std::is_const_v<std::remove_reference_t<decltype(payload)>>);
             return &payload;
         });

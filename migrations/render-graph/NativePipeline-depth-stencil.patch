@@ -97,7 +97,7 @@ diff --git a/native/cocos/renderer/pipeline/custom/NativePipeline.cpp b/native/c
  
 -    visitObject(
 -        resID, ppl.resourceGraph,
-+    ppl.resourceGraph.visit_object(
++    ppl.resourceGraph.visit_vertex(
 +        resID,
          [&](ManagedTexture &tex) {
              CC_EXPECTS(!swapchain || !ppl.defaultFramebufferHasDepthStencil);

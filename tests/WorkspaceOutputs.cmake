@@ -55,7 +55,7 @@ set(referenceTypes "// PolymorphicGraph types\n" "    enum class Kind : uint8_t 
 set(traversal "// Graph\n" "// IncidenceGraph\n" " source(edge_descriptor" "// BidirectionalGraph\n" " in_edges("
     "// AdjacencyGraph\n" " adjacent_vertices(" "// VertexListGraph\n" " vertices()")
 file(READ "${work}/both/native/cocos/renderer/pipeline/custom/LayoutGraphTypes.h" layoutHeader)
-foreach(method IN ITEMS get_allocator out_edges add_vertex visit_object)
+foreach(method IN ITEMS get_allocator out_edges add_vertex visit_vertex)
     if(NOT layoutHeader MATCHES "\n    [^\n]+ ${method}[(][^\n]* // NOLINT[(]readability-identifier-naming[)]\n")
         message(FATAL_ERROR "Missing naming exemption on the generated ${method} declaration")
     endif()

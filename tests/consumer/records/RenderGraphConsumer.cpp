@@ -21,7 +21,7 @@ void checkPayload(const RenderGraph& graph, RenderGraph::vertex_descriptor v, Ta
     require(static_cast<unsigned>(graph.kind(v)) == ordinal && graph.holds<Tag>(v), "payload kind");
     const auto& expected = graph.value(tag, v);
     unsigned calls = 0;
-    const bool matched = graph.visit_object(v,
+    const bool matched = graph.visit_vertex(v,
         [&](decltype(expected) payload) { ++calls; return &payload == &expected; },
         [&](auto&) { ++calls; return false; });
     require(matched && calls == 1, "const visitor payload type, address and call count");
@@ -154,7 +154,7 @@ bool checkRenderGraph() {
         g.getLayout(pass) = "main-layout";
         g.getValid(scene) = true;
         g.getData(scene).constants[7] = {'s'};
-        auto& visitedCopy = g.visit_object(copy,
+        auto& visitedCopy = g.visit_vertex(copy,
             [](CopyPass& payload) -> CopyPass& { return payload; },
             [](auto&) -> CopyPass& { throw std::runtime_error("expected CopyPass"); });
         require(&visitedCopy == &g.value(CopyTag{}, copy), "mutable move-only payload");
@@ -162,7 +162,7 @@ bool checkRenderGraph() {
         require(visitedCopy.uploadPairs.get_allocator().resource() == &scratch && copiedUpload.get_allocator().resource() == &scratch &&
                 copiedUpload.target == "destination-upload-target" && copiedUpload.source.at(1) == 9, "emplaced move-only payload");
         try {
-            g.visit_object(g.null_vertex(), [](auto&) { throw std::runtime_error("visitor called for invalid vertex"); });
+            g.visit_vertex(g.null_vertex(), [](auto&) { throw std::runtime_error("visitor called for invalid vertex"); });
             return false;
         } catch (const std::out_of_range&) {}
         g.value(Clear_{}, clear).emplace_back().slotName = "destination-clear-slot";
