@@ -18,6 +18,21 @@ diff --git a/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp b/nat
  
  namespace cc {
  
+@@ -40,3 +37,3 @@ gfx::Texture* RenderSwapchain::getColorTexture(gfx::Swapchain* swapchain) noexce
+     CC_EXPECTS(swapchain);
+-    gfx::Texture* texture = swapchain->getColorTexture();
++    auto* const texture = swapchain->getColorTexture();
+     CC_ENSURES(texture);
+@@ -49,3 +46,3 @@ gfx::Texture* RenderSwapchain::getColorTexture(scene::RenderWindow* renderWindow
+     CC_EXPECTS(fb->getColorTextures().size() == 1);
+-    gfx::Texture* texture = fb->getColorTextures()[0];
++    auto* const texture = fb->getColorTextures()[0];
+     CC_ENSURES(texture);
+@@ -56,3 +53,3 @@ gfx::Texture* RenderSwapchain::getDepthStencilTexture(gfx::Swapchain* swapchain)
+     CC_EXPECTS(swapchain);
+-    gfx::Texture* texture = swapchain->getDepthStencilTexture();
++    auto* const texture = swapchain->getDepthStencilTexture();
+     CC_ENSURES(texture);
 @@ -217,17 +214,19 @@ namespace {
  std::pair<SubresourceView, ResourceGraph::vertex_descriptor>
  getOriginView(const ResourceGraph& resg, ResourceGraph::vertex_descriptor vertID) {
@@ -161,35 +176,46 @@ diff --git a/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp b/nat
                      states.states = cc::gfx::AccessFlagBit::NONE;
                  }
              }
-@@ -352,13 +345,13 @@ void ResourceGraph::unmount(uint64_t completedFenceValue) {
+@@ -352,48 +345,24 @@ void ResourceGraph::unmount(uint64_t completedFenceValue) {
  }
  
  bool ResourceGraph::isTexture(vertex_descriptor resID) const noexcept {
 -    return visitObject(
 -        resID, *this,
-+    return visit_object(
-+        resID,
-         [&](const ManagedBuffer& res) {
-             std::ignore = res;
-             return false;
-         },
+-        [&](const ManagedBuffer& res) {
+-            std::ignore = res;
+-            return false;
+-        },
 -        [&](const IntrusivePtr<gfx::Buffer>& res) {
-+        [&](const PersistentBuffer& res) {
-             std::ignore = res;
-             return false;
-         },
-@@ -369,8 +362,8 @@ bool ResourceGraph::isTexture(vertex_descriptor resID) const noexcept {
+-            std::ignore = res;
+-            return false;
+-        },
+-        [&](const auto& res) {
+-            std::ignore = res;
+-            return true;
+-        });
++    const auto resourceKind = handles[resID].kind;
++    return resourceKind != Kind::ManagedBuffer && resourceKind != Kind::PersistentBuffer;
  }
  
  bool ResourceGraph::isTextureView(vertex_descriptor resID) const noexcept {
 -    return visitObject(
 -        resID, *this,
-+    return visit_object(
-+        resID,
-         [&](const FormatView& view) {
-             std::ignore = view;
-             return true;
-@@ -387,13 +380,13 @@ bool ResourceGraph::isTextureView(vertex_descriptor resID) const noexcept {
+-        [&](const FormatView& view) {
+-            std::ignore = view;
+-            return true;
+-        },
+-        [&](const SubresourceView& view) {
+-            std::ignore = view;
+-            return true;
+-        },
+-        [&](const auto& res) {
+-            std::ignore = res;
+-            return false;
+-        });
++    const auto resourceKind = handles[resID].kind;
++    return resourceKind == Kind::FormatView || resourceKind == Kind::SubresourceView;
+ }
  
  gfx::Buffer* ResourceGraph::getBuffer(vertex_descriptor resID) {
      gfx::Buffer* buffer = nullptr;
@@ -207,13 +233,13 @@ diff --git a/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp b/nat
          },
          [&](const auto& buffer) {
              std::ignore = buffer;
-@@ -405,13 +398,13 @@ gfx::Buffer* ResourceGraph::getBuffer(vertex_descriptor resID) {
+@@ -405,13 +374,13 @@ gfx::Buffer* ResourceGraph::getBuffer(vertex_descriptor resID) {
  }
  
  gfx::Texture* ResourceGraph::getTexture(vertex_descriptor resID) {
 -    gfx::Texture* texture = visitObject(
 -        resID, *this,
-+    gfx::Texture* texture = visit_object(
++    auto* const texture = visit_object(
 +        resID,
          [](const ManagedTexture& res) -> gfx::Texture* {
              return res.texture.get();
