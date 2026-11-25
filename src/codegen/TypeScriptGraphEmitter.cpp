@@ -187,7 +187,7 @@ void edgeTraversal(std::ostream& out, const GraphStorageNames& names, bool share
     if (sharedEdges)
         out << "        return this." << names.parents << "[v] === u;\n";
     else
-        out << "        return this." << names.outEdges << "[u].some(e => e.target === v);\n";
+        out << "        return this." << names.outEdges << "[u].some((e) => e.target === v);\n";
     out << R"(    }
     source (e: ED): number {
         return e.source as number;
@@ -237,7 +237,7 @@ void referenceQueries(std::ostream& out, const GraphStorageNames& names, const G
     out << "\n    // ReferenceGraph\n";
     if (model.multipleParents)
         out << R"(    reference (u: number, v: number): boolean {
-        return this.)" << names.children << R"([u].some(e => e.target === v);
+        return this.)" << names.children << R"([u].some((e) => e.target === v);
     }
 )";
     else if (model.separateEdges)
@@ -317,14 +317,15 @@ void adjacencyMutation(std::ostream& out, const GraphStorageNames& names, bool r
     out << R"(        return edge;
     }
     remove)" << operation << R"( (e: ED): void {
-        const u = e.source as number, v = e.target as number;
+        const u = e.source as number;
+        const v = e.target as number;
         const out = this.)" << outgoing << R"([u];
-        const index = out.findIndex(other => other.target === v);
+        const index = out.findIndex((other) => other.target === v);
         if (index < 0) return;
         out.splice(index, 1);
 )";
     if (bidirectional) out << "        const incoming = this." << incoming << "[v];\n"
-                                << "        incoming.splice(incoming.findIndex(other => other.target === u), 1);\n";
+                                << "        incoming.splice(incoming.findIndex((other) => other.target === u), 1);\n";
     out << R"(    }
     remove)" << operation << R"(s (u: number, v: number): void {
         const compact = (list: OutE[], neighbor: number): void => {
@@ -518,10 +519,10 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
                     << "        const children = this." << names.children << "[u];\n";
                 if (model.parentGraph) {
                     out << "        const roots = this." << names.roots << ";\n"
-                        << "        const index = roots.findIndex(e => (e.target as number) > v);\n"
+                        << "        const index = roots.findIndex((e) => (e.target as number) > v);\n"
                         << "        roots.splice(index < 0 ? roots.length : index, 0, new OutE(v));\n";
                 }
-                out << "        children.splice(children.findIndex(e => e.target === v), 1);\n"
+                out << "        children.splice(children.findIndex((e) => e.target === v), 1);\n"
                     << "        this." << names.parents << "[v] = this.N;\n    }\n";
             } else out << R"(    addReference (u: number, v: number): ED | null {
         return this.addEdge(u, v);
