@@ -30,14 +30,9 @@ struct BoundField {
     bool usesAllocator{};
     bool defaultNeedsAllocator{};
     bool containsGraph{};
-    bool safeUnsignedInteger{};
     std::string tsReset;
 
     std::string parameterType() const { return byConstReference ? "const " + cpp + "&" : cpp; }
-
-    std::string tsUint64Initializer(const std::string& initial) const {
-        return "defineUint64(this, '" + name + "', " + initial + ")";
-    }
 };
 
 } // namespace cc::codegen

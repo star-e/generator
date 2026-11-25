@@ -156,6 +156,13 @@ check_resource_error("fenceValue: uint64_t = 0" "fenceValue: uint64_t = 90071992
     "uint64_t default exceeds the TypeScript safe integer range")
 check_resource_error("fenceValue: uint64_t = 0" "fenceValue: uint64_t = 18446744073709551616"
     "invalid uint64_t default")
+string(REPLACE "fenceValue: uint64_t = 0" "fenceValue: uint64_t = 9007199254740991" safeFence "${resource}")
+file(WRITE "${resourceSpec}" "${safeFence}")
+run(${generate})
+file(READ "${work}/stage/cocos/rendering/custom/render-graph.ts" safeFenceTs)
+if(NOT safeFenceTs MATCHES "fenceValue = 9007199254740991;" OR safeFenceTs MATCHES "defineUint64")
+    message(FATAL_ERROR "Expected a plain TypeScript field with the maximum safe uint64_t default")
+endif()
 check_resource_error("struct RenderSwapchain" "@serialize struct RenderSwapchain"
     "@cppOnly field in a serializable record requires @transient")
 check_resource_error("binding typescript {" "binding typescript { ClearValue => class { constructor(x, z); };"

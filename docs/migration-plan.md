@@ -143,7 +143,7 @@ C++ 方法可为尾部参数声明默认值，例如 `uint32_t lightByteOffset =
 
 | 结构体里的写法 | C++ | TypeScript |
 | --- | --- | --- |
-| 省略构造声明 | 普通可复制记录保留聚合初始化。PMR、仅移动或不可移动的记录按需生成构造器。 | 在字段声明处初始化，通常使用隐式构造器。需要安装 `uint64_t` 写入校验时生成无参构造器。 |
+| 省略构造声明 | 普通可复制记录保留聚合初始化。PMR、仅移动或不可移动的记录按需生成构造器。 | 在字段声明处初始化，通常使用隐式构造器。 |
 | `constructor();` | 声明零字段参数的构造器。PMR 记录生成 `T(alloc)`。 | 生成显式的零参构造器。 |
 | `constructor(a, b);` | 两个字段参数必填。 | 两个字段参数必填，即使字段本身有初值。 |
 | `constructor(a, b) defaults;` | 每个参数都取字段初值或类型默认值，允许传入零到两个字段参数。无法确定某个默认值时，生成器报告字段名。 | 每个参数都取字段绑定、字段初值或类型默认值。数组、Map 和可无参构造的记录在每次调用时分别创建。无法提供默认值时，生成器报告字段名。 |
@@ -442,7 +442,7 @@ TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数�
 
 两张布局图的归档为每个顶点保存一个父编号。C++ `add_edge(u, v)` 和 TS `addEdge(u, v)`、`addReference(u, v)` 可将已有根节点挂到编号更小的父节点。第二个父节点、重复边、自环和前向父引用都会被拒绝。C++ 返回的成功标志为 `false`，TS 返回 `null`。C++ 也会拒绝无效编号。新挂接的节点按编号插入兄弟序列，保证同名节点的查找结果在归档往返后稳定。C++ `remove_edge(e)` 可将整棵子树拆为独立的树。
 
-`ResourceGraph` 支持按编号遍历顶点、访问 Name、Desc、Traits、States、Sampler 五个组件。C++ 的 `Kind` 和 TS 的 `ResourceGraphValue` 沿用旧版的 0–8 顺序，依次为 Managed、ManagedBuffer、ManagedTexture、PersistentBuffer、PersistentTexture、Framebuffer、Swapchain、FormatView、SubresourceView。Framebuffer 在 C++ 中持有 `IntrusivePtr<gfx::Framebuffer>`，TS 直接保存传入的 GFX 对象。四类缓冲与纹理记录的 `fenceValue` 在 C++ 中保留完整的 `uint64_t`，TS 接受 0 到 `Number.MAX_SAFE_INTEGER` 的整数。TS 通过 `RenderGraphObjectPool` 复用图和记录。[资源图声明](../spec/render/render-graph.spec)
+`ResourceGraph` 支持按编号遍历顶点、访问 Name、Desc、Traits、States、Sampler 五个组件。C++ 的 `Kind` 和 TS 的 `ResourceGraphValue` 沿用旧版的 0–8 顺序，依次为 Managed、ManagedBuffer、ManagedTexture、PersistentBuffer、PersistentTexture、Framebuffer、Swapchain、FormatView、SubresourceView。Framebuffer 在 C++ 中持有 `IntrusivePtr<gfx::Framebuffer>`，TS 直接保存传入的 GFX 对象。四类缓冲与纹理记录的 `fenceValue` 在 C++ 中保留完整的 `uint64_t`，TS 生成普通 `number` 字段。生成器检查 `.spec` 默认值是否为 `0` 到 `Number.MAX_SAFE_INTEGER` 的整数，运行时赋值由调用方保证范围。TS 通过 `RenderGraphObjectPool` 复用图和记录。[资源图声明](../spec/render/render-graph.spec)
 
 `name_index;` 为 `named_graph` 选定的名称组件建立全图唯一索引。`ResourceGraph` 在两端都提供 `contains(name)`、`find(name)`、`vertex(name)`。名称缺失时，`contains` 返回 `false`，`find` 返回无效顶点编号。TS 的 `vertex` 由调用者保证名称已存在，C++ 的 `vertex` 在名称缺失时抛出异常。空字符串也是合法键。添加顶点或通过 `setName(v, name)` 改名遇到重名时，操作失败，原顶点和索引保持一致。C++ 使用支持 `std::string_view` 查询的 PMR 有序映射，TS 使用随图清空的 `Map`。
 

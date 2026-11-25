@@ -447,7 +447,7 @@ assert.equal(new TinyNames().format(), 'first\n            literal 0:true');
 assert.equal(new TinyNames().legacy(), 1);
 assert.deepEqual([StaticProbe.epoch, StaticProbe.kind, StaticProbe.nested.value], [7, 1, 3]);
 assert.equal('nativeFlag' in StaticProbe, false);
-assert.throws(() => { StaticProbe.epoch = -1; }, RangeError);
+assert.equal(Object.getOwnPropertyDescriptor(StaticProbe, 'epoch').writable, true);
 const staticArchive = new BinaryOutputArchive();
 saveStaticProbe(staticArchive, new StaticProbe(31));
 StaticProbe.epoch = 99;

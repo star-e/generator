@@ -129,13 +129,10 @@ if (false) {
     sc.texture = texture;
 }
 function checkUint64<K extends string>(value: Record<K, number>, field: K): void {
-    assert(value[field] === 0 && Object.keys(value).indexOf(field) !== -1);
+    const descriptor = Object.getOwnPropertyDescriptor(value, field);
+    assert(descriptor?.value === 0 && descriptor.writable === true && descriptor.enumerable === true);
     value[field] = Number.MAX_SAFE_INTEGER;
-    for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
-        let rangeError = false;
-        try { value[field] = invalid; } catch (error) { rangeError = error instanceof RangeError; }
-        assert(rangeError && value[field] === Number.MAX_SAFE_INTEGER);
-    }
+    assert(value[field] === Number.MAX_SAFE_INTEGER);
 }
 for (const value of [mb, mt, pb, pt]) checkUint64(value, 'fenceValue');
 checkUint64(resources, 'nextFenceValue');

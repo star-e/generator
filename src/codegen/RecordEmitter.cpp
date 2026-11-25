@@ -369,13 +369,9 @@ BoundField bindMember(const TypeGraph& graph, ModuleId owner, const FieldInfo& f
         return m;
     }
     if (m.ts == "boolean" && (m.tsDefault == "false" || m.tsDefault == "true")) return m;
-    m.safeUnsignedInteger = scalar == "uint64_t";
-    if (m.safeUnsignedInteger) {
+    if (scalar == "uint64_t") {
         if (!field.typescriptInitializer.empty()) m.tsDefault = field.typescriptInitializer;
-        if (!safeUnsignedNumber(m.tsDefault)) {
-            if (!typeOnly) invalid(field, "uint64_t default exceeds the TypeScript safe integer range: " + m.tsDefault);
-            m.tsDefault.clear();
-        }
+        if (!safeUnsignedNumber(m.tsDefault)) invalid(field, "uint64_t default exceeds the TypeScript safe integer range: " + m.tsDefault);
         return m;
     }
     if (m.ts == "number" && numericDefault(scalar, m.tsDefault)) return m;
@@ -1237,10 +1233,7 @@ void tsConstructorAndReset(std::ostream& ts, const std::vector<BoundField>& memb
         if (hasBase) ts << "        super();\n";
         for (uint32_t i = 0; i < members.size(); ++i) {
             const auto& m = members[i];
-            const bool parameter = std::ranges::find(order, i) != order.end();
-            if (m.safeUnsignedInteger) {
-                ts << "        " << m.tsUint64Initializer(parameter ? m.name : m.tsDefault) << ";\n";
-            } else if (parameter) {
+            if (std::ranges::find(order, i) != order.end()) {
                 ts << "        this." << m.name << " = " << m.name << ";\n";
             }
         }
@@ -1278,10 +1271,7 @@ void tsRecord(std::ostream& ts, std::ostream& staticInitializers, const TypeNode
         if (field.ts.empty()) continue; // Native-only field.
         writeDocumentation(ts, field.documentation, "    ");
         const auto declaration = std::string(field.readonly ? "static readonly " : "static ") + field.name + ": " + field.ts;
-        if (field.safeUnsignedInteger) {
-            ts << "    declare " << declaration << ";\n";
-            staticInitializers << "defineUint64(" << node.name << ", '" << field.name << "', " << field.tsDefault << ");\n";
-        } else if (forwardEnum || field.tsDefault.starts_with("new ")) {
+        if (forwardEnum || field.tsDefault.starts_with("new ")) {
             // Initialize after local classes and enums are available.
             ts << "    declare " << declaration << ";\n";
             staticInitializers << "Object.assign(" << node.name << ", { " << field.name << ": " << field.tsDefault << " });\n";
@@ -1289,17 +1279,12 @@ void tsRecord(std::ostream& ts, std::ostream& staticInitializers, const TypeNode
             ts << "    " << declaration << " = " << field.tsDefault << ";\n";
         }
     }
-    const bool emitConstructor = constructor.has_value() || std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
     if (constructor) writeDocumentation(ts, constructor->documentation, "    ");
-    tsConstructorAndReset(ts, members, order, reset, keepOnReset, !base.empty(), emitConstructor, constructor && constructor->defaults);
+    tsConstructorAndReset(ts, members, order, reset, keepOnReset, !base.empty(), constructor.has_value(), constructor && constructor->defaults);
     ts << classMethods;
     for (uint32_t i = 0; i < members.size(); ++i) {
         const auto& m = members[i];
         writeDocumentation(ts, m.documentation, "    ");
-        if (m.safeUnsignedInteger) {
-            ts << "    declare " << (m.readonly ? "readonly " : "") << m.name << ": number;\n";
-            continue;
-        }
         if (std::ranges::find(order, i) == order.end()) {
             ts << "    " << (m.readonly ? "readonly " : "") << m.comment << m.name;
             if (!inferTsType(m)) ts << ": " << m.ts;
@@ -1477,7 +1462,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     auto pendingEnums = output.namedEnums;
     std::string enumImports;
     bool previousTag = false;
-    bool usesUint64Field = false;
     const std::set<std::string> keepNone;
     for (auto id : module.declarations) {
         const auto& node = graph.node(id);
@@ -1533,7 +1517,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
                 }
                 emitTypeScriptGraph(graph, id, ts, deps.valueImports, deps.typeImports, fields, classMethods, std::move(methodNames),
                                     output.compactGraphNames, transactionalLoad);
-                usesUint64Field |= std::ranges::any_of(fields, &BoundField::safeUnsignedInteger);
                 if (entry != output.pools.end()) {
                     if (!model->mutableGraph) throw std::runtime_error(node.qualifiedName + ": graph pool requires mutable_graph");
                     pool.add(node.name, entry->second.member, Pool::Reuse::clear);
@@ -1591,7 +1574,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
             if (field.cppOnly) member.ts.clear();
             const auto& type = graph.node(field.type.type);
             const bool forwardEnum = std::holds_alternative<EnumType>(type.data) && type.module == owner && field.type.type.value > id.value;
-            usesUint64Field |= emitTs && !field.cppOnly && member.safeUnsignedInteger;
             statics.push_back({std::move(member), forwardEnum});
         }
         if (deps.emitCpp) cppRecord(cpp, definitions, graph, module, node, members, statics,
@@ -1650,7 +1632,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
         }
         const auto base = output.bases.find(node.name);
         if (base != output.bases.end()) deps.valueImports[base->second.from.generic_string()].insert(base->second.name);
-        usesUint64Field |= std::ranges::any_of(members, &BoundField::safeUnsignedInteger);
         tsRecord(ts, staticInitializers, node, members, statics, order, reset ? &*reset : nullptr, retained,
                  base == output.bases.end() ? "" : base->second.name, selected, classMethods);
     }
@@ -1752,19 +1733,6 @@ Files emitRecords(const TypeGraph& graph, ModuleId owner, const RecordOutput& ou
     }
     script << ts.str();
     if (!staticInitializers.view().empty()) script << '\n' << staticInitializers.str();
-    if (usesUint64Field) {
-        script << R"(
-function defineUint64 (target: object, key: string, initial: number): void {
-    let value: number;
-    const set = (next: number): void => {
-        if (!Number.isSafeInteger(next) || next < 0) throw new RangeError(key + ' requires a safe unsigned integer');
-        value = next;
-    };
-    set(initial);
-    Object.defineProperty(target, key, { enumerable: true, configurable: true, get: () => value, set });
-}
-)";
-    }
     script << archives.script.str();
     files.emplace(*output.typescript, script.str());
     if (!enumImports.empty()) {

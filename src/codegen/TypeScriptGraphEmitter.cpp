@@ -572,15 +572,10 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     for (const auto& column : columns)
         out << "    " << storage << column.name << ": " << column.arrayType << " = [];\n";
     if (model.nameIndex) out << "    " << storage << names.nameIndex << " = new Map<string, number>();\n";
-    std::string initializers;
     for (const auto& f : fields) {
         writeDocumentation(out, f.documentation, "    ");
-        out << "    " << (f.safeUnsignedInteger ? "declare " : "") << (f.readonly ? "readonly " : "") << f.name << ": " << f.ts;
-        if (f.safeUnsignedInteger) initializers += "        " + f.tsUint64Initializer(f.tsDefault) + ";\n";
-        else out << " = " << f.tsDefault;
-        out << ";\n";
+        out << "    " << (f.readonly ? "readonly " : "") << f.name << ": " << f.ts << " = " << f.tsDefault << ";\n";
     }
-    if (!initializers.empty()) out << "\n    constructor () {\n" << initializers << "    }\n";
     if (transactionalLoad) {
         out << "\n    [adopt" << node.name << "] (decoded: " << node.name << "): void {\n";
         if (model.parentGraph) out << "        this." << names.roots << " = decoded." << names.roots << ";\n";
