@@ -395,7 +395,7 @@ file(WRITE "${stage}/NativeLibraryConstructor.cpp"
     "#include \"cocos/renderer/pipeline/custom/NativePipelineTypes.h\"\n#include \"cocos/renderer/pipeline/custom/RenderingModule.h\"\n"
     "namespace cc::render {\n${libraryConstructor}\n${pipelineConstructor}}\n")
 # Compile the handwritten engine sources beside the generated headers.
-foreach(file IN ITEMS NativeResourceGraph.cpp NativePools.cpp)
+foreach(file IN ITEMS NativeResourceGraph.cpp NativePools.cpp FrameGraphDispatcher.cpp)
     configure_file("${ENGINE}/${nativeCustom}/${file}" "${stage}/${nativeCustom}/${file}" COPYONLY)
 endforeach()
 # Compile the same method bodies against the real NativePipeline and the device-only test fixture.
@@ -415,20 +415,6 @@ namespace cc::render {
 #include "PipelineDepthStencil.inc"
 }
 ]])
-# Exercise the dispatcher configuration and accessors directly from the handwritten engine source.
-file(READ "${ENGINE}/native/cocos/renderer/pipeline/custom/FrameGraphDispatcher.cpp" dispatcherSource)
-source_between(dispatcherSource "void FrameGraphDispatcher::enablePassReorder(" "[[nodiscard]] ccstd::pmr::string concatResName(" dispatcherQueries)
-string(REPLACE "resourceAccessGraph.passIndex.at(u)" "resourceAccessGraph.vertex(u)" dispatcherQueries "${dispatcherQueries}")
-foreach(tag IN ITEMS Barrier PassNode RenderPassInfo)
-    string(REPLACE "get(ResourceAccessGraph::${tag}Tag{}, resourceAccessGraph, ragVertID)"
-        "resourceAccessGraph.get${tag}(ragVertID)" dispatcherQueries "${dispatcherQueries}")
-endforeach()
-file(WRITE "${stage}/DispatcherQueries.cpp" [[
-#include "cocos/renderer/pipeline/custom/FGDispatcherTypes.h"
-#include "cocos/renderer/pipeline/custom/details/GslUtils.h"
-#include "cocos/math/Vec2.h"
-namespace cc::render {
-]] "${dispatcherQueries}\n}\n")
 # Link each standalone consumer with its engine version's printer and descriptor helpers.
 function(write_layout_utils engine output extraHeaders)
     file(READ "${engine}/${nativeCustom}/LayoutGraphUtils.cpp" layoutUtils)
