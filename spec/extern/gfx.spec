@@ -317,7 +317,7 @@ namespace cc::gfx {
     struct ShaderInfo;
     struct Attribute;
     struct SamplerInfo;
-    struct Viewport;
+    @triviallyCopyable struct Viewport;
     struct UniformBlock;
     struct DescriptorSetLayoutInfo;
 
@@ -345,7 +345,7 @@ namespace cc::gfx {
     }
 
     header "cocos/renderer/gfx-base/GFXDef.h" {
-        @constRef struct Color;
+        @constRef @triviallyCopyable struct Color;
     }
 
     header "cocos/renderer/gfx-base/states/GFXSampler.h" {

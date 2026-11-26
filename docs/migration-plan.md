@@ -457,7 +457,7 @@ TS 索引图默认按列存储（SoA）。每个组件生成独立的私有数�
 
 `ResourceGraph.nextFenceValue` 和 `version` 初值为 0。C++ 使用 `uint64_t`，TS 沿用 `fenceValue` 的安全整数范围，调用 `clear()` 或从池中重新取得图时两个字段都归零。`PersistentRenderPassAndFramebuffer` 持有可空的渲染通道和帧缓冲句柄。C++ 的 `clearColors` 使用构造时指定的内存资源。TS 复用该记录时原地清空颜色数组，将深度和模板清除值归零，并使用新传入的句柄。[渲染图声明](../spec/render/render-graph.spec)
 
-`ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。[外部 GFX 类型](../spec/extern/gfx.spec)
+`ClearValue`、`RasterView` 和 `ComputeView` 已接入 `RenderGraph`。记录按声明顺序生成 C++ 比较与哈希，字段上的 `@notElement` 从两者中排除该字段。`RasterView.slotID` 和 `ComputeView.clearValue` 使用此标注。外部类型 `gfx::Color` 上的 `@constRef` 让原生构造函数按 `const gfx::Color&` 接收颜色值。外部值类型可用 `@triviallyCopyable` 声明它有可用的平凡复制构造函数，例如 `gfx::Color` 和 `gfx::Viewport`。生成器在构造函数中直接复制这些值，也会根据 `.spec` 中的成员推导 `ClearValue` 等记录的复制行为。[外部 GFX 类型](../spec/extern/gfx.spec)
 
 `RasterView` 和 `ComputeView` 各保留一条带 `defaults` 的共享构造。原生重载用 `@cppOnly` 标记，带第二个槽名或显式 `plane` 的重载要求传齐字段和分配器。两个视图的池化工厂复用嵌套对象，分别调用 `Color.reset()` 和 `ClearValue.reset(0, 0, 0, 0)`。`defaults` 优先使用字段初值。按值存储的外部类型 `T` 省略初值时，生成的 C++ 默认实参为 `T{}`，由编译器检查该表达式。例如 `RasterView` 和 `ClearView` 的 `clearColor` 均使用 `gfx::Color{}`。[渲染图声明与绑定](../spec/render/render-graph.spec) · [外部 GFX 类型](../spec/extern/gfx.spec)
 

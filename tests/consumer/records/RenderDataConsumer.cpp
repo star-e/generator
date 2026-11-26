@@ -50,6 +50,7 @@ bool checkRenderNodeData() {
     static_assert(std::is_same_v<decltype(Blit::camera), const cc::scene::Camera*>);
     static_assert(std::is_same_v<decltype(Blit::models)::value_type, cc::IntrusivePtr<cc::scene::Model>>);
     static_assert(std::is_same_v<decltype(RenderQueue::viewport), gfx::Viewport>);
+    static_assert(std::is_trivially_copy_constructible_v<gfx::Viewport> && std::is_trivially_copy_constructible_v<gfx::Color>);
     static_assert(any(CullingFlags::CAMERA_FRUSTUM & (CullingFlags::LIGHT_BOUNDS | CullingFlags::CAMERA_FRUSTUM)));
     static_assert(static_cast<uint8_t>(BlitType::DRAW_3D) == 3);
     Arena arena;

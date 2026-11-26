@@ -172,6 +172,7 @@ struct ExternalDeclaration {
     std::vector<std::string> templateParameters;
     bool variadicTemplate{false};
     bool hasVirtualDestructor{false};
+    bool triviallyCopyable{false};
 };
 
 struct TagDeclaration {

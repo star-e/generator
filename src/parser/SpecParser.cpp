@@ -142,6 +142,7 @@ private:
             if (annotation == "string" && !decl.isString) decl.isString = true;
             else if (annotation == "pmr" && !decl.isPmr) decl.isPmr = true;
             else if (annotation == "constRef" && !decl.constructorConstRef) decl.constructorConstRef = true;
+            else if (annotation == "triviallyCopyable" && !decl.triviallyCopyable) decl.triviallyCopyable = true;
             else if (annotation == "container" && decl.container == ContainerKind::None) {
                 expect("(");
                 const auto kind = quotedString("container kind");
@@ -195,6 +196,8 @@ private:
             expect("}");
             decl.hasVirtualDestructor = true;
         }
+        if (decl.triviallyCopyable && (decl.isString || decl.isPmr || decl.hasVirtualDestructor || !decl.templateParameters.empty()))
+            fail("@triviallyCopyable requires a non-template external value type");
         expect(";");
         return {.name = std::move(name), .location = start, .data = std::move(decl), .documentation = std::move(doc)};
     }

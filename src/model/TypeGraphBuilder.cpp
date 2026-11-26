@@ -44,7 +44,7 @@ TypeId ensureNamespace(TypeGraph& graph, const std::string& scope) {
 void registerScalars(TypeGraph& graph) {
     const auto addScalar = [&](const char* name, const char* ts, const std::string& header = {}) {
         graph.appendNode(TypeNode{.name = name, .qualifiedName = name,
-                                  .data = header.empty() ? TypeData{BuiltinType{}} : TypeData{ExternalTypeNode{}},
+                                  .data = header.empty() ? TypeData{BuiltinType{}} : TypeData{ExternalTypeNode{.triviallyCopyable = true}},
                                   .cppHeader = header, .typescriptName = ts}, {});
     };
     // Keep the scalar vertex IDs in name order.
@@ -300,7 +300,7 @@ TypeData declare(const Declaration& decl) {
         return ExternalTypeNode{.isStruct = external->isStruct, .isString = external->isString,
                                 .isPmr = external->isPmr, .constructorConstRef = external->constructorConstRef,
                                 .container = external->container, .hasVirtualDestructor = external->hasVirtualDestructor,
-                                .isAlias = external->isAlias};
+                                .isAlias = external->isAlias, .triviallyCopyable = external->triviallyCopyable};
     }
     return InterfaceType{};
 }

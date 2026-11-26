@@ -284,8 +284,8 @@ void hierarchyMutation(std::ostream& out, std::ostream& source, const std::strin
            << "    if (static_cast<std::uintmax_t>(u) >= " << rows << ".size() || static_cast<std::uintmax_t>(v) >= " << rows << ".size() ||\n"
            << "        " << rows << "[v].parent != null_vertex()" << (model.serializable ? " || u >= v" : "") << ") return {{null_vertex(), null_vertex()}, false};\n";
     if (!model.serializable)
-        source << "    for (auto p = u; p != null_vertex(); p = " << rows << "[p].parent)\n"
-               << "        if (p == v) return {{null_vertex(), null_vertex()}, false};\n";
+        source << "    for (auto p = u; p != null_vertex(); p = " << rows << "[p].parent) {\n"
+               << "        if (p == v) return {{null_vertex(), null_vertex()}, false};\n    }\n";
     source << "    auto& parent = " << rows << "[u];\n"
            << "    auto& child = " << rows << "[v];\n"
            << "    auto* slot = &parent.firstChild;\n"
@@ -332,7 +332,7 @@ void addressableGraph(std::ostream& out, std::ostream& source, const std::string
            << R"(
     while (!refPath.empty()) {
         const auto slash = refPath.find('/');
-        const auto segment = refPath.substr(0, slash);
+        const std::string_view segment{refPath.data(), slash == std::string_view::npos ? refPath.size() : slash};
         refPath.remove_prefix(slash == std::string_view::npos ? refPath.size() : slash + 1);
         if (segment.empty() || segment == ".") continue;
         if (segment == "..") {
@@ -381,13 +381,13 @@ void graphConstructors(std::ostream& out, std::ostream& source, const std::strin
             if (!move && !copyable) continue;
             source << "\n" << name << "::" << name << "(" << (move ? "" : "const ") << name
                    << (move ? "&&" : "&") << " rhs, const allocator_type& alloc)\n";
-            const auto initialize = [&](const std::string& member, bool usesAllocator) {
+            const auto initialize = [&](const std::string& member, bool usesAllocator, bool moveMember) {
                 source << (member == first ? ": " : ", ") << member << "("
-                       << (move ? "std::move(rhs." : "rhs.") << member << (move ? ")" : "")
+                       << (moveMember ? "std::move(rhs." : "rhs.") << member << (moveMember ? ")" : "")
                        << (usesAllocator ? ", alloc)" : ")");
             };
-            for (const auto& member : storage) initialize(member, true);
-            for (const auto& field : fields) initialize(field.name, field.usesAllocator);
+            for (const auto& member : storage) initialize(member, true, move);
+            for (const auto& field : fields) initialize(field.name, field.usesAllocator, move && field.move);
             source << " {}\n";
         }
     }
@@ -1041,8 +1041,8 @@ std::string emitCppGraph(const TypeGraph& graph, TypeId id, std::ostream& out, s
     sections.write(out, source);
     writeDeclaredMethods();
     out << '\n';
-    if (model.compareEqual) out << "    friend bool operator==(const " << name << "&, const " << name << "&) noexcept;\n";
-    if (model.compareLess) out << "    friend bool operator<(const " << name << "&, const " << name << "&) noexcept;\n";
+    if (model.compareEqual) out << "    friend bool operator==(const " << name << "& lhs, const " << name << "& rhs) noexcept;\n";
+    if (model.compareLess) out << "    friend bool operator<(const " << name << "& lhs, const " << name << "& rhs) noexcept;\n";
     if (model.hashable) out << "    friend struct " << scope.name("ccstd::hash") << "<" << name << ">;\n";
     if (!alternatives.empty())
         out << "    struct VertexHandle {\n"

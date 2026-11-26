@@ -67,6 +67,7 @@ namespace cc::codegen {
         container: ContainerKind = ContainerKind::None;
         hasVirtualDestructor: bool = false;
         isAlias: bool = false;
+        triviallyCopyable: bool = false;
     }
 
     struct Enumerator {

@@ -164,6 +164,7 @@ struct ExternalTypeNode {
     ContainerKind container{ContainerKind::None};
     bool hasVirtualDestructor{false};
     bool isAlias{false};
+    bool triviallyCopyable{false};
 };
 
 struct Enumerator {

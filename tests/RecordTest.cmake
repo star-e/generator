@@ -14,6 +14,14 @@ string(REPLACE "graph RenderGraph {\n        vertex_descriptor = uint32_t;"
 file(WRITE "${graphSpec}" "${wideGraph}")
 run(${generate})
 set(customDir "${work}/stage/native/cocos/renderer/pipeline/custom")
+file(READ "${customDir}/RenderGraphTypes.cpp" renderGraphCpp)
+foreach(initializer IN ITEMS "clearValue(clearValueIn)" "clearValue(rhs.clearValue)" "viewport(rhs.viewport)"
+        "clearColor(rhs.clearColor)" "name(std::move(rhs.name), alloc)")
+    string(FIND "${renderGraphCpp}" "${initializer}" found)
+    if(found EQUAL -1)
+        message(FATAL_ERROR "Missing RenderGraph constructor initializer: ${initializer}")
+    endif()
+endforeach()
 file(READ "${customDir}/CustomFwd.h" customForward)
 file(READ "${customDir}/CustomTypes.h" customTypes)
 if(NOT customForward MATCHES "using RenderGraphVertex = uint64_t;" OR

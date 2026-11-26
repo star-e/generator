@@ -122,6 +122,7 @@ namespace cc::codegen {
         templateParameters: std::vector<std::string>;
         variadicTemplate: bool = false;
         hasVirtualDestructor: bool = false;
+        triviallyCopyable: bool = false;
     }
 
     struct TagDeclaration {}
