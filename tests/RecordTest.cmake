@@ -436,7 +436,7 @@ foreach(capability IN ITEMS mutable_graph vertex_list_graph)
     endif()
     file(READ "${work}/stage/cocos/rendering/custom/layout-graph.ts" script)
     if(script MATCHES "caption_|Descriptors_|Render(Stage|Phase)_" OR NOT script MATCHES "export class LayoutGraph " OR
-       NOT script MATCHES "vertexName [(]v: number[)]: string [{]\n        return this[.]_labels\\[v\\];\n    [}]" OR
+       NOT script MATCHES "vertexName [(]v: number[)]: string [{]\n        return this[.]c1\\[v\\];\n    [}]" OR
        NOT script MATCHES "this.vertexName[(]v[)] === name" OR NOT script MATCHES "return getPath[(]this, v[)]")
         message(FATAL_ERROR "TS graph did not bind the renamed component independently of the native tags")
     endif()

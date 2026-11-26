@@ -217,9 +217,10 @@ binding typescript {
     import type { InputArchive } from "./archive";
     IndexedNames => class {
         storedValue (v: number): number { return this._objects[v]; }
+        z (v: number): string { return this._labels[v]; }
     };
     TinyNames => class {
-        _labels (v: number): string { return this.getName(v); }
+        _labels (v: number): string { return this._labels_[v]; }
         describe (text: string, rate: UpdateFrequency): string {
             // } and )ts" belong to the method, as do braces in regular expressions.
             if (rate < 0) { return text; }

@@ -73,7 +73,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 `cppDefaults.spaceBeforeReference` 默认是 `false`，沿用生成器原有的声明格式。cocos4 工作区将它设为 `true`，让接口和普通成员函数写成 `T *get()`、`void set(const T &value)` 和 `const std::vector<T *> &items`。记录的指针和引用字段也使用这个设置，例如 `const RenderGraph *renderGraph`。接口的拷贝、移动声明和 flags 赋值运算符也使用这个设置，例如 `T &operator=(T &&rhs)`。单个模块可以通过 `cpp.spaceBeforeReference` 覆盖工作区设置。
 
-工作区可设置 `"typescriptDefaults": { "compactGraphNames": true }` 缩短 TS 图的私有存储名。默认关闭，cocos4 工作区已开启。出边和入边用 `o/i`，子节点和父节点用 `c/p`，载荷标签用 `t`，载荷数组用 `a`。短名与已声明成员重名时按顺序追加数字。组件数组沿用 `.spec` 的 `member` 名，字段和方法沿用公开名称。绑定方法中直接使用的私有存储名也会保留。
+工作区可设置 `"typescriptDefaults": { "compactGraphNames": true }` 缩短 TS 图的私有名称。默认关闭，cocos4 工作区已开启。出边和入边用 `o/i`，子节点和父节点用 `c/p`，载荷标签用 `t`，载荷数组用 `a`。组件数组取组件名的小写首字母，例如 `Name` 对应 `n`。多个顶点数组共用的截断方法用 `z`。短名遇到冲突时按顺序追加数字。关闭短名时，组件数组沿用带下划线前缀的 `.spec` 成员名，截断方法名为 `truncateVertices`。公开成员和绑定方法中直接使用的私有存储名均保留。
 
 工作区顶层的 `transactionalGraphLoad` 控制 C++ 和 TS 的图反序列化，默认值为 `false`。默认模式直接用归档内容覆盖目标图，保留图上的 `@transient` 字段。读取失败后应丢弃目标图。设置 `"transactionalGraphLoad": true` 后，读取器先填充临时图，全部读取成功后再替换目标图。读取失败时，调用方仍可使用原图。两种模式使用相同的归档格式。
 

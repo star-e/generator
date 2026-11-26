@@ -81,20 +81,31 @@ struct GraphStorageNames {
     std::string outEdges, inEdges, children, parents;
     std::string kinds, objects;
     std::string roots, nameIndex, vertexCount;
+    std::string truncateVertices;
 };
 
-GraphStorageNames graphStorageNames(const GraphType& model, bool compact, std::set<std::string>& members,
-                                   const std::string& owner, std::string_view classMethods) {
+std::set<std::string_view> bindingIdentifiers(std::string_view classMethods) {
     // Binding methods can contain verbatim TypeScript. Leave identifiers in that code available to it.
     constexpr std::string_view identifierChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$";
     std::set<std::string_view> bindingNames;
-    if (compact) {
-        for (auto start = classMethods.find_first_of(identifierChars); start != std::string_view::npos;) {
-            const auto end = classMethods.find_first_not_of(identifierChars, start);
-            bindingNames.insert(classMethods.substr(start, end - start));
-            start = classMethods.find_first_of(identifierChars, end);
-        }
+    for (auto start = classMethods.find_first_of(identifierChars); start != std::string_view::npos;) {
+        const auto end = classMethods.find_first_not_of(identifierChars, start);
+        bindingNames.insert(classMethods.substr(start, end - start));
+        start = classMethods.find_first_of(identifierChars, end);
     }
+    return bindingNames;
+}
+
+std::string availableName(const std::string& preferred, std::set<std::string>& members,
+                          const std::set<std::string_view>& bindingNames) {
+    auto candidate = preferred;
+    for (size_t i = 1; bindingNames.contains(candidate) || !members.insert(candidate).second; ++i)
+        candidate = preferred + std::to_string(i);
+    return candidate;
+}
+
+GraphStorageNames graphStorageNames(const GraphType& model, bool compact, std::set<std::string>& members,
+                                   const std::string& owner, const std::set<std::string_view>& bindingNames) {
     const auto name = [&](bool used, const char* fullName, const char* shortName) -> std::string {
         if (!used) return {};
         if (!compact || (bindingNames.contains(fullName) && !members.contains(fullName))) {
@@ -102,10 +113,7 @@ GraphStorageNames graphStorageNames(const GraphType& model, bool compact, std::s
                 throw std::runtime_error(owner + ": graph field collides with TypeScript member " + fullName);
             return fullName;
         }
-        std::string candidate = shortName;
-        for (size_t i = 1; bindingNames.contains(candidate) || !members.insert(candidate).second; ++i)
-            candidate = shortName + std::to_string(i);
-        return candidate;
+        return availableName(shortName, members, bindingNames);
     };
     const bool polymorphic = !model.alternatives.empty();
     const bool needsCount = !model.incidence && !model.hierarchy && !polymorphic && model.components.empty();
@@ -119,6 +127,7 @@ GraphStorageNames graphStorageNames(const GraphType& model, bool compact, std::s
         .roots = name(model.parentGraph, "roots", "r"),
         .nameIndex = name(model.nameIndex, "nameIndex", "m"),
         .vertexCount = name(needsCount, "_vertexCount", "n"),
+        .truncateVertices = {},
     };
 }
 
@@ -136,6 +145,12 @@ std::vector<VertexColumn> vertexMetadataColumns(const GraphType& model, const Gr
         columns.push_back({names.objects, graphName + "Object[]", "object"});
     }
     return columns;
+}
+
+void truncateVertexColumns(std::ostream& out, const GraphStorageNames& names, const std::vector<VertexColumn>& columns,
+                           std::string_view indent, std::string_view size) {
+    if (!names.truncateVertices.empty()) out << indent << "this." << names.truncateVertices << '(' << size << ");\n";
+    else if (!columns.empty()) out << indent << "this." << columns.front().name << ".length = " << size << ";\n";
 }
 
 void addVertex(std::ostream& out, const GraphType& model, const std::string& kinds,
@@ -177,7 +192,7 @@ void addVertex(std::ostream& out, const GraphType& model, const std::string& kin
         out << "            if (parent !== this.N) siblings.push(new OutE(v));\n";
     out << "        } catch (error) {\n";
     if (model.nameIndex) out << "            this." << names.nameIndex << ".delete(component" << components.at(*model.nameComponentIndex).tagName << ");\n";
-    for (const auto& column : columns) out << "            this." << column.name << ".length = v;\n";
+    truncateVertexColumns(out, names, columns, "            ", "v");
     out << "            throw error;\n        }\n        return v;\n    }\n";
 }
 
@@ -391,12 +406,20 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         if (!api.insert(field.name).second) throw std::runtime_error(node.qualifiedName + ": graph field collides with TypeScript member " + field.name);
     }
     api.insert("__proto__");
-    const auto names = graphStorageNames(model, compactGraphNames, api, node.qualifiedName, classMethods);
+    const auto bindingNames = bindingIdentifiers(classMethods);
+    auto names = graphStorageNames(model, compactGraphNames, api, node.qualifiedName, bindingNames);
     auto columns = vertexMetadataColumns(model, names, node.name);
+    // Resolve the original member names first so verbatim bindings can still refer to them.
     for (auto& component : components) {
         while (!api.insert(component.storageName).second) component.storageName += '_';
+    }
+    for (auto& component : components) {
+        if (compactGraphNames && !bindingNames.contains(component.storageName))
+            component.storageName = availableName(component.visitorMethod().substr(0, 1), api, bindingNames);
         columns.push_back({component.storageName, typeScriptArrayName(component.type), "component" + component.tagName});
     }
+    if (model.mutableGraph && columns.size() > 1)
+        names.truncateVertices = availableName(compactGraphNames ? "z" : "truncateVertices", api, bindingNames);
     const auto vertexList = columns.empty() ? std::string{} : "this." + columns.front().name;
     const auto vertexCount = columns.empty() ? "this." + names.vertexCount : vertexList + ".length";
     if (model.hierarchy && std::ranges::find(components, "Parent", &Column::tagName) != components.end())
@@ -449,7 +472,7 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
         out << "\n    // MutableGraph\n    clear (" << (skipTransients ? "includeTransient = true" : "") << "): void {\n";
         if (model.parentGraph) out << "        this." << names.roots << ".length = 0;\n";
         if (vertexList.empty()) out << "        this." << names.vertexCount << " = 0;\n";
-        for (const auto& column : columns) out << "        this." << column.name << ".length = 0;\n";
+        truncateVertexColumns(out, names, columns, "        ", "0");
         if (model.nameIndex) out << "        this." << names.nameIndex << ".clear();\n";
         for (const auto& f : fields) {
             const auto prefix = skipTransients && f.transient ? "        if (includeTransient) " : "        ";
@@ -567,6 +590,11 @@ void emitTypeScriptGraph(const TypeGraph& graph, TypeId id, std::ostream& out, T
     }
 )";
 
+    if (!names.truncateVertices.empty()) {
+        out << "\n    private " << names.truncateVertices << " (length: number): void {\n";
+        for (const auto& column : columns) out << "        this." << column.name << ".length = length;\n";
+        out << "    }\n";
+    }
     out << '\n';
     if (model.parentGraph) out << "    " << storage << names.roots << ": OutE[] = [];\n";
     if (vertexList.empty()) out << "    private " << names.vertexCount << " = 0;\n";
