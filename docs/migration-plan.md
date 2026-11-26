@@ -40,15 +40,18 @@ ctest --test-dir build/host --output-on-failure
 
 ### 按模块选择输出
 
-从 `generator` 目录运行下面的命令，可在引擎检出中逐字节核对一个模块的产物。
+在 `generator` 目录运行以下命令。第一条预览 `RenderInterface` 在 cocos4 中的差异，第二条写入该模块缺失或内容有变化的文件。
 
 ```sh
-build/host/cocos-codegen generate --workspace config/workspace.json --output ../cocos4 --check --module ArchiveInterface
+build/host/cocos-codegen generate --workspace config/workspace.json --module RenderInterface --output ../cocos4 --check --diff
+build/host/cocos-codegen generate --workspace config/workspace.json --module RenderInterface --output ../cocos4
 ```
 
-`--module` 取 `.spec` 声明的模块名，区分大小写，只能与 `--check` 一起使用。生成器加载完整工作区以解析导入，按模块归属检查生成文件和 `runtimeFiles` 副本。目标目录可包含手写代码，也可省略工作区清单。匹配时显示文件数，缺失或变化时列出路径并返回 1，加 `--diff` 可查看第一处字节差异。引擎代码、自举代码、运行时副本和 JSON 清单默认使用运行生成器的平台换行，Windows 为 CRLF，其他平台为 LF。工作区可用 `lineEnding` 显式选择 `native`、`lf` 或 `crlf`。未知模块返回 2。
+`--module` 取 `.spec` 声明的模块名，区分大小写。生成器加载完整工作区以解析导入并检查路径归属，读写范围仅包含选中模块的生成文件和 `runtimeFiles` 副本。写入后显示实际更新数。检查时，匹配则显示文件总数，缺失或变化则列出路径并返回 1。`--diff` 显示已有文件的第一处字节差异。未知模块返回 2。引擎的完整产物清单保存在 `generator` 仓库。[引擎产物清单](../codegen-generated-manifest.json)
 
-引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `native/cocos/base/GraphDFS.h` 来源于 `runtime/cpp/GraphDFS.h`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序，与同一工作区的源码采用相同的换行规则，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
+引擎代码、自举代码、运行时副本和 JSON 清单默认使用运行生成器的平台换行，Windows 为 CRLF，其他平台为 LF。工作区可用 `lineEnding` 显式选择 `native`、`lf` 或 `crlf`。
+
+引擎和自举工作区都配置了 `"manifest": { "sourceRoot": ".." }`。生成整个工作区时，生成器在输出根目录写入 `codegen-generated-manifest.json`。版本 1 的 `files` 以相对输出路径为键，每项的 `module` 和 `source` 指向声明该产物的模块和 `.spec`。通过 `runtimeFiles` 复制的文件另有 `copiedFrom`，例如 `native/cocos/base/GraphDFS.h` 来源于 `runtime/cpp/GraphDFS.h`。`source` 和 `copiedFrom` 都相对于 `sourceRoot`，该目录相对于工作区配置文件解析，省略时取配置文件所在目录。清单按路径排序，与同一工作区的源码采用相同的换行规则，`--check --diff` 同样检查清单。自定义工作区可省略整个 `manifest` 配置以仅输出代码。[引擎工作区](../config/workspace.json) · [自举清单](../src/codegen-generated-manifest.json)
 
 工作区通过 `ModuleInput` 把每个模块的声明、C++ 定义头、前置声明头和 TS 输出信息交给建图器。建图时，标量别名使用前置声明头，模板实例别名和图标签使用定义头。外部类型的头文件和 TS 导入来源沿用 `extern module` 的声明与配置。[建图输入](../src/model/TypeGraphBuilder.h) · [工作区](../src/workspace/Workspace.cpp)
 
@@ -428,7 +431,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 4 | PrivateTypes | 4 | 4 | `NativeFwd.h`、`NativeTypes.h/.cpp`、`web-types.ts`。`NativePipelineTypes.h` 按值使用 `LayoutGraphData`，直接包含 `LayoutGraphTypes.h`。 |
 | 5 | NativePipeline | 4 | 3 | 三个生成文件和配套运行时头 `Array4.h` 已接入 cocos4，`NativePipelineGraphs.h` 已退役。后续集成验证为链接完整引擎并运行最小原生管线。 |
 
-旧生成器保留 `FGDispatcher` 模块注册供其他模块解析依赖，生成入口已移交给新生成器。`CocosCommon` 提供外部类型登记，`RenderInterfaceDocument` 提供注释，`RenderSceneInterface` 仅参与登记。`RenderCompiler`、`ExecutorExample`、`RenderExample` 的构建和输出受关闭的分支控制。[模块入口](../../cocos-engine-generator/Cocos/CocosBuilder/CocosBuilder.cpp) · [旧外部类型登记](../../cocos-engine-generator/Cocos/CocosBuilder/CocosCommon.cpp)
+11 个引擎模块的 49 个生成文件及 6 个配套运行时文件均由新生成器写入。旧入口保留类型注册和编译，cocos4 自行维护 `native/CMakeLists.txt` 的源文件列表。`CocosCommon` 提供外部类型登记，`RenderInterfaceDocument` 提供注释，`RenderSceneInterface` 仅参与登记。`RenderCompiler`、`ExecutorExample`、`RenderExample` 的构建和输出受关闭的分支控制。[模块入口](../../cocos-engine-generator/Cocos/CocosBuilder/CocosBuilder.cpp) · [旧外部类型登记](../../cocos-engine-generator/Cocos/CocosBuilder/CocosCommon.cpp)
 
 ## 当前图接口覆盖
 

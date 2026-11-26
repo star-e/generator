@@ -541,13 +541,13 @@ void printDifference(const std::string& expected, const std::string& actual) {
 
 int generate(const fs::path& workspace, const std::optional<fs::path>& output, bool check, bool diff,
              std::optional<std::string_view> selectedModule) {
-    if (selectedModule && !check) throw std::runtime_error("--module requires --check");
     auto config = object(workspace);
     const auto base = fs::absolute(workspace).parent_path();
     const auto destination = output.value_or(base / config.at("outputRoot").get<std::string>());
     auto root = fs::weakly_canonical(fs::absolute(destination));
     const Files files = plan(config, base, selectedModule);
     bool drift = false;
+    size_t updated = 0;
     const auto publish = [&](const fs::path& path, const std::string& bytes) {
         const auto target = root / path;
         if (fs::weakly_canonical(target) != target || fs::is_symlink(target)) {
@@ -562,6 +562,7 @@ int generate(const fs::path& workspace, const std::optional<fs::path>& output, b
             drift = true;
         } else {
             replaceFile(target, bytes);
+            ++updated;
         }
     };
     const auto manifest = config.contains("manifest") ? files.find(manifestName) : files.end();
@@ -570,9 +571,12 @@ int generate(const fs::path& workspace, const std::optional<fs::path>& output, b
     }
     if (manifest != files.end()) publish(manifest->first, manifest->second);
     if (selectedModule) {
-        if (!drift)
+        if (!check) {
+            std::cout << *selectedModule << ": " << updated << (updated == 1 ? " file updated\n" : " files updated\n");
+        } else if (!drift) {
             std::cout << *selectedModule << ": " << files.size()
                       << (files.size() == 1 ? " file matches\n" : " files match\n");
+        }
     } else if (check && fs::exists(root)) {
         for (const auto& entry : fs::recursive_directory_iterator(root)) {
             if (!entry.is_regular_file()) continue;

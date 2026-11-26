@@ -6,7 +6,7 @@
 
 namespace {
 constexpr std::string_view usage =
-    "Usage: cocos-codegen generate --workspace FILE [--output DIR] [--check [--module NAME] [--diff]]\n";
+    "Usage: cocos-codegen generate --workspace FILE [--output DIR] [--module NAME] [--check [--diff]]\n";
 }
 
 int main(int argc, char** argv) {
