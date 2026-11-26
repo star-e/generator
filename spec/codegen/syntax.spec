@@ -77,7 +77,7 @@ namespace cc::codegen {
         isClass: bool = false;
         isFinal: bool = false;
         bases: std::vector<TypeRef>;
-        implements: std::optional<TypeRef>;
+        provides: std::optional<TypeRef>;
         destructorNoexcept: std::optional<bool>;
         destructorPrivate: bool = false;
         cppMembers: std::string;

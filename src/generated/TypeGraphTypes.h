@@ -200,7 +200,7 @@ struct RecordType {
     std::vector<ConstructorInfo> constructors;
     std::optional<ConstructorInfo> typescriptConstructor;
     std::vector<TypeId> bases;
-    std::optional<TypeId> implements;
+    std::optional<TypeId> provides;
     bool isClass{false};
     bool isFinal{false};
     std::optional<bool> destructorNoexcept;

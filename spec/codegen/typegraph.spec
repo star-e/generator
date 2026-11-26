@@ -98,7 +98,7 @@ namespace cc::codegen {
         constructors: std::vector<ConstructorInfo>;
         typescriptConstructor: std::optional<ConstructorInfo>;
         bases: std::vector<TypeId>;
-        implements: std::optional<TypeId>;
+        provides: std::optional<TypeId>;
         isClass: bool = false;
         isFinal: bool = false;
         destructorNoexcept: std::optional<bool>;

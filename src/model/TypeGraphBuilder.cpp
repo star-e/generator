@@ -232,11 +232,11 @@ RecordType resolveRecord(TypeGraph& graph, TypeId id, const Record& syntax, cons
             throw std::runtime_error(base.location.describe() + ": expected a distinct, earlier non-final base");
         result.bases.push_back(target);
     }
-    if (syntax.implements) {
-        const auto target = resolve(graph, *syntax.implements, scope, owner).type;
+    if (syntax.provides) {
+        const auto target = resolve(graph, *syntax.provides, scope, owner).type;
         if (!std::holds_alternative<InterfaceType>(graph.node(target).data))
-            throw std::runtime_error(syntax.implements->location.describe() + ": implements requires an interface");
-        result.implements = target;
+            throw std::runtime_error(syntax.provides->location.describe() + ": provides requires an interface");
+        result.provides = target;
     }
     result.staticFields = resolveFields(graph, syntax.staticFields, scope, owner);
     for (const auto& field : result.staticFields) {

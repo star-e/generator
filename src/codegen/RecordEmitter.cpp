@@ -1122,7 +1122,7 @@ void cppRecord(std::ostream& out, std::ostream& source, const TypeGraph& graph, 
         writeDocumentation(out, record.destructorDocumentation, "    ");
         out << "    ~" << node.name << "()" << (*record.destructorNoexcept ? " noexcept" : "") << ";\n";
     }
-    if (!record.bases.empty() || record.implements) {
+    if (!record.bases.empty() || record.provides) {
         memberAccess(out, currentPrivate, false);
         emitImplementationMethods(out, graph, node, deps.headers, deps.forwardTypes, output.spaceBeforeReference);
     }

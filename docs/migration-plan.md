@@ -91,9 +91,9 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 | Customization | `CustomFwd.h`、`CustomTypes.h/.cpp` 已接入 cocos4。六组回调使用 `RenderGraphVertex`。该别名在 .spec 中引用新版 `RenderGraph::vertex_descriptor`，生成的前置声明头将其展开为 `uint32_t`，与旧图的 `vertex_descriptor` 一致。 | 用 `--module Customization --output ../cocos4 --check --diff` 核对三个产物。原生消费者包括 `NativePipeline.cpp` 的两个自定义渲染命令和 `NativeExecutor.cpp` 的回调调用点。 |
 | PrivateTypes | `NativeFwd.h`、`NativeTypes.h/.cpp` 和 `web-types.ts` 已接入 cocos4。`ProgramInfo` 的字段构造要求传入五个参数，C++ 另有只接收分配器的重载。`ProgramGroup` 在 TS 字段声明处初始化两张 Map。 | 用 `--module PrivateTypes --output ../cocos4 --check --diff` 核对四个产物。原生消费测试按 `NativeProgramLibrary` 的插入方式验证分配器传递，Web 消费测试覆盖五参数构造和 Map 的实例隔离。 |
 | FGDispatcher | cocos4 已接入 `FGDispatcherFwd.h` 和 `FGDispatcherTypes.h/.cpp`。手写调度器通过成员接口访问两张双向图，消费测试直接编译完整的 `FrameGraphDispatcher.cpp`。 | 用 `--module FGDispatcher --output ../cocos4 --check` 核对三个产物。原生分叉／汇合用例显式开启重排，检查依赖边和拓扑顺序。 |
-| NativePipeline | `NativePipelineFwd.h` 和 `NativePipelineTypes.h/.cpp` 覆盖旧版全部 50 个顶层类型，包括 9 个具体构建器、原生管线、程序库、资源上下文和绘制队列。 | 引擎切换时，手写执行器和管线代码中引用旧图自由函数与嵌套标签的调用仍需适配。 |
+| NativePipeline | cocos4 已接入 `NativePipelineFwd.h`、`NativePipelineTypes.h/.cpp` 和配套的 `Array4.h`。模块覆盖旧版全部 50 个顶层类型，包括 9 个具体构建器、原生管线、程序库、资源上下文和绘制队列。 | 用 `--module NativePipeline --output ../cocos4 --check` 核对四个文件。Android NDK 已编译完整的管线、程序库和执行器。 |
 
-`NativeSetter : NativeRenderNode implements Setter` 为实现类生成 `Setter` 的成员声明。`NativeRenderQueueBuilder final : RenderQueueBuilder, NativeSetter` 从公开接口推导 `override` 签名，并将已有实现转发到 `NativeSetter`。C++ 派生类的 `constructor(...)` 只列自己的字段。生成器按基类声明顺序收集必需的构造参数，放在本类参数之前，并在初始化列表中分别传给直接基类。派生类省略 `constructor` 时也会转发，允许零业务参数构造的基类则省略其字段参数。`constructor() noexcept = custom;` 为引擎手写的 `NativePipeline` 构造函数生成声明。[原生管线声明](../spec/render/native-pipeline.spec) · [消费测试](../tests/consumer/records/MigrationConsumer.cpp)
+`NativeSetter : NativeRenderNode provides Setter` 为实现类生成 `Setter` 的成员声明。`NativeRenderQueueBuilder final : RenderQueueBuilder, NativeSetter` 从公开接口推导 `override` 签名，并将已有实现转发到 `NativeSetter`。C++ 派生类的 `constructor(...)` 只列自己的字段。生成器按基类声明顺序收集必需的构造参数，放在本类参数之前，并在初始化列表中分别传给直接基类。派生类省略 `constructor` 时也会转发，允许零业务参数构造的基类则省略其字段参数。`constructor() noexcept = custom;` 为引擎手写的 `NativePipeline` 构造函数生成声明。[原生管线声明](../spec/render/native-pipeline.spec) · [消费测试](../tests/consumer/records/MigrationConsumer.cpp)
 
 `struct` 和 `class` 可直接声明 `~T();` 或 `~T() noexcept;`。生成器将声明写入 C++ 头文件，定义由手写源文件提供。例如 `ResourceGroup` 在析构时调用各实例化缓冲区的 `clear()`。[模块声明](../spec/render/native-pipeline.spec) · [引擎实现](../../cocos4/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp)
 
@@ -103,7 +103,7 @@ TypeGraph 预置 `void`、`bool`、`char`、`int`、`float`、`double` 以及当
 
 C++ 图可以在 `.spec` 中用 `component_index { component: PassID_; }` 为一个整数组件建立唯一索引。`add_vertex(key)` 和 `add_vertex(std::piecewise_construct, ...)` 遇到重复键会抛出 `std::invalid_argument`，并回滚本次插入。键通过只读访问器读取。`find(key)` 找不到时返回 `null_vertex()`，`vertex(key)` 则抛出 `std::out_of_range`。原生平面组件图可用 `mutable_graph { remove_vertex; }` 启用删点，组件须支持无异常移动赋值。删除顶点 `v` 会清除所有关联边，大于 `v` 的描述符减一，索引及剩余边同步更新。外部持有的描述符可用稳定键重新查找。[原生消费测试](../tests/consumer/records/DispatcherGraphConsumer.cpp)
 
-消费测试优先包含暂存头文件。`NativePipeline` 切换引擎中的同名文件前，还需完成表中列出的实现适配。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
+消费测试优先包含暂存头文件。三个接口模块继续输出引擎 CMake 已登记的 `*Types.cpp`，这些只包含头文件的翻译单元与旧版基线逐字节核对。声明见 [RenderInterface](../spec/render/render-interface.spec)、[PrivateInterface](../spec/render/private-interface.spec)、[Customization](../spec/render/customization.spec)、[PrivateTypes](../spec/render/private-types.spec)、[FGDispatcher](../spec/render/fg-dispatcher.spec) 和 [NativePipeline](../spec/render/native-pipeline.spec)。
 
 ## 生成流程
 
@@ -426,7 +426,7 @@ ctest --test-dir build/jsb -C Release --output-on-failure
 | 4 | Customization | 3 | 3 | `CustomFwd.h`、`CustomTypes.h/.cpp`。用引擎自定义渲染命令的派生类验证虚接口。 |
 | 4 | FGDispatcher | 3 | 3 | `FGDispatcherFwd.h`、`FGDispatcherTypes.h/.cpp` 已接入 cocos4。`FGDispatcherGraphs.h` 已退役。 |
 | 4 | PrivateTypes | 4 | 4 | `NativeFwd.h`、`NativeTypes.h/.cpp`、`web-types.ts`。`NativePipelineTypes.h` 按值使用 `LayoutGraphData`，直接包含 `LayoutGraphTypes.h`。 |
-| 5 | NativePipeline | 4 | 3 | `NativePipelineFwd.h`、`NativePipelineTypes.h/.cpp`。编译并链接手写 `NativePipeline.cpp` 与执行器，运行一次最小原生管线。 |
+| 5 | NativePipeline | 4 | 3 | 三个生成文件和配套运行时头 `Array4.h` 已接入 cocos4，`NativePipelineGraphs.h` 已退役。后续集成验证为链接完整引擎并运行最小原生管线。 |
 
 旧生成器保留 `FGDispatcher` 模块注册供其他模块解析依赖，生成入口已移交给新生成器。`CocosCommon` 提供外部类型登记，`RenderInterfaceDocument` 提供注释，`RenderSceneInterface` 仅参与登记。`RenderCompiler`、`ExecutorExample`、`RenderExample` 的构建和输出受关闭的分支控制。[模块入口](../../cocos-engine-generator/Cocos/CocosBuilder/CocosBuilder.cpp) · [旧外部类型登记](../../cocos-engine-generator/Cocos/CocosBuilder/CocosCommon.cpp)
 

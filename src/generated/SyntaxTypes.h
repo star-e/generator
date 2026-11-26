@@ -127,7 +127,7 @@ struct Record {
     bool isClass{false};
     bool isFinal{false};
     std::vector<TypeRef> bases;
-    std::optional<TypeRef> implements;
+    std::optional<TypeRef> provides;
     std::optional<bool> destructorNoexcept;
     bool destructorPrivate{false};
     std::string cppMembers;

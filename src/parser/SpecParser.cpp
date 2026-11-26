@@ -746,7 +746,7 @@ private:
             if (accept(":")) {
                 do { record->bases.push_back(type()); } while (accept(","));
             }
-            if (accept("implements")) record->implements = type();
+            if (accept("provides")) record->provides = type();
         }
         expect("{");
         std::set<std::string> members;

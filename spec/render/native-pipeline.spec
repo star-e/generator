@@ -25,14 +25,14 @@ namespace cc::render {
         bool operator()(RenderGraph::vertex_descriptor pass) const { return (*validPasses)[pass]; }
     }
 
-    class NativeRenderNode implements RenderNode {
+    class NativeRenderNode provides RenderNode {
         nullable pipelineRuntime: const PipelineRuntime*;
         nullable renderGraph: RenderGraph*;
         nodeID: RenderGraph::vertex_descriptor = 0xFFFFFFFF;
         constructor(pipelineRuntime, renderGraph, nodeID);
     }
 
-    class NativeSetter : NativeRenderNode implements Setter {
+    class NativeSetter : NativeRenderNode provides Setter {
         nullable layoutGraph: const LayoutGraphData*;
         layoutID: LayoutGraphData::vertex_descriptor = 0xFFFFFFFF;
         constructor(layoutGraph, layoutID);
@@ -42,7 +42,7 @@ namespace cc::render {
         void setMat4ArrayElem(const ccstd::string& name, const cc::Mat4& mat, uint32_t id);
     }
 
-    class NativeRenderSubpassBuilderImpl : NativeSetter implements RenderSubpassBuilder {}
+    class NativeRenderSubpassBuilderImpl : NativeSetter provides RenderSubpassBuilder {}
 
     class NativeSceneBuilder final : SceneBuilder, NativeSetter {}
 

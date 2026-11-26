@@ -52,7 +52,7 @@ struct ClassScope {
             addMembers(record->fields);
             addMembers(record->staticFields);
             for (auto base : record->bases) collect(graph.node(base));
-            if (record->implements) collect(graph.node(*record->implements));
+            if (record->provides) collect(graph.node(*record->provides));
         }
     }
 
@@ -150,7 +150,7 @@ void collectVirtualMethods(const TypeGraph& graph, TypeId id, VirtualMethods& me
             if (method.isPureVirtual) methods[methodSignature(graph, method)] = &method;
     } else if (const auto* base = std::get_if<RecordType>(&data)) {
         for (auto parent : base->bases) collectVirtualMethods(graph, parent, methods);
-        if (base->implements) collectVirtualMethods(graph, *base->implements, methods);
+        if (base->provides) collectVirtualMethods(graph, *base->provides, methods);
     }
 }
 
@@ -370,7 +370,7 @@ void writeCppMethodBody(std::ostream& out, std::string_view body) {
 void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const TypeNode& node, std::set<std::string>& headers,
                                std::set<const TypeNode*>& forwardTypes, bool spaceBeforeReference) {
     const auto& record = std::get<RecordType>(node.data);
-    if (record.bases.empty() && !record.implements) return;
+    if (record.bases.empty() && !record.provides) return;
     const ClassScope scope(graph, node, spaceBeforeReference, forwardTypes);
     VirtualMethods overrides, implementation;
     std::map<std::string, TypeId> providers;
@@ -386,7 +386,7 @@ void emitImplementationMethods(std::ostream& out, const TypeGraph& graph, const 
             }
         }
     }
-    if (record.implements) collectVirtualMethods(graph, *record.implements, implementation);
+    if (record.provides) collectVirtualMethods(graph, *record.provides, implementation);
     implementation.insert(overrides.begin(), overrides.end());
     for (const auto& method : record.methods) implementation.erase(methodSignature(graph, method));
     for (const auto& [key, candidate] : implementation) {
