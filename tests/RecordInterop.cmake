@@ -423,7 +423,6 @@ foreach(tag IN ITEMS Barrier PassNode RenderPassInfo)
     string(REPLACE "get(ResourceAccessGraph::${tag}Tag{}, resourceAccessGraph, ragVertID)"
         "resourceAccessGraph.get${tag}(ragVertID)" dispatcherQueries "${dispatcherQueries}")
 endforeach()
-string(REPLACE "holds<RasterPassTag>(u, renderGraph)" "renderGraph.holds<RasterPassTag>(u)" dispatcherQueries "${dispatcherQueries}")
 file(WRITE "${stage}/DispatcherQueries.cpp" [[
 #include "cocos/renderer/pipeline/custom/FGDispatcherTypes.h"
 #include "cocos/renderer/pipeline/custom/details/GslUtils.h"
