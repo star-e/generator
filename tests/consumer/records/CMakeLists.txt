@@ -43,6 +43,7 @@ add_executable(RecordConsumer RecordConsumer.cpp ForwardConsumer.cpp LayoutGraph
     "${STAGING}/native/cocos/renderer/pipeline/custom/FGDispatcherTypes.cpp"
     "${STAGING}/NativeData.cpp"
     ResourceGraphConsumer.cpp PipelineDepthStencilConsumer.cpp SubpassGraphConsumer.cpp RasterPassConsumer.cpp PassConsumer.cpp RenderDataConsumer.cpp RenderGraphConsumer.cpp
+    "${native}/cocos/renderer/pipeline/custom/NativeRenderGraphUtils.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativeResourceGraph.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/NativePools.cpp"
     "${STAGING}/native/cocos/renderer/pipeline/custom/RenderGraphTypes.cpp"

@@ -1,4 +1,4 @@
-#include "cocos/renderer/pipeline/custom/RenderGraphTypes.h"
+#include "cocos/renderer/pipeline/custom/NativeRenderGraphUtils.h"
 #include "ShiftProbe.h"
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
@@ -32,6 +32,49 @@ std::vector<RenderGraph::vertex_descriptor> sources(Range range) {
     std::vector<RenderGraph::vertex_descriptor> result;
     for (auto e : range) result.push_back(e.source);
     return result;
+}
+
+void checkRenderPassHelpers() {
+    Arena arena;
+    LayoutGraphData layouts{&arena};
+    const auto mainLayout = layouts.add_vertex(RenderStage_{}, "main");
+    const auto shadowLayout = layouts.add_vertex(RenderStage_{}, "shadow", mainLayout);
+    RenderGraph graph{&arena};
+    const auto [pass, layout] = addRenderPassVertex(graph, layouts, 640, 480, 4, 0, "main");
+    auto addScene = [&](auto parent) {
+        const auto queue = addVertex2(Queue_{}, std::make_tuple("draw"), std::tuple<>{}, std::tuple<>{},
+            std::tuple<>{}, std::make_tuple(QueueHint::BLEND), graph, parent);
+        return addVertex2(Scene_{}, std::make_tuple("scene"), std::tuple<>{}, std::tuple<>{},
+            std::tuple<>{}, std::tuple<>{}, graph, queue);
+    };
+    const auto scene = addScene(pass);
+    const auto compute = addVertex2(ComputeTag{}, std::make_tuple("compute"), std::tuple<>{}, std::tuple<>{},
+        std::tuple<>{}, std::tuple<>{}, graph);
+    graph.add_edge(pass, compute);
+    require(graph.getPassID(scene) == pass && graph.getPassID(compute) == compute, "pass ID follows parent links");
+    require(graph.print(&arena) ==
+        "\nRenderGraph {\n    RasterPass \"main\" {\n        Queue \"draw\" {\n            hint: BLEND;\n"
+        "            Scene \"scene\" {\n            }\n        }\n    }\n    ComputePass \"compute\" {\n    }\n}\n",
+        "print hierarchy across an execution edge");
+    require(layout == mainLayout && getSubpassOrPassID(scene, graph, layouts) == mainLayout, "direct pass layout");
+    auto& raster = graph.value(RasterPassTag{}, pass);
+    const auto [shadow, namedLayout] = addRenderSubpassVertex(raster, graph, pass, layouts, layout, "shadow", 1, 0);
+    const auto [msaa, unnamedLayout] = addRenderSubpassVertex(raster, graph, pass, layouts, layout, "", 4, 0);
+    require(namedLayout == shadowLayout && getSubpassOrPassID(addScene(shadow), graph, layouts) == shadowLayout,
+        "named subpass layout");
+    require(unnamedLayout == mainLayout && getSubpassOrPassID(addScene(msaa), graph, layouts) == mainLayout,
+        "multisample subpass layout");
+    ComputeView view{&arena};
+    view.name = "input";
+    addPassComputeViewImpl(RasterPassTag{}, graph, pass, "resource", view);
+    addSubpassComputeViewImpl(RasterSubpassTag{}, graph, shadow, "resource", view);
+    const auto& subpass = graph.value(RasterSubpassTag{}, shadow);
+    require(raster.computeViews.at("resource").front().name == "input" &&
+            subpass.computeViews.at("resource").front().name == "input" &&
+            raster.subpassGraph.getSubpass(subpass.subpassID).computeViews.at("resource").front().name == "input",
+        "compute views on pass and both subpass representations");
+    require(graph.sortedVertices.size() == graph.num_vertices(), "sorted vertex count");
+    for (const auto v : graph.vertices()) require(graph.sortedVertices[v] == v, "sorted insertion order");
 }
 
 void checkReferenceFailures() {
@@ -71,6 +114,7 @@ void checkMultipleParents() {
 
 bool checkRenderGraph() {
     static_assert(!std::is_copy_constructible_v<RenderGraph> && !std::is_copy_assignable_v<RenderGraph>);
+    checkRenderPassHelpers();
     checkReferenceFailures();
     checkMultipleParents();
     Arena destination;
